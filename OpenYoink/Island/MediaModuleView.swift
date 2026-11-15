@@ -471,6 +471,7 @@ struct IslandEqualizerView: View {
     let reduceMotion: Bool
     var tint: Color = .accentColor
     var rhythmSeed: UInt64 = 0
+    var showsCapsule = true
 
     var body: some View {
         Group {
@@ -488,11 +489,13 @@ struct IslandEqualizerView: View {
         }
         .frame(width: 30, height: 22)
         .background {
-            Capsule()
-                .fill(Color.black.opacity(0.72))
-                .overlay {
-                    Capsule().strokeBorder(Color.white.opacity(0.08), lineWidth: 0.75)
-                }
+            if showsCapsule {
+                Capsule()
+                    .fill(Color.black.opacity(0.72))
+                    .overlay {
+                        Capsule().strokeBorder(Color.white.opacity(0.08), lineWidth: 0.75)
+                    }
+            }
         }
         .shadow(color: isPlaying ? tint.opacity(0.32) : .clear,
                 radius: 5)
@@ -511,7 +514,7 @@ struct IslandEqualizerView: View {
                 Capsule()
                     .fill(
                         LinearGradient(
-                            colors: [.white.opacity(0.96), tint],
+                            colors: [tint.opacity(0.82), tint],
                             startPoint: .top,
                             endPoint: .bottom
                         )
@@ -530,6 +533,18 @@ struct CompactNowPlayingArtworkView: View {
     let isHovered: Bool
 
     var body: some View {
+        artwork(size: 23)
+            .frame(width: 23, height: 23)
+            .scaleEffect(isHovered ? 1.04 : 1)
+            .shadow(color: store.snapshot?.isPlaying == true
+                    ? tint.opacity(0.38) : .clear,
+                    radius: 4)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: isHovered)
+            .accessibilityHidden(true)
+    }
+
+    // Kept for a possible future playback ring. Nothing in the active view calls this.
+    private var playbackProgressArtwork: some View {
         TimelineView(.periodic(from: .now, by: 0.5)) { context in
             let duration = store.snapshot?.duration ?? 0
             let elapsed = store.projectedElapsed(at: context.date) ?? 0
@@ -547,25 +562,19 @@ struct CompactNowPlayingArtworkView: View {
                         style: StrokeStyle(lineWidth: 1.7, lineCap: .round)
                     )
                     .rotationEffect(.degrees(-90))
-                Image(nsImage: image)
-                    .resizable()
-                    .renderingMode(.original)
-                    .interpolation(.high)
-                    .scaledToFill()
-                    .frame(width: 18, height: 18)
-                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(Color.black.opacity(isHovered ? 0.16 : 0))
-                    }
+                artwork(size: 18)
             }
             .frame(width: 23, height: 23)
-            .scaleEffect(isHovered ? 1.04 : 1)
-            .shadow(color: store.snapshot?.isPlaying == true
-                    ? tint.opacity(0.38) : .clear,
-                    radius: 4)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: isHovered)
         }
-        .accessibilityHidden(true)
+    }
+
+    private func artwork(size: CGFloat) -> some View {
+        Image(nsImage: image)
+            .resizable()
+            .renderingMode(.original)
+            .interpolation(.high)
+            .scaledToFill()
+            .frame(width: size, height: size)
+            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
     }
 }

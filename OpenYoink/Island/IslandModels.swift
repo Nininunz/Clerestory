@@ -25,6 +25,51 @@ enum IslandSurfaceState: Equatable, Sendable {
     }
 }
 
+/// One source of truth for the two compact wings and their open target.
+enum IslandCompactDisplay: Equatable {
+    case media, transfers, timer, aiUsage, shelf, battery, fallback
+
+    var moduleID: IslandModuleID? {
+        switch self {
+        case .media: .media
+        case .transfers: .transfers
+        case .timer: .timer
+        case .aiUsage: .aiUsage
+        case .shelf: .shelf
+        case .battery: .battery
+        case .fallback: nil
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .media: "music.note"
+        case .transfers: "arrow.up.arrow.down"
+        case .timer: "timer"
+        case .aiUsage: "chart.line.uptrend.xyaxis"
+        case .shelf: "tray.full"
+        case .battery: "battery.75percent"
+        case .fallback: "sparkles"
+        }
+    }
+
+    static func choose(primaryModule: IslandModuleID?, hasMedia: Bool,
+                       hasTransfer: Bool, timerIsActive: Bool, timerIsFinished: Bool,
+                       hasAIValue: Bool, shelfEnabled: Bool, shelfCount: Int,
+                       batteryEnabled: Bool, hasBattery: Bool) -> Self {
+        if primaryModule == .battery, hasBattery { return .battery }
+        if primaryModule == .timer, timerIsFinished { return .timer }
+        if primaryModule == .media, hasMedia { return .media }
+        if hasTransfer { return .transfers }
+        if timerIsActive || timerIsFinished { return .timer }
+        if hasAIValue { return .aiUsage }
+        if shelfEnabled, shelfCount > 0 { return .shelf }
+        if batteryEnabled, hasBattery { return .battery }
+        if shelfEnabled { return .shelf }
+        return .fallback
+    }
+}
+
 /// Shared timing keeps the SwiftUI silhouette transition and the AppKit panel
 /// resize in one rhythm. On collapse the visible surface finishes tucking into
 /// the notch before the now-transparent window footprint is reduced.
@@ -232,13 +277,21 @@ final class IslandActivityCoordinator {
     static let advisorySpotlightDuration: TimeInterval = 8
 
     func primaryActivity(at date: Date = Date()) -> IslandActivity? {
+        rankedActivity(at: date, filterSelectedModule: true)
+    }
+
+    func compactPrimaryActivity(at date: Date = Date()) -> IslandActivity? {
+        rankedActivity(at: date, filterSelectedModule: false)
+    }
+
+    private func rankedActivity(at date: Date, filterSelectedModule: Bool) -> IslandActivity? {
         // Read so SwiftUI re-evaluates when a spotlight ends, which changes the
         // answer without any activity changing.
         _ = spotlightRevision
         let candidates = activities.values
             .filter { $0.isActive(at: date) }
             .filter { activity in
-                activity.priority != .selectedModule
+                !filterSelectedModule || activity.priority != .selectedModule
                     || activity.moduleID == selectedModule
             }
         let hasMedia = candidates.contains { $0.priority == .nowPlaying }

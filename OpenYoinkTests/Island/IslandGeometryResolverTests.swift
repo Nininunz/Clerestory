@@ -19,9 +19,43 @@ final class IslandGeometryResolverTests: XCTestCase {
                        222 + IslandGeometryResolver.compactWingWidth * 2)
         XCTAssertEqual(layout.compactFrame.height,
                        38 + IslandGeometryResolver.physicalNotchClickExtension)
+        XCTAssertEqual(layout.compactFrame.height, layout.cameraHousingFrame.height,
+                       "The compact hit area must end with the visible notch surface")
         XCTAssertEqual(layout.compactFrame.midX, screen.frame.midX)
         XCTAssertEqual(layout.compactFrame.maxY, screen.frame.maxY)
         XCTAssertEqual(layout.expandedFrame.maxY, screen.frame.maxY)
+    }
+
+    func testPhysicalNotchWingsFollowReportedGapAcrossDisplaySizes() {
+        let screenWidths: [CGFloat] = [1280, 1440, 1512, 1710, 1800, 2056, 2560]
+        let housingWidths: [CGFloat] = [160, 184, 185.5, 200, 220, 222, 222.5, 240, 260, 300]
+        for screenWidth in screenWidths {
+            for housingWidth in housingWidths {
+                for screenX in [CGFloat(0), -screenWidth] {
+                    let sideWidth = (screenWidth - housingWidth) / 2
+                    let screen = IslandGeometryResolver.ScreenGeometry(
+                        frame: CGRect(x: screenX, y: 0, width: screenWidth, height: 1329),
+                        visibleFrame: CGRect(x: screenX, y: 0, width: screenWidth, height: 1291),
+                        safeAreaTop: 38,
+                        auxiliaryTopLeftArea: CGRect(x: screenX, y: 1291,
+                                                     width: sideWidth, height: 38),
+                        auxiliaryTopRightArea: CGRect(x: screenX + sideWidth + housingWidth,
+                                                      y: 1291, width: sideWidth, height: 38)
+                    )
+                    let layout = IslandGeometryResolver.resolve(screen: screen)
+                    let leftWingEdge = layout.cameraHousingFrame.minX
+                        - IslandGeometryResolver.compactWingWidth
+                    let rightWingEdge = layout.cameraHousingFrame.maxX
+                        + IslandGeometryResolver.compactWingWidth
+                    XCTAssertTrue(layout.hasPhysicalNotch)
+                    XCTAssertEqual(layout.cameraHousingFrame.width, housingWidth)
+                    XCTAssertLessThanOrEqual(layout.compactFrame.minX, leftWingEdge)
+                    XCTAssertGreaterThan(layout.compactFrame.minX, leftWingEdge - 1)
+                    XCTAssertGreaterThanOrEqual(layout.compactFrame.maxX, rightWingEdge)
+                    XCTAssertLessThan(layout.compactFrame.maxX, rightWingEdge + 1)
+                }
+            }
+        }
     }
 
     func testNoNotchUsesFloatingPillBelowVisibleTop() {

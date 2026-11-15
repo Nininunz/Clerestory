@@ -87,10 +87,9 @@ enum IslandGeometryResolver {
     /// Keep the visual wings and their hit targets narrow: these overlays share
     /// the menu-bar row with status items, which macOS does not move aside for us.
     static let compactWingWidth: CGFloat = 40
-    /// A physical camera housing cannot receive pointer events. Extending the
-    /// attached surface slightly below it creates one obvious click target while
-    /// keeping the top edge fused to the screen hardware.
-    static let physicalNotchClickExtension: CGFloat = 10
+    /// Match the compact panel to the visible surface. A transparent strip
+    /// below the notch would intercept clicks meant for the app underneath.
+    static let physicalNotchClickExtension: CGFloat = 0
     static let floatingCompactSize = CGSize(width: 224, height: 38)
     static let floatingDotHitSize = CGSize(width: 44, height: 22)
     static let floatingDotDiameter: CGFloat = 10

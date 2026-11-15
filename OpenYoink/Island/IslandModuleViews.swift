@@ -42,6 +42,7 @@ struct IslandRootView: View {
     @State private var isSettingsControlHovering = false
     @State private var isSendingCompactMediaCommand = false
     @State private var mediaAccent = ArtworkAccent.fallback
+    @State private var compactArtworkImage: NSImage?
     @State private var renderedSurfaceState: IslandSurfaceState = .compact
     @State private var activeSurfaceAnimation: UUID?
     @State private var requestedSurfaceTransitionID: UInt64 = 0
@@ -138,6 +139,7 @@ struct IslandRootView: View {
             }
         }
         .onChange(of: nowPlayingStore.snapshot?.artworkData, initial: true) { _, data in
+            compactArtworkImage = data.flatMap(NSImage.init(data:))
             mediaAccent = ArtworkAccentExtractor.accent(from: data)
         }
         .onChange(of: coordinator.selectedModule) { samplingContextChanged() }
@@ -225,7 +227,7 @@ struct IslandRootView: View {
     }
 
     private var floatingIdleDot: some View {
-        let activity = coordinator.primaryActivity()
+        let activity = coordinator.compactPrimaryActivity()
         let ring = activity?.moduleID == .media ? mediaAccent.color : activityTint(activity)
         let diameter = IslandGeometryResolver.floatingDotDiameter
         return Circle()
@@ -261,16 +263,13 @@ struct IslandRootView: View {
                 }
             }
             .buttonStyle(.plain)
-            .contentShape(Rectangle())
+            .contentShape(compactHitShape)
             .accessibilityLabel(Text(compactAccessibilityLabel))
             .accessibilityHint(Text("Open OpenYoink Island"))
             .help(Text("Open OpenYoink Island"))
 
-            compactMediaTransportOverlay
         }
-        // The panel keeps a transparent strip below the real camera housing so
-        // clicking remains easy. Only the content above draws pixels.
-        .contentShape(Rectangle())
+        .contentShape(compactHitShape)
         .background {
             if !hasPhysicalNotch {
                 compactSurfaceShape
@@ -303,13 +302,10 @@ struct IslandRootView: View {
             IslandSurfaceShape(attachedToScreenTop: true, cornerRadius: 11)
                 .fill(Color.black)
                 .frame(height: coordinator.currentLayout?.topInset ?? 32)
-            HStack(spacing: 0) {
+            IslandCompactWingRow(cameraHousingWidth: coordinator.currentLayout?.cameraHousingWidth ?? 0) {
                 compactLeading
-                    .frame(width: IslandGeometryResolver.compactWingWidth)
-                Spacer()
-                    .frame(width: coordinator.currentLayout?.cameraHousingWidth ?? 0)
+            } trailing: {
                 compactTrailing
-                    .frame(width: IslandGeometryResolver.compactWingWidth)
             }
             .frame(maxWidth: .infinity)
             .frame(height: coordinator.currentLayout?.topInset ?? 32)
@@ -319,77 +315,135 @@ struct IslandRootView: View {
 
     @ViewBuilder
     private var compactLeading: some View {
-        let activity = coordinator.primaryActivity()
-        if activity?.moduleID == .media,
-           let data = nowPlayingStore.snapshot?.artworkData,
-           let image = NSImage(data: data) {
+        let activity = coordinator.compactPrimaryActivity()
+        if compactDisplay == .media, let image = compactArtworkImage {
             CompactNowPlayingArtworkView(
                 image: image,
                 tint: mediaAccent.color,
                 isHovered: compactIsHighlighted
             )
-                .id(nowPlayingStore.snapshot?.title)
-                .transition(.opacity.combined(with: .scale(scale: 0.86)))
+            .transition(.opacity.combined(with: .scale(scale: 0.86)))
         } else {
-            Image(systemName: activity?.systemImage
-                  ?? defaultModuleDescriptor?.systemImage
-                  ?? "sparkles")
+            Image(systemName: activity.flatMap {
+                $0.moduleID == compactDisplay.moduleID ? $0.systemImage : nil
+            } ?? compactDisplay.systemImage)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(activityTint(activity))
+                .foregroundStyle(activity?.moduleID == compactDisplay.moduleID
+                                 ? activityTint(activity) : .white)
                 .opacity(compactIsHighlighted || activity != nil ? 1 : 0.72)
                 .accessibilityHidden(true)
         }
     }
 
+    private var compactDisplay: IslandCompactDisplay {
+        let timerIsActive: Bool
+        let timerIsFinished: Bool
+        switch timerStore.state {
+        case .running, .paused:
+            timerIsActive = registry.isEnabled(.timer)
+            timerIsFinished = false
+        case .finished:
+            timerIsActive = false
+            timerIsFinished = registry.isEnabled(.timer)
+        case .idle:
+            timerIsActive = false
+            timerIsFinished = false
+        }
+        return IslandCompactDisplay.choose(
+            primaryModule: coordinator.compactPrimaryActivity()?.moduleID,
+            hasMedia: nowPlayingStore.snapshot != nil,
+            hasTransfer: transferStore.hasVisibleActivity,
+            timerIsActive: timerIsActive,
+            timerIsFinished: timerIsFinished,
+            hasAIValue: aiUsageStore.compactValue != nil,
+            shelfEnabled: registry.isEnabled(.shelf),
+            shelfCount: shelfStore.items.count,
+            batteryEnabled: registry.isEnabled(.battery),
+            hasBattery: powerMonitor.snapshot.hasBattery
+        )
+    }
+
     private var compactTrailing: some View {
         Group {
-            if coordinator.primaryActivity()?.moduleID == .media,
-               let snapshot = nowPlayingStore.snapshot {
-                if nowPlayingStore.supportsTransportControls {
-                    Color.clear.frame(width: 30, height: 22)
-                } else {
-                    IslandEqualizerView(
-                        isPlaying: snapshot.isPlaying,
-                        reduceMotion: reduceMotion,
-                        tint: mediaAccent.color,
-                        rhythmSeed: mediaRhythmSeed
-                    )
-                    .scaleEffect(0.92)
+            switch compactDisplay {
+            case .media:
+                if let snapshot = nowPlayingStore.snapshot {
+                    compactMediaEqualizer(isPlaying: snapshot.isPlaying,
+                                          tint: mediaAccent.color,
+                                          rhythmSeed: mediaRhythmSeed)
                 }
-            } else if transferStore.hasVisibleActivity && !reduceMotion {
-                ProgressView()
-                    .controlSize(.mini)
-            } else if case .running = timerStore.state {
-                Text(timerStore.formattedRemaining)
-                    .font(.caption2.monospacedDigit().weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-            } else if let aiValue = aiUsageStore.compactValue {
-                // Chosen in Settings: AI usage outranks the shelf count but
-                // still yields to media, transfers and a running timer.
-                Text(aiValue)
-                    .font(.caption2.monospacedDigit().weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-            } else if registry.isEnabled(.shelf) {
-                Text("\(shelfStore.items.count)")
-                    .font(.caption.monospacedDigit().weight(.semibold))
-            } else if registry.isEnabled(.battery), powerMonitor.snapshot.hasBattery {
-                Text("\(powerMonitor.snapshot.percentage)%")
-                    .font(.caption2.monospacedDigit().weight(.semibold))
-            } else {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 11, weight: .semibold))
+            case .transfers:
+                if reduceMotion {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 13, weight: .semibold))
+                } else {
+                    compactTransferSpinner
+                }
+            case .timer:
+                if case .finished = timerStore.state {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 13, weight: .semibold))
+                } else {
+                    compactTimerText(timerStore.compactRemaining)
+                }
+            case .aiUsage:
+                if let value = aiUsageStore.compactValue {
+                    IslandCompactAIValueText(value: value)
+                }
+            case .shelf:
+                compactShelfText(shelfStore.items.count)
+            case .battery:
+                compactBatteryText(powerMonitor.snapshot.percentage)
+            case .fallback:
+                compactFallbackSymbol
             }
         }
         .foregroundStyle(.white)
-        .opacity(compactIsHighlighted || coordinator.primaryActivity() != nil ? 1 : 0.72)
+        .opacity(compactIsHighlighted || coordinator.compactPrimaryActivity() != nil ? 1 : 0.72)
         .accessibilityHidden(true)
     }
 
+    private func compactMediaEqualizer(isPlaying: Bool, tint: Color,
+                                       rhythmSeed: UInt64) -> some View {
+        IslandEqualizerView(isPlaying: isPlaying, reduceMotion: reduceMotion,
+                            tint: tint, rhythmSeed: rhythmSeed, showsCapsule: false)
+            .scaleEffect(0.92)
+            .brightness(compactIsHighlighted ? 0.10 : 0)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.16),
+                       value: compactIsHighlighted)
+    }
+
+    private var compactTransferSpinner: some View {
+        IslandCompactTransferSpinner()
+    }
+
+    private func compactTimerText(_ value: String) -> some View {
+        Text(value)
+            .font(.caption2.monospacedDigit().weight(.semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.65)
+    }
+
+    private func compactShelfText(_ count: Int) -> some View {
+        Text("\(count)")
+            .font(.caption.monospacedDigit().weight(.semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+    }
+
+    private func compactBatteryText(_ percentage: Int) -> some View {
+        IslandCompactBatteryValueText(percentage: percentage)
+    }
+
+    private var compactFallbackSymbol: some View {
+        Image(systemName: "sparkles")
+            .font(.system(size: 11, weight: .semibold))
+    }
+
+    // Preserved for a possible future compact playback control; not mounted in compactContent.
     @ViewBuilder
     private var compactMediaTransportOverlay: some View {
-        if coordinator.primaryActivity()?.moduleID == .media,
+        if coordinator.compactPrimaryActivity()?.moduleID == .media,
            nowPlayingStore.snapshot != nil,
            nowPlayingStore.supportsTransportControls {
             if hasPhysicalNotch {
@@ -425,39 +479,12 @@ struct IslandRootView: View {
                 isSendingCompactMediaCommand = false
             }
         } label: {
-            ZStack {
-                IslandEqualizerView(
-                    isPlaying: isPlaying,
-                    reduceMotion: reduceMotion,
-                    tint: mediaAccent.color,
-                    rhythmSeed: mediaRhythmSeed
-                )
-                .scaleEffect(showsTransportControl ? 0.84 : 0.92)
-                .opacity(showsTransportControl ? 0 : 1)
-
-                Group {
-                    if isSendingCompactMediaCommand {
-                        ProgressView().controlSize(.mini)
-                    } else {
-                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(mediaAccent.color)
-                    }
-                }
-                .frame(width: 30, height: 22)
-                .background {
-                    Capsule()
-                        .fill(Color.white.opacity(0.10))
-                        .overlay {
-                            Capsule().strokeBorder(mediaAccent.color.opacity(0.38),
-                                                   lineWidth: 0.75)
-                        }
-                }
-                .scaleEffect(showsTransportControl ? 1 : 0.82)
-                .opacity(showsTransportControl ? 1 : 0)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(Rectangle())
+            compactMediaTransportLabel(isPlaying: isPlaying,
+                                       showsControl: showsTransportControl,
+                                       isSending: isSendingCompactMediaCommand,
+                                       tint: mediaAccent.color,
+                                       rhythmSeed: mediaRhythmSeed)
+                .offset(x: hasPhysicalNotch ? -5 : 0)
         }
         .buttonStyle(.plain)
         .disabled(!nowPlayingStore.supportsTransportControls
@@ -477,6 +504,32 @@ struct IslandRootView: View {
         .help(Text(actionLabel))
     }
 
+    private func compactMediaTransportLabel(isPlaying: Bool, showsControl: Bool,
+                                            isSending: Bool, tint: Color,
+                                            rhythmSeed: UInt64) -> some View {
+        ZStack {
+            IslandEqualizerView(isPlaying: isPlaying, reduceMotion: reduceMotion,
+                                tint: tint, rhythmSeed: rhythmSeed, showsCapsule: false)
+                .scaleEffect(showsControl ? 0.84 : 0.92)
+                .opacity(showsControl ? 0 : 1)
+
+            Group {
+                if isSending {
+                    ProgressView().controlSize(.mini).tint(tint)
+                } else {
+                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(tint)
+                }
+            }
+            .frame(width: 30, height: 22)
+            .scaleEffect(showsControl ? 1 : 0.82)
+            .opacity(showsControl ? 1 : 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+    }
+
     private var mediaRhythmSeed: UInt64 {
         guard let snapshot = nowPlayingStore.snapshot else { return 0 }
         return MusicVisualizerRhythm.seed(title: snapshot.title,
@@ -486,7 +539,8 @@ struct IslandRootView: View {
 
     @ViewBuilder
     private var compactSummary: some View {
-        if let activity = coordinator.primaryActivity() {
+        if let activity = coordinator.compactPrimaryActivity(),
+           activity.moduleID == compactDisplay.moduleID {
             VStack(alignment: .leading, spacing: 0) {
                 Text(activity.title)
                     .font(.caption.weight(.semibold))
@@ -499,28 +553,19 @@ struct IslandRootView: View {
                 }
             }
         } else {
-            if let aiSummary = aiUsageStore.compactSummary {
-                Text(aiSummary)
-                    .font(.caption2.monospacedDigit().weight(.semibold))
-                    .lineLimit(1)
-            } else if registry.isEnabled(.system),
-               let cpu = systemStatusStore.snapshot.cpuUsage,
-               let used = systemStatusStore.snapshot.memoryUsedBytes,
-               let total = systemStatusStore.snapshot.memoryTotalBytes,
-               total > 0 {
-                Text("CPU \(Int((cpu * 100).rounded()))% · MEM \(Int((Double(used) / Double(total) * 100).rounded()))%")
-                    .font(.caption2.monospacedDigit().weight(.semibold))
-            } else if registry.isEnabled(.folders),
-                      coordinator.selectedModule == .folders {
-                Text("Quick Access · \(favoriteFoldersStore.items.count)")
-                    .font(.caption2.weight(.semibold))
-            } else if registry.isEnabled(.clipboard), coordinator.selectedModule == .clipboard {
-                Text(String(localized: "Clipboard History") + " · \(clipboardHistoryStore.entries.count)")
-                    .font(.caption2.weight(.semibold))
-            } else {
-                Text(String(localized: "OpenYoink Island"))
-                    .font(.caption.weight(.semibold))
+            Group {
+                switch compactDisplay {
+                case .media: Text("Now Playing")
+                case .transfers: Text("Transfers")
+                case .timer: Text("Timer")
+                case .aiUsage: Text(aiUsageStore.compactSummary ?? "AI Usage")
+                case .shelf: Text("Shelf")
+                case .battery: Text("Battery")
+                case .fallback: Text("OpenYoink Island")
+                }
             }
+            .font(.caption.weight(.semibold))
+            .lineLimit(1)
         }
     }
 
@@ -587,6 +632,11 @@ struct IslandRootView: View {
 
     private var compactSurfaceShape: IslandSurfaceShape {
         IslandSurfaceShape(attachedToScreenTop: hasPhysicalNotch, cornerRadius: 13)
+    }
+
+    private var compactHitShape: IslandSurfaceShape {
+        IslandSurfaceShape(attachedToScreenTop: hasPhysicalNotch,
+                           cornerRadius: hasPhysicalNotch ? 11 : 13)
     }
 
     private var expandedSurfaceShape: IslandSurfaceShape {
@@ -858,13 +908,23 @@ struct IslandRootView: View {
     }
 
     private var compactAccessibilityLabel: String {
-        if let activity = coordinator.primaryActivity() {
-            return [activity.title, activity.detail].compactMap { $0 }.joined(separator: ", ")
-        }
-        if registry.isEnabled(.shelf) {
+        switch compactDisplay {
+        case .battery:
+            return String(localized: "Battery, \(powerMonitor.snapshot.percentage) percent")
+        case .shelf:
             return String(localized: "OpenYoink Island, \(shelfStore.items.count) shelf items")
+        case .timer:
+            if case .finished = timerStore.state {
+                return String(localized: "Timer finished")
+            }
+            return String(localized: "Timer, \(timerStore.compactRemaining) remaining")
+        default:
+            if let activity = coordinator.compactPrimaryActivity(),
+               activity.moduleID == compactDisplay.moduleID {
+                return [activity.title, activity.detail].compactMap { $0 }.joined(separator: ", ")
+            }
+            return String(localized: "OpenYoink Island")
         }
-        return String(localized: "OpenYoink Island")
     }
 
     private var defaultModuleDescriptor: IslandModuleDescriptor? {
@@ -875,8 +935,8 @@ struct IslandRootView: View {
     }
 
     private var defaultOpenModule: IslandModuleID {
-        if let activity = coordinator.primaryActivity(), registry.isEnabled(activity.moduleID) {
-            return activity.moduleID
+        if let moduleID = compactDisplay.moduleID, registry.isEnabled(moduleID) {
+            return moduleID
         }
         return defaultModuleDescriptor?.id ?? .transfers
     }
@@ -891,6 +951,78 @@ struct IslandRootView: View {
         }
     }
 
+}
+
+/// Shared wing layout used by the physical-notch Island and its rendered layout tests.
+struct IslandCompactWingRow<Leading: View, Trailing: View>: View {
+    /// Center every leading symbol in the same 24-point slot, biased toward the notch.
+    private static var leadingOuterInset: CGFloat { 13 }
+    private static var leadingSlotWidth: CGFloat { 24 }
+
+    let cameraHousingWidth: CGFloat
+    let leading: Leading
+    let trailing: Trailing
+
+    init(cameraHousingWidth: CGFloat,
+         @ViewBuilder leading: () -> Leading,
+         @ViewBuilder trailing: () -> Trailing) {
+        self.cameraHousingWidth = cameraHousingWidth
+        self.leading = leading()
+        self.trailing = trailing()
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            leading
+                .frame(width: Self.leadingSlotWidth, alignment: .center)
+                .padding(.leading, Self.leadingOuterInset)
+                .padding(.trailing, IslandGeometryResolver.compactWingWidth
+                         - Self.leadingOuterInset - Self.leadingSlotWidth)
+            Spacer()
+                .frame(width: cameraHousingWidth)
+            trailing
+                .frame(width: IslandGeometryResolver.compactWingWidth - 10,
+                       alignment: .center)
+                .padding(.trailing, 10)
+        }
+    }
+}
+
+/// Shared by the live compact Island and its rendered preview tests.
+struct IslandCompactAIValueText: View {
+    let value: String
+
+    var body: some View {
+        Text(value)
+            .font(.caption2.monospacedDigit().weight(.semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+    }
+}
+
+struct IslandCompactBatteryValueText: View {
+    let percentage: Int
+
+    var body: some View {
+        Text("\(percentage)%")
+            .font(.caption2.monospacedDigit().weight(.semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+    }
+}
+
+struct IslandCompactTransferSpinner: View {
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
+            Image(systemName: "arrow.triangle.2.circlepath")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
+                .rotationEffect(.degrees(context.date.timeIntervalSinceReferenceDate
+                    .truncatingRemainder(dividingBy: 1.6) / 1.6 * 360))
+                .frame(width: 22, height: 22)
+        }
+        .accessibilityHidden(true)
+    }
 }
 
 private struct IslandEmptyModuleSlot: View {
