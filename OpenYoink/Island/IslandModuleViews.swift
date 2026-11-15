@@ -1173,7 +1173,7 @@ struct IslandModuleLibraryView: View {
     let onOpenSettings: () -> Void
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: IslandModuleLayout.headerSpacing) {
             IslandModuleHeader(
                 title: "Quick Settings",
                 subtitle: String(localized: "Choose up to seven pinned modules"),

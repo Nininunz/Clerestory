@@ -12,58 +12,62 @@ struct IslandSystemStatusView: View {
     ]
 
     var body: some View {
-        VStack(spacing: 9) {
+        VStack(spacing: IslandModuleLayout.headerSpacing) {
             IslandModuleHeader(
                 title: "System Status",
                 subtitle: String(localized: "Read-only Mac status"),
                 systemImage: "gauge.with.dots.needle.67percent"
             )
 
-            LazyVGrid(columns: columns, spacing: 8) {
-                metricCard(
-                    title: "CPU",
-                    value: percent(store.snapshot.cpuUsage),
-                    detail: nil,
-                    systemImage: "cpu"
-                )
-                metricCard(
-                    title: "Memory",
-                    value: memorySummary,
-                    detail: pressureTitle,
-                    systemImage: "memorychip"
-                )
-                metricCard(
-                    title: "Network",
-                    value: networkSummary,
-                    detail: networkDetail,
-                    systemImage: "network"
-                )
-                metricCard(
-                    title: "Disk",
-                    value: bytes(store.snapshot.diskAvailableBytes),
-                    detail: String(localized: "available"),
-                    systemImage: "internaldrive"
-                )
-                metricCard(
-                    title: "Battery",
-                    value: batterySummary,
-                    detail: batteryDetail,
-                    systemImage: "battery.75percent"
-                )
-                metricCard(
-                    title: "Thermal",
-                    value: thermalTitle,
-                    detail: store.snapshot.isLowPowerModeEnabled
-                        ? String(localized: "Low Power Mode") : nil,
-                    systemImage: "thermometer.medium"
-                )
-            }
+            IslandModuleScrollView {
+                VStack(spacing: 9) {
+                    LazyVGrid(columns: columns, spacing: 8) {
+                        metricCard(
+                            title: "CPU",
+                            value: percent(store.snapshot.cpuUsage),
+                            detail: nil,
+                            systemImage: "cpu"
+                        )
+                        metricCard(
+                            title: "Memory",
+                            value: memorySummary,
+                            detail: pressureTitle,
+                            systemImage: "memorychip"
+                        )
+                        metricCard(
+                            title: "Network",
+                            value: networkSummary,
+                            detail: networkDetail,
+                            systemImage: "network"
+                        )
+                        metricCard(
+                            title: "Disk",
+                            value: bytes(store.snapshot.diskAvailableBytes),
+                            detail: String(localized: "available"),
+                            systemImage: "internaldrive"
+                        )
+                        metricCard(
+                            title: "Battery",
+                            value: batterySummary,
+                            detail: batteryDetail,
+                            systemImage: "battery.75percent"
+                        )
+                        metricCard(
+                            title: "Thermal",
+                            value: thermalTitle,
+                            detail: store.snapshot.isLowPowerModeEnabled
+                                ? String(localized: "Low Power Mode") : nil,
+                            systemImage: "thermometer.medium"
+                        )
+                    }
 
-            if !store.alerts.isEmpty {
-                alertStrip
-            }
+                    if !store.alerts.isEmpty {
+                        alertStrip
+                    }
 
-            applicationList
+                    applicationList
+                }
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .alert(detailAlert?.title ?? "", isPresented: Binding(
@@ -165,36 +169,31 @@ struct IslandSystemStatusView: View {
                     .foregroundStyle(.white.opacity(0.38))
                     .frame(maxWidth: .infinity, minHeight: 28)
             } else {
-                ScrollView(.vertical, showsIndicators: true) {
-                    LazyVStack(spacing: 3) {
-                        ForEach(store.snapshot.topApplications) { application in
-                            HStack(spacing: 8) {
-                                applicationIcon(application)
-                                Text(application.name)
-                                    .font(.caption.weight(.medium))
-                                    .foregroundStyle(.white.opacity(0.86))
-                                    .lineLimit(1)
-                                Spacer()
-                                Text(percent(application.cpuUsage))
-                                    .font(.caption2.monospacedDigit())
-                                    .foregroundStyle(.white.opacity(0.62))
-                                    .frame(width: 42, alignment: .trailing)
-                                Text(bytes(application.memoryBytes.map(Int64.init)))
-                                    .font(.caption2.monospacedDigit())
-                                    .foregroundStyle(.white.opacity(0.62))
-                                    .frame(width: 58, alignment: .trailing)
-                            }
-                            .frame(height: 21)
+                LazyVStack(spacing: 3) {
+                    ForEach(store.snapshot.topApplications) { application in
+                        HStack(spacing: 8) {
+                            applicationIcon(application)
+                            Text(application.name)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(.white.opacity(0.86))
+                                .lineLimit(1)
+                            Spacer()
+                            Text(percent(application.cpuUsage))
+                                .font(.caption2.monospacedDigit())
+                                .foregroundStyle(.white.opacity(0.62))
+                                .frame(width: 42, alignment: .trailing)
+                            Text(bytes(application.memoryBytes.map(Int64.init)))
+                                .font(.caption2.monospacedDigit())
+                                .foregroundStyle(.white.opacity(0.62))
+                                .frame(width: 58, alignment: .trailing)
                         }
+                        .frame(height: 21)
                     }
-                    .frame(maxWidth: .infinity)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 60, maxHeight: .infinity,
-               alignment: .top)
-        .layoutPriority(1)
+        .frame(maxWidth: .infinity, minHeight: 60, alignment: .top)
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
         .background {

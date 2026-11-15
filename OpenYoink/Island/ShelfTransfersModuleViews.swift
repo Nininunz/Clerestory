@@ -4,7 +4,7 @@ struct IslandShelfModuleView: View {
     @Environment(ShelfStore.self) private var shelfStore
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: IslandModuleLayout.headerSpacing) {
             IslandModuleHeader(
                 title: "Shelf",
                 subtitle: String(localized: "\(shelfStore.items.count) items"),
@@ -20,7 +20,7 @@ struct IslandTransfersView: View {
     var onPerformRecovery: ((RecoveryAction) -> Void)?
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: IslandModuleLayout.headerSpacing) {
             IslandModuleHeader(
                 title: "Transfers",
                 subtitle: transferStore.hasVisibleActivity
@@ -28,15 +28,17 @@ struct IslandTransfersView: View {
                     : String(localized: "No active transfers"),
                 systemImage: "arrow.up.arrow.down"
             )
-            if transferStore.hasVisibleActivity {
-                ShelfActivityStrip(onPerformRecovery: onPerformRecovery)
-                    .frame(maxHeight: .infinity, alignment: .top)
-            } else {
-                IslandEmptyState(
-                    title: "All caught up",
-                    message: "New imports and deliveries appear here.",
-                    systemImage: "checkmark.circle"
-                )
+            IslandModuleScrollView(fillsViewport: true) {
+                if transferStore.hasVisibleActivity {
+                    ShelfActivityStrip(onPerformRecovery: onPerformRecovery)
+                        .frame(maxHeight: .infinity, alignment: .top)
+                } else {
+                    IslandEmptyState(
+                        title: "All caught up",
+                        message: "New imports and deliveries appear here.",
+                        systemImage: "checkmark.circle"
+                    )
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

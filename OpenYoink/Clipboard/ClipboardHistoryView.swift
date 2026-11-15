@@ -24,35 +24,45 @@ struct ClipboardHistoryView: View {
         isIsland ? IslandVisualStyle.secondaryText : .secondary
     }
 
+    private var headerActions: some View {
+        Group {
+            if settings.clipboardHistoryEnabled {
+                Button {
+                    settings.clipboardHistoryPaused.toggle()
+                    history.updateRecording()
+                } label: {
+                    Image(systemName: settings.clipboardHistoryPaused ? "play.fill" : "pause.fill")
+                        .frame(width: 26, height: 26)
+                }
+                .help(settings.clipboardHistoryPaused ? Text("Resume Recording") : Text("Pause Recording"))
+                .accessibilityLabel(settings.clipboardHistoryPaused ? Text("Resume Recording") : Text("Pause Recording"))
+            }
+            Button { confirmsClear = true } label: {
+                Image(systemName: "trash").frame(width: 26, height: 26)
+            }
+            .disabled(history.entries.isEmpty && history.errorMessage == nil)
+            .help(Text("Clear Clipboard History…"))
+            .accessibilityLabel("Clear Clipboard History…")
+        }
+        .buttonStyle(.borderless)
+    }
+
     var body: some View {
         @Bindable var settings = settings
-        VStack(spacing: 10) {
-            HStack(spacing: 8) {
+        VStack(spacing: IslandModuleLayout.headerSpacing) {
+            Group {
                 if isIsland {
-                    IslandModuleHeader(title: "Clipboard History", subtitle: nil, systemImage: "doc.on.clipboard")
-                } else {
-                    Label("Clipboard History", systemImage: "doc.on.clipboard").font(.headline)
-                }
-                Spacer(minLength: 4)
-                if settings.clipboardHistoryEnabled {
-                    Button {
-                        settings.clipboardHistoryPaused.toggle()
-                        history.updateRecording()
-                    } label: {
-                        Image(systemName: settings.clipboardHistoryPaused ? "play.fill" : "pause.fill")
-                            .frame(width: 26, height: 26)
+                    IslandModuleHeader(title: "Clipboard History", subtitle: nil, systemImage: "doc.on.clipboard") {
+                        headerActions
                     }
-                    .help(settings.clipboardHistoryPaused ? Text("Resume Recording") : Text("Pause Recording"))
-                    .accessibilityLabel(settings.clipboardHistoryPaused ? Text("Resume Recording") : Text("Pause Recording"))
+                } else {
+                    HStack(spacing: 8) {
+                        Label("Clipboard History", systemImage: "doc.on.clipboard").font(.headline)
+                        Spacer(minLength: 4)
+                        headerActions
+                    }
                 }
-                Button { confirmsClear = true } label: {
-                    Image(systemName: "trash").frame(width: 26, height: 26)
-                }
-                .disabled(history.entries.isEmpty && history.errorMessage == nil)
-                .help(Text("Clear Clipboard History…"))
-                .accessibilityLabel("Clear Clipboard History…")
             }
-            .buttonStyle(.borderless)
 
             HStack {
                 if isIsland {

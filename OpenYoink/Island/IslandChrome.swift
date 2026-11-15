@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A bounded module viewport for content that can exceed the Island height.
+/// A bounded body viewport. Keep the module header outside this scroll view.
 struct IslandModuleScrollView<Content: View>: View {
     var fillsViewport = false
     @ViewBuilder var content: Content
@@ -17,6 +17,7 @@ struct IslandModuleScrollView<Content: View>: View {
                     .padding(.vertical, 1)
             }
             .scrollIndicators(.automatic)
+            .scrollBounceBehavior(.basedOnSize)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
@@ -75,10 +76,24 @@ struct IslandProgressTrack: View {
     }
 }
 
-struct IslandModuleHeader: View {
+enum IslandModuleLayout {
+    static let headerHeight: CGFloat = 34
+    static let headerSpacing: CGFloat = 10
+}
+
+struct IslandModuleHeader<Actions: View>: View {
     let title: LocalizedStringKey
     let subtitle: String?
     let systemImage: String
+    private let actions: Actions
+
+    init(title: LocalizedStringKey, subtitle: String?, systemImage: String,
+         @ViewBuilder actions: () -> Actions) {
+        self.title = title
+        self.subtitle = subtitle
+        self.systemImage = systemImage
+        self.actions = actions()
+    }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -91,6 +106,7 @@ struct IslandModuleHeader: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.system(size: 15, weight: .semibold))
+                    .lineLimit(1)
                     .foregroundStyle(.white)
                 if let subtitle {
                     Text(subtitle)
@@ -100,8 +116,18 @@ struct IslandModuleHeader: View {
                 }
             }
             Spacer(minLength: 8)
+            HStack(spacing: 8) { actions }
+                .fixedSize()
         }
-        .frame(height: 34)
+        .frame(height: IslandModuleLayout.headerHeight)
+    }
+}
+
+extension IslandModuleHeader where Actions == EmptyView {
+    init(title: LocalizedStringKey, subtitle: String?, systemImage: String) {
+        self.init(title: title, subtitle: subtitle, systemImage: systemImage) {
+            EmptyView()
+        }
     }
 }
 

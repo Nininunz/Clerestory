@@ -5,30 +5,31 @@ struct IslandAIUsageView: View {
     @Environment(AIUsageModuleStore.self) private var store
 
     var body: some View {
-        VStack(spacing: 9) {
+        VStack(spacing: IslandModuleLayout.headerSpacing) {
             IslandModuleHeader(
                 title: "AI Usage",
                 subtitle: subtitle,
                 systemImage: AIUsageModuleStore.moduleDescriptor.systemImage
-            )
-            .overlay(alignment: .trailing) {
+            ) {
                 if store.status == .ready { dashboardButton }
             }
 
-            switch store.status {
-            case .notRunning:
-                notRunningState
-            case let .failed(message) where store.snapshot == nil:
-                IslandEmptyState(title: "Can't read TokenTracker",
-                                 message: LocalizedStringKey(message),
-                                 systemImage: "exclamationmark.triangle")
-            default:
-                if let snapshot = store.snapshot {
-                    content(snapshot)
-                } else {
-                    ProgressView()
-                        .controlSize(.small)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+            IslandModuleScrollView(fillsViewport: true) {
+                switch store.status {
+                case .notRunning:
+                    notRunningState
+                case let .failed(message) where store.snapshot == nil:
+                    IslandEmptyState(title: "Can't read TokenTracker",
+                                     message: LocalizedStringKey(message),
+                                     systemImage: "exclamationmark.triangle")
+                default:
+                    if let snapshot = store.snapshot {
+                        content(snapshot)
+                    } else {
+                        ProgressView()
+                            .controlSize(.small)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
                 }
             }
         }

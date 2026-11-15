@@ -11,51 +11,53 @@ struct IslandNowPlayingView: View {
     @State private var isSendingCommand = false
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: IslandModuleLayout.headerSpacing) {
             IslandModuleHeader(
                 title: "Now Playing",
                 subtitle: nowPlayingSubtitle,
                 systemImage: "music.note"
             )
-            if store.availability == .disabled {
-                VStack(spacing: 12) {
+            IslandModuleScrollView(fillsViewport: true) {
+                if store.availability == .disabled {
+                    VStack(spacing: 12) {
+                        IslandEmptyState(
+                            title: "Enable Now Playing",
+                            message: "Show album artwork, playback progress, and media controls in the Island.",
+                            systemImage: "music.note"
+                        )
+                        Button { settings.islandMediaEnabled = true } label: {
+                            Label("Enable", systemImage: "waveform")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 18)
+                                .frame(height: 36)
+                                .background(Capsule().fill(Color.accentColor))
+                        }
+                        .buttonStyle(IslandPressFeedbackStyle(reduceMotion: reduceMotion))
+                    }
+                } else if store.availability == .probing {
+                    VStack(spacing: 9) {
+                        ProgressView().controlSize(.small)
+                        Text("Checking media access…")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.white.opacity(0.48))
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let snapshot = store.snapshot {
+                    playerCard(snapshot)
+                } else if store.availability == .available {
                     IslandEmptyState(
-                        title: "Enable Now Playing",
-                        message: "Show album artwork, playback progress, and media controls in the Island.",
+                        title: "Nothing playing",
+                        message: "Start media in a supported player.",
                         systemImage: "music.note"
                     )
-                    Button { settings.islandMediaEnabled = true } label: {
-                        Label("Enable", systemImage: "waveform")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 18)
-                            .frame(height: 36)
-                            .background(Capsule().fill(Color.accentColor))
-                    }
-                    .buttonStyle(IslandPressFeedbackStyle(reduceMotion: reduceMotion))
+                } else {
+                    IslandEmptyState(
+                        title: "Now Playing unavailable",
+                        message: "OpenYoink could not read the current player. Other Island features still work normally.",
+                        systemImage: "play.slash"
+                    )
                 }
-            } else if store.availability == .probing {
-                VStack(spacing: 9) {
-                    ProgressView().controlSize(.small)
-                    Text("Checking media access…")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.white.opacity(0.48))
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let snapshot = store.snapshot {
-                playerCard(snapshot)
-            } else if store.availability == .available {
-                IslandEmptyState(
-                    title: "Nothing playing",
-                    message: "Start media in a supported player.",
-                    systemImage: "music.note"
-                )
-            } else {
-                IslandEmptyState(
-                    title: "Now Playing unavailable",
-                    message: "OpenYoink could not read the current player. Other Island features still work normally.",
-                    systemImage: "play.slash"
-                )
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

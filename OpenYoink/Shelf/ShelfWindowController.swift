@@ -564,12 +564,12 @@ final class ShelfWindowController: NSObject {
                 IslandModuleRegistration(
                     descriptor: timerModuleRuntime.descriptor,
                     runtime: timerModuleRuntime,
-                    makeContentView: { _ in AnyView(IslandModuleScrollView { IslandTimerView() }) }
+                    makeContentView: { _ in AnyView(IslandTimerView()) }
                 ),
                 IslandModuleRegistration(
                     descriptor: batteryModuleRuntime.descriptor,
                     runtime: batteryModuleRuntime,
-                    makeContentView: { _ in AnyView(IslandModuleScrollView { IslandBatteryView() }) }
+                    makeContentView: { _ in AnyView(IslandBatteryView()) }
                 ),
                 IslandModuleRegistration(
                     descriptor: systemStatusModuleStore.descriptor,
@@ -580,7 +580,7 @@ final class ShelfWindowController: NSObject {
                     descriptor: mediaModuleRuntime.descriptor,
                     runtime: mediaModuleRuntime,
                     makeContentView: { _ in
-                        AnyView(IslandModuleScrollView(fillsViewport: true) { IslandNowPlayingView() })
+                        AnyView(IslandNowPlayingView())
                     }
                 ),
                 IslandModuleRegistration(
@@ -591,7 +591,7 @@ final class ShelfWindowController: NSObject {
                 IslandModuleRegistration(
                     descriptor: aiUsageModuleStore.descriptor,
                     runtime: aiUsageModuleStore,
-                    makeContentView: { _ in AnyView(IslandModuleScrollView { IslandAIUsageView() }) }
+                    makeContentView: { _ in AnyView(IslandAIUsageView()) }
                 ),
             ],
             coordinator: islandActivityCoordinator

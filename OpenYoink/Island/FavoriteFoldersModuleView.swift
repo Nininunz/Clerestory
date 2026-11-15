@@ -19,13 +19,12 @@ struct FavoriteFoldersModuleView: View {
     ]
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: IslandModuleLayout.headerSpacing) {
             IslandModuleHeader(
                 title: "Quick Access",
                 subtitle: headerSubtitle,
                 systemImage: "folder"
-            )
-            .overlay(alignment: .trailing) {
+            ) {
                 Button(action: chooseFolders) {
                     Image(systemName: "plus")
                         .font(.system(size: 12, weight: .bold))
@@ -114,7 +113,6 @@ struct FavoriteFoldersModuleView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(2)
         .onDisappear {
             copyCoordinator.tileFrames.removeAll()
             copyCoordinator.viewport = .zero

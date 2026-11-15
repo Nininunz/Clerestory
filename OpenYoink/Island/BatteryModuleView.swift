@@ -5,74 +5,76 @@ struct IslandBatteryView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: IslandModuleLayout.headerSpacing) {
             IslandModuleHeader(
                 title: "Battery",
                 subtitle: nil,
                 systemImage: batterySymbol
             )
-            if powerMonitor.snapshot.hasBattery {
-                VStack(spacing: 12) {
-                    HStack(spacing: 20) {
-                        BatteryChargeRing(
-                            percentage: powerMonitor.snapshot.percentage,
-                            tint: batteryTint,
-                            reduceMotion: reduceMotion
-                        )
+            IslandModuleScrollView(fillsViewport: true) {
+                if powerMonitor.snapshot.hasBattery {
+                    VStack(spacing: 12) {
+                        HStack(spacing: 20) {
+                            BatteryChargeRing(
+                                percentage: powerMonitor.snapshot.percentage,
+                                tint: batteryTint,
+                                reduceMotion: reduceMotion
+                            )
 
-                        VStack(alignment: .leading, spacing: 7) {
-                            HStack(spacing: 7) {
-                                Image(systemName: statusSymbol)
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(batteryTint)
-                                    .frame(width: 28, height: 28)
-                                    .background {
-                                        Circle().fill(batteryTint.opacity(0.13))
-                                    }
+                            VStack(alignment: .leading, spacing: 7) {
+                                HStack(spacing: 7) {
+                                    Image(systemName: statusSymbol)
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundStyle(batteryTint)
+                                        .frame(width: 28, height: 28)
+                                        .background {
+                                            Circle().fill(batteryTint.opacity(0.13))
+                                        }
 
-                                Text(powerStatus)
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(IslandVisualStyle.primaryText)
-                                    .lineLimit(1)
+                                    Text(powerStatus)
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(IslandVisualStyle.primaryText)
+                                        .lineLimit(1)
+                                }
+
+                                if let powerWatts = powerMonitor.snapshot.powerWatts {
+                                    let formattedPower = BatteryPowerFormatting.string(watts: powerWatts)
+                                    Text(formattedPower)
+                                        .font(.system(size: 24, weight: .semibold, design: .rounded))
+                                        .monospacedDigit()
+                                        .foregroundStyle(IslandVisualStyle.primaryText)
+                                        .contentTransition(.numericText())
+                                        .accessibilityLabel(Text("Battery power"))
+                                        .accessibilityValue(Text(formattedPower))
+                                } else {
+                                    Text("Not Available")
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundStyle(IslandVisualStyle.tertiaryText)
+                                }
                             }
 
-                            if let powerWatts = powerMonitor.snapshot.powerWatts {
-                                let formattedPower = BatteryPowerFormatting.string(watts: powerWatts)
-                                Text(formattedPower)
-                                    .font(.system(size: 24, weight: .semibold, design: .rounded))
-                                    .monospacedDigit()
-                                    .foregroundStyle(IslandVisualStyle.primaryText)
-                                    .contentTransition(.numericText())
-                                    .accessibilityLabel(Text("Battery power"))
-                                    .accessibilityValue(Text(formattedPower))
-                            } else {
-                                Text("Not Available")
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundStyle(IslandVisualStyle.tertiaryText)
-                            }
+                            Spacer(minLength: 0)
                         }
 
-                        Spacer(minLength: 0)
+                        Divider()
+                            .overlay(IslandVisualStyle.hairline)
+
+                        BatteryPowerWaveform(
+                            samples: powerMonitor.powerHistory,
+                            currentWatts: powerMonitor.snapshot.powerWatts
+                        )
                     }
-
-                    Divider()
-                        .overlay(IslandVisualStyle.hairline)
-
-                    BatteryPowerWaveform(
-                        samples: powerMonitor.powerHistory,
-                        currentWatts: powerMonitor.snapshot.powerWatts
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 13)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .background(batteryCardBackground)
+                } else {
+                    IslandEmptyState(
+                        title: "Not applicable",
+                        message: "This Mac does not report an internal battery.",
+                        systemImage: "desktopcomputer"
                     )
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 13)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .background(batteryCardBackground)
-            } else {
-                IslandEmptyState(
-                    title: "Not applicable",
-                    message: "This Mac does not report an internal battery.",
-                    systemImage: "desktopcomputer"
-                )
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

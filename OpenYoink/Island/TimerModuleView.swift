@@ -12,29 +12,30 @@ struct IslandTimerView: View {
     @State private var page: Page = .timer
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: IslandModuleLayout.headerSpacing) {
             IslandModuleHeader(
                 title: "Timer",
                 subtitle: page == .timer
                     ? timerSubtitle
                     : String(localized: "Focus history"),
                 systemImage: timerStore.mode.systemImage
-            )
-            .overlay(alignment: .trailing) {
+            ) {
                 timerPageSwitcher
             }
 
-            Group {
-                if page == .timer {
-                    timerControls
-                        .transition(.opacity.combined(with: .scale(scale: 0.985)))
-                } else {
-                    IslandFocusHistoryView()
-                        .transition(.opacity.combined(with: .scale(scale: 0.985)))
+            IslandModuleScrollView(fillsViewport: true) {
+                Group {
+                    if page == .timer {
+                        timerControls
+                            .transition(.opacity.combined(with: .scale(scale: 0.985)))
+                    } else {
+                        IslandFocusHistoryView()
+                            .transition(.opacity.combined(with: .scale(scale: 0.985)))
+                    }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                .animation(reduceMotion ? nil : .smooth(duration: 0.26), value: page)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-            .animation(reduceMotion ? nil : .smooth(duration: 0.26), value: page)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .onAppear {
