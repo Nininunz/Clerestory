@@ -425,6 +425,22 @@ private struct TriggerSettingsTab: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
+            Section("Compact Island") {
+                LabeledContent("Cycle Modules") {
+                    HStack(spacing: 8) {
+                        ShortcutRecorderView(shortcut: $settings.compactCycleShortcut)
+                        Button("Restore Default") { settings.compactCycleShortcut = .compactCycle }
+                            .disabled(settings.compactCycleShortcut == .compactCycle)
+                    }
+                }
+                Text("Cycle enabled compact modules: Shelf, Transfers, Timer, Battery, Now Playing, and AI Usage. Your choice is remembered independently of the expanded page. Clear the shortcut to disable it.")
+                    .font(.caption).foregroundStyle(.secondary)
+                if let error = settings.compactCycleShortcutError {
+                    Label(error, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption).foregroundStyle(.orange)
+                }
+            }
+
             Section("Global Hot Key") {
                 Toggle("Enable", isOn: $settings.hotKeyEnabled)
 

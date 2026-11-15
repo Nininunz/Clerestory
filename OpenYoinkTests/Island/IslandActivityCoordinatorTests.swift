@@ -191,24 +191,11 @@ final class IslandActivityCoordinatorTests: XCTestCase {
         XCTAssertNil(coordinator.primaryActivity())
     }
 
-    func testCompactWingsChooseSameStatusRegardlessOfExpandedSelection() {
-        let battery = IslandCompactDisplay.choose(
-            primaryModule: nil, hasMedia: false, hasTransfer: false,
-            timerIsActive: false, timerIsFinished: false,
-            hasAIValue: false, shelfEnabled: true, shelfCount: 0,
-            batteryEnabled: true, hasBattery: true
-        )
-        XCTAssertEqual(battery, .battery)
-        XCTAssertEqual(battery.moduleID, .battery)
-
-        let timer = IslandCompactDisplay.choose(
-            primaryModule: .timer, hasMedia: false, hasTransfer: false,
-            timerIsActive: true, timerIsFinished: false,
-            hasAIValue: false, shelfEnabled: true, shelfCount: 0,
-            batteryEnabled: true, hasBattery: true
-        )
-        XCTAssertEqual(timer, .timer)
-        XCTAssertEqual(timer.moduleID, .timer)
+    func testCompactWingsFollowManualSelection() {
+        let enabled: [IslandModuleID] = [.shelf, .timer, .battery]
+        XCTAssertEqual(IslandCompactDisplay.selected(.battery, enabled: enabled), .battery)
+        XCTAssertEqual(IslandCompactDisplay.selected(.timer, enabled: enabled), .timer)
+        XCTAssertEqual(IslandCompactDisplay.selected(.shelf, enabled: enabled), .shelf)
     }
 
     func testExpiredActivityIsIgnoredAndPruned() {

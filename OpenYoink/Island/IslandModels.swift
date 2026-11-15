@@ -111,21 +111,29 @@ enum IslandCompactDisplay: Equatable {
         }
     }
 
-    static func choose(primaryModule: IslandModuleID?, hasMedia: Bool,
-                       hasTransfer: Bool, timerIsActive: Bool, timerIsFinished: Bool,
-                       hasAIValue: Bool, shelfEnabled: Bool, shelfCount: Int,
-                       batteryEnabled: Bool, hasBattery: Bool) -> Self {
-        if primaryModule == .battery, hasBattery { return .battery }
-        if primaryModule == .timer, timerIsFinished { return .timer }
-        if primaryModule == .media, hasMedia { return .media }
-        if hasTransfer { return .transfers }
-        if timerIsActive || timerIsFinished { return .timer }
-        if hasAIValue { return .aiUsage }
-        if shelfEnabled, shelfCount > 0 { return .shelf }
-        if batteryEnabled, hasBattery { return .battery }
-        if shelfEnabled { return .shelf }
-        return .fallback
+    static let cycleOrder: [IslandModuleID] = [.shelf, .transfers, .timer, .battery, .media, .aiUsage]
+
+    static func selected(_ module: IslandModuleID, enabled: [IslandModuleID]) -> Self {
+        let available = cycleOrder.filter { enabled.contains($0) }
+        guard let resolved = available.contains(module) ? module : available.first else { return .fallback }
+        switch resolved {
+        case .shelf: return .shelf
+        case .transfers: return .transfers
+        case .timer: return .timer
+        case .battery: return .battery
+        case .media: return .media
+        case .aiUsage: return .aiUsage
+        default: return .fallback
+        }
     }
+
+    static func next(after module: IslandModuleID, enabled: [IslandModuleID]) -> IslandModuleID? {
+        let available = cycleOrder.filter { enabled.contains($0) }
+        guard !available.isEmpty else { return nil }
+        let index = available.firstIndex(of: module) ?? 0
+        return available[(index + 1) % available.count]
+    }
+
 }
 
 /// Hover expansion is temporary until the user clicks or pins the Island.

@@ -188,6 +188,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.saveClipboardToShelf()
         }
     )
+    lazy var compactCycleHotKeyMonitor = HotKeyMonitor(
+        shortcut: settingsStore.compactCycleShortcut, hotKeyIdentifier: 3,
+        onPress: { [weak self] in self?.settingsStore.cycleCompactModule() },
+        onDoublePress: {}
+    )
     lazy var clipboardHotKeyMonitor = HotKeyMonitor(
         shortcut: settingsStore.clipboardHistoryShortcut, hotKeyIdentifier: 2,
         onPress: { [weak self] in self?.clipboardHistoryWindowController.show() },
@@ -409,6 +414,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         bookmarkService.stopAccessingAll()
         hotKeyMonitor.setEnabled(false)
         clipboardHotKeyMonitor.setEnabled(false)
+        compactCycleHotKeyMonitor.setEnabled(false)
         mouseShakeMonitor.stop()
         edgeTriggerMonitor.stop()
         dragStartMonitor.stop()
@@ -766,6 +772,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// 时都要保持注册；EdgeTab 起还供给拉环投放暗示的 `isDragInProgress`
     /// 状态，拉环可用（edgeTabEnabled 且非 custom）时同样保持注册。
     private func applyTriggerSettings() {
+        // Release a conflicting cycle registration before registering the other action.
+        if settingsStore.compactCycleShortcutConflicts || !settingsStore.islandEnabled {
+            compactCycleHotKeyMonitor.setEnabled(false)
+        }
         hotKeyMonitor.updateShortcut(settingsStore.hotKeyShortcut)
         hotKeyMonitor.setDoublePressEnabled(settingsStore.hotKeyDoublePressSavesClipboard)
         hotKeyMonitor.setEnabled(settingsStore.hotKeyEnabled)
@@ -777,6 +787,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             && settingsStore.clipboardHistoryShortcut == settingsStore.hotKeyShortcut
             ? String(localized: "Choose a history shortcut different from the shelf shortcut.")
             : clipboardHotKeyMonitor.registrationError
+
+        let cycleShortcut = settingsStore.compactCycleShortcut
+        let cycleConflict = settingsStore.compactCycleShortcutConflicts
+        compactCycleHotKeyMonitor.updateShortcut(cycleShortcut)
+        compactCycleHotKeyMonitor.setEnabled(settingsStore.islandEnabled && cycleShortcut != nil && !cycleConflict)
+        settingsStore.compactCycleShortcutError = cycleConflict
+            ? String(localized: "Choose a compact shortcut different from the shelf and clipboard shortcuts.")
+            : compactCycleHotKeyMonitor.registrationError
 
         if settingsStore.shakeTriggerEnabled {
             mouseShakeMonitor.start(parameters: settingsStore.shakeSensitivity.shakeParameters)

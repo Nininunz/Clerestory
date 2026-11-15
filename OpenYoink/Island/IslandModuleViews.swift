@@ -335,37 +335,14 @@ struct IslandRootView: View {
             } ?? compactDisplay.systemImage)
                 .foregroundStyle(activity?.moduleID == compactDisplay.moduleID
                                  ? activityTint(activity) : .white)
-                .opacity(compactIsHighlighted || activity != nil ? 1 : 0.72)
+                .opacity(compactIsHighlighted || activity?.moduleID == compactDisplay.moduleID ? 1 : 0.72)
                 .accessibilityHidden(true)
         }
     }
 
     private var compactDisplay: IslandCompactDisplay {
-        let timerIsActive: Bool
-        let timerIsFinished: Bool
-        switch timerStore.state {
-        case .running, .paused:
-            timerIsActive = registry.isEnabled(.timer)
-            timerIsFinished = false
-        case .finished:
-            timerIsActive = false
-            timerIsFinished = registry.isEnabled(.timer)
-        case .idle:
-            timerIsActive = false
-            timerIsFinished = false
-        }
-        return IslandCompactDisplay.choose(
-            primaryModule: coordinator.compactPrimaryActivity()?.moduleID,
-            hasMedia: nowPlayingStore.snapshot != nil,
-            hasTransfer: transferStore.hasVisibleActivity,
-            timerIsActive: timerIsActive,
-            timerIsFinished: timerIsFinished,
-            hasAIValue: aiUsageStore.compactValue != nil,
-            shelfEnabled: registry.isEnabled(.shelf),
-            shelfCount: shelfStore.items.count,
-            batteryEnabled: registry.isEnabled(.battery),
-            hasBattery: powerMonitor.snapshot.hasBattery
-        )
+        IslandCompactDisplay.selected(settings.compactModuleID,
+                                      enabled: registry.enabledDescriptors.map(\.id))
     }
 
     private var compactTrailing: some View {
@@ -379,9 +356,22 @@ struct IslandRootView: View {
                         compactMediaEqualizer(isPlaying: snapshot.isPlaying,
                                               tint: mediaAccent.color,
                                               rhythmSeed: mediaRhythmSeed)
+                    } else {
+                        IslandCompactWingIcon(systemName: "pause")
                     }
                 case .transfers:
-                    if reduceMotion {
+                    if let task = transferStore.currentTask, task.phase.isTerminal {
+                        switch task.phase {
+                        case .failed, .partiallySucceeded:
+                            IslandCompactWingIcon(systemName: "exclamationmark.triangle")
+                        case .cancelled:
+                            IslandCompactWingIcon(systemName: "xmark")
+                        default:
+                            IslandCompactWingIcon(systemName: "checkmark")
+                        }
+                    } else if !transferStore.hasVisibleActivity {
+                        IslandCompactWingIcon(systemName: "checkmark")
+                    } else if reduceMotion {
                         IslandCompactWingIcon(systemName: "arrow.triangle.2.circlepath")
                     } else {
                         compactTransferSpinner
@@ -395,18 +385,24 @@ struct IslandRootView: View {
                 case .aiUsage:
                     if let value = aiUsageStore.compactValue {
                         IslandCompactAIValueText(value: value)
+                    } else {
+                        IslandCompactWingIcon(systemName: "minus")
                     }
                 case .shelf:
                     compactShelfText(shelfStore.items.count)
                 case .battery:
-                    compactBatteryText(powerMonitor.snapshot.percentage)
+                    if powerMonitor.snapshot.hasBattery {
+                        compactBatteryText(powerMonitor.snapshot.percentage)
+                    } else {
+                        IslandCompactWingIcon(systemName: "minus")
+                    }
                 case .fallback:
                     compactFallbackSymbol
                 }
             }
         }
         .foregroundStyle(.white)
-        .opacity(compactIsHighlighted || coordinator.compactPrimaryActivity() != nil ? 1 : 0.72)
+        .opacity(compactIsHighlighted || coordinator.compactPrimaryActivity()?.moduleID == compactDisplay.moduleID ? 1 : 0.72)
         .accessibilityHidden(true)
     }
 
@@ -907,14 +903,23 @@ struct IslandRootView: View {
     private var compactAccessibilityLabel: String {
         switch compactDisplay {
         case .battery:
-            return String(localized: "Battery, \(powerMonitor.snapshot.percentage) percent")
+            return powerMonitor.snapshot.hasBattery
+                ? String(localized: "Battery, \(powerMonitor.snapshot.percentage) percent")
+                : String(localized: "No internal battery")
         case .shelf:
             return String(localized: "OpenYoink Island, \(shelfStore.items.count) shelf items")
         case .timer:
+            if case .idle = timerStore.state { return String(localized: "Timer ready") }
             if case .finished = timerStore.state {
                 return String(localized: "Timer finished")
             }
             return String(localized: "Timer, \(timerStore.compactRemaining) remaining")
+        case .media:
+            return nowPlayingStore.snapshot?.title ?? String(localized: "Nothing playing")
+        case .aiUsage:
+            return aiUsageStore.compactSummary ?? String(localized: "AI Usage unavailable")
+        case .transfers:
+            return transferStore.hasVisibleActivity ? String(localized: "Transfers") : String(localized: "No active transfers")
         default:
             if let activity = coordinator.compactPrimaryActivity(),
                activity.moduleID == compactDisplay.moduleID {

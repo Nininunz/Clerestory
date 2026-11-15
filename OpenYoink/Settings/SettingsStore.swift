@@ -118,6 +118,9 @@ final class SettingsStore {
         var option: Bool
         var control: Bool
 
+        /// Control–Option–Space cycles the compact Island independently.
+        static let compactCycle = HotKeyShortcut(keyCode: 49, command: false, shift: false, option: true, control: true)
+
         /// ⌘⇧Space
         static let `default` = HotKeyShortcut(
             keyCode: 49, command: true, shift: true, option: false, control: false
@@ -160,6 +163,30 @@ final class SettingsStore {
             if let data = try? JSONEncoder().encode(clipboardHistoryShortcut) {
                 defaults.set(data, forKey: Keys.clipboardHistoryShortcut)
             }
+        }
+    }
+
+    var compactModuleID: IslandModuleID = .shelf {
+        didSet { defaults.set(compactModuleID.rawValue, forKey: Keys.compactModuleID) }
+    }
+    var compactCycleShortcut: HotKeyShortcut? = .compactCycle {
+        didSet {
+            if let data = try? JSONEncoder().encode(compactCycleShortcut) {
+                defaults.set(data, forKey: Keys.compactCycleShortcut)
+            }
+        }
+    }
+    var compactCycleShortcutError: String?
+
+    var compactCycleShortcutConflicts: Bool {
+        guard let shortcut = compactCycleShortcut else { return false }
+        return (hotKeyEnabled && shortcut == hotKeyShortcut) || shortcut == clipboardHistoryShortcut
+    }
+
+    func cycleCompactModule() {
+        if let next = IslandCompactDisplay.next(after: compactModuleID,
+                enabled: islandModuleConfiguration.enabledModuleIDs) {
+            compactModuleID = next
         }
     }
 
@@ -627,6 +654,8 @@ final class SettingsStore {
         static let clipboardHistoryPaused = prefix + "clipboardHistoryPaused"
         static let clipboardHistoryRetentionDays = prefix + "clipboardHistoryRetentionDays"
         static let clipboardHistoryEntryLimit = prefix + "clipboardHistoryEntryLimit"
+        static let compactModuleID = prefix + "compactModuleID"
+        static let compactCycleShortcut = prefix + "compactCycleShortcut"
         static let clipboardHistoryShortcut = prefix + "clipboardHistoryShortcut"
         static let shelfPresentationMode = prefix + "shelfPresentationMode"
         static let shelfSurfaceSettingsVersion = prefix + "shelfSurfaceSettingsVersion"
@@ -778,6 +807,10 @@ final class SettingsStore {
             clipboardHistoryShortcut = (try? JSONDecoder().decode(HotKeyShortcut?.self, from: data)) ?? nil
         } else {
             clipboardHistoryShortcut = HotKeyShortcut(keyCode: 9, command: true, shift: true, option: false, control: false)
+        }
+        compactModuleID = defaults.string(forKey: Keys.compactModuleID).map(IslandModuleID.init(rawValue:)) ?? .shelf
+        if let data = defaults.data(forKey: Keys.compactCycleShortcut) {
+            compactCycleShortcut = (try? JSONDecoder().decode(HotKeyShortcut?.self, from: data)) ?? nil
         }
         shelfPosition = ShelfPosition(rawValue: defaults.string(forKey: Keys.shelfPosition) ?? "")
             ?? .right

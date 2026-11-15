@@ -2417,31 +2417,8 @@ final class ShelfWindowController: NSObject {
     }
 
     private var effectiveIslandOpenModule: IslandModuleID {
-        let timerIsActive: Bool
-        let timerIsFinished: Bool
-        switch islandTimerStore.state {
-        case .running, .paused:
-            timerIsActive = islandModuleRegistry.isEnabled(.timer)
-            timerIsFinished = false
-        case .finished:
-            timerIsActive = false
-            timerIsFinished = islandModuleRegistry.isEnabled(.timer)
-        case .idle:
-            timerIsActive = false
-            timerIsFinished = false
-        }
-        let display = IslandCompactDisplay.choose(
-            primaryModule: islandActivityCoordinator.compactPrimaryActivity()?.moduleID,
-            hasMedia: nowPlayingModuleStore.snapshot != nil,
-            hasTransfer: importCoordinator.transferStore.hasVisibleActivity,
-            timerIsActive: timerIsActive,
-            timerIsFinished: timerIsFinished,
-            hasAIValue: aiUsageModuleStore.compactValue != nil,
-            shelfEnabled: islandModuleRegistry.isEnabled(.shelf),
-            shelfCount: store.items.count,
-            batteryEnabled: islandModuleRegistry.isEnabled(.battery),
-            hasBattery: powerSourceMonitor.snapshot.hasBattery
-        )
+        let display = IslandCompactDisplay.selected(settings.compactModuleID,
+            enabled: islandModuleRegistry.enabledDescriptors.map(\.id))
         if let moduleID = display.moduleID, islandModuleRegistry.isEnabled(moduleID) {
             return moduleID
         }
