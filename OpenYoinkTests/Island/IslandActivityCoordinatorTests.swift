@@ -175,6 +175,44 @@ final class IslandActivityCoordinatorTests: XCTestCase {
         XCTAssertEqual(coordinator.surfaceState, .expanded)
     }
 
+    func testHoverPreviewCancelsDwellWhenPointerLeaves() {
+        var preview = IslandHoverPreviewStateMachine()
+        XCTAssertEqual(preview.handle(.entered), [.scheduleDwell])
+        XCTAssertEqual(preview.handle(.left), [.cancelDwell])
+        XCTAssertEqual(preview.handle(.dwellElapsed), [])
+        XCTAssertEqual(preview.phase, .idle)
+    }
+
+    func testHoverPreviewExitGraceAndClickPromotion() {
+        var preview = IslandHoverPreviewStateMachine()
+        _ = preview.handle(.entered)
+        XCTAssertEqual(preview.handle(.dwellElapsed), [.showPreview])
+        XCTAssertEqual(preview.handle(.left), [.scheduleExit])
+        XCTAssertEqual(preview.handle(.entered), [.cancelExit])
+        XCTAssertEqual(preview.handle(.left), [.scheduleExit])
+        XCTAssertEqual(preview.handle(.committed), [.cancelExit, .commitPreview])
+        XCTAssertEqual(preview.handle(.exitElapsed), [])
+        XCTAssertEqual(preview.phase, .idle)
+    }
+
+    func testHoverPreviewDismissesAfterExitGrace() {
+        var preview = IslandHoverPreviewStateMachine()
+        _ = preview.handle(.entered)
+        _ = preview.handle(.dwellElapsed)
+        _ = preview.handle(.left)
+        XCTAssertEqual(preview.handle(.exitElapsed), [.dismissPreview])
+        XCTAssertEqual(preview.phase, .idle)
+    }
+
+    func testHoverPreviewResetCancelsExitAndDismisses() {
+        var preview = IslandHoverPreviewStateMachine()
+        _ = preview.handle(.entered)
+        _ = preview.handle(.dwellElapsed)
+        _ = preview.handle(.left)
+        XCTAssertEqual(preview.handle(.reset), [.cancelExit, .dismissPreview])
+        XCTAssertEqual(preview.phase, .idle)
+    }
+
     func testSurfaceWillChangeCallbackRunsBeforeObservableMutation() {
         let coordinator = IslandActivityCoordinator()
         var callbackStates: [(IslandSurfaceState, IslandSurfaceState, IslandSurfaceState)] = []

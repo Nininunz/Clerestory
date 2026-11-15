@@ -82,6 +82,14 @@ enum IslandGeometryResolver {
 
         var cameraHousingWidth: CGFloat { cameraHousingFrame.width }
         var topInset: CGFloat { cameraHousingFrame.height }
+
+        /// CGRect.contains excludes maxY, while the pointer can report the
+        /// screen's exact top coordinate when pressed against the menu bar.
+        var compactPointerFrame: CGRect {
+            guard hasPhysicalNotch else { return compactFrame }
+            return CGRect(x: compactFrame.minX, y: compactFrame.minY,
+                          width: compactFrame.width, height: compactFrame.height + 1)
+        }
     }
 
     /// Keep the visual wings and their hit targets narrow: these overlays share

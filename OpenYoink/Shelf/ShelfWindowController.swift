@@ -115,6 +115,10 @@ final class ShelfWindowController: NSObject {
     private var islandGlobalMonitor: Any?
     private var islandLocalMonitor: Any?
     private var islandHoverTask: Task<Void, Never>?
+    private var islandHoverExitTask: Task<Void, Never>?
+    private var islandHoverPreview = IslandHoverPreviewStateMachine()
+    private var moduleBeforeIslandHoverPreview: IslandModuleID?
+    private var moduleToRestoreAfterHoverCollapse: IslandModuleID?
     private var islandLayoutTask: Task<Void, Never>?
     /// Floating Island idle dot / hidden mode (issue #11).
     private var isFloatingIslandRevealed = false
@@ -526,6 +530,11 @@ final class ShelfWindowController: NSObject {
         }
         islandActivityCoordinator.onSurfaceAnimationCompleted = { [weak self] in
             guard let self else { return }
+            if self.islandActivityCoordinator.surfaceState == .compact,
+               let module = self.moduleToRestoreAfterHoverCollapse {
+                self.moduleToRestoreAfterHoverCollapse = nil
+                self.islandActivityCoordinator.selectedModule = module
+            }
             self.logIslandPresentation("surface-animation-completed")
             self.scheduleIslandLayoutUpdate()
         }
@@ -613,6 +622,7 @@ final class ShelfWindowController: NSObject {
     deinit {
         quickActionLayoutTask?.cancel()
         islandHoverTask?.cancel()
+        islandHoverExitTask?.cancel()
         islandLayoutTask?.cancel()
         floatingConcealTask?.cancel()
         floatingShrinkTask?.cancel()
@@ -627,6 +637,7 @@ final class ShelfWindowController: NSObject {
         favoriteFolderDropCoordinator.cancelCopy()
         quickActionLayoutTask?.cancel()
         islandHoverTask?.cancel()
+        islandHoverExitTask?.cancel()
         islandLayoutTask?.cancel()
         floatingConcealTask?.cancel()
         floatingShrinkTask?.cancel()
@@ -1000,6 +1011,7 @@ final class ShelfWindowController: NSObject {
 
     func collapseIsland(animated: Bool = true) {
         guard settings.islandEnabled else { return }
+        resetIslandHoverPreview(restoreSelection: true)
         quickLookCoordinator.closeForShelfHide()
         logIslandPresentation("collapse-request")
         islandActivityCoordinator.collapse()
@@ -1483,7 +1495,7 @@ final class ShelfWindowController: NSObject {
     /// Where a click or hover counts as touching the collapsed Island.
     private func interactiveCompactFrame(for layout: IslandGeometryResolver.Layout) -> NSRect {
         switch islandActivityCoordinator.floatingPresentation {
-        case .capsule: return layout.compactFrame
+        case .capsule: return layout.compactPointerFrame
         case .dot: return layout.floatingDotFrame
         case .hidden: return .null
         }
@@ -1565,6 +1577,11 @@ final class ShelfWindowController: NSObject {
         from oldState: IslandSurfaceState,
         to newState: IslandSurfaceState
     ) {
+        if newState == .pinned {
+            performIslandHoverActions(islandHoverPreview.handle(.committed))
+        } else if oldState.isExpanded, !newState.isExpanded {
+            resetIslandHoverPreview(restoreSelection: true)
+        }
         islandLogger.notice("surface-transition \(String(describing: oldState), privacy: .public) -> \(String(describing: newState), privacy: .public) id=\(self.islandActivityCoordinator.surfaceTransitionID)")
         guard settings.islandEnabled,
               !oldState.isExpanded,
@@ -2004,7 +2021,11 @@ final class ShelfWindowController: NSObject {
             self.islandLocalMonitor = nil
         }
         islandHoverTask?.cancel()
+        islandHoverExitTask?.cancel()
         islandHoverTask = nil
+        islandHoverExitTask = nil
+        islandHoverPreview = IslandHoverPreviewStateMachine()
+        moduleBeforeIslandHoverPreview = nil
         islandActivityCoordinator.setPointerHovering(false)
     }
 
@@ -2015,11 +2036,14 @@ final class ShelfWindowController: NSObject {
             if !islandActivityCoordinator.surfaceState.isExpanded {
                 let layout = islandLayout(at: point)
                 guard interactiveCompactFrame(for: layout).contains(point) else { return }
-                // The right music wing owns a direct play/pause action. Let
-                // its SwiftUI button consume the click instead of expanding.
-                guard !isCompactMediaTransportHit(point, layout: layout) else { return }
+                performIslandHoverActions(islandHoverPreview.handle(.committed))
                 islandActivityCoordinator.currentLayout = layout
                 islandActivityCoordinator.show(module: effectiveIslandOpenModule)
+                return
+            }
+            if islandHoverPreview.phase == .preview || islandHoverPreview.phase == .leaving,
+               islandPanel.frame.contains(point) {
+                performIslandHoverActions(islandHoverPreview.handle(.committed))
                 return
             }
             guard islandActivityCoordinator.surfaceState == .expanded,
@@ -2039,28 +2063,91 @@ final class ShelfWindowController: NSObject {
                 !islandActivityCoordinator.surfaceState.isExpanded
                     && interactiveFrame.contains(point)
             )
-            guard settings.islandHoverRevealEnabled,
-                  islandActivityCoordinator.canRevealOnHover,
-                  !islandActivityCoordinator.surfaceState.isExpanded else {
-                islandHoverTask?.cancel()
-                islandHoverTask = nil
+            guard settings.islandHoverRevealEnabled else {
+                let wasPreview = islandHoverPreview.phase == .preview
+                    || islandHoverPreview.phase == .leaving
+                resetIslandHoverPreview(restoreSelection: true)
+                if wasPreview { collapseIsland(animated: true) }
                 return
             }
-            guard islandActivityCoordinator.floatingPresentation == .capsule,
-                  interactiveFrame.insetBy(dx: -4, dy: -4).contains(point) else {
-                islandHoverTask?.cancel()
-                islandHoverTask = nil
+            if islandHoverPreview.phase == .preview || islandHoverPreview.phase == .leaving {
+                let inside = islandPanel.frame.insetBy(dx: -8, dy: -8).contains(point)
+                performIslandHoverActions(islandHoverPreview.handle(inside ? .entered : .left))
                 return
             }
-            guard islandHoverTask == nil else { return }
-            islandHoverTask = Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .milliseconds(300))
-                guard let self, !Task.isCancelled else { return }
-                self.islandHoverTask = nil
-                self.islandActivityCoordinator.show(module: self.effectiveIslandOpenModule)
-            }
+            let canStart = islandActivityCoordinator.canRevealOnHover
+                && !islandActivityCoordinator.surfaceState.isExpanded
+                && islandActivityCoordinator.floatingPresentation == .capsule
+                && interactiveFrame.contains(point)
+            performIslandHoverActions(islandHoverPreview.handle(canStart ? .entered : .left))
         default:
             break
+        }
+    }
+
+    private func resetIslandHoverPreview(restoreSelection: Bool) {
+        let actions = islandHoverPreview.handle(.reset)
+        islandHoverTask?.cancel()
+        islandHoverExitTask?.cancel()
+        islandHoverTask = nil
+        islandHoverExitTask = nil
+        if restoreSelection, actions.contains(.dismissPreview),
+           let module = moduleBeforeIslandHoverPreview {
+            moduleToRestoreAfterHoverCollapse = module
+        }
+        moduleBeforeIslandHoverPreview = nil
+    }
+
+    private func performIslandHoverActions(_ actions: [IslandHoverPreviewStateMachine.Action]) {
+        for action in actions {
+            switch action {
+            case .scheduleDwell:
+                islandHoverTask?.cancel()
+                islandHoverTask = Task { @MainActor [weak self] in
+                    try? await Task.sleep(for: .milliseconds(350))
+                    guard let self, !Task.isCancelled else { return }
+                    self.islandHoverTask = nil
+                    let layout = self.islandLayout()
+                    let inside = self.settings.islandHoverRevealEnabled
+                        && self.islandActivityCoordinator.canRevealOnHover
+                        && !self.islandActivityCoordinator.surfaceState.isExpanded
+                        && self.islandActivityCoordinator.floatingPresentation == .capsule
+                        && self.interactiveCompactFrame(for: layout).contains(NSEvent.mouseLocation)
+                    self.performIslandHoverActions(
+                        self.islandHoverPreview.handle(inside ? .dwellElapsed : .left)
+                    )
+                }
+            case .cancelDwell:
+                islandHoverTask?.cancel()
+                islandHoverTask = nil
+            case .showPreview:
+                moduleBeforeIslandHoverPreview = islandActivityCoordinator.selectedModule
+                islandActivityCoordinator.show(module: effectiveIslandOpenModule)
+            case .scheduleExit:
+                islandHoverExitTask?.cancel()
+                islandHoverExitTask = Task { @MainActor [weak self] in
+                    try? await Task.sleep(for: .milliseconds(500))
+                    guard let self, !Task.isCancelled else { return }
+                    self.islandHoverExitTask = nil
+                    let stillOutside = !self.islandPanel.frame
+                        .insetBy(dx: -8, dy: -8).contains(NSEvent.mouseLocation)
+                    self.performIslandHoverActions(
+                        self.islandHoverPreview.handle(stillOutside ? .exitElapsed : .entered)
+                    )
+                }
+            case .cancelExit:
+                islandHoverExitTask?.cancel()
+                islandHoverExitTask = nil
+            case .dismissPreview:
+                if let module = moduleBeforeIslandHoverPreview {
+                    moduleToRestoreAfterHoverCollapse = module
+                }
+                moduleBeforeIslandHoverPreview = nil
+                collapseIsland(animated: true)
+            case .commitPreview:
+                moduleBeforeIslandHoverPreview = nil
+                moduleToRestoreAfterHoverCollapse = nil
+            }
         }
     }
 

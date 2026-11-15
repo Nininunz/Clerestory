@@ -339,8 +339,10 @@ private struct TriggerSettingsTab: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Island Reveal") {
-                Toggle("Expand Island on hover", isOn: $settings.islandHoverRevealEnabled)
+                Toggle("Preview Island on hover", isOn: $settings.islandHoverRevealEnabled)
                     .disabled(!settings.islandEnabled)
+                Text("The preview closes when you move away. Click it to keep it open.")
+                    .font(.caption).foregroundStyle(.secondary)
                 Toggle("Expand Island when dragging files near the top", isOn: $settings.islandDragApproachEnabled)
                     .disabled(!settings.islandEnabled)
                     .accessibilityIdentifier("settings.islandDragApproach")

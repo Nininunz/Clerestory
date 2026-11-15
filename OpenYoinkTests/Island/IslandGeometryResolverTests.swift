@@ -23,6 +23,10 @@ final class IslandGeometryResolverTests: XCTestCase {
                        "The compact hit area must end with the visible notch surface")
         XCTAssertEqual(layout.compactFrame.midX, screen.frame.midX)
         XCTAssertEqual(layout.compactFrame.maxY, screen.frame.maxY)
+        XCTAssertTrue(layout.compactPointerFrame.contains(
+            CGPoint(x: layout.compactFrame.minX + 20, y: screen.frame.maxY)))
+        XCTAssertFalse(layout.compactPointerFrame.contains(
+            CGPoint(x: layout.compactFrame.minX + 20, y: layout.compactFrame.minY - 1)))
         XCTAssertEqual(layout.expandedFrame.maxY, screen.frame.maxY)
     }
 

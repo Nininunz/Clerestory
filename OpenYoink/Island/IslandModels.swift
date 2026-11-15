@@ -70,6 +70,58 @@ enum IslandCompactDisplay: Equatable {
     }
 }
 
+/// Hover expansion is temporary until the user clicks or pins the Island.
+struct IslandHoverPreviewStateMachine {
+    enum Phase: Equatable { case idle, dwelling, preview, leaving }
+    enum Event { case entered, left, dwellElapsed, exitElapsed, committed, reset }
+    enum Action: Equatable {
+        case scheduleDwell, cancelDwell, showPreview
+        case scheduleExit, cancelExit, dismissPreview, commitPreview
+    }
+
+    private(set) var phase: Phase = .idle
+
+    mutating func handle(_ event: Event) -> [Action] {
+        switch (phase, event) {
+        case (.idle, .entered):
+            phase = .dwelling
+            return [.scheduleDwell]
+        case (.dwelling, .left), (.dwelling, .reset):
+            phase = .idle
+            return [.cancelDwell]
+        case (.dwelling, .dwellElapsed):
+            phase = .preview
+            return [.showPreview]
+        case (.preview, .left):
+            phase = .leaving
+            return [.scheduleExit]
+        case (.leaving, .entered):
+            phase = .preview
+            return [.cancelExit]
+        case (.leaving, .exitElapsed):
+            phase = .idle
+            return [.dismissPreview]
+        case (.preview, .committed):
+            phase = .idle
+            return [.commitPreview]
+        case (.leaving, .committed):
+            phase = .idle
+            return [.cancelExit, .commitPreview]
+        case (.preview, .reset):
+            phase = .idle
+            return [.dismissPreview]
+        case (.leaving, .reset):
+            phase = .idle
+            return [.cancelExit, .dismissPreview]
+        case (.dwelling, .committed):
+            phase = .idle
+            return [.cancelDwell]
+        default:
+            return []
+        }
+    }
+}
+
 /// Shared timing keeps the SwiftUI silhouette transition and the AppKit panel
 /// resize in one rhythm. On collapse the visible surface finishes tucking into
 /// the notch before the now-transparent window footprint is reduced.
