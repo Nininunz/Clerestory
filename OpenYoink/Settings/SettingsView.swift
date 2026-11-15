@@ -69,12 +69,16 @@ struct SettingsView: View {
                                 if navigation.selectedPane == pane {
                                     RoundedRectangle(cornerRadius: 6)
                                         .fill(Color.accentColor.opacity(0.18))
+                                } else if focusedPane == pane {
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(Color.primary.opacity(0.06))
                                 }
                             }
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .focusable()
+                    .focusEffectDisabled()
                     .focused($focusedPane, equals: pane)
                     .accessibilityAddTraits(navigation.selectedPane == pane ? .isSelected : [])
                     .accessibilityIdentifier("settings.pane.\(pane.rawValue)")
