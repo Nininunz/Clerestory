@@ -98,6 +98,7 @@ final class WorkflowUpgradeTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = SettingsStore(defaults: defaults)
         settings.setIslandModuleEnabled(true, id: "future.module")
+        settings.setIslandModulePinned(true, id: "future.module")
         settings.clipboardHistoryEnabled = false
         settings.clipboardHistoryPaused = true
         for preset in WorkflowPreset.allCases {
@@ -110,6 +111,9 @@ final class WorkflowUpgradeTests: XCTestCase {
         }
         XCTAssertTrue(settings.isIslandModuleEnabled(.folders))
         XCTAssertTrue(settings.isIslandModulePinned(.clipboard))
+        XCTAssertTrue(settings.isIslandModulePinned("future.module"))
+        XCTAssertTrue(settings.isIslandModulePinned(.system))
+        XCTAssertEqual(settings.islandModuleConfiguration.pinnedModuleIDs.count, 6)
         settings.clipboardHistoryShortcut = nil
         XCTAssertNil(SettingsStore(defaults: defaults).clipboardHistoryShortcut)
     }

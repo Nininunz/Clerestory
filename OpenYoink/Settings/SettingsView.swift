@@ -8,6 +8,21 @@ import UniformTypeIdentifiers
 @Observable
 final class SettingsNavigationModel {
     var selectedPane: SettingsPane = .general
+    var moduleSettingsDestination: ModuleSettingsDestination?
+
+    func open(_ pane: SettingsPane) {
+        switch pane {
+        case .shelf:
+            selectedPane = .modules
+            moduleSettingsDestination = .shelf
+        case .clipboard:
+            selectedPane = .modules
+            moduleSettingsDestination = .clipboard
+        default:
+            selectedPane = SettingsPane.visibleCases.contains(pane) ? pane : .general
+            moduleSettingsDestination = nil
+        }
+    }
 
     /// Tab focus can move independently of selection in the button sidebar.
     /// Arrow navigation continues from that focused button, not the old pane.
@@ -18,7 +33,7 @@ final class SettingsNavigationModel {
         let next = current + (forward ? 1 : -1)
         guard SettingsPane.visibleCases.indices.contains(next) else { return nil }
         let pane = SettingsPane.visibleCases[next]
-        selectedPane = pane
+        open(pane)
         return pane
     }
 }
@@ -59,7 +74,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(SettingsPane.visibleCases) { pane in
                     Button {
-                        navigation.selectedPane = pane
+                        navigation.open(pane)
                     } label: {
                         Label(pane.title, systemImage: pane.systemImage)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -155,9 +170,9 @@ enum SettingsPane: String, CaseIterable, Identifiable {
 
     static var visibleCases: [SettingsPane] {
         #if DEBUG
-        allCases.filter { SideShelfAvailability.isEnabled || $0 != .appearance }
+        allCases.filter { $0 != .shelf && $0 != .clipboard && (SideShelfAvailability.isEnabled || $0 != .appearance) }
         #else
-        allCases.filter { (SideShelfAvailability.isEnabled || $0 != .appearance) && $0 != .debug }
+        allCases.filter { $0 != .shelf && $0 != .clipboard && (SideShelfAvailability.isEnabled || $0 != .appearance) && $0 != .debug }
         #endif
     }
 
@@ -437,7 +452,7 @@ private struct TriggerSettingsTab: View {
                             .disabled(settings.compactCycleShortcut == .compactCycle)
                     }
                 }
-                Text("Cycle enabled compact modules: Shelf, Transfers, Timer, Battery, Now Playing, and AI Usage. Hold Shift with the shortcut to cycle backward (release Shift if it is already part of your shortcut). Your choice is remembered independently of the expanded page. Clear the shortcut to disable both directions.")
+                Text("Choose compact modules and their cycling order in the Quick Settings page’s Compact view. Hold Shift with the shortcut to cycle backward (release Shift if it is already part of your shortcut). Your choice is remembered independently of the expanded page. Clear the shortcut to disable both directions.")
                     .font(.caption).foregroundStyle(.secondary)
                 if let error = settings.compactCycleShortcutError {
                     Label(error, systemImage: "exclamationmark.triangle.fill")

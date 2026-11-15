@@ -3,6 +3,72 @@ import XCTest
 
 @MainActor
 final class IslandActivityCoordinatorTests: XCTestCase {
+    func testContentSizedExtensionIsOptInAndIndependentPerModule() {
+        let coordinator = IslandActivityCoordinator()
+        let first = IslandModuleDescriptor(id: .quickSettings, title: "First", systemImage: "gear",
+            order: 0, isCore: true, supportsExtendedHeight: true)
+        let second = IslandModuleDescriptor(id: .timer, title: "Second", systemImage: "timer",
+            order: 1, isCore: false, supportsExtendedHeight: true)
+        let unsupported = IslandModuleDescriptor(id: .battery, title: "Battery", systemImage: "battery",
+            order: 2, isCore: false)
+        coordinator.recordModuleContentHeight(482.2, descriptor: first)
+        coordinator.recordModuleContentHeight(610, descriptor: second)
+        coordinator.setModuleExtended(true, descriptor: first)
+        XCTAssertEqual(coordinator.preferredExpandedHeight(for: first), 483)
+        XCTAssertEqual(coordinator.preferredExpandedHeight(for: second), 330)
+        coordinator.selectedModule = .timer
+        coordinator.setModuleExtended(true, descriptor: second)
+        coordinator.setModuleExtended(false, descriptor: first)
+        XCTAssertEqual(coordinator.preferredExpandedHeight(for: first), 330)
+        XCTAssertEqual(coordinator.preferredExpandedHeight(for: second), 610)
+        coordinator.recordModuleContentHeight(410, descriptor: second)
+        XCTAssertEqual(coordinator.preferredExpandedHeight(for: second), 410)
+        coordinator.recordModuleContentHeight(100, descriptor: second)
+        XCTAssertEqual(coordinator.preferredExpandedHeight(for: second), 330)
+        coordinator.setModuleExtended(true, descriptor: unsupported)
+        XCTAssertFalse(coordinator.isModuleExtended(unsupported))
+        XCTAssertEqual(coordinator.preferredExpandedHeight(for: unsupported), 330)
+        XCTAssertTrue(coordinator.isModuleExtended(second))
+    }
+
+    func testOpenMenuSuspendsHoverExitAndRestartsGraceAfterClosing() {
+        var preview = IslandHoverPreviewStateMachine()
+        _ = preview.handle(.entered)
+        _ = preview.handle(.dwellElapsed)
+        XCTAssertEqual(preview.handle(.left), [.scheduleExit])
+        XCTAssertEqual(preview.handle(.menuOpened), [.cancelExit])
+        XCTAssertEqual(preview.handle(.left), [])
+        XCTAssertEqual(preview.handle(.exitElapsed), [])
+        XCTAssertEqual(preview.phase, .preview)
+        XCTAssertEqual(preview.handle(.menuClosed(pointerInside: false)), [.scheduleExit])
+        XCTAssertEqual(preview.handle(.exitElapsed), [.dismissPreview])
+    }
+
+    func testClosingMenuInsideKeepsPreviewAndResetClearsSuspension() {
+        var preview = IslandHoverPreviewStateMachine()
+        _ = preview.handle(.entered)
+        _ = preview.handle(.dwellElapsed)
+        _ = preview.handle(.menuOpened)
+        XCTAssertEqual(preview.handle(.menuClosed(pointerInside: true)), [])
+        XCTAssertEqual(preview.phase, .preview)
+        _ = preview.handle(.menuOpened)
+        _ = preview.handle(.reset)
+        XCTAssertFalse(preview.isMenuOpen)
+        XCTAssertEqual(preview.phase, .idle)
+    }
+
+    func testSwipeFollowsMovedShortcutsPosition() {
+        let slots: [IslandModuleID] = [.timer, .shelf, .quickSettings, .battery]
+        XCTAssertEqual(IslandShortcutSwipe.target(current: .shelf, step: 1, pinned: slots,
+                                                  enabled: { _ in true }), .quickSettings)
+        XCTAssertEqual(IslandShortcutSwipe.target(current: .quickSettings, step: 1, pinned: slots,
+                                                  enabled: { _ in true }), .battery)
+        XCTAssertEqual(IslandShortcutSwipe.target(current: .quickSettings, step: -1, pinned: slots,
+                                                  enabled: { _ in true }), .shelf)
+        XCTAssertNil(IslandShortcutSwipe.target(current: .battery, step: 1, pinned: slots,
+                                                enabled: { _ in true }))
+    }
+
     func testSwipeCompletionCommitsOnceAndCancellationReturns() {
         let coordinator = IslandActivityCoordinator()
         coordinator.show(module: .shelf)

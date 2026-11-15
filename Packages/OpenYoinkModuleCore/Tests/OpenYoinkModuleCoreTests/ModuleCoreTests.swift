@@ -16,6 +16,105 @@ struct ModuleCoreTests {
         #expect(configuration.pinnedModuleIDs == Array(ids.prefix(7)))
     }
 
+    @Test("Pin controls follow shortcut capacity and always allow unpinning")
+    func pinControlCapacity() {
+        let capacity = IslandModuleConfiguration.maximumPinnedModules
+        #expect(capacity == IslandModuleConfiguration.shortcutSlotsPerSide * 2 - 1)
+        let ids = (0...capacity).map { IslandModuleID(rawValue: "module.\($0)") }
+        var configuration = IslandModuleConfiguration(enabledModuleIDs: ids, pinnedModuleIDs: [])
+        for id in ids.prefix(capacity) {
+            #expect(configuration.canTogglePin(for: id))
+            configuration.setPinned(true, for: id)
+        }
+        #expect(configuration.pinnedModuleIDs.count == capacity)
+        #expect(!configuration.canTogglePin(for: ids[capacity]))
+        #expect(configuration.canTogglePin(for: ids[0]))
+        configuration.setPinned(false, for: ids[0])
+        #expect(configuration.canTogglePin(for: ids[capacity]))
+        configuration.setEnabled(false, for: ids[capacity])
+        #expect(!configuration.canTogglePin(for: ids[capacity]))
+    }
+
+    @Test("Shortcut position changes preserve module enablement")
+    func shortcutReordering() {
+        let ids: [IslandModuleID] = ["shelf", "timer", "battery"]
+        var configuration = IslandModuleConfiguration(enabledModuleIDs: ids, pinnedModuleIDs: ids)
+        configuration.movePinned(fromOffsets: IndexSet(integer: 0), toOffset: 2)
+        #expect(configuration.pinnedModuleIDs == [ids[1], ids[0], ids[2]])
+        configuration.movePinned(fromOffsets: IndexSet(integer: 1), toOffset: 0)
+        #expect(configuration.pinnedModuleIDs == ids)
+        configuration.setPinned(false, for: ids[1])
+        #expect(configuration.enabledModuleIDs == ids)
+        #expect(configuration.pinnedModuleIDs == [ids[0], ids[2]])
+    }
+
+    @Test("Fixed positions preserve gaps and swap existing shortcuts")
+    func fixedPositions() throws {
+        let ids: [IslandModuleID] = ["shelf", "timer", "battery"]
+        var configuration = IslandModuleConfiguration(enabledModuleIDs: ids, pinnedModuleIDs: ids)
+        configuration.assignShortcut(nil, at: 1)
+        #expect(configuration.shortcutPositions[1] == nil)
+        #expect(configuration.shortcutPositions[2] == ids[2])
+        configuration.assignShortcut(ids[0], at: 2)
+        #expect(configuration.shortcutPositions[0] == ids[2])
+        #expect(configuration.shortcutPositions[2] == ids[0])
+        configuration.assignShortcut(ids[1], at: 6)
+        let restored = try JSONDecoder().decode(IslandModuleConfiguration.self,
+            from: JSONEncoder().encode(configuration))
+        #expect(restored.shortcutPositions == configuration.shortcutPositions)
+        #expect(restored.pinnedModuleIDs == [ids[2], ids[0], ids[1]])
+        configuration.setEnabled(false, for: ids[0])
+        #expect(configuration.shortcutPositions[2] == nil)
+        #expect(configuration.shortcutPositions[6] == ids[1])
+        configuration.assignShortcut("disabled", at: 0)
+        #expect(configuration.shortcutPositions[0] == ids[2])
+        configuration.setPinned(true, for: ids[0])
+        #expect(configuration.shortcutPositions[1] == ids[0])
+    }
+
+    @Test("Legacy packed configurations populate positions without losing pins")
+    func legacyPositions() throws {
+        let original = IslandModuleConfiguration(enabledModuleIDs: ["shelf", "timer"],
+                                                 pinnedModuleIDs: ["timer", "shelf"])
+        let data = try JSONEncoder().encode(original)
+        let json = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        #expect(json["pinnedPositions"] == nil)
+        let restored = try JSONDecoder().decode(IslandModuleConfiguration.self, from: data)
+        #expect(restored.shortcutPositions.count == IslandModuleConfiguration.shortcutPositionCount)
+        #expect(restored.shortcutPositions.prefix(3) == ["timer", "shelf", nil])
+    }
+
+    @Test("Required shortcut swaps into every slot and cannot be removed")
+    func requiredShortcutPositions() throws {
+        let required = IslandModuleConfiguration.requiredShortcut
+        let ids = (0..<7).map { IslandModuleID(rawValue: "module.\($0)") }
+        for target in 0..<IslandModuleConfiguration.shortcutPositionCount {
+            var config = IslandModuleConfiguration(enabledModuleIDs: ids, pinnedModuleIDs: ids)
+            config.assignShortcut(required, at: target)
+            #expect(config.shortcutPositions[target] == required)
+            #expect(config.shortcutPositions.filter { $0 == required }.count == 1)
+            #expect(Set(config.pinnedModuleIDs) == Set(ids))
+            config.assignShortcut(nil, at: target)
+            config.setEnabled(false, for: required)
+            config.setPinned(false, for: required)
+            #expect(config.shortcutPositions[target] == required)
+            #expect(config.isEnabled(required))
+            let restored = try JSONDecoder().decode(IslandModuleConfiguration.self,
+                from: JSONEncoder().encode(config))
+            #expect(restored.shortcutPositions == config.shortcutPositions)
+        }
+        var sparse = IslandModuleConfiguration(enabledModuleIDs: ids, pinnedModuleIDs: [])
+        sparse.assignShortcut(required, at: 0)
+        #expect(sparse.shortcutPositions[0] == required)
+        #expect(sparse.shortcutPositions[7] == nil)
+        sparse.assignShortcut(ids[0], at: 0)
+        #expect(sparse.shortcutPositions[0] == required)
+        sparse.assignShortcut(ids[0], at: 5)
+        sparse.assignShortcut(ids[0], at: 0)
+        #expect(sparse.shortcutPositions[5] == required)
+        #expect(sparse.shortcutPositions[0] == ids[0])
+    }
+
     @Test("Disabling a module also unpins it")
     func disablingUnpins() {
         let id: IslandModuleID = "timer"

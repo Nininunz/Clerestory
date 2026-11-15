@@ -166,6 +166,40 @@ final class SettingsStore {
         }
     }
 
+    var compactModuleOrder: [IslandModuleID] = IslandCompactDisplay.cycleOrder {
+        didSet {
+            let normalized = compactModuleOrder.reduce(into: [IslandModuleID]()) { result, id in
+                if IslandCompactDisplay.cycleOrder.contains(id), !result.contains(id) { result.append(id) }
+            }
+            if normalized != compactModuleOrder { compactModuleOrder = normalized }
+            defaults.set(normalized.map(\.rawValue), forKey: Keys.compactModuleOrder)
+        }
+    }
+
+    var effectiveCompactModuleOrder: [IslandModuleID] {
+        compactModuleOrder.filter { isIslandModuleEnabled($0) }
+    }
+
+    var compactDisplay: IslandCompactDisplay {
+        IslandCompactDisplay.selected(compactModuleID, enabled: effectiveCompactModuleOrder,
+                                      order: effectiveCompactModuleOrder)
+    }
+
+    func setCompactModuleIncluded(_ included: Bool, id: IslandModuleID) {
+        if included {
+            if !compactModuleOrder.contains(id) { compactModuleOrder.append(id) }
+        } else {
+            compactModuleOrder.removeAll { $0 == id }
+        }
+    }
+
+    func moveCompactModule(_ id: IslandModuleID, to target: IslandModuleID) {
+        guard let source = compactModuleOrder.firstIndex(of: id),
+              let destination = compactModuleOrder.firstIndex(of: target), source != destination else { return }
+        compactModuleOrder.remove(at: source)
+        compactModuleOrder.insert(id, at: destination)
+    }
+
     var compactModuleID: IslandModuleID = .shelf {
         didSet { defaults.set(compactModuleID.rawValue, forKey: Keys.compactModuleID) }
     }
@@ -194,7 +228,7 @@ final class SettingsStore {
 
     func cycleCompactModule(backwards: Bool = false) {
         if let next = IslandCompactDisplay.next(after: compactModuleID,
-                enabled: islandModuleConfiguration.enabledModuleIDs, backwards: backwards) {
+                enabled: effectiveCompactModuleOrder, backwards: backwards, order: effectiveCompactModuleOrder) {
             compactCycleBackwards = backwards
             compactModuleID = next
         }
@@ -438,6 +472,24 @@ final class SettingsStore {
         islandModuleConfiguration = configuration
     }
 
+    func assignIslandShortcut(_ id: IslandModuleID?, at index: Int) {
+        var configuration = islandModuleConfiguration
+        configuration.assignShortcut(id, at: index)
+        islandModuleConfiguration = configuration
+    }
+
+    func restoreDefaultIslandShortcuts() {
+        islandModuleConfiguration = Self.defaultIslandShortcuts(
+            enabled: islandModuleConfiguration.enabledModuleIDs)
+    }
+
+    private static func defaultIslandShortcuts(enabled: [IslandModuleID]) -> IslandModuleConfiguration {
+        var configuration = IslandModuleConfiguration(enabledModuleIDs: enabled, pinnedModuleIDs: [])
+        configuration.assignShortcut(.shelf, at: IslandModuleConfiguration.shortcutSlotsPerSide - 1)
+        configuration.assignShortcut(.quickSettings, at: IslandModuleConfiguration.shortcutSlotsPerSide)
+        return configuration
+    }
+
     func movePinnedIslandModules(fromOffsets: IndexSet, toOffset: Int) {
         var configuration = islandModuleConfiguration
         configuration.movePinned(fromOffsets: fromOffsets, toOffset: toOffset)
@@ -664,6 +716,7 @@ final class SettingsStore {
         static let clipboardHistoryPaused = prefix + "clipboardHistoryPaused"
         static let clipboardHistoryRetentionDays = prefix + "clipboardHistoryRetentionDays"
         static let clipboardHistoryEntryLimit = prefix + "clipboardHistoryEntryLimit"
+        static let compactModuleOrder = prefix + "compactModuleOrder"
         static let compactModuleID = prefix + "compactModuleID"
         static let compactCycleShortcut = prefix + "compactCycleShortcut"
         static let clipboardHistoryShortcut = prefix + "clipboardHistoryShortcut"
@@ -817,6 +870,11 @@ final class SettingsStore {
             clipboardHistoryShortcut = (try? JSONDecoder().decode(HotKeyShortcut?.self, from: data)) ?? nil
         } else {
             clipboardHistoryShortcut = HotKeyShortcut(keyCode: 9, command: true, shift: true, option: false, control: false)
+        }
+        if let savedOrder = defaults.stringArray(forKey: Keys.compactModuleOrder) {
+            compactModuleOrder = savedOrder.map(IslandModuleID.init(rawValue:)).reduce(into: []) { result, id in
+                if IslandCompactDisplay.cycleOrder.contains(id), !result.contains(id) { result.append(id) }
+            }
         }
         compactModuleID = defaults.string(forKey: Keys.compactModuleID).map(IslandModuleID.init(rawValue:)) ?? .shelf
         if let data = defaults.data(forKey: Keys.compactCycleShortcut) {
@@ -1030,10 +1088,7 @@ final class SettingsStore {
         mediaEnabled: Bool
     ) -> IslandModuleConfiguration {
         if !existingInstallation {
-            return IslandModuleConfiguration(
-                enabledModuleIDs: [.shelf, .transfers, .timer, .battery, .system],
-                pinnedModuleIDs: [.shelf, .timer, .system]
-            )
+            return defaultIslandShortcuts(enabled: [.shelf, .transfers, .timer, .battery, .system])
         }
 
         var enabled: [IslandModuleID] = []

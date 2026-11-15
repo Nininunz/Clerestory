@@ -42,6 +42,6 @@ extension SettingsStore {
         let unknownEnabled = islandModuleConfiguration.enabledModuleIDs.filter { !builtIns.contains($0) }
         let unknownPinned = islandModuleConfiguration.pinnedModuleIDs.filter { !builtIns.contains($0) }
         islandModuleConfiguration = IslandModuleConfiguration(enabledModuleIDs: enabled + unknownEnabled,
-                                                               pinnedModuleIDs: Array((unknownPinned + pinned).prefix(5)))
+                                                               pinnedModuleIDs: unknownPinned + pinned)
     }
 }

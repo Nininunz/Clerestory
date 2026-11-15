@@ -3,6 +3,37 @@ import XCTest
 
 @MainActor
 final class IslandCompactSelectionTests: XCTestCase {
+    func testCustomCompactOrderPersistsAndRemainsIndependentOfExpandedSlots() throws {
+        let suite = "OpenYoink.CompactOrder.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = SettingsStore(defaults: defaults)
+        for id in IslandCompactDisplay.cycleOrder { settings.setIslandModuleEnabled(true, id: id) }
+        let expanded = settings.islandModuleConfiguration.shortcutPositions
+        settings.compactModuleOrder = [.battery, .timer, .shelf]
+        settings.compactModuleID = .battery
+        settings.cycleCompactModule()
+        XCTAssertEqual(settings.compactModuleID, .timer)
+        settings.cycleCompactModule(backwards: true)
+        XCTAssertEqual(settings.compactModuleID, .battery)
+        settings.setCompactModuleIncluded(false, id: .battery)
+        XCTAssertEqual(settings.compactDisplay, .timer)
+        settings.moveCompactModule(.shelf, to: .timer)
+        XCTAssertEqual(settings.compactModuleOrder, [.shelf, .timer])
+        XCTAssertEqual(settings.compactDisplay, .shelf)
+        XCTAssertEqual(settings.islandModuleConfiguration.shortcutPositions, expanded)
+        settings.setIslandModuleEnabled(false, id: .shelf)
+        XCTAssertEqual(settings.effectiveCompactModuleOrder, [.timer])
+        settings.setIslandModuleEnabled(true, id: .shelf)
+        XCTAssertEqual(SettingsStore(defaults: defaults).compactModuleOrder, [.shelf, .timer])
+        // Compact edits never changed the previously configured expanded positions.
+        settings.restoreDefaultIslandShortcuts()
+        XCTAssertEqual(settings.islandModuleConfiguration.shortcutPositions, expanded)
+        settings.compactModuleOrder = []
+        XCTAssertEqual(settings.compactDisplay, .fallback)
+        XCTAssertTrue(SettingsStore(defaults: defaults).compactModuleOrder.isEmpty)
+    }
+
     func testCycleSkipsDisabledAndUnsupportedModulesAndWraps() {
         let enabled: [IslandModuleID] = [.shelf, .timer, .media, .folders, .system, .clipboard, .quickSettings]
         XCTAssertEqual(IslandCompactDisplay.next(after: .shelf, enabled: enabled), .timer)

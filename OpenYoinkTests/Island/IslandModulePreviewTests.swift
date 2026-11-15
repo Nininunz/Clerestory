@@ -155,7 +155,7 @@ final class IslandModulePreviewTests: XCTestCase {
                 settings.setIslandModuleEnabled(state == "All modules enabled", id: descriptor.id)
             }
             registry.apply(settings: settings)
-            views.append(entry(state, IslandModuleLibraryView(onOpenModule: { _ in }, onOpenSettings: {}).environment(settings).environment(registry)))
+            views.append(entry(state, IslandModuleLibraryView(onOpenSettings: {}).environment(settings).environment(registry).environment(IslandActivityCoordinator())))
         }
         try await export("quick-settings", "Quick Settings", views)
     }

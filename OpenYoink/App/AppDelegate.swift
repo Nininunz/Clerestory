@@ -116,6 +116,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                                                    onOpenSettings: { [weak self] in
                                                                        self?.settingsWindowController.show(pane: .general)
                                                                    },
+                                                                   onOpenModuleSettings: { [weak self] in
+                                                                       self?.settingsWindowController.show(pane: .modules)
+                                                                   },
                                                                    onOpenStorageRecovery: { [weak self] in
                                                                        self?.settingsWindowController.show(pane: .storage)
                                                                    },

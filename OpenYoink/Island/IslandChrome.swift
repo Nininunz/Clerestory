@@ -1,7 +1,48 @@
 import SwiftUI
 
+/// Supplied by the module host only when a module opts into content-sized extension.
+struct IslandModuleExtensionContext {
+    var isExtended: Binding<Bool>
+    var reportHeight: (CGFloat) -> Void
+}
+
+extension EnvironmentValues {
+    @Entry var islandModuleExtension: IslandModuleExtensionContext? = nil
+    @Entry var islandSurfaceHeight: CGFloat? = nil
+}
+
+struct IslandModuleExtendButton: View {
+    @Environment(\.islandModuleExtension) private var extensionContext
+
+    var body: some View {
+        if let context = extensionContext {
+            Button { context.isExtended.wrappedValue.toggle() } label: {
+                Image(systemName: context.isExtended.wrappedValue
+                      ? "arrow.up.right.and.arrow.down.left" : "arrow.down.left.and.arrow.up.right")
+            }
+            .buttonStyle(IslandHeaderButtonStyle())
+            .help(context.isExtended.wrappedValue ? "Use regular height" : "Extend to fit content")
+            .accessibilityLabel(Text(context.isExtended.wrappedValue ? "Use regular height" : "Extend module"))
+        }
+    }
+}
+
+struct IslandModuleExtendToggle: View {
+    @Environment(\.islandModuleExtension) private var extensionContext
+
+    var body: some View {
+        if let context = extensionContext {
+            Toggle("Extended Height", isOn: context.isExtended)
+                .toggleStyle(IslandClipboardToggleStyle())
+                .font(.system(size: 11, weight: .medium))
+        }
+    }
+}
+
 /// A bounded body viewport. Keep the module header outside this scroll view.
 struct IslandModuleScrollView<Content: View>: View {
+    @Environment(\.islandSurfaceHeight) private var surfaceHeight
+    @Environment(\.islandModuleExtension) private var extensionContext
     var fillsViewport = false
     @ViewBuilder var content: Content
     var body: some View {
@@ -9,6 +50,13 @@ struct IslandModuleScrollView<Content: View>: View {
             ScrollView(.vertical) {
                 content
                     .frame(maxWidth: .infinity, alignment: .top)
+                    .onGeometryChange(for: CGFloat.self) { geometry in
+                        // Measure before fillsViewport adds artificial empty space.
+                        ceil(geometry.size.height + 2
+                             + (surfaceHeight ?? 0) - viewport.size.height)
+                    } action: { height in
+                        if surfaceHeight != nil { extensionContext?.reportHeight(height) }
+                    }
                     // A short module can use the entire viewport while longer
                     // content still scrolls. Include the inset in that height
                     // so fitting content does not acquire a tiny scroll range.
@@ -16,7 +64,7 @@ struct IslandModuleScrollView<Content: View>: View {
                            alignment: .top)
                     .padding(.vertical, 1)
             }
-            .scrollIndicators(.automatic)
+            .scrollIndicators(.hidden)
             .scrollBounceBehavior(.basedOnSize)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -48,10 +96,11 @@ enum IslandVisualStyle {
 /// Feedback changes appearance without moving content or changing hit targets.
 struct IslandPressFeedbackStyle: ButtonStyle {
     var reduceMotion = false
+    var cornerRadius: CGFloat = 6
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .modifier(IslandControlFeedback(isPressed: configuration.isPressed, reduceMotion: reduceMotion))
+            .modifier(IslandControlFeedback(isPressed: configuration.isPressed, cornerRadius: cornerRadius, reduceMotion: reduceMotion))
     }
 }
 
@@ -127,13 +176,16 @@ struct IslandModuleHeader<Actions: View>: View {
     let subtitle: String?
     let systemImage: String
     private let actions: Actions
+    private let showsExtendButton: Bool
 
     init(title: LocalizedStringKey, subtitle: String?, systemImage: String,
+         showsExtendButton: Bool = true,
          @ViewBuilder actions: () -> Actions) {
         self.title = title
         self.subtitle = subtitle
         self.systemImage = systemImage
         self.actions = actions()
+        self.showsExtendButton = showsExtendButton
     }
 
     var body: some View {
@@ -157,7 +209,10 @@ struct IslandModuleHeader<Actions: View>: View {
                 }
             }
             Spacer(minLength: 8)
-            HStack(spacing: 8) { actions }
+            HStack(spacing: 8) {
+                actions
+                if showsExtendButton { IslandModuleExtendButton() }
+            }
                 .fixedSize()
         }
         .frame(height: IslandModuleLayout.headerHeight)
@@ -273,6 +328,7 @@ struct IslandModuleNotice: View {
 /// SwiftUI leaves the Toggle's semantics and binding intact while making the
 /// enabled/disabled distinction explicit.
 struct IslandClipboardToggleStyle: ToggleStyle {
+    var showsLabel = true
     @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
@@ -280,7 +336,7 @@ struct IslandClipboardToggleStyle: ToggleStyle {
             configuration.isOn.toggle()
         } label: {
             HStack(spacing: 8) {
-                configuration.label
+                if showsLabel { configuration.label }
                 Capsule(style: .continuous)
                     .fill(configuration.isOn
                           ? Color.accentColor

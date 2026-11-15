@@ -3,6 +3,24 @@ import XCTest
 @testable import OpenYoink
 
 final class IslandGeometryResolverTests: XCTestCase {
+    func testExtendedHeightKeepsTopAnchorAndRespectsScreenCap() {
+        for height: CGFloat in [600, 982] {
+            let screen = IslandGeometryResolver.ScreenGeometry(
+                frame: CGRect(x: 0, y: 0, width: 1512, height: height),
+                visibleFrame: CGRect(x: 0, y: 0, width: 1512, height: height - 38),
+                safeAreaTop: 38,
+                auxiliaryTopLeftArea: CGRect(x: 0, y: height - 38, width: 645, height: 38),
+                auxiliaryTopRightArea: CGRect(x: 867, y: height - 38, width: 645, height: 38))
+            let regular = IslandGeometryResolver.resolve(screen: screen)
+            let extended = IslandGeometryResolver.resolve(screen: screen, preferredExpandedHeight: 550)
+            XCTAssertEqual(extended.expandedFrame.maxY, regular.expandedFrame.maxY)
+            XCTAssertEqual(extended.expandedFrame.width, regular.expandedFrame.width)
+            XCTAssertEqual(extended.compactFrame, regular.compactFrame)
+            XCTAssertGreaterThan(extended.expandedFrame.height, regular.expandedFrame.height)
+            XCTAssertLessThanOrEqual(extended.expandedFrame.height, (height - 38) * 0.6 + 1)
+        }
+    }
+
     func testPhysicalNotchUsesAuxiliaryGapAndWings() {
         let screen = IslandGeometryResolver.ScreenGeometry(
             frame: CGRect(x: 0, y: 0, width: 1512, height: 982),

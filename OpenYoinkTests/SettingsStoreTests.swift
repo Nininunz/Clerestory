@@ -15,6 +15,23 @@ final class SettingsStoreTests: XCTestCase {
 
     // MARK: - General settings persistence
 
+    func testRestoreShortcutDefaultsPreservesEnabledModulesAndPersistsPositions() throws {
+        let suite = "OpenYoink.ShortcutDefaults.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = SettingsStore(defaults: defaults)
+        store.setIslandModuleEnabled(false, id: .timer)
+        store.setIslandModuleEnabled(true, id: .aiUsage)
+        store.assignIslandShortcut(.quickSettings, at: 0)
+        store.assignIslandShortcut(.aiUsage, at: 6)
+        let enabled = store.islandModuleConfiguration.enabledModuleIDs
+        store.restoreDefaultIslandShortcuts()
+        let positions = store.islandModuleConfiguration.shortcutPositions
+        XCTAssertEqual(positions, [nil, nil, nil, .shelf, .quickSettings, nil, nil, nil])
+        XCTAssertEqual(store.islandModuleConfiguration.enabledModuleIDs, enabled)
+        XCTAssertEqual(SettingsStore(defaults: defaults).islandModuleConfiguration.shortcutPositions, positions)
+    }
+
     func testEdgeTabIconPreferencesPersistIndependentlyOfTabVisibility() throws {
         let (defaults, name) = try makeSuite()
         defer { defaults.removePersistentDomain(forName: name) }
@@ -102,7 +119,9 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.islandModuleConfiguration.enabledModuleIDs,
                        [.shelf, .transfers, .timer, .battery, .system])
         XCTAssertEqual(store.islandModuleConfiguration.pinnedModuleIDs,
-                       [.shelf, .timer, .system])
+                       [.shelf])
+        XCTAssertEqual(store.islandModuleConfiguration.shortcutPositions[3], .shelf)
+        XCTAssertEqual(store.islandModuleConfiguration.shortcutPositions[4], .quickSettings)
         XCTAssertTrue(store.classicShelfHoverRevealEnabled)
     }
 

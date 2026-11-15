@@ -146,6 +146,7 @@ final class ShelfWindowController: NSObject {
     private let favoriteFoldersModuleRuntime: CallbackIslandModuleRuntime
     private var islandGlobalMonitor: Any?
     private var islandLocalMonitor: Any?
+    private var islandTrackingMenus = Set<ObjectIdentifier>()
     private var islandHoverTask: Task<Void, Never>?
     private var islandHoverExitTask: Task<Void, Never>?
     private var islandHoverPreview = IslandHoverPreviewStateMachine()
@@ -442,6 +443,7 @@ final class ShelfWindowController: NSObject {
          dragStartMonitor: DragStartMonitor,
          clipboardHistoryStore: ClipboardHistoryStore,
          onOpenSettings: @escaping @MainActor () -> Void = {},
+         onOpenModuleSettings: @escaping @MainActor () -> Void = {},
          onOpenStorageRecovery: @escaping @MainActor () -> Void = {},
          tutorialTokenForItem: @escaping @MainActor (UUID) -> String? = { _ in nil }) {
         self.appState = appState
@@ -537,9 +539,10 @@ final class ShelfWindowController: NSObject {
                     descriptor: IslandModuleRegistry.quickSettingsDescriptor,
                     runtime: CallbackIslandModuleRuntime(descriptor: IslandModuleRegistry.quickSettingsDescriptor),
                     makeContentView: { context in
-                        AnyView(IslandModuleLibraryView(
-                            onOpenModule: context.onOpenModule,
-                            onOpenSettings: context.onOpenSettings))
+                        AnyView(IslandModuleLibraryView(onOpenSettings: {
+                            islandActivityCoordinator.collapse()
+                            onOpenModuleSettings()
+                        }))
                     }
                 ),
                 IslandModuleRegistration(
@@ -1744,7 +1747,9 @@ final class ShelfWindowController: NSObject {
             pointerPoint: point
         ) {
             return IslandGeometryResolver.resolve(
-                screen: IslandScreenCatalog.geometry(for: screen)
+                screen: IslandScreenCatalog.geometry(for: screen),
+                preferredExpandedHeight: islandActivityCoordinator.preferredExpandedHeight(
+                    for: islandModuleContainer.registration(for: islandActivityCoordinator.selectedModule)?.descriptor)
             )
         }
         return IslandGeometryResolver.resolve(screen: .init(
@@ -1753,7 +1758,8 @@ final class ShelfWindowController: NSObject {
             safeAreaTop: 0,
             auxiliaryTopLeftArea: .zero,
             auxiliaryTopRightArea: .zero
-        ))
+        ), preferredExpandedHeight: islandActivityCoordinator.preferredExpandedHeight(
+                    for: islandModuleContainer.registration(for: islandActivityCoordinator.selectedModule)?.descriptor))
     }
 
     /// 当前屏幕几何快照（NSScreen → 纯值，供 ShelfLayoutEngine）。
@@ -2175,7 +2181,7 @@ final class ShelfWindowController: NSObject {
             let step = offset < 0 ? 1 : -1
             let target = IslandShortcutSwipe.target(
                 current: islandActivityCoordinator.selectedModule, step: step,
-                pinned: settings.islandModuleConfiguration.pinnedModuleIDs,
+                pinned: settings.islandModuleConfiguration.shortcutPositions.compactMap { $0 },
                 enabled: islandModuleRegistry.isEnabled)
             let width = IslandExpandedLayout.contentWidth(surfaceWidth: islandActivityCoordinator.currentLayout?.expandedFrame.width ?? 492, hasPhysicalNotch: islandActivityCoordinator.currentLayout?.hasPhysicalNotch == true)
             islandActivityCoordinator.shortcutSwipeDirection = step
@@ -2213,6 +2219,10 @@ final class ShelfWindowController: NSObject {
 
     private func startIslandEventMonitoring() {
         guard islandGlobalMonitor == nil, islandLocalMonitor == nil else { return }
+        NotificationCenter.default.addObserver(self, selector: #selector(islandMenuBegan(_:)),
+            name: NSMenu.didBeginTrackingNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(islandMenuEnded(_:)),
+            name: NSMenu.didEndTrackingNotification, object: nil)
         let mask: NSEvent.EventTypeMask = [.leftMouseDown, .mouseMoved]
         islandGlobalMonitor = NSEvent.addGlobalMonitorForEvents(matching: mask) {
             [weak self] event in
@@ -2221,6 +2231,9 @@ final class ShelfWindowController: NSObject {
         }
         islandLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: mask.union(.scrollWheel)) {
             [weak self] event in
+            if MainActor.assumeIsolated({ self?.islandTrackingMenus.isEmpty == false }) {
+                return event
+            }
             if event.type == .scrollWheel {
                 let consumed = MainActor.assumeIsolated {
                     self?.handleIslandShortcutSwipe(event) == true
@@ -2233,7 +2246,26 @@ final class ShelfWindowController: NSObject {
         }
     }
 
+    @objc private func islandMenuBegan(_ notification: Notification) {
+        guard let menu = notification.object as? NSMenu,
+              islandActivityCoordinator.surfaceState.isExpanded,
+              !islandTrackingMenus.isEmpty || islandPanel.frame.contains(NSEvent.mouseLocation) else { return }
+        islandTrackingMenus.insert(ObjectIdentifier(menu))
+        performIslandHoverActions(islandHoverPreview.handle(.menuOpened))
+    }
+
+    @objc private func islandMenuEnded(_ notification: Notification) {
+        guard let menu = notification.object as? NSMenu,
+              islandTrackingMenus.remove(ObjectIdentifier(menu)) != nil,
+              islandTrackingMenus.isEmpty else { return }
+        let inside = hoverKeepAliveFrame(for: islandLayout()).contains(NSEvent.mouseLocation)
+        performIslandHoverActions(islandHoverPreview.handle(.menuClosed(pointerInside: inside)))
+    }
+
     private func stopIslandEventMonitoring() {
+        NotificationCenter.default.removeObserver(self, name: NSMenu.didBeginTrackingNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: NSMenu.didEndTrackingNotification, object: nil)
+        islandTrackingMenus.removeAll()
         shortcutSettleTask?.cancel()
         shortcutSettleTask = nil
         islandActivityCoordinator.shortcutSwipeOffset = 0
@@ -2257,7 +2289,7 @@ final class ShelfWindowController: NSObject {
     }
 
     private func handleIslandEvent(_ event: NSEvent, at point: CGPoint) {
-        guard settings.islandEnabled else { return }
+        guard settings.islandEnabled, islandTrackingMenus.isEmpty else { return }
         switch event.type {
         case .leftMouseDown:
             if !islandActivityCoordinator.surfaceState.isExpanded {
@@ -2417,8 +2449,7 @@ final class ShelfWindowController: NSObject {
     }
 
     private var effectiveIslandOpenModule: IslandModuleID {
-        let display = IslandCompactDisplay.selected(settings.compactModuleID,
-            enabled: islandModuleRegistry.enabledDescriptors.map(\.id))
+        let display = settings.compactDisplay
         if let moduleID = display.moduleID, islandModuleRegistry.isEnabled(moduleID) {
             return moduleID
         }

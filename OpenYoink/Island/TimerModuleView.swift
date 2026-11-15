@@ -92,6 +92,7 @@ struct IslandTimerView: View {
         }
         .padding(2)
         .background(Capsule().fill(Color.white.opacity(0.07)))
+        .clipShape(Capsule())
         .overlay {
             Capsule().strokeBorder(IslandVisualStyle.hairline, lineWidth: 1)
         }
@@ -123,7 +124,7 @@ struct IslandTimerView: View {
                 }
                 .contentShape(Capsule())
         }
-        .buttonStyle(IslandPressFeedbackStyle(reduceMotion: reduceMotion))
+        .buttonStyle(IslandPressFeedbackStyle(reduceMotion: reduceMotion, cornerRadius: 12))
         .accessibilityLabel(Text(accessibilityLabel))
         .modifier(IslandSelectedAccessibilityModifier(selected: selected))
     }

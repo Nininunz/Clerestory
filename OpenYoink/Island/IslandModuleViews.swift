@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ShelfPresentationRootView: View {
     let presentationStyle: ShelfPresentationStyle
@@ -53,10 +54,13 @@ struct IslandRootView: View {
     var body: some View {
         ZStack(alignment: .top) {
             if renderedSurfaceState.isExpanded {
-                expandedContent
-                    .frame(width: coordinator.currentLayout?.expandedFrame.width,
-                           height: coordinator.currentLayout?.expandedFrame.height,
-                           alignment: .top)
+                GeometryReader { surface in
+                    expandedContent
+                        .environment(\.islandSurfaceHeight, surface.size.height)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                }
+                    .frame(width: coordinator.currentLayout?.expandedFrame.width)
+                    .frame(maxHeight: .infinity, alignment: .top)
                     .transition(.asymmetric(
                         insertion: .modifier(
                             active: IslandSurfaceRevealModifier(
@@ -344,8 +348,7 @@ struct IslandRootView: View {
     }
 
     private var compactDisplay: IslandCompactDisplay {
-        IslandCompactDisplay.selected(settings.compactModuleID,
-                                      enabled: registry.enabledDescriptors.map(\.id))
+        settings.compactDisplay
     }
 
     private var compactTrailing: some View {
@@ -652,8 +655,8 @@ struct IslandRootView: View {
 
     private var physicalNotchModuleStrip: some View {
         let slots = pinnedModuleSlots
-        let leadingSlots = Array(slots.prefix(4))
-        let trailingSlots = Array(slots.dropFirst(4))
+        let leadingSlots = Array(slots.prefix(IslandModuleConfiguration.shortcutSlotsPerSide))
+        let trailingSlots = Array(slots.dropFirst(IslandModuleConfiguration.shortcutSlotsPerSide))
         let notchWidth = coordinator.currentLayout?.cameraHousingWidth ?? 0
         let notchHeight = coordinator.currentLayout?.topInset ?? 32
         let stripHeight = notchHeight
@@ -684,8 +687,6 @@ struct IslandRootView: View {
                             emptyModuleSlot(size: 24)
                         }
                     }
-                    // Quick Settings owns the final slot, outside user reordering.
-                    settingsButton(size: 24)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -785,7 +786,7 @@ struct IslandRootView: View {
         Button {
             coordinator.selectedModule = .quickSettings
         } label: {
-            Image(systemName: "gearshape")
+            Image(systemName: "square.grid.2x2")
                 .font(.system(size: size == 30 ? 13 : 11, weight: .semibold))
                 .foregroundStyle(coordinator.selectedModule == .quickSettings
                                  ? Color.accentColor : Color.white.opacity(isSettingsControlHovering ? 1 : 0.72))
@@ -833,7 +834,6 @@ struct IslandRootView: View {
                     emptyModuleSlot(size: 30)
                 }
             }
-            settingsButton(size: 30)
         }
         .padding(4)
         .background {
@@ -854,12 +854,9 @@ struct IslandRootView: View {
     }
 
     private var pinnedModuleSlots: [IslandModuleDescriptor?] {
-        let descriptors = visibleModuleDescriptors.map(Optional.some)
-        return descriptors + Array(
-            repeating: nil,
-            count: max(0, IslandModuleConfiguration.maximumPinnedModules
-                       - descriptors.count)
-        )
+        settings.islandModuleConfiguration.shortcutPositions.map { id in
+            id.flatMap { registry.descriptor(for: $0) }
+        }
     }
 
     private func floatingModuleButton(
@@ -900,6 +897,17 @@ struct IslandRootView: View {
                 onOpenModule: { coordinator.selectedModule = $0 },
                 onOpenSettings: openSettings
             )
+        )
+        .environment(\.islandModuleExtension, moduleExtensionContext(for: module))
+    }
+
+    private func moduleExtensionContext(for module: IslandModuleID) -> IslandModuleExtensionContext? {
+        guard let descriptor = moduleContainer.registration(for: module)?.descriptor,
+              descriptor.supportsExtendedHeight else { return nil }
+        return IslandModuleExtensionContext(
+            isExtended: Binding(get: { coordinator.isModuleExtended(descriptor) },
+                                set: { coordinator.setModuleExtended($0, descriptor: descriptor) }),
+            reportHeight: { coordinator.recordModuleContentHeight($0, descriptor: descriptor) }
         )
     }
 
@@ -1171,119 +1179,287 @@ struct IslandModuleLibraryView: View {
     @Environment(SettingsStore.self) private var settings
     @Environment(IslandModuleRegistry.self) private var registry
 
-    let onOpenModule: (IslandModuleID) -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    @State private var draggedCompactModule: IslandModuleID?
+    @State private var compactDragOrder: [IslandModuleID]?
+    @State private var compactDragTarget: IslandModuleID?
+    @State private var hoveredCompactHandle: IslandModuleID?
+    @State private var compactRowFrames: [IslandModuleID: CGRect] = [:]
+    @GestureState private var compactDragActive = false
+    @Namespace private var shortcutSwitcher
+    @State private var showsCompact = false
+
     let onOpenSettings: () -> Void
+
 
     var body: some View {
         VStack(spacing: IslandModuleLayout.headerSpacing) {
             IslandModuleHeader(
                 title: "Quick Settings",
-                subtitle: String(localized: "Choose up to seven pinned modules"),
-                systemImage: "square.grid.2x2"
-            )
-
-            ScrollView {
-                VStack(spacing: 7) {
-                    ForEach(registry.descriptors) { descriptor in
-                        moduleRow(descriptor)
+                subtitle: showsCompact ? String(localized: "Choose compact modules and their cycling order")
+                    : String(localized: "Choose shortcuts and arrange their positions"),
+                systemImage: "square.grid.2x2",
+                showsExtendButton: false
+            ) {
+                pageSwitcher
+            }
+            IslandModuleScrollView {
+                VStack(alignment: .leading, spacing: 7) {
+                    if showsCompact {
+                        compactEditor
+                    } else {
+                    ForEach(0..<IslandModuleConfiguration.shortcutPositionCount, id: \.self) { index in
+                        positionRow(index)
+                    }
+                    HStack {
+                        Label("One position must contain Quick Settings", systemImage: "lock")
+                            .font(.caption2).foregroundStyle(.secondary)
+                        Spacer(minLength: 8)
+                        Button("Restore Defaults") { settings.restoreDefaultIslandShortcuts() }
+                            .buttonStyle(IslandActionButtonStyle())
+                            .controlSize(.small)
+                            .help("Restore shortcut positions without changing enabled modules")
+                    }
+                    .padding(.vertical, 4)
                     }
                 }
             }
-            .scrollIndicators(.automatic)
-            .scrollBounceBehavior(.basedOnSize)
-
+            .id(showsCompact)
+            .transition(.opacity)
             HStack {
-                Text("Drag pinned rows to reorder the seven Island positions.")
-                    .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.46))
-                Spacer()
-                Button("Open Full Settings") { onOpenSettings() }
+                Button("Module Settings", action: onOpenSettings)
                     .buttonStyle(IslandActionButtonStyle())
                     .controlSize(.small)
+                Spacer()
+                IslandModuleExtendButton()
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onChange(of: compactDragActive) { _, active in
+            if !active { clearCompactDrag() }
+        }
+        .onDisappear {
+            hoveredCompactHandle = nil
+            clearCompactDrag()
+        }
     }
 
-    private func moduleRow(_ descriptor: IslandModuleDescriptor) -> some View {
-        let enabled = settings.isIslandModuleEnabled(descriptor.id)
-        let pinned = settings.isIslandModulePinned(descriptor.id)
-        let pinnedCount = settings.islandModuleConfiguration.pinnedModuleIDs.count
+    private var pageSwitcher: some View {
+        HStack(spacing: 2) {
+            ForEach([false, true], id: \.self) { compact in
+                Button {
+                    clearCompactDrag()
+                    withAnimation(reduceMotion ? nil : .smooth(duration: 0.22)) { showsCompact = compact }
+                } label: {
+                    Image(systemName: compact ? "rectangle.compress.vertical" : "rectangle.expand.vertical")
+                        .font(.system(size: 10, weight: .semibold))
+                        .frame(width: 27, height: 24)
+                        .foregroundStyle(showsCompact == compact ? .white : IslandVisualStyle.tertiaryText)
+                        .background {
+                            if showsCompact == compact {
+                                Capsule().fill(Color.white.opacity(0.11))
+                                    .matchedGeometryEffect(id: "selection", in: shortcutSwitcher)
+                            }
+                        }
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(IslandPressFeedbackStyle(cornerRadius: 12))
+                .help(compact ? "Compact" : "Expanded")
+                .accessibilityLabel(Text(compact ? "Compact shortcuts" : "Expanded shortcuts"))
+                .modifier(IslandSelectedAccessibilityModifier(selected: showsCompact == compact))
+            }
+        }
+        .padding(2)
+        .background(Capsule().fill(Color.white.opacity(0.07)))
+        .clipShape(Capsule())
+        .overlay { Capsule().strokeBorder(IslandVisualStyle.hairline, lineWidth: 1) }
+    }
 
-        return HStack(spacing: 10) {
-            Image(systemName: descriptor.systemImage)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(enabled ? Color.accentColor : Color.white.opacity(0.42))
-                .frame(width: 24)
+    private var compactEditor: some View {
+        let order = compactDragOrder ?? settings.compactModuleOrder
+        let rows = order + IslandCompactDisplay.cycleOrder.filter { !order.contains($0) }
+        return VStack(spacing: 7) {
+            ForEach(rows, id: \.self) { id in
+                if let descriptor = registry.descriptor(for: id) {
+                    compactRow(descriptor)
+                }
+            }
+            HStack {
+                Text("Drag included modules or use arrows to set cycling order.")
+                    .font(.caption2).foregroundStyle(.secondary)
+                Spacer()
+                Button("Restore Defaults") { settings.compactModuleOrder = IslandCompactDisplay.cycleOrder }
+                    .buttonStyle(IslandActionButtonStyle())
+            }
+        }
+        .coordinateSpace(name: "compactOrder")
+        .onPreferenceChange(CompactRowFramesKey.self) { compactRowFrames = $0 }
+        .animation(reduceMotion ? nil : .smooth(duration: 0.24), value: order)
+    }
 
+    private func compactRow(_ descriptor: IslandModuleDescriptor) -> some View {
+        let order = compactDragOrder ?? settings.compactModuleOrder
+        let index = order.firstIndex(of: descriptor.id)
+        let row = HStack(spacing: 8) {
+            if index != nil {
+                Image(systemName: "line.3.horizontal")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 22, height: 32)
+                    .contentShape(Rectangle())
+                    .gesture(compactReorderGesture(descriptor.id))
+                    .onContinuousHover { phase in
+                        switch phase {
+                        case .active:
+                            hoveredCompactHandle = descriptor.id
+                        case .ended:
+                            if hoveredCompactHandle == descriptor.id { hoveredCompactHandle = nil }
+                        }
+                        updateCompactDragCursor()
+                    }
+                    .help("Drag to reorder")
+            }
+            Image(systemName: descriptor.systemImage).frame(width: 22)
             VStack(alignment: .leading, spacing: 2) {
-                Text(descriptor.title)
-                    .font(.system(size: 12, weight: .semibold))
-                Text(pinned
-                     ? String(localized: "Pinned in the Island strip")
-                     : enabled
-                        ? String(localized: "Enabled in the module library")
-                        : String(localized: "Disabled"))
-                    .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.46))
+                Text(descriptor.title).font(.system(size: 12, weight: .medium))
+                if !settings.isIslandModuleEnabled(descriptor.id) {
+                    Text("Disabled in Modules").font(.caption2).foregroundStyle(.secondary)
+                }
             }
-
             Spacer(minLength: 4)
-
-            if enabled {
-                Button("Open") { onOpenModule(descriptor.id) }
-                    .buttonStyle(IslandPressFeedbackStyle())
-                    .foregroundStyle(Color.accentColor)
-                    .font(.caption.weight(.semibold))
+            if let index {
+                Button {
+                    settings.moveCompactModule(descriptor.id, to: order[index - 1])
+                } label: { Image(systemName: "arrow.up").frame(width: 24, height: 24) }
+                .disabled(index == 0)
+                .accessibilityLabel(Text("Move earlier"))
+                Button {
+                    settings.moveCompactModule(descriptor.id, to: order[index + 1])
+                } label: { Image(systemName: "arrow.down").frame(width: 24, height: 24) }
+                .disabled(index == order.count - 1)
+                .accessibilityLabel(Text("Move later"))
             }
-
-            Button {
-                settings.setIslandModulePinned(!pinned, id: descriptor.id)
-            } label: {
-                Image(systemName: pinned ? "pin.fill" : "pin")
-                    .frame(width: 24, height: 24)
-            }
-            .buttonStyle(IslandPressFeedbackStyle())
-            .disabled(!enabled || (!pinned && pinnedCount >= 5))
-            .opacity(!enabled || (!pinned && pinnedCount >= 5) ? 0.34 : 1)
-            .accessibilityLabel(Text(pinned ? "Unpin module" : "Pin module"))
-
-            Toggle("", isOn: Binding(
-                get: { settings.isIslandModuleEnabled(descriptor.id) },
-                set: { settings.setIslandModuleEnabled($0, id: descriptor.id) }
+            Toggle(descriptor.title, isOn: Binding(
+                get: { settings.compactModuleOrder.contains(descriptor.id) },
+                set: { settings.setCompactModuleIncluded($0, id: descriptor.id) }
             ))
             .labelsHidden()
-            .toggleStyle(IslandClipboardToggleStyle())
-            .controlSize(.mini)
+            .toggleStyle(IslandClipboardToggleStyle(showsLabel: false))
+        }
+        .buttonStyle(IslandPressFeedbackStyle())
+        .padding(.horizontal, 10)
+        .frame(minHeight: 38)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.055)))
+        return row
+            .background {
+                GeometryReader { geometry in
+                    Color.clear.preference(key: CompactRowFramesKey.self,
+                        value: [descriptor.id: geometry.frame(in: .named("compactOrder"))])
+                }
+            }
+            .opacity(draggedCompactModule == descriptor.id ? 0.65 : 1)
+    }
+
+    private func compactReorderGesture(_ id: IslandModuleID) -> some Gesture {
+        DragGesture(minimumDistance: 4, coordinateSpace: .named("compactOrder"))
+            .updating($compactDragActive) { _, active, _ in active = true }
+            .onChanged { value in
+                if draggedCompactModule == nil {
+                    compactDragOrder = settings.compactModuleOrder
+                    draggedCompactModule = id
+                }
+                NSCursor.closedHand.set()
+                if compactRowFrames[id]?.contains(value.location) == true {
+                    compactDragTarget = nil
+                    return
+                }
+                guard var order = compactDragOrder,
+                      let target = order.first(where: { $0 != id && compactRowFrames[$0]?.contains(value.location) == true }),
+                      compactDragTarget != target,
+                      let source = order.firstIndex(of: id),
+                      let destination = order.firstIndex(of: target) else { return }
+                compactDragTarget = target
+                order.remove(at: source)
+                order.insert(id, at: destination)
+                compactDragOrder = order
+            }
+            .onEnded { value in
+                if let order = compactDragOrder,
+                   order.contains(where: { compactRowFrames[$0]?.contains(value.location) == true }) {
+                    settings.compactModuleOrder = order
+                }
+                clearCompactDrag()
+            }
+    }
+
+    private func clearCompactDrag() {
+        draggedCompactModule = nil
+        compactDragOrder = nil
+        compactDragTarget = nil
+        updateCompactDragCursor()
+    }
+
+    private func updateCompactDragCursor() {
+        if draggedCompactModule != nil {
+            NSCursor.closedHand.set()
+        } else if hoveredCompactHandle != nil {
+            NSCursor.openHand.set()
+        } else {
+            NSCursor.arrow.set()
+        }
+    }
+
+    private func positionRow(_ index: Int) -> some View {
+        HStack(spacing: 12) {
+            Text("\(index + 1)")
+                .font(.caption.monospacedDigit().weight(.semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 20)
+            Text(positionLabel(index))
+                .font(.system(size: 12, weight: .medium))
+                .frame(width: 58, alignment: .leading)
+            Picker(positionLabel(index), selection: Binding<IslandModuleID?>(
+                get: { settings.islandModuleConfiguration.shortcutPositions[index] },
+                set: { settings.assignIslandShortcut($0, at: index) }
+            )) {
+                Text("Empty").tag(nil as IslandModuleID?)
+                    .disabled(settings.islandModuleConfiguration.shortcutPositions[index] == .quickSettings)
+                Label("Quick Settings", systemImage: "square.grid.2x2")
+                    .tag(Optional(IslandModuleID.quickSettings))
+                ForEach(registry.enabledDescriptors) { descriptor in
+                    Label(descriptor.title, systemImage: descriptor.systemImage)
+                        .tag(Optional(descriptor.id))
+                        .disabled(settings.islandModuleConfiguration.shortcutPositions[index] == .quickSettings
+                                  && !settings.isIslandModulePinned(descriptor.id))
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .accessibilityIdentifier("island.shortcut.position.\(index)")
         }
         .padding(.horizontal, 10)
-        .frame(minHeight: 42)
+        .frame(minHeight: 32)
         .background {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.white.opacity(pinned ? 0.085 : 0.045))
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color.white.opacity(0.055))
         }
-        .draggable(pinned ? descriptor.id.rawValue : "")
-        .dropDestination(for: String.self) { items, _ in
-            guard pinned,
-                  let sourceRawValue = items.first,
-                  !sourceRawValue.isEmpty else { return false }
-            let ids = settings.islandModuleConfiguration.pinnedModuleIDs
-            let sourceID = IslandModuleID(rawValue: sourceRawValue)
-            guard let source = ids.firstIndex(of: sourceID),
-                  let destination = ids.firstIndex(of: descriptor.id),
-                  source != destination else { return false }
-            settings.movePinnedIslandModules(
-                fromOffsets: IndexSet(integer: source),
-                toOffset: destination > source ? destination + 1 : destination
-            )
-            return true
-        }
+    }
+
+    private func positionLabel(_ index: Int) -> String {
+        let perSide = IslandModuleConfiguration.shortcutSlotsPerSide
+        return index < perSide
+            ? String(localized: "Left \(index + 1)")
+            : String(localized: "Right \(index - perSide + 1)")
     }
 }
 
-
-
-
+private struct CompactRowFramesKey: PreferenceKey {
+    static let defaultValue: [IslandModuleID: CGRect] = [:]
+    static func reduce(value: inout [IslandModuleID: CGRect], nextValue: () -> [IslandModuleID: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+    }
+}
 
 private struct IslandSurfaceRevealModifier: ViewModifier, @MainActor Animatable {
     var progress: CGFloat

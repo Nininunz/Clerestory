@@ -120,7 +120,7 @@ enum IslandGeometryResolver {
         return resolve(screen: screen)
     }
 
-    static func resolve(screen: ScreenGeometry) -> Layout {
+    static func resolve(screen: ScreenGeometry, preferredExpandedHeight: CGFloat = expandedPreferredHeight) -> Layout {
         let left = screen.auxiliaryTopLeftArea
         let right = screen.auxiliaryTopRightArea
         // auxiliary areas have been observed in both screen-relative and global
@@ -165,7 +165,7 @@ enum IslandGeometryResolver {
                                 max(minimumExpandedWidth,
                                     min(availableWidth, maximumExpandedWidth)))
         let heightCap = max(260, screen.visibleFrame.height * maximumExpandedHeightFraction)
-        let expandedHeight = min(expandedPreferredHeight, heightCap)
+        let expandedHeight = min(max(expandedPreferredHeight, preferredExpandedHeight), heightCap)
         let expanded = CGRect(x: horizontalAnchor - expandedWidth / 2,
                               y: topAnchor - expandedHeight,
                               width: expandedWidth,
