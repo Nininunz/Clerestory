@@ -8,7 +8,9 @@ struct IslandBatteryView: View {
         VStack(spacing: IslandModuleLayout.headerSpacing) {
             IslandModuleHeader(
                 title: "Battery",
-                subtitle: nil,
+                subtitle: powerMonitor.snapshot.hasBattery
+                    ? powerStatus
+                    : String(localized: "No internal battery"),
                 systemImage: batterySymbol
             )
             IslandModuleScrollView(fillsViewport: true) {
