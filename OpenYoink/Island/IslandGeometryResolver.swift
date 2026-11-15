@@ -106,7 +106,7 @@ enum IslandGeometryResolver {
     static let floatingCompactSize = CGSize(width: 224, height: 38)
     static let floatingDotHitSize = CGSize(width: 44, height: 22)
     static let floatingDotDiameter: CGFloat = 10
-    static let maximumExpandedWidth: CGFloat = 440
+    static let maximumExpandedWidth: CGFloat = 492
     static let minimumExpandedWidth: CGFloat = 360
     static let expandedPreferredHeight: CGFloat = 330
     static let maximumExpandedHeightFraction: CGFloat = 0.6

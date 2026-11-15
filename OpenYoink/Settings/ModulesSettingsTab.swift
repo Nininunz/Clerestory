@@ -63,7 +63,7 @@ struct ModulesSettingsTab: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                    Text("Open the Island module library to drag the five pinned positions into order.")
+                    Text("Open the Island module library to drag the seven pinned positions into order.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

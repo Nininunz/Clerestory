@@ -2181,10 +2181,10 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "平均" } }
       }
     },
-    "Choose up to five pinned modules" : {
+    "Choose up to seven pinned modules" : {
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose up to five pinned modules" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "最多固定五个模块" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose up to seven pinned modules" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "最多固定七个模块" } }
       }
     },
     "Connected to Power" : {
@@ -2235,10 +2235,10 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "磁盘空间不足" } }
       }
     },
-    "Drag pinned rows to reorder the five Island positions." : {
+    "Drag pinned rows to reorder the seven Island positions." : {
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Drag pinned rows to reorder the five Island positions." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "拖动已固定模块行可调整岛顶部五个位置的顺序。" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Drag pinned rows to reorder the seven Island positions." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "拖动已固定模块行可调整岛顶部七个位置的顺序。" } }
       }
     },
     "Enabled in the module library" : {
@@ -2349,10 +2349,10 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "打开完整设置" } }
       }
     },
-    "Open the Island module library to drag the five pinned positions into order." : {
+    "Open the Island module library to drag the seven pinned positions into order." : {
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open the Island module library to drag the five pinned positions into order." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请在岛的模块库中拖动调整五个固定位置的顺序。" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open the Island module library to drag the seven pinned positions into order." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请在岛的模块库中拖动调整七个固定位置的顺序。" } }
       }
     },
     "Performance may be reduced" : {

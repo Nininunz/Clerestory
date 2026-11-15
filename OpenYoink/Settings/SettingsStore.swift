@@ -362,7 +362,7 @@ final class SettingsStore {
     }
 
     /// Versioned primary configuration for Island module enablement and the
-    /// five user-controlled pinned positions. The v1.5 booleans remain shadow
+    /// seven user-controlled pinned positions. The v1.5 booleans remain shadow
     /// keys for one release so downgrading does not discard user choices.
     var islandModuleConfiguration: IslandModuleConfiguration {
         didSet {

@@ -663,8 +663,8 @@ struct IslandRootView: View {
 
     private var physicalNotchModuleStrip: some View {
         let slots = pinnedModuleSlots
-        let leadingSlots = Array(slots.prefix(2))
-        let trailingSlots = Array(slots.dropFirst(2))
+        let leadingSlots = Array(slots.prefix(3))
+        let trailingSlots = Array(slots.dropFirst(3))
         let notchWidth = coordinator.currentLayout?.cameraHousingWidth ?? 0
         let notchHeight = coordinator.currentLayout?.topInset ?? 32
         let stripHeight = notchHeight
@@ -855,7 +855,7 @@ struct IslandRootView: View {
         }
     }
 
-    /// The five saved positions are the only normal compact navigation slots.
+    /// The seven saved positions are the only normal compact navigation slots.
     /// Enabled but unpinned modules remain available from the module library.
     private var visibleModuleDescriptors: [IslandModuleDescriptor] {
         settings.islandModuleConfiguration.pinnedModuleIDs.compactMap {
@@ -1177,7 +1177,7 @@ private struct IslandModuleLibraryView: View {
         VStack(spacing: 10) {
             IslandModuleHeader(
                 title: "Module Library",
-                subtitle: String(localized: "Choose up to five pinned modules"),
+                subtitle: String(localized: "Choose up to seven pinned modules"),
                 systemImage: "square.grid.2x2"
             )
 
@@ -1190,7 +1190,7 @@ private struct IslandModuleLibraryView: View {
             }
 
             HStack {
-                Text("Drag pinned rows to reorder the five Island positions.")
+                Text("Drag pinned rows to reorder the seven Island positions.")
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.46))
                 Spacer()

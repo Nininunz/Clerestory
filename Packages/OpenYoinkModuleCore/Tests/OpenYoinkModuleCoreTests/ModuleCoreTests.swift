@@ -13,7 +13,7 @@ struct ModuleCoreTests {
         )
 
         #expect(configuration.enabledModuleIDs.count == 8)
-        #expect(configuration.pinnedModuleIDs == Array(ids.prefix(5)))
+        #expect(configuration.pinnedModuleIDs == Array(ids.prefix(7)))
     }
 
     @Test("Disabling a module also unpins it")

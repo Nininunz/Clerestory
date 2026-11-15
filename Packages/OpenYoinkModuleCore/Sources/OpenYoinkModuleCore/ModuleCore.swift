@@ -98,7 +98,7 @@ public enum IslandModuleEvent: Equatable, Sendable {
 /// than a Set so unknown future identifiers survive a load/save round trip.
 public struct IslandModuleConfiguration: Codable, Equatable, Sendable {
     public static let currentVersion = 1
-    public static let maximumPinnedModules = 5
+    public static let maximumPinnedModules = 7
 
     public var version: Int
     public var enabledModuleIDs: [IslandModuleID]
