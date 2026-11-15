@@ -2173,12 +2173,10 @@ final class ShelfWindowController: NSObject {
         case .consumed: return true
         case let .drag(offset):
             let step = offset < 0 ? 1 : -1
-            let pages = settings.islandModuleConfiguration.pinnedModuleIDs.filter {
-                islandModuleRegistry.isEnabled($0) && $0 != .quickSettings
-            } + [.quickSettings]
-            let current = pages.firstIndex(of: islandActivityCoordinator.selectedModule)
-            let next = current.map { $0 + step } ?? (step > 0 ? 0 : pages.count - 1)
-            let target = pages.indices.contains(next) ? pages[next] : nil
+            let target = IslandShortcutSwipe.target(
+                current: islandActivityCoordinator.selectedModule, step: step,
+                pinned: settings.islandModuleConfiguration.pinnedModuleIDs,
+                enabled: islandModuleRegistry.isEnabled)
             let width = max(1, (islandActivityCoordinator.currentLayout?.expandedFrame.width ?? 492) - 28)
             islandActivityCoordinator.shortcutSwipeDirection = step
             islandActivityCoordinator.shortcutSwipeTarget = target
@@ -2190,12 +2188,13 @@ final class ShelfWindowController: NSObject {
 
     private func settleShortcutSwipe(cancelled: Bool, timestamp: TimeInterval) {
         let coordinator = islandActivityCoordinator
-        let startingModule = coordinator.selectedModule
+        let revision = coordinator.shortcutNavigationRevision
         let target = coordinator.shortcutSwipeTarget
         let width = max(1, (coordinator.currentLayout?.expandedFrame.width ?? 492) - 28)
         let projected = islandShortcutSwipe.projectedTranslation(at: timestamp)
-        let forwardTravel = -CGFloat(coordinator.shortcutSwipeDirection) * projected
-        let commit = !cancelled && target != nil && forwardTravel >= width * 0.18
+        let commit = IslandShortcutSwipe.shouldCommit(
+            projected: projected, direction: coordinator.shortcutSwipeDirection, width: width,
+            hasTarget: target != nil, cancelled: cancelled)
         let duration = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? 0.0 : 0.2
         withAnimation(.easeOut(duration: duration)) {
             coordinator.shortcutSwipeOffset = commit ? -CGFloat(coordinator.shortcutSwipeDirection) * width : 0
@@ -2206,11 +2205,7 @@ final class ShelfWindowController: NSObject {
             var transaction = Transaction()
             transaction.disablesAnimations = true
             withTransaction(transaction) {
-                if coordinator.selectedModule == startingModule, commit, let target {
-                    coordinator.selectedModule = target
-                }
-                coordinator.shortcutSwipeOffset = 0
-                coordinator.shortcutSwipeTarget = nil
+                coordinator.completeShortcutSwipe(target: commit ? target : nil, revision: revision)
             }
             self.shortcutSettleTask = nil
         }

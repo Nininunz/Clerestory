@@ -236,6 +236,18 @@ final class IslandGeometryResolverTests: XCTestCase {
         XCTAssertEqual(layout.activationFrame.minY, layout.expandedFrame.minY - 16)
         XCTAssertEqual(layout.activationFrame.maxY, screen.frame.maxY + 1)
         XCTAssertTrue(layout.activationFrame.contains(layout.expandedFrame))
+        // Probe the full approach area, including its lower corners well
+        // outside the compact notch, rather than testing only the top edge.
+        for x in [layout.activationFrame.minX + 1, layout.activationFrame.midX, layout.activationFrame.maxX - 1] {
+            for y in [layout.activationFrame.minY + 1, layout.activationFrame.midY, layout.activationFrame.maxY - 1] {
+                XCTAssertTrue(IslandGeometryResolver.acceptsFileDrag(
+                    at: CGPoint(x: x, y: y), compactPointerFrame: .null,
+                    activationFrame: layout.activationFrame, topApproachEnabled: true))
+            }
+        }
+        XCTAssertFalse(IslandGeometryResolver.acceptsFileDrag(
+            at: CGPoint(x: layout.activationFrame.midX, y: layout.activationFrame.minY - 1),
+            compactPointerFrame: .null, activationFrame: layout.activationFrame, topApproachEnabled: true))
 
         let approachPoint = CGPoint(x: layout.activationFrame.minX - 1,
                                     y: screen.frame.maxY - 120)

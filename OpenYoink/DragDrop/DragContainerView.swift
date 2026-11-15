@@ -127,6 +127,10 @@ final class DragContainerView: NSView {
         fatalError("DragContainerView is created programmatically")
     }
 
+    nonisolated static func acceptsApproachPayload(_ types: [NSPasteboard.PasteboardType], fileDragsOnly: Bool) -> Bool {
+        !fileDragsOnly || PasteboardTypes.hasFileDragContent(in: types)
+    }
+
     // MARK: - NSDraggingDestination
 
     override func hitTest(_ point: NSPoint) -> NSView? {
@@ -139,7 +143,7 @@ final class DragContainerView: NSView {
     }
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
-        guard !fileDragsOnly || PasteboardTypes.hasFileDragContent(in: sender.draggingPasteboard.types ?? []) else { return [] }
+        guard Self.acceptsApproachPayload(sender.draggingPasteboard.types ?? [], fileDragsOnly: fileDragsOnly) else { return [] }
         if PasteboardTypes.hasFileDragContent(in: sender.draggingPasteboard.types ?? []) {
             onNativeFileDrag()
         }
@@ -180,7 +184,7 @@ final class DragContainerView: NSView {
     }
 
     override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
-        guard !fileDragsOnly || PasteboardTypes.hasFileDragContent(in: sender.draggingPasteboard.types ?? []) else { return [] }
+        guard Self.acceptsApproachPayload(sender.draggingPasteboard.types ?? [], fileDragsOnly: fileDragsOnly) else { return [] }
         if PasteboardTypes.hasFileDragContent(in: sender.draggingPasteboard.types ?? []) {
             onNativeFileDrag()
         }
@@ -226,11 +230,11 @@ final class DragContainerView: NSView {
     }
 
     override func prepareForDragOperation(_ sender: NSDraggingInfo) -> Bool {
-        !fileDragsOnly || PasteboardTypes.hasFileDragContent(in: sender.draggingPasteboard.types ?? [])
+        Self.acceptsApproachPayload(sender.draggingPasteboard.types ?? [], fileDragsOnly: fileDragsOnly)
     }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
-        guard !fileDragsOnly || PasteboardTypes.hasFileDragContent(in: sender.draggingPasteboard.types ?? []) else { return false }
+        guard Self.acceptsApproachPayload(sender.draggingPasteboard.types ?? [], fileDragsOnly: fileDragsOnly) else { return false }
         var accepted = false
         defer { onDestinationEnded(sender.draggingSequenceNumber, accepted) }
         if let dropOverride, dropOverride.isActive() {

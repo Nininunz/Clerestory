@@ -9,6 +9,17 @@ enum IslandDragFeedback {
 
 /// One page per horizontal trackpad gesture; vertical gestures stay with content.
 struct IslandShortcutSwipe {
+    static func target(current: IslandModuleID, step: Int, pinned: [IslandModuleID],
+                       enabled: (IslandModuleID) -> Bool) -> IslandModuleID? {
+        let pages = pinned.filter { enabled($0) && $0 != .quickSettings } + [.quickSettings]
+        let next = pages.firstIndex(of: current).map { $0 + step } ?? (step > 0 ? 0 : pages.count - 1)
+        return pages.indices.contains(next) ? pages[next] : nil
+    }
+
+    static func shouldCommit(projected: CGFloat, direction: Int, width: CGFloat,
+                             hasTarget: Bool, cancelled: Bool) -> Bool {
+        !cancelled && hasTarget && -CGFloat(direction) * projected >= width * 0.18
+    }
     enum Result: Equatable { case ignored, consumed, drag(CGFloat) }
     private var x: CGFloat = 0
     private var y: CGFloat = 0
@@ -267,11 +278,13 @@ final class IslandActivityCoordinator {
     var shortcutSwipeDirection = 1
     var shortcutSwipeOffset: CGFloat = 0
     var shortcutSwipeTarget: IslandModuleID?
+    private(set) var shortcutNavigationRevision: UInt64 = 0
     var selectedModule: IslandModuleID = .shelf {
         didSet {
-            guard oldValue != selectedModule else { return }
+            shortcutNavigationRevision &+= 1
             shortcutSwipeOffset = 0
             shortcutSwipeTarget = nil
+            guard oldValue != selectedModule else { return }
             onStateDidChange?()
         }
     }
@@ -292,6 +305,11 @@ final class IslandActivityCoordinator {
 
     func setSurfaceState(_ state: IslandSurfaceState) {
         guard surfaceState != state else { return }
+        shortcutNavigationRevision &+= 1
+        if !state.isExpanded {
+            shortcutSwipeOffset = 0
+            shortcutSwipeTarget = nil
+        }
         let previousState = surfaceState
         onSurfaceStateWillChange?(previousState, state)
         surfaceState = state
@@ -308,6 +326,14 @@ final class IslandActivityCoordinator {
         guard transitionID == surfaceTransitionID, isSurfaceTransitionPending else { return }
         isSurfaceTransitionPending = false
         onSurfaceAnimationCompleted?()
+    }
+
+    /// A delayed settle cannot override a later click, collapse, or reopened page.
+    func completeShortcutSwipe(target: IslandModuleID?, revision: UInt64) {
+        guard shortcutNavigationRevision == revision, surfaceState.isExpanded else { return }
+        if let target { selectedModule = target }
+        shortcutSwipeOffset = 0
+        shortcutSwipeTarget = nil
     }
 
     func setPointerHovering(_ hovering: Bool) {

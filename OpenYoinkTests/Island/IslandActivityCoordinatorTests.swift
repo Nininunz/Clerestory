@@ -3,6 +3,95 @@ import XCTest
 
 @MainActor
 final class IslandActivityCoordinatorTests: XCTestCase {
+    func testSwipeCompletionCommitsOnceAndCancellationReturns() {
+        let coordinator = IslandActivityCoordinator()
+        coordinator.show(module: .shelf)
+        let revision = coordinator.shortcutNavigationRevision
+        coordinator.shortcutSwipeTarget = .timer
+        coordinator.shortcutSwipeOffset = -200
+        coordinator.completeShortcutSwipe(target: .timer, revision: revision)
+        XCTAssertEqual(coordinator.selectedModule, .timer)
+        XCTAssertEqual(coordinator.shortcutSwipeOffset, 0)
+        XCTAssertNil(coordinator.shortcutSwipeTarget)
+        coordinator.completeShortcutSwipe(target: .battery, revision: revision)
+        XCTAssertEqual(coordinator.selectedModule, .timer)
+
+        coordinator.shortcutSwipeOffset = 20
+        coordinator.shortcutSwipeTarget = .shelf
+        coordinator.completeShortcutSwipe(target: nil, revision: coordinator.shortcutNavigationRevision)
+        XCTAssertEqual(coordinator.selectedModule, .timer)
+        XCTAssertEqual(coordinator.shortcutSwipeOffset, 0)
+        XCTAssertNil(coordinator.shortcutSwipeTarget)
+    }
+
+    func testSwipeCompletionCannotOverrideClickAwayAndBackOrCollapseAndReopen() {
+        let coordinator = IslandActivityCoordinator()
+        coordinator.show(module: .shelf)
+        let beforeClick = coordinator.shortcutNavigationRevision
+        coordinator.selectedModule = .quickSettings
+        coordinator.selectedModule = .shelf
+        coordinator.completeShortcutSwipe(target: .timer, revision: beforeClick)
+        XCTAssertEqual(coordinator.selectedModule, .shelf)
+
+        let beforeSamePageClick = coordinator.shortcutNavigationRevision
+        coordinator.shortcutSwipeOffset = -100
+        coordinator.shortcutSwipeTarget = .timer
+        coordinator.selectedModule = .shelf
+        coordinator.completeShortcutSwipe(target: .timer, revision: beforeSamePageClick)
+        XCTAssertEqual(coordinator.selectedModule, .shelf)
+        XCTAssertEqual(coordinator.shortcutSwipeOffset, 0)
+        XCTAssertNil(coordinator.shortcutSwipeTarget)
+
+        let beforeCollapse = coordinator.shortcutNavigationRevision
+        coordinator.shortcutSwipeOffset = -100
+        coordinator.shortcutSwipeTarget = .timer
+        coordinator.collapse()
+        XCTAssertEqual(coordinator.shortcutSwipeOffset, 0)
+        XCTAssertNil(coordinator.shortcutSwipeTarget)
+        coordinator.show(module: .shelf)
+        coordinator.completeShortcutSwipe(target: .timer, revision: beforeCollapse)
+        XCTAssertEqual(coordinator.selectedModule, .shelf)
+    }
+
+    func testShortcutOrderSkipsDisabledPagesAndKeepsSettingsLast() {
+        let pinned: [IslandModuleID] = [.battery, .timer, .shelf]
+        func target(_ current: IslandModuleID, _ step: Int) -> IslandModuleID? {
+            IslandShortcutSwipe.target(current: current, step: step, pinned: pinned,
+                                       enabled: { $0 != .timer })
+        }
+        XCTAssertNil(target(.battery, -1))
+        XCTAssertEqual(target(.battery, 1), .shelf)
+        XCTAssertEqual(target(.shelf, 1), .quickSettings)
+        XCTAssertEqual(target(.quickSettings, -1), .shelf)
+        XCTAssertNil(target(.quickSettings, 1))
+        XCTAssertEqual(IslandShortcutSwipe.target(current: .shelf, step: 1, pinned: [],
+                                                 enabled: { _ in true }), .quickSettings)
+    }
+
+    func testShortDragCancellationAndEdgeCannotCommitButFlickCan() {
+        XCTAssertFalse(IslandShortcutSwipe.shouldCommit(projected: -30, direction: 1, width: 464, hasTarget: true, cancelled: false))
+        XCTAssertTrue(IslandShortcutSwipe.shouldCommit(projected: -150, direction: 1, width: 464, hasTarget: true, cancelled: false))
+        XCTAssertFalse(IslandShortcutSwipe.shouldCommit(projected: -150, direction: 1, width: 464, hasTarget: true, cancelled: true))
+        XCTAssertFalse(IslandShortcutSwipe.shouldCommit(projected: -150, direction: 1, width: 464, hasTarget: false, cancelled: false))
+        XCTAssertFalse(IslandShortcutSwipe.shouldCommit(projected: 150, direction: 1, width: 464, hasTarget: true, cancelled: false))
+    }
+
+    func testQuickSettingsSurvivesSettingsEditsAndYieldsToAnotherShortcut() throws {
+        let name = "QuickSettingsNavigation-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let settings = SettingsStore(defaults: defaults)
+        let registry = IslandModuleRegistry()
+        let coordinator = IslandActivityCoordinator()
+        coordinator.show(module: .quickSettings)
+        settings.islandTimerEnabled = false
+        registry.apply(settings: settings)
+        XCTAssertTrue(registry.isEnabled(coordinator.selectedModule))
+        XCTAssertEqual(coordinator.selectedModule, .quickSettings)
+        coordinator.selectedModule = .shelf
+        XCTAssertEqual(coordinator.selectedModule, .shelf)
+    }
+
     func testQuickFlickProjectsFartherButHoldingRemovesMomentum() {
         var swipe = IslandShortcutSwipe()
         _ = swipe.sample(dx: -15, dy: 0, began: true, momentum: false, timestamp: 1)
