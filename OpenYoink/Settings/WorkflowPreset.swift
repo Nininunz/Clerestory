@@ -5,15 +5,15 @@ enum WorkflowPreset: String, CaseIterable, Identifiable {
     var id: Self { self }
     var title: String {
         switch self {
-        case .files: String(localized: "File Shelf")
+        case .files: String(localized: "Files")
         case .clipboard: String(localized: "Files & Clipboard")
         case .toolbox: String(localized: "Full Toolbox")
         }
     }
     var detail: String {
         switch self {
-        case .files: String(localized: "Use the side shelf for files. Island and its background modules are turned off.")
-        case .clipboard: String(localized: "Enable the side shelf and Island with Shelf, Transfers and Clipboard History. Recording stays under your control.")
+        case .files: String(localized: "Use Island with Shelf and Transfers for files.")
+        case .clipboard: String(localized: "Use Island with Shelf, Transfers and Clipboard History. Recording stays under your control.")
         case .toolbox: String(localized: "Enable all built-in Island modules. Clipboard recording stays under your control.")
         }
     }
@@ -22,13 +22,15 @@ enum WorkflowPreset: String, CaseIterable, Identifiable {
 extension SettingsStore {
     /// Changes presentation only. Data, privacy consent, shortcut, and unknown module IDs survive.
     func applyWorkflowPreset(_ preset: WorkflowPreset) {
-        classicShelfEnabled = true
-        edgeTabEnabled = true
-        dragAutoAppearMode = .edgeOnly
+        if SideShelfAvailability.isEnabled {
+            classicShelfEnabled = true
+            edgeTabEnabled = true
+            dragAutoAppearMode = .edgeOnly
+            classicShelfHoverRevealEnabled = false
+        }
         islandDragApproachEnabled = false
         islandHoverRevealEnabled = false
-        classicShelfHoverRevealEnabled = false
-        islandEnabled = preset != .files
+        islandEnabled = true
         let builtIns: [IslandModuleID] = [.shelf, .transfers, .timer, .battery, .system, .media, .folders, .clipboard]
         let enabled: [IslandModuleID]
         let pinned: [IslandModuleID]

@@ -1,6 +1,12 @@
 import Foundation
 import OpenYoinkModuleCore
 
+/// Side Shelf is parked until its next implementation. Keep its code and
+/// persisted preferences, but expose only the Island in the current app.
+enum SideShelfAvailability {
+    static let isEnabled = false
+}
+
 /// UserDefaults-backed app settings, observable by SwiftUI.
 ///
 /// All keys are prefixed with `OpenYoink.` to avoid collisions. Defaults are
@@ -205,7 +211,7 @@ final class SettingsStore {
         // whenever that surface is enabled. Island remains independently
         // clickable and drag-addressable; it is only the shortcut fallback
         // when the side shelf is disabled.
-        if classicShelfEnabled { return .classic }
+        if SideShelfAvailability.isEnabled && classicShelfEnabled { return .classic }
         if islandShelfAvailable { return .island }
         return nil
     }
@@ -272,6 +278,16 @@ final class SettingsStore {
     /// always available, so disabling hover never makes Island unreachable.
     var islandHoverRevealEnabled: Bool {
         didSet { defaults.set(islandHoverRevealEnabled, forKey: Keys.islandHoverRevealEnabled) }
+    }
+
+    /// Time the pointer must stay over the compact Island before previewing it.
+    var islandHoverDelaySeconds: Double {
+        didSet { defaults.set(islandHoverDelaySeconds, forKey: Keys.islandHoverDelaySeconds) }
+    }
+
+    /// Grace period before a hover preview closes after the pointer leaves.
+    var islandHoverLeaveDelaySeconds: Double {
+        didSet { defaults.set(islandHoverLeaveDelaySeconds, forKey: Keys.islandHoverLeaveDelaySeconds) }
     }
 
     /// Expands the Island Shelf when a drag approaches the top-center target.
@@ -613,6 +629,8 @@ final class SettingsStore {
         static let islandShelfEnabled = prefix + "islandShelfEnabled"
         static let preferredShelfSurface = prefix + "preferredShelfSurface"
         static let islandHoverRevealEnabled = prefix + "islandHoverRevealEnabled"
+        static let islandHoverDelaySeconds = prefix + "islandHoverDelaySeconds"
+        static let islandHoverLeaveDelaySeconds = prefix + "islandHoverLeaveDelaySeconds"
         static let islandDragApproachEnabled = prefix + "islandDragApproachEnabled"
         static let islandTimerEnabled = prefix + "islandTimerEnabled"
         static let islandBatteryEnabled = prefix + "islandBatteryEnabled"
@@ -708,6 +726,8 @@ final class SettingsStore {
             Keys.islandShelfEnabled: true,
             Keys.preferredShelfSurface: PreferredShelfSurface.island.rawValue,
             Keys.islandHoverRevealEnabled: false,
+            Keys.islandHoverDelaySeconds: 0.15,
+            Keys.islandHoverLeaveDelaySeconds: 0.25,
             Keys.islandDragApproachEnabled: false,
             Keys.islandTimerEnabled: true,
             Keys.islandBatteryEnabled: true,
@@ -794,12 +814,20 @@ final class SettingsStore {
             ) ?? .classic
         }
         classicShelfEnabled = resolvedClassicShelfEnabled
-        islandEnabled = resolvedIslandEnabled
+        // Keep legacy Side Shelf preferences for a future implementation,
+        // while ensuring classic-only users still have a visible surface.
+        let activateIsland = !SideShelfAvailability.isEnabled && hadPersistedOnboardingVersion
+            && resolvedClassicShelfEnabled && !resolvedIslandEnabled
+        islandEnabled = resolvedIslandEnabled || activateIsland
         islandDisplayTarget = IslandDisplayTarget(
             persistedValue: defaults.string(forKey: Keys.islandDisplayTarget)
         )
-        islandShelfEnabled = resolvedIslandShelfEnabled
+        islandShelfEnabled = resolvedIslandShelfEnabled || activateIsland
         preferredShelfSurface = resolvedPreferredSurface
+        if activateIsland {
+            defaults.set(true, forKey: Keys.islandEnabled)
+            defaults.set(true, forKey: Keys.islandShelfEnabled)
+        }
         if needsSurfaceMigration {
             defaults.set(resolvedClassicShelfEnabled, forKey: Keys.classicShelfEnabled)
             defaults.set(resolvedIslandEnabled, forKey: Keys.islandEnabled)
@@ -823,6 +851,8 @@ final class SettingsStore {
         )
         let resolvedIslandMediaEnabled = defaults.bool(forKey: Keys.islandMediaEnabled)
         islandHoverRevealEnabled = resolvedIslandHoverRevealEnabled
+        islandHoverDelaySeconds = min(max(defaults.double(forKey: Keys.islandHoverDelaySeconds), 0), 0.5)
+        islandHoverLeaveDelaySeconds = min(max(defaults.double(forKey: Keys.islandHoverLeaveDelaySeconds), 0), 1)
         islandDragApproachEnabled = resolvedIslandDragApproachEnabled
         islandTimerEnabled = resolvedIslandTimerEnabled
         islandBatteryEnabled = resolvedIslandBatteryEnabled

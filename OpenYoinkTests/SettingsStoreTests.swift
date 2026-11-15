@@ -80,15 +80,17 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.language, .system)
         XCTAssertEqual(store.onboardingVersion, 0)
         XCTAssertFalse(store.hadPersistedOnboardingVersion)
-        XCTAssertEqual(store.shelfPresentationMode, .classic)
-        XCTAssertEqual(store.shelfPlacement, .right)
+        XCTAssertEqual(store.shelfPresentationMode, .island)
+        XCTAssertEqual(store.shelfPlacement, .island)
         XCTAssertTrue(store.classicShelfEnabled)
         XCTAssertTrue(store.islandEnabled)
         XCTAssertEqual(store.islandDisplayTarget, .main)
         XCTAssertTrue(store.islandShelfEnabled)
         XCTAssertEqual(store.preferredShelfSurface, .island)
-        XCTAssertEqual(store.effectivePreferredShelfSurface, .classic)
+        XCTAssertEqual(store.effectivePreferredShelfSurface, .island)
         XCTAssertFalse(store.islandHoverRevealEnabled)
+        XCTAssertEqual(store.islandHoverDelaySeconds, 0.15)
+        XCTAssertEqual(store.islandHoverLeaveDelaySeconds, 0.25)
         XCTAssertFalse(store.islandDragApproachEnabled)
         XCTAssertTrue(store.islandTimerEnabled)
         XCTAssertTrue(store.islandBatteryEnabled)
@@ -225,6 +227,8 @@ final class SettingsStoreTests: XCTestCase {
         store.shelfPlacement = .island
         store.islandDisplayTarget = .display("display-uuid")
         store.islandHoverRevealEnabled = true
+        store.islandHoverDelaySeconds = 0.05
+        store.islandHoverLeaveDelaySeconds = 0.8
         store.islandDragApproachEnabled = true
         store.islandTimerEnabled = false
         store.islandBatteryEnabled = false
@@ -235,6 +239,8 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(reloaded.shelfPresentationMode, .island)
         XCTAssertEqual(reloaded.islandDisplayTarget, .display("display-uuid"))
         XCTAssertTrue(reloaded.islandHoverRevealEnabled)
+        XCTAssertEqual(reloaded.islandHoverDelaySeconds, 0.05)
+        XCTAssertEqual(reloaded.islandHoverLeaveDelaySeconds, 0.8)
         XCTAssertTrue(reloaded.islandDragApproachEnabled)
         XCTAssertFalse(reloaded.islandTimerEnabled)
         XCTAssertFalse(reloaded.islandBatteryEnabled)
@@ -271,13 +277,13 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertTrue(reloaded.islandEnabled)
         XCTAssertTrue(reloaded.islandShelfEnabled)
         XCTAssertEqual(reloaded.preferredShelfSurface, .island)
-        XCTAssertEqual(reloaded.effectivePreferredShelfSurface, .classic)
+        XCTAssertEqual(reloaded.effectivePreferredShelfSurface, .island)
 
         reloaded.islandShelfEnabled = false
         XCTAssertTrue(reloaded.classicShelfEnabled)
         XCTAssertTrue(reloaded.islandEnabled)
         XCTAssertEqual(reloaded.preferredShelfSurface, .island)
-        XCTAssertEqual(reloaded.effectivePreferredShelfSurface, .classic)
+        XCTAssertNil(reloaded.effectivePreferredShelfSurface)
     }
 
     func testLegacyIslandModeMigratesToIndependentSurfaceSettings() throws {
@@ -307,7 +313,8 @@ final class SettingsStoreTests: XCTestCase {
         let store = SettingsStore(defaults: defaults)
 
         XCTAssertTrue(store.classicShelfEnabled)
-        XCTAssertFalse(store.islandEnabled)
+        XCTAssertTrue(store.islandEnabled)
+        XCTAssertTrue(store.islandShelfEnabled)
         XCTAssertEqual(store.preferredShelfSurface, .classic)
     }
 
@@ -320,10 +327,10 @@ final class SettingsStoreTests: XCTestCase {
         store.islandEnabled = true
         store.islandShelfEnabled = true
         store.preferredShelfSurface = .island
-        XCTAssertEqual(store.effectivePreferredShelfSurface, .classic)
+        XCTAssertEqual(store.effectivePreferredShelfSurface, .island)
 
         store.islandEnabled = false
-        XCTAssertEqual(store.effectivePreferredShelfSurface, .classic)
+        XCTAssertNil(store.effectivePreferredShelfSurface)
         XCTAssertEqual(store.preferredShelfSurface, .island)
 
         store.classicShelfEnabled = false

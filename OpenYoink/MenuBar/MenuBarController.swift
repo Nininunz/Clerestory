@@ -271,8 +271,8 @@ extension MenuBarController: NSMenuDelegate {
     func menuWillOpen(_ menu: NSMenu) {
         let isVisible = isShelfExpanded()
         toggleItem.title = isVisible
-            ? String(localized: "Hide Shelf")
-            : String(localized: "Show Shelf")
+            ? String(localized: "Hide Island")
+            : String(localized: "Show Island")
         toggleItem.state = isVisible ? .on : .off
         rebuildRecentSubmenu()
     }

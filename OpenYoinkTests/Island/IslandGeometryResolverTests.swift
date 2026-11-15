@@ -215,6 +215,20 @@ final class IslandGeometryResolverTests: XCTestCase {
                                  after.visibleFrame.height * 0.6)
     }
 
+    func testFileDragOnCompactIslandDoesNotNeedTopApproachSetting() {
+        let compact = CGRect(x: 100, y: 900, width: 300, height: 38)
+        let topZone = CGRect(x: 50, y: 850, width: 400, height: 88)
+        XCTAssertTrue(IslandGeometryResolver.acceptsFileDrag(
+            at: CGPoint(x: 120, y: 920), compactPointerFrame: compact,
+            activationFrame: topZone, topApproachEnabled: false))
+        XCTAssertFalse(IslandGeometryResolver.acceptsFileDrag(
+            at: CGPoint(x: 80, y: 900), compactPointerFrame: compact,
+            activationFrame: topZone, topApproachEnabled: false))
+        XCTAssertTrue(IslandGeometryResolver.acceptsFileDrag(
+            at: CGPoint(x: 80, y: 900), compactPointerFrame: compact,
+            activationFrame: topZone, topApproachEnabled: true))
+    }
+
     private func geometry(x: CGFloat, width: CGFloat,
                           height: CGFloat) -> IslandGeometryResolver.ScreenGeometry {
         .init(frame: CGRect(x: x, y: 0, width: width, height: height),

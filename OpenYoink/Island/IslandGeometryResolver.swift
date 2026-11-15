@@ -35,6 +35,11 @@ enum IslandFloatingPresentation: Equatable, Sendable {
 }
 
 enum IslandGeometryResolver {
+    static func acceptsFileDrag(at point: CGPoint, compactPointerFrame: CGRect,
+                                activationFrame: CGRect, topApproachEnabled: Bool) -> Bool {
+        compactPointerFrame.contains(point)
+            || (topApproachEnabled && activationFrame.contains(point))
+    }
     struct ScreenGeometry: Equatable, Sendable {
         var frame: CGRect
         var visibleFrame: CGRect

@@ -713,6 +713,7 @@ final class ShelfWindowController: NSObject {
 
     /// 从贴附缘滑入并淡入（贴左缘时自左侧滑入，贴右缘时自右侧滑入）。
     func showShelf(animated: Bool = true, takeKeyboardFocus: Bool = false) {
+        guard SideShelfAvailability.isEnabled else { return }
         onClassicPresentationRequested?()
         let animated = animated && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         if !isOpeningClassicHoverPreview {
@@ -1841,7 +1842,7 @@ final class ShelfWindowController: NSObject {
         classicPanel.level = .floating
         // 形变中途按半成品形状算出的阴影会残留成错位轮廓；形变结束时会恢复。
         if !isClassicMorphing { classicPanel.hasShadow = classicWantsWindowShadow }
-        if settings.classicShelfEnabled {
+        if SideShelfAvailability.isEnabled && settings.classicShelfEnabled {
             if appState.isShelfVisible {
                 applyClassicLayout(animated: animated)
                 if !classicPanel.isVisible {
@@ -1901,12 +1902,18 @@ final class ShelfWindowController: NSObject {
 
     func islandDragApproachedTop(at point: CGPoint) -> Bool {
         guard settings.islandEnabled,
-              settings.islandShelfEnabled,
-              settings.islandDragApproachEnabled else { return false }
+              settings.islandShelfEnabled else { return false }
         let layout = islandLayout(at: point)
-        guard layout.activationFrame.contains(point) else { return false }
+        guard IslandGeometryResolver.acceptsFileDrag(
+            at: point,
+            compactPointerFrame: interactiveCompactFrame(for: layout),
+            activationFrame: layout.activationFrame,
+            topApproachEnabled: settings.islandDragApproachEnabled
+                && settings.dragAutoAppearMode != .off
+        ) else { return false }
         islandActivityCoordinator.currentLayout = layout
         if !islandActivityCoordinator.surfaceState.isExpanded {
+            resetIslandHoverPreview(restoreSelection: false)
             islandActivityCoordinator.beginDrag()
             return true
         }
@@ -2104,7 +2111,8 @@ final class ShelfWindowController: NSObject {
             case .scheduleDwell:
                 islandHoverTask?.cancel()
                 islandHoverTask = Task { @MainActor [weak self] in
-                    try? await Task.sleep(for: .milliseconds(350))
+                    let delay = max(0, min(self?.settings.islandHoverDelaySeconds ?? 0.15, 0.5))
+                    try? await Task.sleep(for: .seconds(delay))
                     guard let self, !Task.isCancelled else { return }
                     self.islandHoverTask = nil
                     let layout = self.islandLayout()
@@ -2126,7 +2134,8 @@ final class ShelfWindowController: NSObject {
             case .scheduleExit:
                 islandHoverExitTask?.cancel()
                 islandHoverExitTask = Task { @MainActor [weak self] in
-                    try? await Task.sleep(for: .milliseconds(500))
+                    let delay = max(0, min(self?.settings.islandHoverLeaveDelaySeconds ?? 0.25, 1))
+                    try? await Task.sleep(for: .seconds(delay))
                     guard let self, !Task.isCancelled else { return }
                     self.islandHoverExitTask = nil
                     let stillOutside = !self.islandPanel.frame

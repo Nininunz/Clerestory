@@ -15,16 +15,16 @@ final class SettingsNavigationTests: XCTestCase {
         let navigation = SettingsNavigationModel()
         navigation.selectedPane = .about
 
-        XCTAssertEqual(navigation.moveSidebarSelection(forward: false, focusedPane: .triggers), .appearance)
-        XCTAssertEqual(navigation.selectedPane, .appearance)
+        XCTAssertEqual(navigation.moveSidebarSelection(forward: false, focusedPane: .triggers), .modules)
+        XCTAssertEqual(navigation.selectedPane, .modules)
     }
 
     func testNoFocusedButtonFallsBackToSelectedPane() {
         let navigation = SettingsNavigationModel()
-        navigation.selectedPane = .appearance
+        navigation.selectedPane = .general
 
-        XCTAssertEqual(navigation.moveSidebarSelection(forward: true, focusedPane: nil), .triggers)
-        XCTAssertEqual(navigation.moveSidebarSelection(forward: false, focusedPane: nil), .appearance)
+        XCTAssertEqual(navigation.moveSidebarSelection(forward: true, focusedPane: nil), .modules)
+        XCTAssertEqual(navigation.moveSidebarSelection(forward: false, focusedPane: nil), .general)
     }
 
     func testArrowsDoNotWrapAtSidebarBoundaries() {

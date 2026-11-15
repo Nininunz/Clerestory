@@ -297,7 +297,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         _ = menuBarController
         if !isUITesting { clipboardHistoryStore.start() }
         // EdgeTab: 拉环随启动就位（shelf 初始隐藏，拉环立即在边缘就位）。
-        _ = edgeTabController
+        if SideShelfAvailability.isEnabled { _ = edgeTabController }
         // Sparkle: 启动 updater（应用「自动检查」设置后 start；幂等）。
         if !isUITesting {
             updateController.start()
@@ -369,7 +369,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let arguments = ProcessInfo.processInfo.arguments
         if arguments.contains("--ui-testing-open-settings") {
             settingsWindowController.show(pane: .general)
-        } else if arguments.contains("--ui-testing-show-shelf") {
+        } else if SideShelfAvailability.isEnabled && arguments.contains("--ui-testing-show-shelf") {
             shelfWindowController.showShelf(animated: false)
         }
     }
@@ -461,9 +461,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func handleDragUpdate(at point: CGPoint) {
         guard settingsStore.islandEnabled,
-              settingsStore.islandShelfEnabled,
-              settingsStore.islandDragApproachEnabled,
-              settingsStore.dragAutoAppearMode != .off else { return }
+              settingsStore.islandShelfEnabled else { return }
         if shelfPresentationCoordinator.dragApproachedTop(at: point) {
             islandDragWasActivated = true
         }
@@ -781,7 +779,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             mouseShakeMonitor.stop()
         }
 
-        let classicActive = settingsStore.classicShelfEnabled
+        let classicActive = SideShelfAvailability.isEnabled && settingsStore.classicShelfEnabled
         let edgeActive = classicActive
             && settingsStore.dragAutoAppearMode == .edgeOnly
             && settingsStore.shelfPosition != .custom
@@ -802,8 +800,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             && settingsStore.shelfPosition != .custom
         let islandDragActive = settingsStore.islandEnabled
             && settingsStore.islandShelfEnabled
-            && settingsStore.islandDragApproachEnabled
-            && settingsStore.dragAutoAppearMode != .off
         let classicImmediateActive = settingsStore.effectivePreferredShelfSurface == .classic
             && settingsStore.dragAutoAppearMode == .immediate
         if classicImmediateActive

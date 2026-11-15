@@ -41,7 +41,7 @@ final class SettingsWindowController {
     /// activate；重复调用幂等——窗口已存在则只做前置）。
     func show(pane: SettingsPane? = nil) {
         if let pane {
-            navigation.selectedPane = pane
+            navigation.selectedPane = SettingsPane.visibleCases.contains(pane) ? pane : .general
             if pane == .storage {
                 storageManagementController.refresh()
             }
