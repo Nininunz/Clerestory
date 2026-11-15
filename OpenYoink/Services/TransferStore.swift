@@ -529,3 +529,18 @@ final class TransferStore {
         }
     }
 }
+
+#if DEBUG
+// Isolated, non-running fixtures for the module preview catalog. Never used by app startup.
+extension TransferStore {
+    static func preview(phase: TransferPhase?, direction: TransferDirection = .importIntoShelf) -> TransferStore {
+        let store = TransferStore()
+        if let phase {
+            let task = TransferTask(id: UUID(), direction: direction, startedAt: Date(), itemIDs: (0..<5).map { _ in UUID() }, phase: phase, safetyMessage: "", expectedCount: 5)
+            store.tasks = [task]
+            store.visibleTaskIDs = [task.id]
+        }
+        return store
+    }
+}
+#endif

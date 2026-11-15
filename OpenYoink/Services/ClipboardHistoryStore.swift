@@ -245,3 +245,17 @@ final class ClipboardHistoryStore {
         }
     }
 }
+
+#if DEBUG
+// Isolated, non-running fixtures for the module preview catalog. Never used by app startup.
+extension ClipboardHistoryStore {
+    static func preview(settings: SettingsStore, directory: URL, entries: [ClipboardHistoryEntry] = [], loading: Bool = false, error: String? = nil, notice: String? = nil) -> ClipboardHistoryStore {
+        let store = ClipboardHistoryStore(settings: settings, pasteboard: NSPasteboard(name: .init("OpenYoink.ModulePreviews")), directoryURL: directory)
+        store.entries = entries
+        store.isLoading = loading
+        store.errorMessage = error
+        store.noticeMessage = notice
+        return store
+    }
+}
+#endif

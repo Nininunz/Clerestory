@@ -588,3 +588,16 @@ final class FavoriteFoldersStore {
         noticeIsError = isError
     }
 }
+
+#if DEBUG
+// Isolated, non-running fixtures for the module preview catalog. Never used by app startup.
+extension FavoriteFoldersStore {
+    static func preview(items: [FavoriteFolder] = [], unavailable: Bool = false, notice: String? = nil, isError: Bool = false) -> FavoriteFoldersStore {
+        let store = FavoriteFoldersStore(items: items, bookmarkService: BookmarkService(), itemsAreLoaded: true)
+        store.noticeMessage = notice
+        store.noticeIsError = isError
+        if unavailable { store.unavailableIDs = Set(items.map(\.id)) }
+        return store
+    }
+}
+#endif

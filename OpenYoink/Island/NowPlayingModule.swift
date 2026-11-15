@@ -416,3 +416,16 @@ final class NowPlayingModuleStore: IslandModule {
         let artist: String?
     }
 }
+
+#if DEBUG
+// Isolated, non-running fixtures for the module preview catalog. Never used by app startup.
+extension NowPlayingModuleStore {
+    static func preview(availability: Availability, snapshot: NowPlayingSnapshot? = nil, source: NowPlayingSource? = nil) -> NowPlayingModuleStore {
+        let store = NowPlayingModuleStore()
+        store.availability = availability
+        store.snapshot = snapshot
+        store.source = source
+        return store
+    }
+}
+#endif

@@ -19,30 +19,16 @@ struct IslandNowPlayingView: View {
             )
             IslandModuleScrollView(fillsViewport: true) {
                 if store.availability == .disabled {
-                    VStack(spacing: 12) {
-                        IslandEmptyState(
-                            title: "Enable Now Playing",
-                            message: "Show album artwork, playback progress, and media controls in the Island.",
-                            systemImage: "music.note"
-                        )
-                        Button { settings.islandMediaEnabled = true } label: {
-                            Label("Enable", systemImage: "waveform")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 18)
-                                .frame(height: 36)
-                                .background(Capsule().fill(Color.accentColor))
-                        }
-                        .buttonStyle(IslandPressFeedbackStyle(reduceMotion: reduceMotion))
+                    IslandModuleState(
+                        title: "Enable Now Playing",
+                        message: "Show album artwork, playback progress, and media controls in the Island.",
+                        systemImage: "music.note"
+                    ) {
+                        Button("Enable") { settings.islandMediaEnabled = true }
+                            .buttonStyle(IslandActionButtonStyle(prominent: true))
                     }
                 } else if store.availability == .probing {
-                    VStack(spacing: 9) {
-                        ProgressView().controlSize(.small)
-                        Text("Checking media access…")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.white.opacity(0.48))
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    IslandLoadingState(title: "Checking media access…")
                 } else if let snapshot = store.snapshot {
                     playerCard(snapshot)
                 } else if store.availability == .available {

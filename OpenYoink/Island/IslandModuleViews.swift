@@ -587,7 +587,7 @@ struct IslandRootView: View {
     }
 
     private var expandedContent: some View {
-        VStack(spacing: 10) {
+        IslandExpandedSurface(hasPhysicalNotch: hasPhysicalNotch) {
             if hasPhysicalNotch {
                 physicalNotchModuleStrip
             } else {
@@ -595,6 +595,7 @@ struct IslandRootView: View {
                     .padding(.top, 12)
                     .padding(.horizontal, 14)
             }
+        } content: {
             GeometryReader { geometry in
                 let pages = [coordinator.selectedModule] + (coordinator.shortcutSwipeTarget.map { [$0] } ?? [])
                 ZStack {
@@ -608,27 +609,6 @@ struct IslandRootView: View {
                             .allowsHitTesting(module == coordinator.selectedModule && coordinator.shortcutSwipeOffset == 0)
                     }
                 }
-            }
-                .clipped()
-                .padding(.horizontal, 14)
-                .padding(.bottom, 14)
-        }
-        .contentShape(expandedSurfaceShape)
-        .background {
-            ZStack {
-                Color.black
-                LinearGradient(
-                    colors: [Color.white.opacity(0.035), .clear],
-                    startPoint: .top,
-                    endPoint: .center
-                )
-            }
-            .clipShape(expandedSurfaceShape)
-        }
-        .overlay {
-            if !hasPhysicalNotch {
-                expandedSurfaceShape
-                    .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
             }
         }
         // A physical notch is attached to the display rather than floating
@@ -1114,55 +1094,6 @@ private struct IslandEmptyModuleSlot: View {
 /// Screen-attached surfaces use shallow inward top corners and fuller convex
 /// bottom corners. The shape stays flush with the screen edge while avoiding
 /// the square, pasted-on silhouette of a regular rounded rectangle.
-private struct IslandSurfaceShape: InsettableShape {
-    var attachedToScreenTop: Bool
-    var cornerRadius: CGFloat
-    var insetAmount: CGFloat = 0
-
-    func inset(by amount: CGFloat) -> IslandSurfaceShape {
-        var copy = self
-        copy.insetAmount += amount
-        return copy
-    }
-
-    func path(in rect: CGRect) -> Path {
-        let rect = rect.insetBy(dx: insetAmount, dy: insetAmount)
-        guard attachedToScreenTop else {
-            return RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .path(in: rect)
-        }
-
-        let bottomRadius = min(cornerRadius, rect.width / 2, rect.height / 2)
-        let topCut = min(7, max(4, bottomRadius * 0.45))
-        let leftBody = rect.minX + topCut
-        let rightBody = rect.maxX - topCut
-        var path = Path()
-        path.move(to: CGPoint(x: rect.minX, y: rect.minY))
-        path.addCurve(
-            to: CGPoint(x: leftBody, y: rect.minY + topCut),
-            control1: CGPoint(x: rect.minX + topCut * 0.55, y: rect.minY),
-            control2: CGPoint(x: leftBody, y: rect.minY + topCut * 0.45)
-        )
-        path.addLine(to: CGPoint(x: leftBody, y: rect.maxY - bottomRadius))
-        path.addQuadCurve(
-            to: CGPoint(x: leftBody + bottomRadius, y: rect.maxY),
-            control: CGPoint(x: leftBody, y: rect.maxY)
-        )
-        path.addLine(to: CGPoint(x: rightBody - bottomRadius, y: rect.maxY))
-        path.addQuadCurve(
-            to: CGPoint(x: rightBody, y: rect.maxY - bottomRadius),
-            control: CGPoint(x: rightBody, y: rect.maxY)
-        )
-        path.addLine(to: CGPoint(x: rightBody, y: rect.minY + topCut))
-        path.addCurve(
-            to: CGPoint(x: rect.maxX, y: rect.minY),
-            control1: CGPoint(x: rightBody, y: rect.minY + topCut * 0.45),
-            control2: CGPoint(x: rect.maxX - topCut * 0.55, y: rect.minY)
-        )
-        path.closeSubpath()
-        return path
-    }
-}
 
 
 struct IslandModuleLibraryView: View {
@@ -1196,7 +1127,7 @@ struct IslandModuleLibraryView: View {
                     .foregroundStyle(.white.opacity(0.46))
                 Spacer()
                 Button("Open Full Settings") { onOpenSettings() }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(IslandActionButtonStyle())
                     .controlSize(.small)
             }
         }
@@ -1230,7 +1161,7 @@ struct IslandModuleLibraryView: View {
 
             if enabled {
                 Button("Open") { onOpenModule(descriptor.id) }
-                    .buttonStyle(.plain)
+                    .buttonStyle(IslandPressFeedbackStyle())
                     .foregroundStyle(Color.accentColor)
                     .font(.caption.weight(.semibold))
             }
@@ -1241,7 +1172,7 @@ struct IslandModuleLibraryView: View {
                 Image(systemName: pinned ? "pin.fill" : "pin")
                     .frame(width: 24, height: 24)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(IslandPressFeedbackStyle())
             .disabled(!enabled || (!pinned && pinnedCount >= 5))
             .opacity(!enabled || (!pinned && pinnedCount >= 5) ? 0.34 : 1)
             .accessibilityLabel(Text(pinned ? "Unpin module" : "Pin module"))

@@ -94,12 +94,14 @@ struct ClipboardHistoryView: View {
             }
             .onChange(of: settings.clipboardHistoryEnabled) { _, _ in history.updateRecording() }
 
-            if let error = history.errorMessage {
-                Text(error).font(.caption).foregroundStyle(.orange)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else if let notice = history.noticeMessage {
-                Text(notice).font(.caption).foregroundStyle(secondaryForeground)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            if let message = history.errorMessage ?? history.noticeMessage {
+                if isIsland {
+                    IslandModuleNotice(message: message, isError: history.errorMessage != nil)
+                } else {
+                    Text(message).font(.caption)
+                        .foregroundStyle(history.errorMessage != nil ? Color.orange : secondaryForeground)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
 
             HStack(spacing: 6) {
@@ -125,14 +127,22 @@ struct ClipboardHistoryView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             if history.isLoading {
-                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                if isIsland {
+                    IslandModuleScrollView(fillsViewport: true) {
+                        IslandLoadingState(title: "Loading clipboard history…")
+                    }
+                } else {
+                    ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             } else if history.filteredEntries(query: query, filter: filter).isEmpty {
                 if isIsland {
-                    IslandEmptyState(
-                        title: query.isEmpty ? "No Clipboard History" : "No Results",
-                        message: query.isEmpty ? "Copied items appear here when recording is enabled." : "Try a different search or filter.",
-                        systemImage: "doc.on.clipboard"
-                    )
+                    IslandModuleScrollView(fillsViewport: true) {
+                        IslandEmptyState(
+                            title: query.isEmpty ? "No Clipboard History" : "No Results",
+                            message: query.isEmpty ? "Copied items appear here when recording is enabled." : "Try a different search or filter.",
+                            systemImage: "doc.on.clipboard"
+                        )
+                    }
                 } else {
                     VStack(spacing: 8) {
                         Image(systemName: "doc.on.clipboard").font(.title2).foregroundStyle(secondaryForeground)
@@ -273,3 +283,14 @@ private struct ClipboardHistoryRow: View {
         return NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))
     }
 }
+
+#if DEBUG
+// Isolated, non-running fixtures for the module preview catalog. Never used by app startup.
+extension ClipboardHistoryView {
+    static func preview(query: String) -> ClipboardHistoryView {
+        var view = ClipboardHistoryView(isIsland: true)
+        view._query = State(initialValue: query)
+        return view
+    }
+}
+#endif

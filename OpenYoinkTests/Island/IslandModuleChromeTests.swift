@@ -89,14 +89,101 @@ final class IslandModuleChromeTests: XCTestCase {
         }
     }
 
+    func testHeaderActionStyleKeepsSameSizeWhenDisabled() throws {
+        for disabled in [false, true] {
+            let image = try render(
+                Button {} label: { Image(systemName: "plus") }
+                    .buttonStyle(IslandHeaderButtonStyle())
+                    .disabled(disabled)
+            )
+            XCTAssertEqual(image.pixelsWide, 56)
+            XCTAssertEqual(image.pixelsHigh, 56)
+        }
+    }
+
+    func testStateAllowsLongErrorDetailsToGrowWithoutTruncation() throws {
+        let short = try render(IslandModuleState(title: "Couldn't load", message: "Try again.") {
+            Button("Retry") {}
+        }.frame(width: 240).fixedSize(horizontal: false, vertical: true))
+        let long = try render(IslandModuleState(
+            title: "Couldn't load",
+            message: "The service could not be reached. Check that the application is running and that access has been granted, then try again. Your existing data is still available."
+        ) {
+            Button("Retry") {}
+        }.frame(width: 240).fixedSize(horizontal: false, vertical: true))
+        XCTAssertEqual(short.pixelsWide, 480)
+        XCTAssertEqual(long.pixelsWide, 480)
+        XCTAssertGreaterThan(long.pixelsHigh, short.pixelsHigh + 40)
+    }
+
+    func testClipboardStatesKeepTitleInsideViewport() async throws {
+        let suite = "OpenYoink.ClipboardLayoutTest.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = SettingsStore(defaults: defaults)
+        settings.clipboardHistoryEnabled = true
+        for state in ["loading", "empty", "no-results", "error"] {
+            let store = ClipboardHistoryStore.preview(
+                settings: settings, directory: FileManager.default.temporaryDirectory,
+                loading: state == "loading",
+                error: state == "error" ? "Clipboard history could not be loaded. Clear history to reset it." : nil
+            )
+            let view = ClipboardHistoryView.preview(query: state == "no-results" ? "missing" : "")
+                .environment(settings).environment(store).environment(\.colorScheme, .dark)
+                .frame(width: 464, height: 240).background(Color.black)
+            let window = host(view, height: 240)
+            defer { window.close() }
+            await settle(window)
+            let host = try XCTUnwrap(window.contentView)
+            let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+            host.cacheDisplay(in: host.bounds, to: bitmap)
+            let scale = CGFloat(bitmap.pixelsWide) / 464
+            var titlePixels = 0
+            // The white title belongs in the top 18 pt; a pushed-out header
+            // leaves only its gray subtitle (or nothing) in this region.
+            for x in Int(40 * scale)..<Int(220 * scale) {
+                for y in 0..<Int(18 * scale) {
+                    guard let color = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB) else { continue }
+                    if min(color.redComponent, color.greenComponent, color.blueComponent) > 0.8 { titlePixels += 1 }
+                }
+            }
+            XCTAssertGreaterThan(titlePixels, 100, "Header clipped in \(state) state")
+        }
+    }
+
+    func testExpandedSurfacePaddingIsMeasuredFromVisibleEdge() async throws {
+        for notched in [true, false] {
+            let probe = Probe()
+            let view = IslandExpandedSurface(hasPhysicalNotch: notched) {
+                Color.clear.frame(height: 32)
+            } content: {
+                Color.white
+                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { probe.frames["body"] = $0 }
+            }
+            let window = host(view, height: 330, width: 492)
+            defer { window.close() }
+            await settle(window)
+            let body = try XCTUnwrap(probe.frames["body"])
+            let visibleEdge: CGFloat = notched ? 7 : 0
+            XCTAssertEqual(body.minX - visibleEdge, 14, accuracy: 0.5)
+            XCTAssertEqual(492 - visibleEdge - body.maxX, 14, accuracy: 0.5)
+            XCTAssertEqual(330 - body.maxY, 14, accuracy: 0.5)
+            XCTAssertEqual(body.width, IslandExpandedLayout.contentWidth(surfaceWidth: 492, hasPhysicalNotch: notched), accuracy: 0.5)
+            let path = IslandSurfaceShape(attachedToScreenTop: notched, cornerRadius: 26)
+                .path(in: CGRect(x: 0, y: 0, width: 492, height: 330))
+            XCTAssertTrue(path.contains(CGPoint(x: visibleEdge + 0.5, y: 100)))
+            XCTAssertFalse(path.contains(CGPoint(x: visibleEdge - 0.5, y: 100)))
+        }
+    }
+
     private func render<V: View>(_ view: V) throws -> NSBitmapImageRep {
         let renderer = ImageRenderer(content: view)
         renderer.scale = 2
         return NSBitmapImageRep(cgImage: try XCTUnwrap(renderer.cgImage))
     }
 
-    private func host<V: View>(_ view: V, height: CGFloat) -> NSWindow {
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 464, height: height),
+    private func host<V: View>(_ view: V, height: CGFloat, width: CGFloat = 464) -> NSWindow {
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: width, height: height),
                               styleMask: [.borderless], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: view)

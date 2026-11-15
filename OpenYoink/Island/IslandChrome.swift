@@ -45,15 +45,56 @@ enum IslandVisualStyle {
     static let hairline = Color.white.opacity(0.08)
 }
 
+/// Feedback changes appearance without moving content or changing hit targets.
 struct IslandPressFeedbackStyle: ButtonStyle {
-    let reduceMotion: Bool
+    var reduceMotion = false
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .opacity(configuration.isPressed ? 0.72 : 1)
-            .scaleEffect(reduceMotion || !configuration.isPressed ? 1 : 0.96)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.12),
-                       value: configuration.isPressed)
+            .modifier(IslandControlFeedback(isPressed: configuration.isPressed, reduceMotion: reduceMotion))
+    }
+}
+
+private struct IslandControlFeedback: ViewModifier {
+    let isPressed: Bool
+    var cornerRadius: CGFloat = 6
+    var reduceMotion = false
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.isFocused) private var isFocused
+    @State private var isHovered = false
+
+    func body(content: Content) -> some View {
+        content
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(Color.white.opacity(isEnabled && isHovered ? 0.07 : 0))
+                    .allowsHitTesting(false)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .strokeBorder(Color.accentColor.opacity(isEnabled && isFocused ? 0.9 : 0), lineWidth: 2)
+                    .allowsHitTesting(false)
+            }
+            .opacity(isEnabled ? (isPressed ? 0.72 : 1) : 0.35)
+            .onHover { isHovered = $0 }
+            .animation(reduceMotion || systemReduceMotion ? nil : .easeOut(duration: 0.12), value: isHovered)
+            .animation(reduceMotion || systemReduceMotion ? nil : .easeOut(duration: 0.12), value: isPressed)
+    }
+}
+
+struct IslandActionButtonStyle: ButtonStyle {
+    var prominent = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(prominent ? Color.black : IslandVisualStyle.primaryText)
+            .padding(.horizontal, 12)
+            .frame(minHeight: 28)
+            .background(Capsule().fill(prominent ? Color.white.opacity(0.92) : Color.white.opacity(0.10)))
+            .contentShape(Capsule())
+            .modifier(IslandControlFeedback(isPressed: configuration.isPressed, cornerRadius: 14))
     }
 }
 
@@ -133,8 +174,6 @@ extension IslandModuleHeader where Actions == EmptyView {
 
 /// Shared treatment for ordinary module-header actions (not segmented controls).
 struct IslandHeaderButtonStyle: ButtonStyle {
-    @Environment(\.isEnabled) private var isEnabled
-
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 12, weight: .semibold))
@@ -142,7 +181,52 @@ struct IslandHeaderButtonStyle: ButtonStyle {
             .frame(width: 28, height: 28)
             .background(Circle().fill(Color.white.opacity(configuration.isPressed ? 0.16 : 0.08)))
             .contentShape(Circle())
-            .opacity(isEnabled ? 1 : 0.35)
+            .modifier(IslandControlFeedback(isPressed: configuration.isPressed, cornerRadius: 14))
+    }
+}
+
+/// Full-body states share typography, spacing, and optional recovery actions.
+struct IslandModuleState<Actions: View>: View {
+    let title: LocalizedStringKey
+    var message: LocalizedStringKey? = nil
+    var systemImage = "exclamationmark.triangle"
+    var isLoading = false
+    @ViewBuilder var actions: Actions
+
+    var body: some View {
+        VStack(spacing: 10) {
+            if isLoading {
+                ProgressView().controlSize(.small)
+                    .accessibilityLabel(Text(title))
+            } else {
+                Image(systemName: systemImage)
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundStyle(IslandVisualStyle.tertiaryText)
+                    .accessibilityHidden(true)
+            }
+            Text(title)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(IslandVisualStyle.primaryText)
+            if let message {
+                Text(message)
+                    .font(.system(size: 12))
+                    .foregroundStyle(IslandVisualStyle.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: 300)
+            }
+            HStack(spacing: 8) { actions }
+                .buttonStyle(IslandActionButtonStyle())
+        }
+        .multilineTextAlignment(.center)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+struct IslandLoadingState: View {
+    let title: LocalizedStringKey
+    var body: some View {
+        IslandModuleState(title: title, isLoading: true) { EmptyView() }
     }
 }
 
@@ -152,26 +236,36 @@ struct IslandEmptyState: View {
     let systemImage: String
 
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: systemImage)
-                .font(.system(size: 24, weight: .medium))
-                .foregroundStyle(.white.opacity(0.42))
-            Text(title)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.9))
-            Text(message)
-                .font(.system(size: 12, weight: .regular))
-                .foregroundStyle(.white.opacity(0.46))
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .frame(maxWidth: 270)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        IslandModuleState(title: title, message: message, systemImage: systemImage) { EmptyView() }
     }
 }
 
+/// Non-blocking notices preserve usable content and fixed search controls.
+struct IslandModuleNotice: View {
+    let message: String
+    var isError = false
+    var onDismiss: (() -> Void)? = nil
 
-
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: isError ? "exclamationmark.triangle.fill" : "info.circle")
+                .foregroundStyle(isError ? Color.orange : IslandVisualStyle.secondaryText)
+                .accessibilityHidden(true)
+            Text(message)
+                .font(.system(size: 11))
+                .foregroundStyle(IslandVisualStyle.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+            if let onDismiss {
+                Button(action: onDismiss) { Image(systemName: "xmark") }
+                    .buttonStyle(IslandHeaderButtonStyle())
+                    .accessibilityLabel("Dismiss")
+            }
+        }
+        .padding(8)
+        .background(RoundedRectangle(cornerRadius: 8).fill(IslandVisualStyle.cardFill))
+    }
+}
 
 /// A focus-independent toggle for the dark, non-activating Island panel.
 /// AppKit's native switch dims its tint when the panel loses key-window focus,
@@ -209,5 +303,102 @@ struct IslandClipboardToggleStyle: ToggleStyle {
             }
             .toggleStyle(.switch)
         }
+    }
+}
+
+/// The live Island and module previews share the same visible edge and insets.
+struct IslandExpandedSurface<Navigation: View, Content: View>: View {
+    let hasPhysicalNotch: Bool
+    @ViewBuilder var navigation: Navigation
+    @ViewBuilder var content: Content
+
+    static var visiblePadding: CGFloat { 14 }
+
+    var body: some View {
+        let shape = IslandSurfaceShape(attachedToScreenTop: hasPhysicalNotch, cornerRadius: 26)
+        VStack(spacing: 10) {
+            navigation
+            content
+                .clipped()
+                .padding(.horizontal, IslandExpandedLayout.horizontalInset(hasPhysicalNotch: hasPhysicalNotch))
+                .padding(.bottom, Self.visiblePadding)
+        }
+        .contentShape(shape)
+        .background {
+            ZStack {
+                Color.black
+                LinearGradient(colors: [Color.white.opacity(0.035), .clear], startPoint: .top, endPoint: .center)
+            }
+            .clipShape(shape)
+        }
+        .overlay {
+            if !hasPhysicalNotch {
+                shape.strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
+            }
+        }
+    }
+}
+
+enum IslandExpandedLayout {
+    static func horizontalInset(hasPhysicalNotch: Bool) -> CGFloat {
+        14 + (hasPhysicalNotch ? IslandSurfaceShape.bodyInset(cornerRadius: 26) : 0)
+    }
+
+    static func contentWidth(surfaceWidth: CGFloat, hasPhysicalNotch: Bool) -> CGFloat {
+        max(1, surfaceWidth - 2 * horizontalInset(hasPhysicalNotch: hasPhysicalNotch))
+    }
+}
+
+struct IslandSurfaceShape: InsettableShape {
+    var attachedToScreenTop: Bool
+    var cornerRadius: CGFloat
+    var insetAmount: CGFloat = 0
+
+    func inset(by amount: CGFloat) -> IslandSurfaceShape {
+        var copy = self
+        copy.insetAmount += amount
+        return copy
+    }
+
+    static func bodyInset(cornerRadius: CGFloat) -> CGFloat {
+        min(7, max(4, cornerRadius * 0.45))
+    }
+
+    func path(in rect: CGRect) -> Path {
+        let rect = rect.insetBy(dx: insetAmount, dy: insetAmount)
+        guard attachedToScreenTop else {
+            return RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .path(in: rect)
+        }
+
+        let bottomRadius = min(cornerRadius, rect.width / 2, rect.height / 2)
+        let topCut = Self.bodyInset(cornerRadius: bottomRadius)
+        let leftBody = rect.minX + topCut
+        let rightBody = rect.maxX - topCut
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+        path.addCurve(
+            to: CGPoint(x: leftBody, y: rect.minY + topCut),
+            control1: CGPoint(x: rect.minX + topCut * 0.55, y: rect.minY),
+            control2: CGPoint(x: leftBody, y: rect.minY + topCut * 0.45)
+        )
+        path.addLine(to: CGPoint(x: leftBody, y: rect.maxY - bottomRadius))
+        path.addQuadCurve(
+            to: CGPoint(x: leftBody + bottomRadius, y: rect.maxY),
+            control: CGPoint(x: leftBody, y: rect.maxY)
+        )
+        path.addLine(to: CGPoint(x: rightBody - bottomRadius, y: rect.maxY))
+        path.addQuadCurve(
+            to: CGPoint(x: rightBody, y: rect.maxY - bottomRadius),
+            control: CGPoint(x: rightBody, y: rect.maxY)
+        )
+        path.addLine(to: CGPoint(x: rightBody, y: rect.minY + topCut))
+        path.addCurve(
+            to: CGPoint(x: rect.maxX, y: rect.minY),
+            control1: CGPoint(x: rightBody, y: rect.minY + topCut * 0.45),
+            control2: CGPoint(x: rect.maxX - topCut * 0.55, y: rect.minY)
+        )
+        path.closeSubpath()
+        return path
     }
 }

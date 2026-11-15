@@ -11,6 +11,12 @@ struct IslandTimerView: View {
     @State private var customMinutes = 25
     @State private var page: Page = .timer
 
+    #if DEBUG
+    init(previewHistory: Bool = false) {
+        _page = State(initialValue: previewHistory ? .history : .timer)
+    }
+    #endif
+
     var body: some View {
         VStack(spacing: IslandModuleLayout.headerSpacing) {
             IslandModuleHeader(

@@ -381,3 +381,14 @@ final class IslandTimerStore: IslandModule {
         publishActivity()
     }
 }
+
+#if DEBUG
+// Isolated, non-running fixtures for the module preview catalog. Never used by app startup.
+extension IslandTimerStore {
+    static func preview(state: State, defaults: UserDefaults) -> IslandTimerStore {
+        let store = IslandTimerStore(defaults: defaults)
+        store.state = state
+        return store
+    }
+}
+#endif

@@ -353,3 +353,14 @@ final class PowerSourceMonitor: IslandModule {
         }
     }
 }
+
+#if DEBUG
+// Isolated, non-running fixtures for the module preview catalog. Never used by app startup.
+extension PowerSourceMonitor {
+    static func preview(snapshot: Snapshot) -> PowerSourceMonitor {
+        let store = PowerSourceMonitor(samplingAllowed: { false })
+        store.snapshot = snapshot
+        return store
+    }
+}
+#endif

@@ -742,3 +742,15 @@ final class SystemStatusModuleStore: IslandModuleRuntime {
         return [cpu, memory].compactMap { $0 }.joined(separator: " · ")
     }
 }
+
+#if DEBUG
+// Isolated, non-running fixtures for the module preview catalog. Never used by app startup.
+extension SystemStatusModuleStore {
+    static func preview(snapshot: SystemSnapshot, alerts: [IslandActivity] = []) -> SystemStatusModuleStore {
+        let store = SystemStatusModuleStore(isSelectedAndExpanded: { false })
+        store.snapshot = snapshot
+        store.alerts = alerts
+        return store
+    }
+}
+#endif

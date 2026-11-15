@@ -2177,7 +2177,7 @@ final class ShelfWindowController: NSObject {
                 current: islandActivityCoordinator.selectedModule, step: step,
                 pinned: settings.islandModuleConfiguration.pinnedModuleIDs,
                 enabled: islandModuleRegistry.isEnabled)
-            let width = max(1, (islandActivityCoordinator.currentLayout?.expandedFrame.width ?? 492) - 28)
+            let width = IslandExpandedLayout.contentWidth(surfaceWidth: islandActivityCoordinator.currentLayout?.expandedFrame.width ?? 492, hasPhysicalNotch: islandActivityCoordinator.currentLayout?.hasPhysicalNotch == true)
             islandActivityCoordinator.shortcutSwipeDirection = step
             islandActivityCoordinator.shortcutSwipeTarget = target
             islandActivityCoordinator.shortcutSwipeOffset = target == nil
@@ -2190,7 +2190,7 @@ final class ShelfWindowController: NSObject {
         let coordinator = islandActivityCoordinator
         let revision = coordinator.shortcutNavigationRevision
         let target = coordinator.shortcutSwipeTarget
-        let width = max(1, (coordinator.currentLayout?.expandedFrame.width ?? 492) - 28)
+        let width = IslandExpandedLayout.contentWidth(surfaceWidth: coordinator.currentLayout?.expandedFrame.width ?? 492, hasPhysicalNotch: coordinator.currentLayout?.hasPhysicalNotch == true)
         let projected = islandShortcutSwipe.projectedTranslation(at: timestamp)
         let commit = IslandShortcutSwipe.shouldCommit(
             projected: projected, direction: coordinator.shortcutSwipeDirection, width: width,

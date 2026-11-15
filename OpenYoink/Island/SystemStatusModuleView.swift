@@ -138,11 +138,11 @@ struct IslandSystemStatusView: View {
                             }
                         }
                         Button("View Details") { detailAlert = alert }
-                            .buttonStyle(.plain)
+                            .buttonStyle(IslandPressFeedbackStyle())
                             .font(.system(size: 9, weight: .semibold))
                             .foregroundStyle(Color.accentColor)
                         Button("Ignore Once") { store.ignoreAlert(id: alert.id) }
-                            .buttonStyle(.plain)
+                            .buttonStyle(IslandPressFeedbackStyle())
                             .font(.system(size: 9))
                             .foregroundStyle(.white.opacity(0.56))
                     }

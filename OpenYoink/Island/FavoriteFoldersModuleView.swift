@@ -51,10 +51,10 @@ struct FavoriteFoldersModuleView: View {
                 HStack(spacing: 8) {
                     ProgressView(value: Double(copyCoordinator.completed), total: Double(max(1, copyCoordinator.total)))
                     Text("\(copyCoordinator.completed) / \(copyCoordinator.total)").font(.caption.monospacedDigit())
-                    Button("Cancel") { copyCoordinator.cancelCopy() }.buttonStyle(.plain)
+                    Button("Cancel") { copyCoordinator.cancelCopy() }.buttonStyle(IslandPressFeedbackStyle())
                 }
             } else if let message = copyCoordinator.message {
-                Text(message).font(.caption).foregroundStyle(IslandVisualStyle.secondaryText).lineLimit(2)
+                IslandModuleNotice(message: message)
             }
 
             if store.items.isEmpty {
@@ -138,30 +138,7 @@ struct FavoriteFoldersModuleView: View {
     }
 
     private func notice(message: String, isError: Bool) -> some View {
-        HStack(spacing: 7) {
-            Image(systemName: isError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
-                .foregroundStyle(isError ? Color.orange : Color.green)
-            Text(message)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(IslandVisualStyle.secondaryText)
-                .lineLimit(2)
-            Spacer(minLength: 4)
-            Button {
-                store.dismissNotice()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 9, weight: .bold))
-                    .frame(width: 20, height: 20)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("Dismiss"))
-        }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 6)
-        .background {
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(Color.white.opacity(0.055))
-        }
+        IslandModuleNotice(message: message, isError: isError, onDismiss: store.dismissNotice)
     }
 
     private func chooseFolders() {

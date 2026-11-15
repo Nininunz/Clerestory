@@ -695,8 +695,15 @@ final class AIUsageModuleStore: IslandModuleRuntime {
         return String(localized: "AI today \(AIUsageFormat.cost(today.costUSD)) · \(AIUsageFormat.tokens(today.tokens))")
     }
 
+    #if DEBUG
+    @ObservationIgnored private var previewInstalled: Bool?
+    #endif
+
     var isTokenTrackerInstalled: Bool {
-        NSWorkspace.shared.urlForApplication(withBundleIdentifier: TokenTrackerClient.bundleIdentifier) != nil
+        #if DEBUG
+        if let previewInstalled { return previewInstalled }
+        #endif
+        return NSWorkspace.shared.urlForApplication(withBundleIdentifier: TokenTrackerClient.bundleIdentifier) != nil
     }
 
     func openTokenTracker() {
@@ -760,3 +767,16 @@ final class AIUsageModuleStore: IslandModuleRuntime {
         }
     }
 }
+
+#if DEBUG
+// Isolated, non-running fixtures for the module preview catalog. Never used by app startup.
+extension AIUsageModuleStore {
+    static func preview(status: Status, snapshot: AIUsageSnapshot? = nil, installed: Bool = true) -> AIUsageModuleStore {
+        let store = AIUsageModuleStore(isSelectedAndExpanded: { false }, compactMetric: { .off }, alertsEnabled: { false })
+        store.status = status
+        store.snapshot = snapshot
+        store.previewInstalled = installed
+        return store
+    }
+}
+#endif
