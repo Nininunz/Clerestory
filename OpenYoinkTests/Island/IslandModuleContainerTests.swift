@@ -4,6 +4,25 @@ import XCTest
 
 @MainActor
 final class IslandModuleContainerTests: XCTestCase {
+    func testQuickSettingsRemainsAvailableWithoutPinnedOrEnabledModules() {
+        let runtime = RuntimeSpy(id: .quickSettings)
+        let coordinator = IslandActivityCoordinator()
+        let container = makeContainer(runtime: runtime, coordinator: coordinator)
+        let configuration = IslandModuleConfiguration(enabledModuleIDs: [], pinnedModuleIDs: [])
+
+        coordinator.show(module: .quickSettings)
+        container.apply(configuration: configuration, isActive: true)
+        XCTAssertEqual(runtime.startCount, 1)
+        XCTAssertEqual(coordinator.selectedModule, .quickSettings)
+        XCTAssertTrue(IslandModuleRegistry().isEnabled(.quickSettings))
+        XCTAssertNotNil(IslandModuleRegistry().descriptor(for: .quickSettings))
+
+        coordinator.show(module: .shelf)
+        XCTAssertEqual(coordinator.selectedModule, .shelf)
+        container.apply(configuration: configuration, isActive: false)
+        XCTAssertEqual(runtime.stopCount, 1)
+    }
+
     func testLifecycleIsIdempotentAndDisabledRuntimeStops() {
         let runtime = RuntimeSpy(id: .timer)
         let coordinator = IslandActivityCoordinator()

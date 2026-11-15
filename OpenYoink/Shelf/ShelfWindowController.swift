@@ -534,6 +534,15 @@ final class ShelfWindowController: NSObject {
         self.islandModuleContainer = IslandModuleContainer(
             registrations: [
                 IslandModuleRegistration(
+                    descriptor: IslandModuleRegistry.quickSettingsDescriptor,
+                    runtime: CallbackIslandModuleRuntime(descriptor: IslandModuleRegistry.quickSettingsDescriptor),
+                    makeContentView: { context in
+                        AnyView(IslandModuleLibraryView(
+                            onOpenModule: context.onOpenModule,
+                            onOpenSettings: context.onOpenSettings))
+                    }
+                ),
+                IslandModuleRegistration(
                     descriptor: clipboardRuntime.descriptor,
                     runtime: clipboardRuntime,
                     makeContentView: { _ in AnyView(ClipboardHistoryView(isIsland: true)) }
@@ -2141,6 +2150,72 @@ final class ShelfWindowController: NSObject {
         }
     }
 
+    private var islandShortcutSwipe = IslandShortcutSwipe()
+    private var shortcutSettleTask: Task<Void, Never>?
+
+    private func handleIslandShortcutSwipe(_ event: NSEvent) -> Bool {
+        guard event.window === islandPanel,
+              islandActivityCoordinator.surfaceState.isExpanded,
+              event.hasPreciseScrollingDeltas,
+              !event.phase.isEmpty || !event.momentumPhase.isEmpty else { return false }
+        if event.phase.contains(.ended) || event.phase.contains(.cancelled) {
+            guard islandActivityCoordinator.shortcutSwipeOffset != 0 else { return false }
+            settleShortcutSwipe(cancelled: event.phase.contains(.cancelled), timestamp: event.timestamp)
+            return true
+        }
+        if shortcutSettleTask != nil { return true }
+        let result = islandShortcutSwipe.sample(
+            dx: event.scrollingDeltaX, dy: event.scrollingDeltaY,
+            began: event.phase.contains(.began), momentum: !event.momentumPhase.isEmpty,
+            timestamp: event.timestamp)
+        switch result {
+        case .ignored: return false
+        case .consumed: return true
+        case let .drag(offset):
+            let step = offset < 0 ? 1 : -1
+            let pages = settings.islandModuleConfiguration.pinnedModuleIDs.filter {
+                islandModuleRegistry.isEnabled($0) && $0 != .quickSettings
+            } + [.quickSettings]
+            let current = pages.firstIndex(of: islandActivityCoordinator.selectedModule)
+            let next = current.map { $0 + step } ?? (step > 0 ? 0 : pages.count - 1)
+            let target = pages.indices.contains(next) ? pages[next] : nil
+            let width = max(1, (islandActivityCoordinator.currentLayout?.expandedFrame.width ?? 492) - 28)
+            islandActivityCoordinator.shortcutSwipeDirection = step
+            islandActivityCoordinator.shortcutSwipeTarget = target
+            islandActivityCoordinator.shortcutSwipeOffset = target == nil
+                ? max(-24, min(24, offset * 0.18)) : max(-width, min(width, offset))
+            return true
+        }
+    }
+
+    private func settleShortcutSwipe(cancelled: Bool, timestamp: TimeInterval) {
+        let coordinator = islandActivityCoordinator
+        let startingModule = coordinator.selectedModule
+        let target = coordinator.shortcutSwipeTarget
+        let width = max(1, (coordinator.currentLayout?.expandedFrame.width ?? 492) - 28)
+        let projected = islandShortcutSwipe.projectedTranslation(at: timestamp)
+        let forwardTravel = -CGFloat(coordinator.shortcutSwipeDirection) * projected
+        let commit = !cancelled && target != nil && forwardTravel >= width * 0.18
+        let duration = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? 0.0 : 0.2
+        withAnimation(.easeOut(duration: duration)) {
+            coordinator.shortcutSwipeOffset = commit ? -CGFloat(coordinator.shortcutSwipeDirection) * width : 0
+        }
+        shortcutSettleTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(duration))
+            guard let self, !Task.isCancelled else { return }
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                if coordinator.selectedModule == startingModule, commit, let target {
+                    coordinator.selectedModule = target
+                }
+                coordinator.shortcutSwipeOffset = 0
+                coordinator.shortcutSwipeTarget = nil
+            }
+            self.shortcutSettleTask = nil
+        }
+    }
+
     private func startIslandEventMonitoring() {
         guard islandGlobalMonitor == nil, islandLocalMonitor == nil else { return }
         let mask: NSEvent.EventTypeMask = [.leftMouseDown, .mouseMoved]
@@ -2149,8 +2224,14 @@ final class ShelfWindowController: NSObject {
             let point = NSEvent.mouseLocation
             Task { @MainActor in self?.handleIslandEvent(event, at: point) }
         }
-        islandLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: mask) {
+        islandLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: mask.union(.scrollWheel)) {
             [weak self] event in
+            if event.type == .scrollWheel {
+                let consumed = MainActor.assumeIsolated {
+                    self?.handleIslandShortcutSwipe(event) == true
+                }
+                return consumed ? nil : event
+            }
             let point = NSEvent.mouseLocation
             Task { @MainActor in self?.handleIslandEvent(event, at: point) }
             return event
@@ -2158,6 +2239,11 @@ final class ShelfWindowController: NSObject {
     }
 
     private func stopIslandEventMonitoring() {
+        shortcutSettleTask?.cancel()
+        shortcutSettleTask = nil
+        islandActivityCoordinator.shortcutSwipeOffset = 0
+        islandActivityCoordinator.shortcutSwipeTarget = nil
+        islandShortcutSwipe = IslandShortcutSwipe()
         if let islandGlobalMonitor {
             NSEvent.removeMonitor(islandGlobalMonitor)
             self.islandGlobalMonitor = nil

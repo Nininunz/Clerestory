@@ -7,7 +7,49 @@ enum IslandDragFeedback {
     static let isEnabled = false
 }
 
+/// One page per horizontal trackpad gesture; vertical gestures stay with content.
+struct IslandShortcutSwipe {
+    enum Result: Equatable { case ignored, consumed, drag(CGFloat) }
+    private var x: CGFloat = 0
+    private var y: CGFloat = 0
+    private var horizontal = false
+    private var vertical = false
+    private var velocity: CGFloat = 0
+    private var lastSampleTime: TimeInterval?
+
+    mutating func sample(dx: CGFloat, dy: CGFloat, began: Bool,
+                         momentum: Bool, timestamp: TimeInterval = 0) -> Result {
+        if began { self = Self() }
+        if momentum { return horizontal ? .consumed : .ignored }
+        if vertical { return .ignored }
+        let interval = lastSampleTime.map { timestamp - $0 } ?? (1.0 / 60.0)
+        if interval > 0 {
+            let instantaneous = dx / max(1.0 / 120.0, interval)
+            velocity = interval > 0.12 ? instantaneous : velocity * 0.35 + instantaneous * 0.65
+        }
+        lastSampleTime = timestamp
+        x += dx
+        y += dy
+        if !horizontal {
+            if abs(y) >= 8 && abs(y) > abs(x) * 1.2 {
+                vertical = true
+                return .ignored
+            }
+            guard abs(x) >= 8 && abs(x) > abs(y) * 1.3 else { return .ignored }
+            horizontal = true
+        }
+        return .drag(x)
+    }
+
+    func projectedTranslation(at timestamp: TimeInterval) -> CGFloat {
+        guard horizontal, abs(x) >= 12, let lastSampleTime,
+              timestamp - lastSampleTime < 0.12 else { return x }
+        return x + velocity * 0.20
+    }
+}
+
 extension IslandModuleID {
+    static let quickSettings = Self(rawValue: "quickSettings")
     static let shelf = Self(rawValue: "shelf")
     static let transfers = Self(rawValue: "transfers")
     static let timer = Self(rawValue: "timer")
@@ -154,6 +196,10 @@ protocol IslandModule: AnyObject {
 @MainActor
 @Observable
 final class IslandModuleRegistry {
+    /// Navigation module reached by the fixed gear, outside user-pinned slots.
+    static let quickSettingsDescriptor = IslandModuleDescriptor(
+        id: .quickSettings, title: String(localized: "Quick Settings"),
+        systemImage: "gearshape", order: -1, isCore: true)
     private(set) var descriptors: [IslandModuleDescriptor] = [
         .init(id: .shelf, title: String(localized: "Shelf"),
               systemImage: "tray.full", order: 0, isCore: true),
@@ -187,11 +233,11 @@ final class IslandModuleRegistry {
     }
 
     func isEnabled(_ id: IslandModuleID) -> Bool {
-        enabledIDs.contains(id)
+        id == .quickSettings || enabledIDs.contains(id)
     }
 
     func descriptor(for id: IslandModuleID) -> IslandModuleDescriptor? {
-        descriptors.first { $0.id == id }
+        id == .quickSettings ? Self.quickSettingsDescriptor : descriptors.first { $0.id == id }
     }
 }
 
@@ -218,9 +264,14 @@ final class IslandActivityCoordinator {
     /// still resting on the notch, which can look like the click selected the
     /// current activity's module instead of collapsing.
     private(set) var isHoverRevealSuppressed = false
+    var shortcutSwipeDirection = 1
+    var shortcutSwipeOffset: CGFloat = 0
+    var shortcutSwipeTarget: IslandModuleID?
     var selectedModule: IslandModuleID = .shelf {
         didSet {
             guard oldValue != selectedModule else { return }
+            shortcutSwipeOffset = 0
+            shortcutSwipeTarget = nil
             onStateDidChange?()
         }
     }

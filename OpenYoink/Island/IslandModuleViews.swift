@@ -46,7 +46,6 @@ struct IslandRootView: View {
     @State private var renderedSurfaceState: IslandSurfaceState = .compact
     @State private var activeSurfaceAnimation: UUID?
     @State private var requestedSurfaceTransitionID: UInt64 = 0
-    @State private var isShowingModuleLibrary = false
 
     var onPerformRecovery: ((RecoveryAction) -> Void)?
     var onOpenSettings: (() -> Void)?
@@ -596,9 +595,20 @@ struct IslandRootView: View {
                     .padding(.top, 12)
                     .padding(.horizontal, 14)
             }
-            moduleContent
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .id(coordinator.selectedModule)
+            GeometryReader { geometry in
+                let pages = [coordinator.selectedModule] + (coordinator.shortcutSwipeTarget.map { [$0] } ?? [])
+                ZStack {
+                    ForEach(pages, id: \.self) { module in
+                        modulePage(module)
+                            .frame(width: geometry.size.width, height: geometry.size.height)
+                            .offset(x: reduceMotion ? 0 : coordinator.shortcutSwipeOffset
+                                + (module == coordinator.selectedModule ? 0
+                                   : CGFloat(coordinator.shortcutSwipeDirection) * geometry.size.width))
+                            .opacity(reduceMotion && module != coordinator.selectedModule ? 0 : 1)
+                            .allowsHitTesting(module == coordinator.selectedModule && coordinator.shortcutSwipeOffset == 0)
+                    }
+                }
+            }
                 .clipped()
                 .padding(.horizontal, 14)
                 .padding(.bottom, 14)
@@ -663,8 +673,8 @@ struct IslandRootView: View {
 
     private var physicalNotchModuleStrip: some View {
         let slots = pinnedModuleSlots
-        let leadingSlots = Array(slots.prefix(3))
-        let trailingSlots = Array(slots.dropFirst(3))
+        let leadingSlots = Array(slots.prefix(4))
+        let trailingSlots = Array(slots.dropFirst(4))
         let notchWidth = coordinator.currentLayout?.cameraHousingWidth ?? 0
         let notchHeight = coordinator.currentLayout?.topInset ?? 32
         let stripHeight = notchHeight
@@ -673,8 +683,6 @@ struct IslandRootView: View {
         return ZStack(alignment: .top) {
             HStack(spacing: 0) {
                 HStack(spacing: 2) {
-                    settingsButton(size: 26)
-
                     ForEach(leadingSlots.indices, id: \.self) { index in
                         if let descriptor = leadingSlots[index] {
                             physicalNotchModuleButton(descriptor)
@@ -697,6 +705,8 @@ struct IslandRootView: View {
                             emptyModuleSlot(size: 24)
                         }
                     }
+                    // Quick Settings owns the final slot, outside user reordering.
+                    settingsButton(size: 24)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -743,7 +753,6 @@ struct IslandRootView: View {
         let isSelected = coordinator.selectedModule == descriptor.id
         let isEnabled = registry.isEnabled(descriptor.id)
         return Button {
-            isShowingModuleLibrary = false
             coordinator.selectedModule = descriptor.id
         } label: {
             Image(systemName: descriptor.systemImage)
@@ -764,7 +773,6 @@ struct IslandRootView: View {
 
     private var floatingIslandToolbar: some View {
         HStack(spacing: 10) {
-            settingsButton(size: 30)
             moduleNavigation
             Spacer(minLength: 4)
 
@@ -796,14 +804,15 @@ struct IslandRootView: View {
 
     private func settingsButton(size: CGFloat) -> some View {
         Button {
-            isShowingModuleLibrary.toggle()
+            coordinator.selectedModule = .quickSettings
         } label: {
             Image(systemName: "gearshape")
                 .font(.system(size: size == 30 ? 13 : 11, weight: .semibold))
-                .foregroundStyle(Color.white.opacity(isSettingsControlHovering ? 1 : 0.72))
+                .foregroundStyle(coordinator.selectedModule == .quickSettings
+                                 ? Color.accentColor : Color.white.opacity(isSettingsControlHovering ? 1 : 0.72))
                 .frame(width: size, height: size)
                 .background {
-                    Circle().fill(Color.white.opacity(isSettingsControlHovering ? 0.14 : 0.07))
+                    Circle().fill(Color.white.opacity(coordinator.selectedModule == .quickSettings ? 0.10 : (isSettingsControlHovering ? 0.14 : 0.07)))
                 }
                 .contentShape(Circle())
         }
@@ -817,8 +826,9 @@ struct IslandRootView: View {
                 }
             }
         }
-        .accessibilityLabel(Text("Module Library"))
-        .help(Text("Module Library"))
+        .accessibilityLabel(Text("Quick Settings"))
+        .help(Text("Quick Settings"))
+        .modifier(IslandSelectedAccessibilityModifier(selected: coordinator.selectedModule == .quickSettings))
     }
 
     private func openSettings() {
@@ -844,6 +854,7 @@ struct IslandRootView: View {
                     emptyModuleSlot(size: 30)
                 }
             }
+            settingsButton(size: 30)
         }
         .padding(4)
         .background {
@@ -878,7 +889,6 @@ struct IslandRootView: View {
         let isSelected = coordinator.selectedModule == descriptor.id
         let isEnabled = registry.isEnabled(descriptor.id)
         return Button {
-            isShowingModuleLibrary = false
             coordinator.selectedModule = descriptor.id
         } label: {
             Image(systemName: descriptor.systemImage)
@@ -900,29 +910,18 @@ struct IslandRootView: View {
     private func emptyModuleSlot(size: CGFloat) -> some View {
         IslandEmptyModuleSlot(size: size) { moduleID in
             coordinator.selectedModule = moduleID
-            isShowingModuleLibrary = false
         }
     }
 
-    private var moduleContent: some View {
-        Group {
-            if isShowingModuleLibrary {
-                IslandModuleLibraryView(
-                    onOpenModule: { moduleID in
-                        coordinator.selectedModule = moduleID
-                        isShowingModuleLibrary = false
-                    },
-                    onOpenSettings: openSettings
-                )
-            } else {
-                moduleContainer.contentView(
-                    for: coordinator.selectedModule,
-                    context: IslandModuleViewContext(
-                        onPerformRecovery: onPerformRecovery
-                    )
-                )
-            }
-        }
+    private func modulePage(_ module: IslandModuleID) -> some View {
+        moduleContainer.contentView(
+            for: module,
+            context: IslandModuleViewContext(
+                onPerformRecovery: onPerformRecovery,
+                onOpenModule: { coordinator.selectedModule = $0 },
+                onOpenSettings: openSettings
+            )
+        )
     }
 
     private var compactAccessibilityLabel: String {
@@ -1166,7 +1165,7 @@ private struct IslandSurfaceShape: InsettableShape {
 }
 
 
-private struct IslandModuleLibraryView: View {
+struct IslandModuleLibraryView: View {
     @Environment(SettingsStore.self) private var settings
     @Environment(IslandModuleRegistry.self) private var registry
 
@@ -1176,7 +1175,7 @@ private struct IslandModuleLibraryView: View {
     var body: some View {
         VStack(spacing: 10) {
             IslandModuleHeader(
-                title: "Module Library",
+                title: "Quick Settings",
                 subtitle: String(localized: "Choose up to seven pinned modules"),
                 systemImage: "square.grid.2x2"
             )

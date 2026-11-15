@@ -3,6 +3,30 @@ import XCTest
 
 @MainActor
 final class IslandActivityCoordinatorTests: XCTestCase {
+    func testQuickFlickProjectsFartherButHoldingRemovesMomentum() {
+        var swipe = IslandShortcutSwipe()
+        _ = swipe.sample(dx: -15, dy: 0, began: true, momentum: false, timestamp: 1)
+        _ = swipe.sample(dx: -20, dy: 0, began: false, momentum: false, timestamp: 1.016)
+        XCTAssertLessThan(swipe.projectedTranslation(at: 1.03), -84)
+        XCTAssertEqual(swipe.projectedTranslation(at: 1.3), -35)
+    }
+
+    func testShortcutSwipeTracksFingerDistanceAndIgnoresMomentum() {
+        var swipe = IslandShortcutSwipe()
+        XCTAssertEqual(swipe.sample(dx: -20, dy: 1, began: true, momentum: false), .drag(-20))
+        XCTAssertEqual(swipe.sample(dx: -30, dy: 1, began: false, momentum: false), .drag(-50))
+        XCTAssertEqual(swipe.sample(dx: -80, dy: 0, began: false, momentum: false), .drag(-130))
+        XCTAssertEqual(swipe.sample(dx: -80, dy: 0, began: false, momentum: true), .consumed)
+        XCTAssertEqual(swipe.sample(dx: 50, dy: 0, began: true, momentum: false), .drag(50))
+    }
+
+    func testVerticalScrollNeverTurnsIntoShortcutSwipe() {
+        var swipe = IslandShortcutSwipe()
+        XCTAssertEqual(swipe.sample(dx: 2, dy: 20, began: true, momentum: false), .ignored)
+        XCTAssertEqual(swipe.sample(dx: 80, dy: 2, began: false, momentum: false), .ignored)
+        XCTAssertEqual(swipe.sample(dx: 80, dy: 0, began: false, momentum: true), .ignored)
+    }
+
     func testRegistryCanDisableShelfWithoutDisablingIslandModules() throws {
         let suiteName = "IslandModuleRegistryTests-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
