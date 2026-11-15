@@ -321,7 +321,7 @@ struct IslandRootView: View {
     @ViewBuilder
     private var compactLeading: some View {
         let activity = coordinator.compactPrimaryActivity()
-        if hasPhysicalNotch && coordinator.isFileDragNearby {
+        if IslandDragFeedback.isEnabled && hasPhysicalNotch && coordinator.isFileDragNearby {
             compactDragCueSymbol("tray.and.arrow.down.fill")
         } else if compactDisplay == .media, let image = compactArtworkImage {
             CompactNowPlayingArtworkView(
@@ -371,7 +371,7 @@ struct IslandRootView: View {
 
     private var compactTrailing: some View {
         Group {
-            if hasPhysicalNotch && coordinator.isFileDragNearby {
+            if IslandDragFeedback.isEnabled && hasPhysicalNotch && coordinator.isFileDragNearby {
                 compactDragCueSymbol("arrow.down")
             } else {
                 switch compactDisplay {

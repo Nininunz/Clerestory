@@ -233,6 +233,7 @@ final class ShelfWindowController: NSObject {
         panel.level = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 7)
         let content = NSViewController()
         let outline = NSHostingView(rootView: IslandDragZonePreview())
+        outline.isHidden = !IslandDragFeedback.isEnabled
         content.view = outline
         islandDragZoneOutline = outline
         panel.contentView = DragContainerView(
@@ -271,7 +272,9 @@ final class ShelfWindowController: NSObject {
         islandDragZonePanel.setFrame(layout.activationFrame, display: true)
         islandDragZoneOutline?.rootView = IslandDragZonePreview(
             footprint: layout.expandedFrame, activation: layout.activationFrame)
-        islandDragZoneOutline?.alphaValue = 1
+        // A pointer gesture only arms the native receiver. Visible feedback
+        // requires file evidence; moving windows must not draw the outline.
+        islandDragZoneOutline?.alphaValue = dragStartMonitor.isDragInProgress ? 1 : 0
         islandDragZonePanel.orderFront(nil)
     }
 
@@ -2013,9 +2016,12 @@ final class ShelfWindowController: NSObject {
     func islandDragStarted() {
         guard settings.islandEnabled, settings.islandShelfEnabled,
               hasAvailableIslandDisplay,
-              islandActivityCoordinator.currentLayout?.hasPhysicalNotch == true,
               !islandActivityCoordinator.surfaceState.isExpanded else { return }
-        islandActivityCoordinator.isFileDragNearby = true
+        if islandDragZonePanel.isVisible {
+            islandDragZoneOutline?.alphaValue = 1
+        }
+        islandActivityCoordinator.isFileDragNearby =
+            islandActivityCoordinator.currentLayout?.hasPhysicalNotch == true
     }
 
     func islandDragApproachedTop(at point: CGPoint) -> Bool {

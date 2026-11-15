@@ -2,6 +2,11 @@ import Foundation
 import Observation
 @_exported import OpenYoinkModuleCore
 
+/// Keep the drag feedback implementation available without displaying it.
+enum IslandDragFeedback {
+    static let isEnabled = false
+}
+
 extension IslandModuleID {
     static let shelf = Self(rawValue: "shelf")
     static let transfers = Self(rawValue: "transfers")
