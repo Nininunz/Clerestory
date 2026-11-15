@@ -67,7 +67,7 @@ final class IslandCompactWingRowTests: XCTestCase {
         for housingWidth in housingWidths {
             for kind in ["sparkles", "equalizer", "spinner", "shelf12", "shelf1000", "battery85", "battery100"] {
             let width = housingWidth + IslandGeometryResolver.compactWingWidth * 2
-            let row = IslandCompactWingRow(cameraHousingWidth: housingWidth) {
+            let row = IslandCompactWingRow(cameraHousingWidth: housingWidth, display: .shelf, height: 38) {
                 IslandCompactWingIcon(systemName: "arrow.down")
                     .foregroundStyle(.white)
             } trailing: {
@@ -125,7 +125,7 @@ final class IslandCompactWingRowTests: XCTestCase {
     func testArtworkFootprintMatchesLeftIconSlot() throws {
         for housingWidth in housingWidths {
             let width = housingWidth + IslandGeometryResolver.compactWingWidth * 2
-            let row = IslandCompactWingRow(cameraHousingWidth: housingWidth) {
+            let row = IslandCompactWingRow(cameraHousingWidth: housingWidth, display: .shelf, height: 38) {
                 RoundedRectangle(cornerRadius: 4)
                     .fill(.white)
                     .frame(width: 23, height: 23)
@@ -148,10 +148,51 @@ final class IslandCompactWingRowTests: XCTestCase {
         }
     }
 
+    func testSlidingContentCannotEscapeVisibleIslandOutline() throws {
+        for housingWidth in housingWidths {
+            let width = housingWidth + IslandGeometryResolver.compactWingWidth * 2
+            let maskRenderer = ImageRenderer(content:
+                IslandSurfaceShape(attachedToScreenTop: true, cornerRadius: 11)
+                    .fill(.white)
+                    .frame(width: width, height: 38)
+                    .background(Color.black))
+            maskRenderer.scale = scale
+            let mask = NSBitmapImageRep(cgImage: try XCTUnwrap(maskRenderer.cgImage))
+            // Oversized, offset content exercises clipping throughout the slide's travel.
+            for offset: CGFloat in [-40, -20, 0, 20, 40] {
+                let row = IslandCompactWingRow(cameraHousingWidth: housingWidth,
+                                              display: .shelf, height: 38) {
+                    Color.white.frame(width: 80, height: 60).offset(x: offset)
+                } trailing: {
+                    Color.white.frame(width: 80, height: 60).offset(x: offset)
+                }
+                .frame(width: width, height: 38)
+                .background(Color.black)
+                let renderer = ImageRenderer(content: row)
+                renderer.scale = scale
+                let image = NSBitmapImageRep(cgImage: try XCTUnwrap(renderer.cgImage))
+                for x in 0..<image.pixelsWide {
+                    for y in 0..<image.pixelsHigh {
+                        let point = CGPoint(x: (CGFloat(x) + 0.5) / scale,
+                                            y: (CGFloat(y) + 0.5) / scale)
+                        let boundary = try XCTUnwrap(mask.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB))
+                        guard boundary.redComponent < 0.05 else { continue }
+                        let color = try XCTUnwrap(image.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB))
+                        XCTAssertLessThan(color.redComponent, 0.1,
+                                          "Escaped outline at \(point), offset \(offset)")
+                    }
+                }
+                let wingPixels = Int(IslandGeometryResolver.compactWingWidth * scale)
+                XCTAssertFalse(hasInk(in: image,
+                    xRange: wingPixels..<(image.pixelsWide - wingPixels)))
+            }
+        }
+    }
+
     private func render(housingWidth: CGFloat, symbol: String, value: String,
                         minimumScale: CGFloat) throws -> NSBitmapImageRep {
         let width = housingWidth + IslandGeometryResolver.compactWingWidth * 2
-        let row = IslandCompactWingRow(cameraHousingWidth: housingWidth) {
+        let row = IslandCompactWingRow(cameraHousingWidth: housingWidth, display: .shelf, height: 38) {
             IslandCompactWingIcon(systemName: symbol)
                 .foregroundStyle(.white)
         } trailing: {

@@ -306,7 +306,9 @@ struct IslandRootView: View {
             IslandSurfaceShape(attachedToScreenTop: true, cornerRadius: 11)
                 .fill(Color.black)
                 .frame(height: coordinator.currentLayout?.topInset ?? 32)
-            IslandCompactWingRow(cameraHousingWidth: coordinator.currentLayout?.cameraHousingWidth ?? 0) {
+            IslandCompactWingRow(cameraHousingWidth: coordinator.currentLayout?.cameraHousingWidth ?? 0,
+                                 display: compactDisplay,
+                                 height: coordinator.currentLayout?.topInset ?? 32) {
                 compactLeading
             } trailing: {
                 compactTrailing
@@ -961,31 +963,65 @@ struct IslandCompactWingRow<Leading: View, Trailing: View>: View {
     private static var leadingOuterInset: CGFloat { 13 }
     private static var leadingSlotWidth: CGFloat { 24 }
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     let cameraHousingWidth: CGFloat
+    let display: IslandCompactDisplay?
+    let height: CGFloat?
     let leading: Leading
     let trailing: Trailing
 
     init(cameraHousingWidth: CGFloat,
+         display: IslandCompactDisplay? = nil,
+         height: CGFloat? = nil,
          @ViewBuilder leading: () -> Leading,
          @ViewBuilder trailing: () -> Trailing) {
         self.cameraHousingWidth = cameraHousingWidth
+        self.display = display
+        self.height = height
         self.leading = leading()
         self.trailing = trailing()
     }
 
     var body: some View {
         HStack(spacing: 0) {
-            leading
-                .frame(width: Self.leadingSlotWidth, alignment: .center)
-                .padding(.leading, Self.leadingOuterInset)
-                .padding(.trailing, IslandGeometryResolver.compactWingWidth
-                         - Self.leadingOuterInset - Self.leadingSlotWidth)
+            slidingWing {
+                leading
+                    .frame(width: Self.leadingSlotWidth, alignment: .center)
+                    .padding(.leading, Self.leadingOuterInset)
+                    .padding(.trailing, IslandGeometryResolver.compactWingWidth
+                             - Self.leadingOuterInset - Self.leadingSlotWidth)
+            }
             Spacer()
                 .frame(width: cameraHousingWidth)
-            trailing
-                .frame(width: IslandGeometryResolver.compactWingWidth - 10,
-                       alignment: .center)
-                .padding(.trailing, 10)
+            slidingWing {
+                trailing
+                    .frame(width: IslandGeometryResolver.compactWingWidth - 10,
+                           alignment: .center)
+                    .padding(.trailing, 10)
+            }
+        }
+        .compositingGroup()
+        .clipShape(IslandSurfaceShape(attachedToScreenTop: true, cornerRadius: 11))
+    }
+
+    @ViewBuilder
+    private func slidingWing<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        if let display {
+            ZStack {
+                content()
+                    .id(display)
+                    .transition(reduceMotion ? .opacity : .asymmetric(
+                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                        removal: .move(edge: .leading).combined(with: .opacity)
+                    ))
+            }
+            .frame(width: IslandGeometryResolver.compactWingWidth, height: height)
+            // Clip each wing independently so outgoing content never crosses the camera.
+            .clipped()
+            .animation(.easeInOut(duration: reduceMotion ? 0.12 : 0.24), value: display)
+        } else {
+            content()
         }
     }
 }

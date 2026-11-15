@@ -84,7 +84,7 @@ enum IslandSurfaceState: Equatable, Sendable {
 }
 
 /// One source of truth for the two compact wings and their open target.
-enum IslandCompactDisplay: Equatable {
+enum IslandCompactDisplay: Hashable {
     case media, transfers, timer, aiUsage, shelf, battery, fallback
 
     var moduleID: IslandModuleID? {
