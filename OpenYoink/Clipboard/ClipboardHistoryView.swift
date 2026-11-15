@@ -24,6 +24,13 @@ struct ClipboardHistoryView: View {
         isIsland ? IslandVisualStyle.secondaryText : .secondary
     }
 
+    private var headerSubtitle: String {
+        if !settings.clipboardHistoryEnabled { return String(localized: "Recording off") }
+        return settings.clipboardHistoryPaused
+            ? String(localized: "Paused")
+            : String(localized: "Recording")
+    }
+
     private var headerActions: some View {
         Group {
             if settings.clipboardHistoryEnabled {
@@ -52,7 +59,7 @@ struct ClipboardHistoryView: View {
         VStack(spacing: IslandModuleLayout.headerSpacing) {
             Group {
                 if isIsland {
-                    IslandModuleHeader(title: "Clipboard History", subtitle: nil, systemImage: "doc.on.clipboard") {
+                    IslandModuleHeader(title: "Clipboard History", subtitle: headerSubtitle, systemImage: "doc.on.clipboard") {
                         headerActions
                     }
                 } else {
