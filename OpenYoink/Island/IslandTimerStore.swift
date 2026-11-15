@@ -212,6 +212,14 @@ final class IslandTimerStore: IslandModule {
         return String(format: "%02d:%02d", total / 60, total % 60)
     }
 
+    /// Omit seconds only when the minutes-and-seconds form needs three minute digits.
+    var compactRemaining: String {
+        let total = Int(remaining().rounded(.up))
+        let minutes = total / 60
+        guard minutes >= 100 else { return formattedRemaining }
+        return "\(minutes)m"
+    }
+
     func updateForCurrentTime() {
         guard case let .running(endDate, originalDuration) = state else { return }
         guard endDate <= nowProvider() else {

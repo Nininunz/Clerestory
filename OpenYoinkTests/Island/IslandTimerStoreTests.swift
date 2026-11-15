@@ -83,6 +83,21 @@ final class IslandTimerStoreTests: XCTestCase {
         timer.stop()
     }
 
+    func testCompactTimerOmitsSecondsOnlyForThreeDigitMinutes() throws {
+        let (defaults, name) = try suite()
+        defer { defaults.removePersistentDomain(forName: name) }
+        let now = Date(timeIntervalSince1970: 5_000)
+        let timer = IslandTimerStore(defaults: defaults, now: { now })
+
+        timer.start(duration: 105 * 60 + 47)
+        XCTAssertEqual(timer.formattedRemaining, "105:47")
+        XCTAssertEqual(timer.compactRemaining, "105m")
+
+        timer.start(duration: 99 * 60 + 59)
+        XCTAssertEqual(timer.compactRemaining, "99:59")
+        timer.stop()
+    }
+
     func testFlowModeAndGoalPersistAcrossLaunch() throws {
         let (defaults, name) = try suite()
         defer { defaults.removePersistentDomain(forName: name) }

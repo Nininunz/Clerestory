@@ -340,12 +340,26 @@ enum AIUsageFormat {
         return formatter.string(from: NSNumber(value: value)) ?? String(format: "$%.2f", value)
     }
 
-    /// Compact Island wing: as short as possible ("$19.5", "$1.2K").
+    /// Compact Island wing: cents below $10, whole dollars below $1K, then K notation.
     static func compactCost(_ value: Double?) -> String {
         guard let value else { return "--" }
-        if value >= 1000 { return String(format: "$%.1fK", value / 1000) }
-        if value >= 100 { return String(format: "$%.0f", value) }
-        return String(format: "$%.1f", value)
+        if value.rounded() >= 1000 {
+            let thousands = (value / 1000 * 10).rounded() / 10
+            if thousands == thousands.rounded() {
+                return String(format: "$%.0fK", thousands)
+            }
+            return String(format: "$%.1fK", thousands)
+        }
+        var amount = Decimal(string: String(value), locale: Locale(identifier: "en_US_POSIX"))
+            ?? Decimal(value)
+        var roundedCents = Decimal()
+        NSDecimalRound(&roundedCents, &amount, 2, .plain)
+        if roundedCents >= 10 {
+            var roundedDollars = Decimal()
+            NSDecimalRound(&roundedDollars, &amount, 0, .plain)
+            return String(format: "$%.0f", NSDecimalNumber(decimal: roundedDollars).doubleValue)
+        }
+        return String(format: "$%.2f", NSDecimalNumber(decimal: roundedCents).doubleValue)
     }
 
     static func percent(_ fraction: Double) -> String {
