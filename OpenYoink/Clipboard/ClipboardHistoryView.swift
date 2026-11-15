@@ -31,7 +31,16 @@ struct ClipboardHistoryView: View {
             : String(localized: "Recording")
     }
 
+    @ViewBuilder
     private var headerActions: some View {
+        if isIsland {
+            headerButtons.buttonStyle(IslandHeaderButtonStyle())
+        } else {
+            headerButtons.buttonStyle(.borderless)
+        }
+    }
+
+    private var headerButtons: some View {
         Group {
             if settings.clipboardHistoryEnabled {
                 Button {
@@ -39,19 +48,18 @@ struct ClipboardHistoryView: View {
                     history.updateRecording()
                 } label: {
                     Image(systemName: settings.clipboardHistoryPaused ? "play.fill" : "pause.fill")
-                        .frame(width: 26, height: 26)
+                        .frame(width: isIsland ? nil : 26, height: isIsland ? nil : 26)
                 }
                 .help(settings.clipboardHistoryPaused ? Text("Resume Recording") : Text("Pause Recording"))
                 .accessibilityLabel(settings.clipboardHistoryPaused ? Text("Resume Recording") : Text("Pause Recording"))
             }
             Button { confirmsClear = true } label: {
-                Image(systemName: "trash").frame(width: 26, height: 26)
+                Image(systemName: "trash").frame(width: isIsland ? nil : 26, height: isIsland ? nil : 26)
             }
             .disabled(history.entries.isEmpty && history.errorMessage == nil)
             .help(Text("Clear Clipboard History…"))
             .accessibilityLabel("Clear Clipboard History…")
         }
-        .buttonStyle(.borderless)
     }
 
     var body: some View {
@@ -119,12 +127,20 @@ struct ClipboardHistoryView: View {
             if history.isLoading {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if history.filteredEntries(query: query, filter: filter).isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "doc.on.clipboard").font(.title2).foregroundStyle(secondaryForeground)
-                    Text(query.isEmpty ? String(localized: "No Clipboard History") : String(localized: "No Results"))
-                        .font(.callout).foregroundStyle(secondaryForeground)
+                if isIsland {
+                    IslandEmptyState(
+                        title: query.isEmpty ? "No Clipboard History" : "No Results",
+                        message: query.isEmpty ? "Copied items appear here when recording is enabled." : "Try a different search or filter.",
+                        systemImage: "doc.on.clipboard"
+                    )
+                } else {
+                    VStack(spacing: 8) {
+                        Image(systemName: "doc.on.clipboard").font(.title2).foregroundStyle(secondaryForeground)
+                        Text(query.isEmpty ? String(localized: "No Clipboard History") : String(localized: "No Results"))
+                            .font(.callout).foregroundStyle(secondaryForeground)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
@@ -136,6 +152,7 @@ struct ClipboardHistoryView: View {
                     }
                 }
                 .scrollIndicators(.automatic)
+                .scrollBounceBehavior(.basedOnSize)
             }
 
             HStack {

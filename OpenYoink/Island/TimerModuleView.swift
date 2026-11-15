@@ -73,7 +73,6 @@ struct IslandTimerView: View {
             }
             .frame(maxWidth: .infinity)
         }
-        .padding(.horizontal, 4)
     }
 
     private var timerPageSwitcher: some View {
@@ -472,8 +471,6 @@ private struct IslandFocusHistoryView: View {
             }
             .frame(maxWidth: .infinity)
         }
-        .padding(.horizontal, 10)
-        .padding(.top, 2)
         .frame(maxWidth: .infinity, minHeight: 150, alignment: .center)
     }
 

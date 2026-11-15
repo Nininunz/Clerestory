@@ -9,7 +9,6 @@ struct FavoriteFoldersModuleView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var addPanel: NSOpenPanel?
-    @State private var isAddButtonHovering = false
     @State private var renameTargetID: UUID?
     @State private var renameText = ""
 
@@ -27,31 +26,8 @@ struct FavoriteFoldersModuleView: View {
             ) {
                 Button(action: chooseFolders) {
                     Image(systemName: "plus")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(Color.white)
-                        .frame(width: 30, height: 30)
-                        .background {
-                            Circle()
-                                .fill(Color.accentColor.opacity(isAddButtonHovering ? 1 : 0.9))
-                                .overlay {
-                                    Circle()
-                                        .strokeBorder(Color.white.opacity(0.3), lineWidth: 1)
-                                }
-                                .shadow(
-                                    color: Color.accentColor.opacity(isAddButtonHovering ? 0.45 : 0.3),
-                                    radius: isAddButtonHovering ? 6 : 4,
-                                    y: 2
-                                )
-                        }
-                        .contentShape(Circle())
-                        .scaleEffect(isAddButtonHovering ? 1.06 : 1)
                 }
-                .buttonStyle(.plain)
-                .onHover { hovering in
-                    isAddButtonHovering = hovering
-                }
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.14),
-                           value: isAddButtonHovering)
+                .buttonStyle(IslandHeaderButtonStyle())
                 .accessibilityLabel(Text("Add folders"))
                 .help(Text("Add folders"))
             }
@@ -109,6 +85,7 @@ struct FavoriteFoldersModuleView: View {
                     .padding(.vertical, 1)
                 }
                 .scrollIndicators(.automatic)
+                .scrollBounceBehavior(.basedOnSize)
                 .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { copyCoordinator.viewport = $0 }
             }
         }

@@ -247,14 +247,31 @@ struct ShelfView: View {
                         : .opacity.combined(with: .move(edge: .top)))
             }
             if store.items.isEmpty {
-                ShelfEmptyState()
-                    .contentShape(Rectangle())
-                    .onTapGesture(perform: clearSelectionAndCollapse)
+                Group {
+                    if presentationStyle == .island {
+                        IslandEmptyState(title: "Drop files here",
+                                         message: "Hold ⌘ while dropping to move the original here",
+                                         systemImage: "tray.and.arrow.down")
+                            .accessibilityElement(children: .combine)
+                            .accessibilityIdentifier("shelf.emptyState")
+                    } else {
+                        ShelfEmptyState()
+                    }
+                }
+                .contentShape(Rectangle())
+                .onTapGesture(perform: clearSelectionAndCollapse)
             } else if store.visibleItems.isEmpty {
-                Text("No Results").foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .contentShape(Rectangle())
-                    .onTapGesture(perform: clearSelectionAndCollapse)
+                Group {
+                    if presentationStyle == .island {
+                        IslandEmptyState(title: "No Results", message: "Try a different search or filter.",
+                                         systemImage: "magnifyingglass")
+                    } else {
+                        Text("No Results").foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+                .contentShape(Rectangle())
+                .onTapGesture(perform: clearSelectionAndCollapse)
             } else {
                 itemGrid
             }
@@ -265,7 +282,7 @@ struct ShelfView: View {
                         : .opacity.combined(with: .move(edge: .bottom)))
             }
         }
-        .padding(8)
+        .padding(presentationStyle == .classic ? 8 : 0)
         .background {
             // 空白处点击清除选择并收起 Stack；卡片点击由卡片自己的事件层处理。
             // 经典模式改由玻璃面命中层处理（几何不跟随高度弹簧动画）。
@@ -543,7 +560,8 @@ struct ShelfView: View {
         ScrollView(.vertical) {
             cardGrid(columns: columns)
         }
-        .scrollIndicators(.hidden)
+        .scrollIndicators(presentationStyle == .island ? .automatic : .hidden)
+        .scrollBounceBehavior(.basedOnSize)
     }
 
     private func cardGrid(columns: [GridItem]) -> some View {

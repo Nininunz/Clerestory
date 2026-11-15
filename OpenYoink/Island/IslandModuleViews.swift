@@ -1187,6 +1187,8 @@ struct IslandModuleLibraryView: View {
                     }
                 }
             }
+            .scrollIndicators(.automatic)
+            .scrollBounceBehavior(.basedOnSize)
 
             HStack {
                 Text("Drag pinned rows to reorder the seven Island positions.")

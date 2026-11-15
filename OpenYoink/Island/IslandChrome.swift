@@ -131,6 +131,21 @@ extension IslandModuleHeader where Actions == EmptyView {
     }
 }
 
+/// Shared treatment for ordinary module-header actions (not segmented controls).
+struct IslandHeaderButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(IslandVisualStyle.primaryText)
+            .frame(width: 28, height: 28)
+            .background(Circle().fill(Color.white.opacity(configuration.isPressed ? 0.16 : 0.08)))
+            .contentShape(Circle())
+            .opacity(isEnabled ? 1 : 0.35)
+    }
+}
+
 struct IslandEmptyState: View {
     let title: LocalizedStringKey
     let message: LocalizedStringKey

@@ -63,8 +63,6 @@ struct IslandAIUsageView: View {
                 limitsList(limits, now: snapshot.fetchedAt)
             }
         }
-        .padding(.horizontal, 6)
-        .padding(.top, 2)
     }
 
     /// Today's spend is the headline; tokens and conversations sit beside it.
@@ -192,13 +190,8 @@ struct IslandAIUsageView: View {
             store.openDashboard()
         } label: {
             Image(systemName: "arrow.up.right")
-                .font(.system(size: 10.5, weight: .bold))
-                .foregroundStyle(.white.opacity(0.72))
-                .frame(width: 26, height: 26)
-                .background(Circle().fill(Color.white.opacity(0.08)))
-                .contentShape(Circle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(IslandHeaderButtonStyle())
         .help(Text("Open TokenTracker's dashboard in the browser"))
         .accessibilityLabel(Text("Open Dashboard"))
     }
