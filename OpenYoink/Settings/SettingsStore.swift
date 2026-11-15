@@ -177,15 +177,25 @@ final class SettingsStore {
         }
     }
     var compactCycleShortcutError: String?
+    private(set) var compactCycleBackwards = false
+
+    var compactReverseCycleShortcut: HotKeyShortcut? {
+        guard var shortcut = compactCycleShortcut else { return nil }
+        shortcut.shift.toggle()
+        return shortcut
+    }
 
     var compactCycleShortcutConflicts: Bool {
         guard let shortcut = compactCycleShortcut else { return false }
-        return (hotKeyEnabled && shortcut == hotKeyShortcut) || shortcut == clipboardHistoryShortcut
+        return [shortcut, compactReverseCycleShortcut].compactMap { $0 }.contains {
+            (hotKeyEnabled && $0 == hotKeyShortcut) || $0 == clipboardHistoryShortcut
+        }
     }
 
-    func cycleCompactModule() {
+    func cycleCompactModule(backwards: Bool = false) {
         if let next = IslandCompactDisplay.next(after: compactModuleID,
-                enabled: islandModuleConfiguration.enabledModuleIDs) {
+                enabled: islandModuleConfiguration.enabledModuleIDs, backwards: backwards) {
+            compactCycleBackwards = backwards
             compactModuleID = next
         }
     }

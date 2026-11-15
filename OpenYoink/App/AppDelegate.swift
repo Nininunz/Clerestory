@@ -193,6 +193,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         onPress: { [weak self] in self?.settingsStore.cycleCompactModule() },
         onDoublePress: {}
     )
+    lazy var compactReverseCycleHotKeyMonitor = HotKeyMonitor(
+        shortcut: settingsStore.compactReverseCycleShortcut, hotKeyIdentifier: 4,
+        onPress: { [weak self] in self?.settingsStore.cycleCompactModule(backwards: true) },
+        onDoublePress: {}
+    )
     lazy var clipboardHotKeyMonitor = HotKeyMonitor(
         shortcut: settingsStore.clipboardHistoryShortcut, hotKeyIdentifier: 2,
         onPress: { [weak self] in self?.clipboardHistoryWindowController.show() },
@@ -415,6 +420,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotKeyMonitor.setEnabled(false)
         clipboardHotKeyMonitor.setEnabled(false)
         compactCycleHotKeyMonitor.setEnabled(false)
+        compactReverseCycleHotKeyMonitor.setEnabled(false)
         mouseShakeMonitor.stop()
         edgeTriggerMonitor.stop()
         dragStartMonitor.stop()
@@ -775,6 +781,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Release a conflicting cycle registration before registering the other action.
         if settingsStore.compactCycleShortcutConflicts || !settingsStore.islandEnabled {
             compactCycleHotKeyMonitor.setEnabled(false)
+            compactReverseCycleHotKeyMonitor.setEnabled(false)
         }
         hotKeyMonitor.updateShortcut(settingsStore.hotKeyShortcut)
         hotKeyMonitor.setDoublePressEnabled(settingsStore.hotKeyDoublePressSavesClipboard)
@@ -790,11 +797,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let cycleShortcut = settingsStore.compactCycleShortcut
         let cycleConflict = settingsStore.compactCycleShortcutConflicts
+        // Release both first so swapping the Shift modifier cannot collide with the old pair.
+        compactCycleHotKeyMonitor.setEnabled(false)
+        compactReverseCycleHotKeyMonitor.setEnabled(false)
         compactCycleHotKeyMonitor.updateShortcut(cycleShortcut)
+        compactReverseCycleHotKeyMonitor.updateShortcut(settingsStore.compactReverseCycleShortcut)
         compactCycleHotKeyMonitor.setEnabled(settingsStore.islandEnabled && cycleShortcut != nil && !cycleConflict)
+        compactReverseCycleHotKeyMonitor.setEnabled(settingsStore.islandEnabled && cycleShortcut != nil && !cycleConflict)
         settingsStore.compactCycleShortcutError = cycleConflict
-            ? String(localized: "Choose a compact shortcut different from the shelf and clipboard shortcuts.")
-            : compactCycleHotKeyMonitor.registrationError
+            ? String(localized: "Choose a compact shortcut whose forward and reverse combinations differ from the shelf and clipboard shortcuts.")
+            : compactCycleHotKeyMonitor.registrationError ?? compactReverseCycleHotKeyMonitor.registrationError
 
         if settingsStore.shakeTriggerEnabled {
             mouseShakeMonitor.start(parameters: settingsStore.shakeSensitivity.shakeParameters)

@@ -12,6 +12,60 @@ final class IslandCompactSelectionTests: XCTestCase {
         XCTAssertEqual(IslandCompactDisplay.selected(.battery, enabled: enabled), .shelf)
     }
 
+    func testReverseCycleWrapsAndSkipsDisabledModules() {
+        let enabled: [IslandModuleID] = [.shelf, .timer, .media, .system]
+        XCTAssertEqual(IslandCompactDisplay.next(after: .shelf, enabled: enabled, backwards: true), .media)
+        XCTAssertEqual(IslandCompactDisplay.next(after: .media, enabled: enabled, backwards: true), .timer)
+        XCTAssertEqual(IslandCompactDisplay.next(after: .timer, enabled: enabled, backwards: true), .shelf)
+        XCTAssertEqual(IslandCompactDisplay.next(after: .battery, enabled: enabled, backwards: true), .media)
+        XCTAssertNil(IslandCompactDisplay.next(after: .shelf, enabled: [], backwards: true))
+        XCTAssertEqual(IslandCompactDisplay.next(after: .shelf, enabled: [.shelf], backwards: true), .shelf)
+    }
+
+    func testReverseShortcutAndDirection() throws {
+        let suite = "OpenYoink.ReverseCycleTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = SettingsStore(defaults: defaults)
+        var reverse = SettingsStore.HotKeyShortcut.compactCycle
+        reverse.shift = true
+        XCTAssertEqual(settings.compactReverseCycleShortcut, reverse)
+        settings.clipboardHistoryShortcut = reverse
+        XCTAssertTrue(settings.compactCycleShortcutConflicts)
+        settings.clipboardHistoryShortcut = nil
+        settings.hotKeyEnabled = true
+        settings.hotKeyShortcut = reverse
+        XCTAssertTrue(settings.compactCycleShortcutConflicts)
+        settings.hotKeyEnabled = false
+        XCTAssertFalse(settings.compactCycleShortcutConflicts)
+        settings.compactCycleShortcut = reverse
+        XCTAssertEqual(settings.compactReverseCycleShortcut, .compactCycle)
+        settings.compactCycleShortcut = nil
+        XCTAssertNil(settings.compactReverseCycleShortcut)
+        for id in IslandCompactDisplay.cycleOrder { settings.setIslandModuleEnabled(true, id: id) }
+        settings.compactModuleID = .shelf
+        settings.cycleCompactModule(backwards: true)
+        XCTAssertEqual(settings.compactModuleID, .aiUsage)
+        XCTAssertTrue(settings.compactCycleBackwards)
+        settings.cycleCompactModule()
+        XCTAssertEqual(settings.compactModuleID, .shelf)
+        XCTAssertFalse(settings.compactCycleBackwards)
+    }
+
+    func testExistingSlideUsesNewDirectionOnFirstReversal() {
+        var backwards = false
+        let outgoing = IslandCompactSlideModifier(progress: -0.5, isBackwards: { backwards })
+        let incoming = IslandCompactSlideModifier(progress: 0.5, isBackwards: { backwards })
+        XCTAssertLessThan(outgoing.horizontalOffset, 0)
+        XCTAssertGreaterThan(incoming.horizontalOffset, 0)
+        backwards = true
+        XCTAssertGreaterThan(outgoing.horizontalOffset, 0)
+        XCTAssertLessThan(incoming.horizontalOffset, 0)
+        backwards = false
+        XCTAssertLessThan(outgoing.horizontalOffset, 0)
+        XCTAssertGreaterThan(incoming.horizontalOffset, 0)
+    }
+
     func testZeroAndOneAvailableModule() {
         XCTAssertNil(IslandCompactDisplay.next(after: .shelf, enabled: [.system]))
         XCTAssertEqual(IslandCompactDisplay.selected(.shelf, enabled: [.system]), .fallback)

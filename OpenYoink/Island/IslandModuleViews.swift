@@ -308,6 +308,7 @@ struct IslandRootView: View {
                 .frame(height: coordinator.currentLayout?.topInset ?? 32)
             IslandCompactWingRow(cameraHousingWidth: coordinator.currentLayout?.cameraHousingWidth ?? 0,
                                  display: compactDisplay,
+                                 isBackwards: { settings.compactCycleBackwards },
                                  height: coordinator.currentLayout?.topInset ?? 32) {
                 compactLeading
             } trailing: {
@@ -967,17 +968,20 @@ struct IslandCompactWingRow<Leading: View, Trailing: View>: View {
 
     let cameraHousingWidth: CGFloat
     let display: IslandCompactDisplay?
+    let isBackwards: () -> Bool
     let height: CGFloat?
     let leading: Leading
     let trailing: Trailing
 
     init(cameraHousingWidth: CGFloat,
          display: IslandCompactDisplay? = nil,
+         isBackwards: @escaping () -> Bool = { false },
          height: CGFloat? = nil,
          @ViewBuilder leading: () -> Leading,
          @ViewBuilder trailing: () -> Trailing) {
         self.cameraHousingWidth = cameraHousingWidth
         self.display = display
+        self.isBackwards = isBackwards
         self.height = height
         self.leading = leading()
         self.trailing = trailing()
@@ -1012,8 +1016,12 @@ struct IslandCompactWingRow<Leading: View, Trailing: View>: View {
                 content()
                     .id(display)
                     .transition(reduceMotion ? .opacity : .asymmetric(
-                        insertion: .move(edge: .trailing).combined(with: .opacity),
-                        removal: .move(edge: .leading).combined(with: .opacity)
+                        insertion: .modifier(
+                            active: IslandCompactSlideModifier(progress: 1, isBackwards: isBackwards),
+                            identity: IslandCompactSlideModifier(progress: 0, isBackwards: isBackwards)),
+                        removal: .modifier(
+                            active: IslandCompactSlideModifier(progress: -1, isBackwards: isBackwards),
+                            identity: IslandCompactSlideModifier(progress: 0, isBackwards: isBackwards))
                     ))
             }
             .frame(width: IslandGeometryResolver.compactWingWidth, height: height)
@@ -1023,6 +1031,28 @@ struct IslandCompactWingRow<Leading: View, Trailing: View>: View {
         } else {
             content()
         }
+    }
+}
+
+/// Resolve direction live, including for a departing view created by an earlier cycle.
+/// Only progress interpolates; changing direction must not animate through the old sign.
+struct IslandCompactSlideModifier: AnimatableModifier {
+    nonisolated var progress: CGFloat
+    let isBackwards: () -> Bool
+
+    nonisolated var animatableData: CGFloat {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    var horizontalOffset: CGFloat {
+        progress * IslandGeometryResolver.compactWingWidth * (isBackwards() ? -1 : 1)
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .offset(x: horizontalOffset)
+            .opacity(1 - abs(progress))
     }
 }
 

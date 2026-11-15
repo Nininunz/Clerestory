@@ -127,11 +127,11 @@ enum IslandCompactDisplay: Hashable {
         }
     }
 
-    static func next(after module: IslandModuleID, enabled: [IslandModuleID]) -> IslandModuleID? {
+    static func next(after module: IslandModuleID, enabled: [IslandModuleID], backwards: Bool = false) -> IslandModuleID? {
         let available = cycleOrder.filter { enabled.contains($0) }
         guard !available.isEmpty else { return nil }
         let index = available.firstIndex(of: module) ?? 0
-        return available[(index + 1) % available.count]
+        return available[(index + (backwards ? -1 : 1) + available.count) % available.count]
     }
 
 }

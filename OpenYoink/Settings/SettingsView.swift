@@ -433,7 +433,7 @@ private struct TriggerSettingsTab: View {
                             .disabled(settings.compactCycleShortcut == .compactCycle)
                     }
                 }
-                Text("Cycle enabled compact modules: Shelf, Transfers, Timer, Battery, Now Playing, and AI Usage. Your choice is remembered independently of the expanded page. Clear the shortcut to disable it.")
+                Text("Cycle enabled compact modules: Shelf, Transfers, Timer, Battery, Now Playing, and AI Usage. Hold Shift with the shortcut to cycle backward (release Shift if it is already part of your shortcut). Your choice is remembered independently of the expanded page. Clear the shortcut to disable both directions.")
                     .font(.caption).foregroundStyle(.secondary)
                 if let error = settings.compactCycleShortcutError {
                     Label(error, systemImage: "exclamationmark.triangle.fill")
