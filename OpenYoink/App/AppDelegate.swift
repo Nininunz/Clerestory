@@ -141,6 +141,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                                                          supportController: supportController,
                                                                          clipboardHistoryStore: clipboardHistoryStore)
     private lazy var menuBarController = MenuBarController(
+        settings: settingsStore,
         isShelfExpanded: { [weak self] in
             self?.shelfPresentationCoordinator.isExpanded ?? false
         },
@@ -230,7 +231,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             || IgnoreListService.frontmostAppIsIgnored(in: self.settingsStore.ignoredAppBundleIDs)
     }, onDragStart: { [weak self] in
         self?.handleDragStart()
-    }, onDragUpdate: { [weak self] point in
+    }, onPotentialDragChange: { [weak self] active in
+        self?.shelfWindowController.setIslandDragZoneActive(active)
+    }, onNativeDragUpdate: { [weak self] point in
         self?.handleDragUpdate(at: point)
     }, onDragEnd: { [weak self] in
         self?.handleDragEnd()
@@ -451,6 +454,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// 唤出，不标记、不动它）。`.edgeOnly` 只做记帐，唤出交给边缘触发。
     private func handleDragStart() {
         dragAutoShowSession.dragBegan()
+        shelfPresentationCoordinator.dragStarted()
         guard settingsStore.effectivePreferredShelfSurface == .classic else { return }
         guard settingsStore.classicShelfEnabled else { return }
         guard settingsStore.dragAutoAppearMode == .immediate else { return }
@@ -481,6 +485,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let shouldHideClassic = dragAutoShowSession.dragEnded(
             keepShelfOpenAfterDrop: settingsStore.keepShelfOpenAfterDrop
         )
+        shelfPresentationCoordinator.dragProximityEnded()
         if islandDragWasActivated {
             shelfPresentationCoordinator.dragEnded(imported: imported)
             islandDragWasActivated = false
@@ -800,6 +805,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             && settingsStore.shelfPosition != .custom
         let islandDragActive = settingsStore.islandEnabled
             && settingsStore.islandShelfEnabled
+            && !IslandScreenCatalog.options().isEmpty
         let classicImmediateActive = settingsStore.effectivePreferredShelfSurface == .classic
             && settingsStore.dragAutoAppearMode == .immediate
         if classicImmediateActive
@@ -825,6 +831,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { @MainActor in
             self.applyTriggerSettings()
             self.shelfPresentationCoordinator.applyCurrentMode(animated: true)
+            self.menuBarController.applyVisibility()
             // Sparkle: 「自动检查更新」开关同步（值未变时不写，幂等）。
             self.updateController.applySettings()
             self.clipboardHistoryStore.prune(force: true)

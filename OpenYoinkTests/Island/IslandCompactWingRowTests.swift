@@ -22,7 +22,7 @@ final class IslandCompactWingRowTests: XCTestCase {
 
         for housingWidth in housingWidths {
             var iconCenters: [String: Int] = [:]
-            for symbol in ["battery.75percent", "chart.line.uptrend.xyaxis"] {
+            for symbol in ["battery.75percent", "chart.line.uptrend.xyaxis", "tray.and.arrow.down.fill", "arrow.down"] {
                 for value in values {
                     let image = try render(housingWidth: housingWidth, symbol: symbol,
                                            value: value.text, minimumScale: value.minimumScale)
@@ -68,13 +68,12 @@ final class IslandCompactWingRowTests: XCTestCase {
             for kind in ["sparkles", "equalizer", "spinner", "shelf12", "shelf1000", "battery85", "battery100"] {
             let width = housingWidth + IslandGeometryResolver.compactWingWidth * 2
             let row = IslandCompactWingRow(cameraHousingWidth: housingWidth) {
-                Image(systemName: "arrow.down")
-                    .font(.system(size: 13, weight: .semibold))
+                IslandCompactWingIcon(systemName: "arrow.down")
                     .foregroundStyle(.white)
             } trailing: {
                 if kind == "equalizer" {
-                    IslandEqualizerView(isPlaying: false, reduceMotion: true,
-                                        tint: .white, showsCapsule: false)
+                    IslandCompactWingIcon(systemName: "play.fill")
+                        .foregroundStyle(.white)
                 } else if kind == "spinner" {
                     IslandCompactTransferSpinner()
                 } else if kind == "shelf12" || kind == "shelf1000" {
@@ -87,8 +86,7 @@ final class IslandCompactWingRowTests: XCTestCase {
                     IslandCompactBatteryValueText(percentage: kind == "battery85" ? 85 : 100)
                         .foregroundStyle(.white)
                 } else {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 11, weight: .semibold))
+                    IslandCompactWingIcon(systemName: "sparkles")
                         .foregroundStyle(.white)
                 }
             }
@@ -154,8 +152,7 @@ final class IslandCompactWingRowTests: XCTestCase {
                         minimumScale: CGFloat) throws -> NSBitmapImageRep {
         let width = housingWidth + IslandGeometryResolver.compactWingWidth * 2
         let row = IslandCompactWingRow(cameraHousingWidth: housingWidth) {
-            Image(systemName: symbol)
-                .font(.system(size: 13, weight: .semibold))
+            IslandCompactWingIcon(systemName: symbol)
                 .foregroundStyle(.white)
         } trailing: {
             if minimumScale == 0.7 {

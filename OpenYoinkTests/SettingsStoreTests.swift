@@ -84,14 +84,16 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.shelfPlacement, .island)
         XCTAssertTrue(store.classicShelfEnabled)
         XCTAssertTrue(store.islandEnabled)
+        XCTAssertTrue(store.menuBarIconEnabled)
         XCTAssertEqual(store.islandDisplayTarget, .main)
         XCTAssertTrue(store.islandShelfEnabled)
         XCTAssertEqual(store.preferredShelfSurface, .island)
         XCTAssertEqual(store.effectivePreferredShelfSurface, .island)
         XCTAssertFalse(store.islandHoverRevealEnabled)
+        XCTAssertTrue(store.islandClickRevealEnabled)
         XCTAssertEqual(store.islandHoverDelaySeconds, 0.15)
         XCTAssertEqual(store.islandHoverLeaveDelaySeconds, 0.25)
-        XCTAssertFalse(store.islandDragApproachEnabled)
+        XCTAssertTrue(store.islandDragApproachEnabled)
         XCTAssertTrue(store.islandTimerEnabled)
         XCTAssertTrue(store.islandBatteryEnabled)
         XCTAssertFalse(store.islandMediaEnabled)
@@ -224,9 +226,11 @@ final class SettingsStoreTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: name) }
 
         let store = SettingsStore(defaults: defaults)
+        store.menuBarIconEnabled = false
         store.shelfPlacement = .island
         store.islandDisplayTarget = .display("display-uuid")
         store.islandHoverRevealEnabled = true
+        store.islandClickRevealEnabled = false
         store.islandHoverDelaySeconds = 0.05
         store.islandHoverLeaveDelaySeconds = 0.8
         store.islandDragApproachEnabled = true
@@ -236,9 +240,11 @@ final class SettingsStoreTests: XCTestCase {
         store.islandMediaEnabled = true
 
         let reloaded = SettingsStore(defaults: defaults)
+        XCTAssertFalse(reloaded.menuBarIconEnabled)
         XCTAssertEqual(reloaded.shelfPresentationMode, .island)
         XCTAssertEqual(reloaded.islandDisplayTarget, .display("display-uuid"))
         XCTAssertTrue(reloaded.islandHoverRevealEnabled)
+        XCTAssertFalse(reloaded.islandClickRevealEnabled)
         XCTAssertEqual(reloaded.islandHoverDelaySeconds, 0.05)
         XCTAssertEqual(reloaded.islandHoverLeaveDelaySeconds, 0.8)
         XCTAssertTrue(reloaded.islandDragApproachEnabled)

@@ -69,6 +69,8 @@ final class DragContainerView: NSView {
     private let dropOverride: DragContainerDropOverride?
     private let onDestinationEntered: (Int) -> Void
     private let onDestinationEnded: (Int, Bool) -> Void
+    private let onNativeFileDrag: () -> Void
+    private let fileDragsOnly: Bool
     private var currentDestinationSequenceNumber: Int?
     /// Smoothed travel of the dragged card center, used to tell a horizontal
     /// find-the-slot move from a vertical row change.
@@ -84,6 +86,8 @@ final class DragContainerView: NSView {
          dropOverride: DragContainerDropOverride? = nil,
          onDestinationEntered: @escaping (Int) -> Void = { _ in },
          onDestinationEnded: @escaping (Int, Bool) -> Void = { _, _ in },
+         onNativeFileDrag: @escaping () -> Void = {},
+         fileDragsOnly: Bool = false,
          contentViewController: NSViewController) {
         self.store = store
         self.coordinator = coordinator
@@ -92,6 +96,8 @@ final class DragContainerView: NSView {
         self.dropOverride = dropOverride
         self.onDestinationEntered = onDestinationEntered
         self.onDestinationEnded = onDestinationEnded
+        self.onNativeFileDrag = onNativeFileDrag
+        self.fileDragsOnly = fileDragsOnly
         self.contentViewController = contentViewController
         super.init(frame: .zero)
 
@@ -123,7 +129,20 @@ final class DragContainerView: NSView {
 
     // MARK: - NSDraggingDestination
 
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        // The temporary approach zone has an empty child controller. Make
+        // the registered destination itself own every point in that zone.
+        if fileDragsOnly {
+            return bounds.contains(convert(point, from: superview)) ? self : nil
+        }
+        return super.hitTest(point)
+    }
+
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        guard !fileDragsOnly || PasteboardTypes.hasFileDragContent(in: sender.draggingPasteboard.types ?? []) else { return [] }
+        if PasteboardTypes.hasFileDragContent(in: sender.draggingPasteboard.types ?? []) {
+            onNativeFileDrag()
+        }
         currentDestinationSequenceNumber = sender.draggingSequenceNumber
         onDestinationEntered(sender.draggingSequenceNumber)
         if let dropOverride, dropOverride.isActive() {
@@ -161,6 +180,10 @@ final class DragContainerView: NSView {
     }
 
     override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+        guard !fileDragsOnly || PasteboardTypes.hasFileDragContent(in: sender.draggingPasteboard.types ?? []) else { return [] }
+        if PasteboardTypes.hasFileDragContent(in: sender.draggingPasteboard.types ?? []) {
+            onNativeFileDrag()
+        }
         // The global monitor delivers drag-start on the main actor. Repeating
         // this idempotent registration also covers entering before that delivery.
         onDestinationEntered(sender.draggingSequenceNumber)
@@ -203,10 +226,11 @@ final class DragContainerView: NSView {
     }
 
     override func prepareForDragOperation(_ sender: NSDraggingInfo) -> Bool {
-        true
+        !fileDragsOnly || PasteboardTypes.hasFileDragContent(in: sender.draggingPasteboard.types ?? [])
     }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        guard !fileDragsOnly || PasteboardTypes.hasFileDragContent(in: sender.draggingPasteboard.types ?? []) else { return false }
         var accepted = false
         defer { onDestinationEnded(sender.draggingSequenceNumber, accepted) }
         if let dropOverride, dropOverride.isActive() {

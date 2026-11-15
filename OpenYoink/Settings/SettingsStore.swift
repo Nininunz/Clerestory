@@ -179,6 +179,10 @@ final class SettingsStore {
         didSet { defaults.set(islandEnabled, forKey: Keys.islandEnabled) }
     }
 
+    var menuBarIconEnabled: Bool {
+        didSet { defaults.set(menuBarIconEnabled, forKey: Keys.menuBarIconEnabled) }
+    }
+
     var islandDisplayTarget: IslandDisplayTarget {
         didSet {
             defaults.set(islandDisplayTarget.persistedValue,
@@ -274,10 +278,14 @@ final class SettingsStore {
         }
     }
 
-    /// Optional hover reveal. Click, drag approach and the global shortcut are
-    /// always available, so disabling hover never makes Island unreachable.
+    /// Hover and click reveal are independent. The menu, drag approach and
+    /// global shortcut can still open Island when either is disabled.
     var islandHoverRevealEnabled: Bool {
         didSet { defaults.set(islandHoverRevealEnabled, forKey: Keys.islandHoverRevealEnabled) }
+    }
+
+    var islandClickRevealEnabled: Bool {
+        didSet { defaults.set(islandClickRevealEnabled, forKey: Keys.islandClickRevealEnabled) }
     }
 
     /// Time the pointer must stay over the compact Island before previewing it.
@@ -290,9 +298,8 @@ final class SettingsStore {
         didSet { defaults.set(islandHoverLeaveDelaySeconds, forKey: Keys.islandHoverLeaveDelaySeconds) }
     }
 
-    /// Expands the Island Shelf when a drag approaches the top-center target.
-    /// Off by default so browser tab rearrangement near the menu bar remains
-    /// unobstructed; the side shelf keeps its independent edge-drag behavior.
+    /// Expands the Island Shelf when a file drag approaches the top center.
+    /// Independent of pointer hover and Side Shelf drag preferences.
     var islandDragApproachEnabled: Bool {
         didSet {
             defaults.set(islandDragApproachEnabled,
@@ -625,10 +632,12 @@ final class SettingsStore {
         static let shelfSurfaceSettingsVersion = prefix + "shelfSurfaceSettingsVersion"
         static let classicShelfEnabled = prefix + "classicShelfEnabled"
         static let islandEnabled = prefix + "islandEnabled"
+        static let menuBarIconEnabled = prefix + "menuBarIconEnabled"
         static let islandDisplayTarget = prefix + "islandDisplayTarget"
         static let islandShelfEnabled = prefix + "islandShelfEnabled"
         static let preferredShelfSurface = prefix + "preferredShelfSurface"
         static let islandHoverRevealEnabled = prefix + "islandHoverRevealEnabled"
+        static let islandClickRevealEnabled = prefix + "islandClickRevealEnabled"
         static let islandHoverDelaySeconds = prefix + "islandHoverDelaySeconds"
         static let islandHoverLeaveDelaySeconds = prefix + "islandHoverLeaveDelaySeconds"
         static let islandDragApproachEnabled = prefix + "islandDragApproachEnabled"
@@ -722,13 +731,15 @@ final class SettingsStore {
             Keys.shelfPresentationMode: ShelfPresentationMode.classic.rawValue,
             Keys.classicShelfEnabled: true,
             Keys.islandEnabled: true,
+            Keys.menuBarIconEnabled: true,
             Keys.islandDisplayTarget: IslandDisplayTarget.main.persistedValue,
             Keys.islandShelfEnabled: true,
             Keys.preferredShelfSurface: PreferredShelfSurface.island.rawValue,
             Keys.islandHoverRevealEnabled: false,
+            Keys.islandClickRevealEnabled: true,
             Keys.islandHoverDelaySeconds: 0.15,
             Keys.islandHoverLeaveDelaySeconds: 0.25,
-            Keys.islandDragApproachEnabled: false,
+            Keys.islandDragApproachEnabled: true,
             Keys.islandTimerEnabled: true,
             Keys.islandBatteryEnabled: true,
             Keys.islandFullChargeAlertEnabled: false,
@@ -819,6 +830,7 @@ final class SettingsStore {
         let activateIsland = !SideShelfAvailability.isEnabled && hadPersistedOnboardingVersion
             && resolvedClassicShelfEnabled && !resolvedIslandEnabled
         islandEnabled = resolvedIslandEnabled || activateIsland
+        menuBarIconEnabled = defaults.bool(forKey: Keys.menuBarIconEnabled)
         islandDisplayTarget = IslandDisplayTarget(
             persistedValue: defaults.string(forKey: Keys.islandDisplayTarget)
         )
@@ -851,6 +863,7 @@ final class SettingsStore {
         )
         let resolvedIslandMediaEnabled = defaults.bool(forKey: Keys.islandMediaEnabled)
         islandHoverRevealEnabled = resolvedIslandHoverRevealEnabled
+        islandClickRevealEnabled = defaults.bool(forKey: Keys.islandClickRevealEnabled)
         islandHoverDelaySeconds = min(max(defaults.double(forKey: Keys.islandHoverDelaySeconds), 0), 0.5)
         islandHoverLeaveDelaySeconds = min(max(defaults.double(forKey: Keys.islandHoverLeaveDelaySeconds), 0), 1)
         islandDragApproachEnabled = resolvedIslandDragApproachEnabled

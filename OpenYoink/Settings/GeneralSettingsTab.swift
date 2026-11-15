@@ -3,25 +3,14 @@ import Combine
 import SwiftUI
 
 struct GeneralSettingsTab: View {
-    @Environment(ClipboardHistoryStore.self) private var history
     @Environment(SettingsStore.self) private var settings
     @Environment(LaunchAtLoginController.self) private var launchAtLoginController
     @Environment(UpdateController.self) private var updateController
     @State private var islandScreens: [IslandScreenCatalog.Option] = []
-    @State private var pendingPreset: WorkflowPreset?
 
     var body: some View {
         @Bindable var settings = settings
         SettingsForm {
-            Section("Workflow Presets") {
-                Menu("Apply a Preset…") {
-                    ForEach(WorkflowPreset.allCases) { preset in
-                        Button(preset.title) { pendingPreset = preset }
-                    }
-                }
-                Text("Presets change modules and reveal behavior. Your files, history and recording choice are kept.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
             Section("Startup") {
                 Toggle("Launch OpenYoink at login", isOn: Binding(
                     get: { launchAtLoginController.isRequested },
@@ -51,79 +40,9 @@ struct GeneralSettingsTab: View {
                 }
             }
 
-            if SideShelfAvailability.isEnabled {
-            Section("Side Shelf") {
-                Toggle("Enable Side Shelf", isOn: $settings.classicShelfEnabled)
-
-                if settings.classicShelfEnabled {
-                    Picker("Position", selection: $settings.shelfPosition) {
-                        Text("Left").tag(SettingsStore.ShelfPosition.left)
-                        Text("Right").tag(SettingsStore.ShelfPosition.right)
-                        Text("Custom").tag(SettingsStore.ShelfPosition.custom)
-                    }
-                    .pickerStyle(.segmented)
-                }
-
-                if settings.classicShelfEnabled && settings.shelfPosition == .custom {
-                    // S9: custom 模式 —— 面板可拖动，拖动结束持久化 frame；
-                    // 首次选中从右缘默认位置起步。边缘触发在无贴附缘时暂停。
-                    Text("Drag the shelf by its title bar to place it anywhere. The edge trigger is unavailable in custom mode.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                if settings.classicShelfEnabled {
-                    LabeledContent("Width") {
-                        HStack(spacing: 8) {
-                            Slider(value: $settings.shelfWidth, in: 240...480, step: 10)
-                            Text("\(Int(settings.shelfWidth)) pt")
-                                .monospacedDigit()
-                                .frame(width: 52, alignment: .trailing)
-                        }
-                    }
-
-                    Toggle("Hide after dragging out", isOn: $settings.autoHide)
-
-                    Toggle("Keep expanded after dropping", isOn: $settings.keepShelfOpenAfterDrop)
-                    Text("Applies only to the side shelf opened automatically during a drag. Drag-out and empty-shelf settings still apply.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    // UX6: 非空→空迁移时自动收回（手动唤出的空架不受影响）。
-                    Toggle("Hide automatically when empty", isOn: $settings.autoHideWhenEmpty)
-
-                    // EdgeTab: 拉环只在 shelf 隐藏时贴屏幕边缘显示（互斥模型；
-                    // shelf 展开后由面板外缘隐形热区承担同点位收起）。
-                    // custom 模式无贴附缘，开关不生效（说明文案覆盖）。
-                    Toggle("Show edge tab while shelf is hidden", isOn: $settings.edgeTabEnabled)
-                    Text("Click the tab to show the shelf, drag it along the edge to reposition, or drop files onto it. Not shown in custom position mode.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            }
-
-            Section("Shelf Behavior") {
-                if SideShelfAvailability.isEnabled && settings.classicShelfEnabled && settings.islandEnabled {
-                    Text("With Side Shelf enabled, the shelf shortcut controls it. Otherwise the shortcut opens Island Shelf.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Picker("After dragging out", selection: $settings.dragOutRemovalPolicy) {
-                    Text("Keep on Shelf").tag(SettingsStore.DragOutRemovalPolicy.keep)
-                    Text("Remove").tag(SettingsStore.DragOutRemovalPolicy.remove)
-                    Text("Ask Every Time").tag(SettingsStore.DragOutRemovalPolicy.ask)
-                }
-                .accessibilityIdentifier("settings.dragOutRemovalPolicy")
-
-                // F-05: 双模式拖入说明（静态文案）。
-                Text("Dropping files keeps a reference. Hold ⌘ while dropping to move the original into the shelf — the original goes to the Trash, so it can be restored.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Text("After a successful drop, the receiving shelf stays open so you can drag the item to its destination.")
+            Section("Menu Bar") {
+                Toggle("Show OpenYoink in menu bar", isOn: $settings.menuBarIconEnabled)
+                Text("The icon stays visible whenever Island cannot be opened directly, so Settings remains accessible.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -132,72 +51,42 @@ struct GeneralSettingsTab: View {
                 Toggle("Enable OpenYoink Island", isOn: $settings.islandEnabled)
 
                 if settings.islandEnabled {
-                    Text("Island uses the built-in camera housing when available. Displays without a notch use a floating pill below the menu bar.")
+                    Text("Island uses the built-in camera housing on a notched display.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
-                    Picker("Without a notch, when idle", selection: $settings.islandFloatingIdleStyle) {
-                        Text("Show the pill").tag(IslandFloatingIdleStyle.capsule)
-                        Text("Shrink to a dot").tag(IslandFloatingIdleStyle.dot)
-                        Text("Hide until the pointer reaches the top edge")
-                            .tag(IslandFloatingIdleStyle.hidden)
-                    }
-                    .pickerStyle(.menu)
-                    .accessibilityIdentifier("settings.islandFloatingIdleStyle")
-
-                    Picker("Display", selection: $settings.islandDisplayTarget) {
-                        Text("Main Display")
-                            .tag(SettingsStore.IslandDisplayTarget.main)
-                        Text("Follow Pointer")
-                            .tag(SettingsStore.IslandDisplayTarget.automatic)
-                        ForEach(islandScreens) { screen in
-                            Text(islandScreenTitle(screen))
-                                .tag(SettingsStore.IslandDisplayTarget.display(screen.id))
+                    if islandScreens.isEmpty {
+                        Text("Connect a notched display to show Island.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Picker("Display", selection: $settings.islandDisplayTarget) {
+                            Text("Main Display")
+                                .tag(SettingsStore.IslandDisplayTarget.main)
+                            Text("Follow Pointer")
+                                .tag(SettingsStore.IslandDisplayTarget.automatic)
+                            ForEach(islandScreens) { screen in
+                                Text(islandScreenTitle(screen))
+                                    .tag(SettingsStore.IslandDisplayTarget.display(screen.id))
+                            }
+                            if case let .display(id) = settings.islandDisplayTarget,
+                               !islandScreens.contains(where: { $0.id == id }) {
+                                Text("Unavailable Display")
+                                    .tag(SettingsStore.IslandDisplayTarget.display(id))
+                            }
                         }
-                        if case let .display(id) = settings.islandDisplayTarget,
-                           !islandScreens.contains(where: { $0.id == id }) {
-                            Text("Unavailable Display")
-                                .tag(SettingsStore.IslandDisplayTarget.display(id))
-                        }
+                        .pickerStyle(.menu)
+                        .accessibilityIdentifier("settings.islandDisplay")
+
+                        Text(islandDisplayDescription)
+                            .font(.caption)
+                            .foregroundStyle(isSelectedIslandDisplayUnavailable
+                                             ? Color.orange : Color.secondary)
+
+                        Text("Configure Island reveal behavior in Triggers.")
+                            .font(.caption).foregroundStyle(.secondary)
                     }
-                    .pickerStyle(.menu)
-                    .accessibilityIdentifier("settings.islandDisplay")
-
-                    Text(islandDisplayDescription)
-                        .font(.caption)
-                        .foregroundStyle(isSelectedIslandDisplayUnavailable
-                                         ? Color.orange : Color.secondary)
-
-                    Text("Configure Island reveal behavior in Triggers.")
-                        .font(.caption).foregroundStyle(.secondary)
                 }
-            }
-
-            Section("Clipboard History") {
-                Toggle("Record Clipboard", isOn: $settings.clipboardHistoryEnabled)
-                    .onChange(of: settings.clipboardHistoryEnabled) { _, _ in history.updateRecording() }
-                Toggle("Pause Recording", isOn: $settings.clipboardHistoryPaused)
-                    .disabled(!settings.clipboardHistoryEnabled)
-                    .onChange(of: settings.clipboardHistoryPaused) { _, _ in history.updateRecording() }
-                Picker("Keep History", selection: $settings.clipboardHistoryRetentionDays) {
-                    Text("1 Day").tag(1)
-                    Text("7 Days").tag(7)
-                    Text("30 Days").tag(30)
-                }
-                .onChange(of: settings.clipboardHistoryRetentionDays) { _, _ in history.prune(force: true) }
-                Picker("History Limit", selection: $settings.clipboardHistoryEntryLimit) {
-                    ForEach(ClipboardHistoryPolicy.supportedEntryLimits, id: \.self) { Text("\($0)").tag($0) }
-                }
-                .onChange(of: settings.clipboardHistoryEntryLimit) { _, _ in history.prune(force: true) }
-                LabeledContent("History Shortcut") { ShortcutRecorderView(shortcut: $settings.clipboardHistoryShortcut) }
-                if let error = history.shortcutRegistrationError {
-                    Label(error, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.orange)
-                }
-                Text("Favorites do not expire. Up to 30 favorites and 20 MiB total are kept on this Mac. Privacy markers and ignored apps are skipped; unmarked sensitive text may still be recorded.")
-                    .font(.caption).foregroundStyle(.secondary)
-                Text("Turning recording off keeps saved history. Clear history to delete it.")
-                    .font(.caption).foregroundStyle(.secondary)
-                Button("Clipboard History…") { history.onShowWindow?() }
             }
 
             Section("Language") {
@@ -232,17 +121,6 @@ struct GeneralSettingsTab: View {
             }
         }
         .onAppear { launchAtLoginController.refresh() }
-        .alert("Apply Workflow Preset?", isPresented: Binding(
-            get: { pendingPreset != nil }, set: { if !$0 { pendingPreset = nil } }
-        )) {
-            Button("Cancel", role: .cancel) { pendingPreset = nil }
-            Button("Apply") {
-                if let preset = pendingPreset { settings.applyWorkflowPreset(preset) }
-                pendingPreset = nil
-            }
-        } message: {
-            Text(pendingPreset?.detail ?? "")
-        }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             launchAtLoginController.refresh()
         }
@@ -275,11 +153,15 @@ struct GeneralSettingsTab: View {
     private var islandDisplayDescription: String {
         switch settings.islandDisplayTarget {
         case .main:
-            String(localized: "Island stays on the display chosen as main in System Settings.")
+            if islandScreens.contains(where: \.isMain) {
+                String(localized: "Island stays on the display chosen as main in System Settings.")
+            } else {
+                String(localized: "The main display has no notch. Island uses a connected notched display.")
+            }
         case .automatic:
-            String(localized: "Island follows the pointer and active drag across displays.")
+            String(localized: "Island follows the pointer across notched displays.")
         case .display where isSelectedIslandDisplayUnavailable:
-            String(localized: "This display is unavailable. Island is temporarily using the main display and will return when it reconnects.")
+            String(localized: "This display is unavailable or has no notch. Island uses a connected notched display.")
         case .display:
             String(localized: "Island stays on this display until you choose another.")
         }

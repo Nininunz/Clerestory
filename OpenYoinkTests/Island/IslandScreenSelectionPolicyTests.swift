@@ -49,4 +49,37 @@ final class IslandScreenSelectionPolicyTests: XCTestCase {
             screens: [main, external]
         ), "external")
     }
+
+    func testNonNotchedDisplaysAreSkippedWhileFloatingIslandIsParked() {
+        let nonNotchedExternal = IslandScreenSelectionCandidate(
+            id: "external", frame: external.frame, isMain: false,
+            hasPhysicalNotch: false
+        )
+        XCTAssertEqual(IslandScreenSelectionPolicy.selectedID(
+            for: .automatic,
+            pointerPoint: CGPoint(x: 2_000, y: 500),
+            screens: [main, nonNotchedExternal],
+            allowFloating: false
+        ), "main")
+        XCTAssertEqual(IslandScreenSelectionPolicy.selectedID(
+            for: .display("external"),
+            pointerPoint: CGPoint(x: 2_000, y: 500),
+            screens: [main, nonNotchedExternal],
+            allowFloating: false
+        ), "main")
+        var nonNotchedMain = main
+        nonNotchedMain.hasPhysicalNotch = false
+        XCTAssertNil(IslandScreenSelectionPolicy.selectedID(
+            for: .main,
+            pointerPoint: .zero,
+            screens: [nonNotchedMain, nonNotchedExternal],
+            allowFloating: false
+        ))
+        XCTAssertEqual(IslandScreenSelectionPolicy.selectedID(
+            for: .automatic,
+            pointerPoint: CGPoint(x: 2_000, y: 500),
+            screens: [main, nonNotchedExternal],
+            allowFloating: true
+        ), "external")
+    }
 }

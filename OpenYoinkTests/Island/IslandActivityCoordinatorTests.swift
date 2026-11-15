@@ -183,7 +183,7 @@ final class IslandActivityCoordinatorTests: XCTestCase {
         XCTAssertEqual(preview.phase, .idle)
     }
 
-    func testHoverPreviewExitGraceAndClickPromotion() {
+    func testHoverPreviewExitGraceAndPinPromotion() {
         var preview = IslandHoverPreviewStateMachine()
         _ = preview.handle(.entered)
         XCTAssertEqual(preview.handle(.dwellElapsed), [.showPreview])
@@ -192,6 +192,18 @@ final class IslandActivityCoordinatorTests: XCTestCase {
         XCTAssertEqual(preview.handle(.left), [.scheduleExit])
         XCTAssertEqual(preview.handle(.committed), [.cancelExit, .commitPreview])
         XCTAssertEqual(preview.handle(.exitElapsed), [])
+        XCTAssertEqual(preview.phase, .idle)
+    }
+
+    func testInteractionInsideHoverPreviewDoesNotPreventAutoClose() {
+        var preview = IslandHoverPreviewStateMachine()
+        _ = preview.handle(.entered)
+        XCTAssertEqual(preview.handle(.dwellElapsed), [.showPreview])
+        XCTAssertEqual(preview.handle(.entered), [])
+        XCTAssertEqual(preview.handle(.left), [.scheduleExit])
+        XCTAssertEqual(preview.handle(.entered), [.cancelExit])
+        XCTAssertEqual(preview.handle(.left), [.scheduleExit])
+        XCTAssertEqual(preview.handle(.exitElapsed), [.dismissPreview])
         XCTAssertEqual(preview.phase, .idle)
     }
 

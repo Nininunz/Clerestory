@@ -229,6 +229,28 @@ final class IslandGeometryResolverTests: XCTestCase {
             activationFrame: topZone, topApproachEnabled: true))
     }
 
+    func testFileDragActivatesOnlyInsideTopZone() {
+        let screen = geometry(x: 0, width: 1512, height: 982)
+        let layout = IslandGeometryResolver.resolve(screen: screen)
+        XCTAssertEqual(layout.activationFrame.width, layout.expandedFrame.width + 32)
+        XCTAssertEqual(layout.activationFrame.minY, layout.expandedFrame.minY - 16)
+        XCTAssertEqual(layout.activationFrame.maxY, screen.frame.maxY + 1)
+        XCTAssertTrue(layout.activationFrame.contains(layout.expandedFrame))
+
+        let approachPoint = CGPoint(x: layout.activationFrame.minX - 1,
+                                    y: screen.frame.maxY - 120)
+        XCTAssertFalse(IslandGeometryResolver.acceptsFileDrag(
+            at: approachPoint, compactPointerFrame: .null,
+            activationFrame: layout.activationFrame, topApproachEnabled: true))
+        XCTAssertTrue(IslandGeometryResolver.acceptsFileDrag(
+            at: CGPoint(x: layout.activationFrame.midX, y: screen.frame.maxY),
+            compactPointerFrame: .null, activationFrame: layout.activationFrame,
+            topApproachEnabled: true))
+        XCTAssertFalse(IslandGeometryResolver.acceptsFileDrag(
+            at: approachPoint, compactPointerFrame: .null,
+            activationFrame: layout.activationFrame, topApproachEnabled: false))
+    }
+
     private func geometry(x: CGFloat, width: CGFloat,
                           height: CGFloat) -> IslandGeometryResolver.ScreenGeometry {
         .init(frame: CGRect(x: x, y: 0, width: width, height: height),

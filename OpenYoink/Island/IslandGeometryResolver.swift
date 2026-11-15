@@ -170,11 +170,13 @@ enum IslandGeometryResolver {
                               y: topAnchor - expandedHeight,
                               width: expandedWidth,
                               height: expandedHeight)
-        let activationHeight: CGFloat = 88
-        let activation = CGRect(x: horizontalAnchor - expandedWidth / 2,
-                                y: screen.frame.maxY - activationHeight,
-                                width: expandedWidth,
-                                height: activationHeight)
+        let expandedFootprint = expanded.integral
+        let activationLeft = max(screen.frame.minX, expandedFootprint.minX - 16)
+        let activationRight = min(screen.frame.maxX, expandedFootprint.maxX + 16)
+        let activationBottom = max(screen.frame.minY, expandedFootprint.minY - 16)
+        let activation = CGRect(x: activationLeft, y: activationBottom,
+                                width: activationRight - activationLeft,
+                                height: screen.frame.maxY + 1 - activationBottom)
         return Layout(hasPhysicalNotch: hasNotch,
                       cameraHousingFrame: housing,
                       // NSPanel rounds half-point window origins to whole

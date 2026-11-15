@@ -205,6 +205,8 @@ final class IslandActivityCoordinator {
     /// Visual-only hover state. It intentionally does not call
     /// `onStateDidChange`, because pointer movement must never resize the panel.
     var isPointerHovering = false
+    /// Visual cue while a file drag is active, before expansion.
+    var isFileDragNearby = false
     /// A deliberate collapse must win over hover reveal until the pointer has
     /// actually left the compact surface. Without this latch, the mouse-move
     /// monitor immediately schedules another expansion while the click is
@@ -417,6 +419,7 @@ final class IslandActivityCoordinator {
     }
 
     func beginDrag() {
+        isFileDragNearby = false
         if stateBeforeDrag == nil {
             stateBeforeDrag = surfaceState
             moduleBeforeDrag = selectedModule

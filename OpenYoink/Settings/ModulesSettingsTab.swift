@@ -2,10 +2,20 @@ import SwiftUI
 
 struct ModulesSettingsTab: View {
     @Environment(SettingsStore.self) private var settings
+    @State private var pendingPreset: WorkflowPreset?
 
     var body: some View {
         @Bindable var settings = settings
         SettingsForm {
+            Section("Workflow Presets") {
+                Menu("Apply a Preset…") {
+                    ForEach(WorkflowPreset.allCases) { preset in
+                        Button(preset.title) { pendingPreset = preset }
+                    }
+                }
+                Text("Presets change modules and reveal behavior. Your files, history and recording choice are kept.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             if settings.islandEnabled {
                 Section("Island Modules") {
                     islandModuleControl("Shelf", id: .shelf)
@@ -63,6 +73,17 @@ struct ModulesSettingsTab: View {
                         .foregroundStyle(.secondary)
                 }
             }
+        }
+        .alert("Apply Workflow Preset?", isPresented: Binding(
+            get: { pendingPreset != nil }, set: { if !$0 { pendingPreset = nil } }
+        )) {
+            Button("Cancel", role: .cancel) { pendingPreset = nil }
+            Button("Apply") {
+                if let preset = pendingPreset { settings.applyWorkflowPreset(preset) }
+                pendingPreset = nil
+            }
+        } message: {
+            Text(pendingPreset?.detail ?? "")
         }
     }
 

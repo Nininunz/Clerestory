@@ -241,7 +241,10 @@ struct IslandRootView: View {
             .accessibilityLabel(Text(compactAccessibilityLabel))
             .accessibilityHint(Text("Open OpenYoink Island"))
             .accessibilityAddTraits(.isButton)
-            .accessibilityAction { coordinator.show(module: defaultOpenModule) }
+            .accessibilityAction {
+                guard settings.islandClickRevealEnabled else { return }
+                coordinator.show(module: defaultOpenModule)
+            }
     }
 
     private var compactContent: some View {
@@ -263,6 +266,8 @@ struct IslandRootView: View {
                 }
             }
             .buttonStyle(.plain)
+            .allowsHitTesting(settings.islandClickRevealEnabled)
+            .accessibilityHidden(!settings.islandClickRevealEnabled)
             .contentShape(compactHitShape)
             .accessibilityLabel(Text(compactAccessibilityLabel))
             .accessibilityHint(Text("Open OpenYoink Island"))
@@ -316,7 +321,9 @@ struct IslandRootView: View {
     @ViewBuilder
     private var compactLeading: some View {
         let activity = coordinator.compactPrimaryActivity()
-        if compactDisplay == .media, let image = compactArtworkImage {
+        if hasPhysicalNotch && coordinator.isFileDragNearby {
+            compactDragCueSymbol("tray.and.arrow.down.fill")
+        } else if compactDisplay == .media, let image = compactArtworkImage {
             CompactNowPlayingArtworkView(
                 image: image,
                 tint: mediaAccent.color,
@@ -324,10 +331,9 @@ struct IslandRootView: View {
             )
             .transition(.opacity.combined(with: .scale(scale: 0.86)))
         } else {
-            Image(systemName: activity.flatMap {
+            IslandCompactWingIcon(systemName: activity.flatMap {
                 $0.moduleID == compactDisplay.moduleID ? $0.systemImage : nil
             } ?? compactDisplay.systemImage)
-                .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(activity?.moduleID == compactDisplay.moduleID
                                  ? activityTint(activity) : .white)
                 .opacity(compactIsHighlighted || activity != nil ? 1 : 0.72)
@@ -365,37 +371,39 @@ struct IslandRootView: View {
 
     private var compactTrailing: some View {
         Group {
-            switch compactDisplay {
-            case .media:
-                if let snapshot = nowPlayingStore.snapshot {
-                    compactMediaEqualizer(isPlaying: snapshot.isPlaying,
-                                          tint: mediaAccent.color,
-                                          rhythmSeed: mediaRhythmSeed)
+            if hasPhysicalNotch && coordinator.isFileDragNearby {
+                compactDragCueSymbol("arrow.down")
+            } else {
+                switch compactDisplay {
+                case .media:
+                    if let snapshot = nowPlayingStore.snapshot {
+                        compactMediaEqualizer(isPlaying: snapshot.isPlaying,
+                                              tint: mediaAccent.color,
+                                              rhythmSeed: mediaRhythmSeed)
+                    }
+                case .transfers:
+                    if reduceMotion {
+                        IslandCompactWingIcon(systemName: "arrow.triangle.2.circlepath")
+                    } else {
+                        compactTransferSpinner
+                    }
+                case .timer:
+                    if case .finished = timerStore.state {
+                        IslandCompactWingIcon(systemName: "checkmark")
+                    } else {
+                        compactTimerText(timerStore.compactRemaining)
+                    }
+                case .aiUsage:
+                    if let value = aiUsageStore.compactValue {
+                        IslandCompactAIValueText(value: value)
+                    }
+                case .shelf:
+                    compactShelfText(shelfStore.items.count)
+                case .battery:
+                    compactBatteryText(powerMonitor.snapshot.percentage)
+                case .fallback:
+                    compactFallbackSymbol
                 }
-            case .transfers:
-                if reduceMotion {
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                        .font(.system(size: 13, weight: .semibold))
-                } else {
-                    compactTransferSpinner
-                }
-            case .timer:
-                if case .finished = timerStore.state {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 13, weight: .semibold))
-                } else {
-                    compactTimerText(timerStore.compactRemaining)
-                }
-            case .aiUsage:
-                if let value = aiUsageStore.compactValue {
-                    IslandCompactAIValueText(value: value)
-                }
-            case .shelf:
-                compactShelfText(shelfStore.items.count)
-            case .battery:
-                compactBatteryText(powerMonitor.snapshot.percentage)
-            case .fallback:
-                compactFallbackSymbol
             }
         }
         .foregroundStyle(.white)
@@ -403,14 +411,25 @@ struct IslandRootView: View {
         .accessibilityHidden(true)
     }
 
+    private func compactDragCueSymbol(_ name: String) -> some View {
+        IslandCompactWingIcon(systemName: name)
+            .foregroundStyle(Color.accentColor)
+            .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
     private func compactMediaEqualizer(isPlaying: Bool, tint: Color,
                                        rhythmSeed: UInt64) -> some View {
+        if !isPlaying {
+            IslandCompactWingIcon(systemName: "play.fill")
+        } else {
         IslandEqualizerView(isPlaying: isPlaying, reduceMotion: reduceMotion,
                             tint: tint, rhythmSeed: rhythmSeed, showsCapsule: false)
             .scaleEffect(0.92)
             .brightness(compactIsHighlighted ? 0.10 : 0)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.16),
                        value: compactIsHighlighted)
+        }
     }
 
     private var compactTransferSpinner: some View {
@@ -436,8 +455,7 @@ struct IslandRootView: View {
     }
 
     private var compactFallbackSymbol: some View {
-        Image(systemName: "sparkles")
-            .font(.system(size: 11, weight: .semibold))
+        IslandCompactWingIcon(systemName: "sparkles")
     }
 
     // Preserved for a possible future compact playback control; not mounted in compactContent.
@@ -1011,15 +1029,27 @@ struct IslandCompactBatteryValueText: View {
     }
 }
 
+/// All compact wing SF Symbols share this typography and centered canvas.
+/// Color and animation belong to the caller; wing placement belongs to the row.
+struct IslandCompactWingIcon: View {
+    let systemName: String
+
+    var body: some View {
+        Image(systemName: systemName)
+            .font(.system(size: 13, weight: .semibold))
+            .imageScale(.medium)
+            .frame(width: 22, height: 22, alignment: .center)
+            .accessibilityHidden(true)
+    }
+}
+
 struct IslandCompactTransferSpinner: View {
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
-            Image(systemName: "arrow.triangle.2.circlepath")
-                .font(.system(size: 13, weight: .semibold))
+            IslandCompactWingIcon(systemName: "arrow.triangle.2.circlepath")
                 .foregroundStyle(.white)
                 .rotationEffect(.degrees(context.date.timeIntervalSinceReferenceDate
                     .truncatingRemainder(dividingBy: 1.6) / 1.6 * 360))
-                .frame(width: 22, height: 22)
         }
         .accessibilityHidden(true)
     }

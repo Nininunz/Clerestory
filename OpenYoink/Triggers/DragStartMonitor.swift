@@ -132,7 +132,8 @@ struct DragAutoShowSession: Sendable, Equatable {
     }
 }
 
-/// UX1: 全局拖拽开始监听（计划外 UX 批次，对齐 Yoink「开始拖拽即出现」）。
+/// Global file-drag monitor. A fresh drag pasteboard change establishes the
+/// session; a common-run-loop poll fills gaps in AppKit mouse event delivery.
 ///
 /// 沙箱合规：`NSEvent.addGlobalMonitorForEvents` 监听
 /// `leftMouseDown/leftMouseDragged/leftMouseUp` 无需 Accessibility 权限
@@ -140,10 +141,10 @@ struct DragAutoShowSession: Sendable, Equatable {
 /// monitor 覆盖从本应用窗口（shelf 卡片拖出等）起始的拖拽。
 ///
 /// 注册生命周期与 `MouseShakeMonitor` 一致：monitor 只存在于 `start` 与
-/// `stop` 之间；`start` 幂等。识别核心 `DragGestureTracker` 为纯类型。
+/// `stop` 之间；`start` 幂等。
 ///
 /// 回调语义：
-/// - `onDragStart`：位移阈值首次跨越（忽略列表前台时经 `shouldSuppress` 抑制）；
+/// - `onDragStart`：首次检测到新文件拖拽（忽略列表前台时经 `shouldSuppress` 抑制）；
 /// - `onDragEnd`：已确认拖拽的左键抬起（不被抑制 —— 抑制即无会话，
 ///   配合 `DragAutoShowSession` 空转安全）。
 ///
@@ -159,10 +160,16 @@ final class DragStartMonitor {
     /// EdgeTab: 已确认的拖拽会话进行中（阈值跨越 → 抬起）。
     private(set) var isDragInProgress = false
 
-    private var tracker: DragGestureTracker?
+    private var gestureTracker = DragGestureTracker()
     private var fileDragTracker = EdgeFileDragTracker()
     private var globalMonitor: Any?
     private var localMonitor: Any?
+    private var dragPollTimer: Timer?
+    private var dragSessionSuppressed = false
+    private var lastIdlePasteboardChangeCount: Int?
+    private var isPotentialDrag = false
+    private let onPotentialDragChange: @MainActor (Bool) -> Void
+    private let onNativeDragUpdate: @MainActor (CGPoint) -> Void
 
     /// Ignore-list gate, evaluated only at the moment a drag is confirmed.
     private let shouldSuppress: @MainActor () -> Bool
@@ -173,17 +180,24 @@ final class DragStartMonitor {
     init(shouldSuppress: @escaping @MainActor () -> Bool,
          onDragStart: @escaping @MainActor () -> Void,
          onDragUpdate: @escaping @MainActor (CGPoint) -> Void = { _ in },
+         onPotentialDragChange: @escaping @MainActor (Bool) -> Void = { _ in },
+         onNativeDragUpdate: @escaping @MainActor (CGPoint) -> Void = { _ in },
          onDragEnd: @escaping @MainActor () -> Void) {
         self.shouldSuppress = shouldSuppress
         self.onDragStart = onDragStart
         self.onDragUpdate = onDragUpdate
         self.onDragEnd = onDragEnd
+        self.onPotentialDragChange = onPotentialDragChange
+        self.onNativeDragUpdate = onNativeDragUpdate
     }
 
     /// Registers the monitors. Idempotent: starting while monitoring is a no-op.
     func start() {
         guard !isMonitoring else { return }
-        tracker = DragGestureTracker()
+        let initialChangeCount = DragPasteboardSnapshot.current().changeCount
+        lastIdlePasteboardChangeCount = initialChangeCount
+        fileDragTracker.mouseDown(changeCount: initialChangeCount)
+        gestureTracker.mouseDown(at: NSEvent.mouseLocation)
 
         let mask: NSEvent.EventTypeMask = [.leftMouseDown, .leftMouseDragged, .leftMouseUp]
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: mask) { [weak self] event in
@@ -205,6 +219,14 @@ final class DragStartMonitor {
             }
             return event
         }
+        // Native Finder drags can stop delivering ordinary mouse-drag events,
+        // particularly after Show Desktop. Poll the drag pasteboard and pointer
+        // while the gesture is active so the Island still sees the file drag.
+        let timer = Timer(timeInterval: 0.05, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.pollDrag() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        dragPollTimer = timer
         isMonitoring = true
     }
 
@@ -218,10 +240,73 @@ final class DragStartMonitor {
             NSEvent.removeMonitor(localMonitor)
             self.localMonitor = nil
         }
-        tracker = nil
+        dragPollTimer?.invalidate()
+        dragPollTimer = nil
+        setPotentialDrag(false)
         fileDragTracker.reset()
+        gestureTracker.reset()
         isMonitoring = false
         isDragInProgress = false
+        dragSessionSuppressed = false
+        lastIdlePasteboardChangeCount = nil
+    }
+
+    private func pollDrag() {
+        guard isMonitoring else { return }
+        let snapshot = DragPasteboardSnapshot.current()
+        if NSEvent.pressedMouseButtons & 1 == 0 {
+            setPotentialDrag(false)
+            finishDrag()
+            // Keep a baseline while idle. The drag pasteboard retains the
+            // previous file, so only a new change may start another session.
+            lastIdlePasteboardChangeCount = snapshot.changeCount
+            fileDragTracker.mouseDown(changeCount: snapshot.changeCount)
+            gestureTracker.mouseDown(at: NSEvent.mouseLocation)
+            return
+        }
+        sampleDrag(at: NSEvent.mouseLocation, snapshot: snapshot)
+    }
+
+    private func sampleDrag(at point: CGPoint, snapshot: DragPasteboardSnapshot) {
+        let hasSharedFileDrag = fileDragTracker.mouseDragged(
+            changeCount: snapshot.changeCount,
+            hasFileContent: PasteboardTypes.hasFileDragContent(in: snapshot.types)
+        )
+        let movedFarEnough = gestureTracker.mouseDragged(to: point)
+            || gestureTracker.phase == .dragging
+        setPotentialDrag(movedFarEnough && !shouldSuppress())
+        guard hasSharedFileDrag else { return }
+        if !isDragInProgress {
+            isDragInProgress = true
+            dragSessionSuppressed = shouldSuppress()
+            if !dragSessionSuppressed { onDragStart() }
+        }
+        if !dragSessionSuppressed { onDragUpdate(point) }
+    }
+
+    private func finishDrag() {
+        guard isDragInProgress else { return }
+        isDragInProgress = false
+        dragSessionSuppressed = false
+        onDragEnd()
+    }
+
+    private func setPotentialDrag(_ active: Bool) {
+        guard active != isPotentialDrag else { return }
+        isPotentialDrag = active
+        onPotentialDragChange(active)
+    }
+
+    /// The Island destination has the session's real pasteboard even when
+    /// cross-process drag data never appears on the shared pasteboard.
+    func confirmFileDragFromDestination(at point: CGPoint) {
+        guard isMonitoring else { return }
+        if !isDragInProgress {
+            isDragInProgress = true
+            dragSessionSuppressed = shouldSuppress()
+            if !dragSessionSuppressed { onDragStart() }
+        }
+        if !dragSessionSuppressed { onNativeDragUpdate(point) }
     }
 
     private func handle(eventType: NSEvent.EventType,
@@ -230,28 +315,21 @@ final class DragStartMonitor {
         guard isMonitoring else { return }
         switch eventType {
         case .leftMouseDown:
-            tracker?.mouseDown(at: point)
-            fileDragTracker.mouseDown(changeCount: snapshot.changeCount)
+            guard !isDragInProgress else { return }
+            gestureTracker.mouseDown(at: point)
+            // The drag pasteboard may already have changed by the time the
+            // mouse-down event reaches us after Show Desktop. Use the last
+            // idle sample so that early change still belongs to this gesture.
+            fileDragTracker.mouseDown(
+                changeCount: lastIdlePasteboardChangeCount ?? snapshot.changeCount
+            )
         case .leftMouseDragged:
-            guard fileDragTracker.mouseDragged(
-                changeCount: snapshot.changeCount,
-                hasFileContent: PasteboardTypes.hasFileDragContent(in: snapshot.types)
-            ) else { return }
-            let didBegin = tracker?.mouseDragged(to: point) == true
-            guard tracker?.phase == .dragging else { return }
-            // EdgeTab: 投放暗示状态与抑制无关 —— 被抑制（忽略列表 / 正在拖动
-            // 拉环本身）的拖拽依然是「拖拽进行中」，只是不触发唤出。
-            isDragInProgress = true
-            // 抑制（忽略列表前台）只影响唤出，不破坏跟踪器状态：抬起时
-            // onDragEnd 照常到达，会话裁决（未 dragBegan）空转。
-            guard !shouldSuppress() else { return }
-            if didBegin { onDragStart() }
-            onDragUpdate(point)
+            sampleDrag(at: point, snapshot: snapshot)
         case .leftMouseUp:
+            setPotentialDrag(false)
             fileDragTracker.mouseUp()
-            guard tracker?.mouseUp() == true else { return }
-            isDragInProgress = false
-            onDragEnd()
+            gestureTracker.reset()
+            finishDrag()
         default:
             break
         }

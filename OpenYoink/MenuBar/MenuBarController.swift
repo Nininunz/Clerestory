@@ -8,6 +8,7 @@ import AppKit
 /// 用户可见字符串经 `String(localized:)` 走 Localizable.xcstrings（S10）。
 @MainActor
 final class MenuBarController: NSObject {
+    private let settings: SettingsStore
     private let isShelfExpanded: () -> Bool
     private let recents: RecentItemsService
     private let onToggleShelf: () -> Void
@@ -32,7 +33,8 @@ final class MenuBarController: NSObject {
     /// 「Recent Items」父项；子菜单每次打开菜单时重建（entries 随拖出变化）。
     private let recentParentItem = NSMenuItem()
 
-    init(isShelfExpanded: @escaping () -> Bool,
+    init(settings: SettingsStore,
+         isShelfExpanded: @escaping () -> Bool,
          recents: RecentItemsService,
          onToggleShelf: @escaping () -> Void,
          onReaddRecent: @escaping (RecentEntry) -> Void,
@@ -43,6 +45,7 @@ final class MenuBarController: NSObject {
          onCheckForUpdates: @escaping () -> Void,
          onOpenManualUpdate: @escaping () -> Void,
          onShowClipboardHistory: @escaping () -> Void = {}) {
+        self.settings = settings
         self.isShelfExpanded = isShelfExpanded
         self.recents = recents
         self.onToggleShelf = onToggleShelf
@@ -60,6 +63,26 @@ final class MenuBarController: NSObject {
         super.init()
         configureButton()
         configureMenu()
+        applyVisibility()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(screenParametersDidChange(_:)),
+            name: NSApplication.didChangeScreenParametersNotification,
+            object: nil
+        )
+    }
+
+    func applyVisibility() {
+        // Keep Settings reachable if there is no active Island surface.
+        statusItem.isVisible = settings.menuBarIconEnabled
+            || !settings.islandEnabled
+            || IslandScreenCatalog.options().isEmpty
+            || IslandDebugMode.simulatesNoNotch
+            || (!settings.islandClickRevealEnabled && !settings.islandHoverRevealEnabled)
+    }
+
+    @objc private func screenParametersDidChange(_ notification: Notification) {
+        applyVisibility()
     }
 
     private func configureButton() {
@@ -79,6 +102,7 @@ final class MenuBarController: NSObject {
         toggleItem.action = #selector(toggleShelf(_:))
         toggleItem.target = self
         menu.addItem(toggleItem)
+
 
         menu.addItem(.separator())
 
@@ -148,6 +172,7 @@ final class MenuBarController: NSObject {
     @objc private func toggleShelf(_ sender: NSMenuItem) {
         onToggleShelf()
     }
+
 
     /// 打开自管理设置窗口（`SettingsWindowController`）。
     ///
@@ -269,6 +294,7 @@ extension MenuBarController: NSMenuDelegate {
     /// 每次打开菜单时刷新勾选项与标题（跟随 shelf 实际可见性），并重建
     /// 最近项目子菜单（entries 随拖出/Clear 变化）。
     func menuWillOpen(_ menu: NSMenu) {
+        toggleItem.isHidden = IslandScreenCatalog.options().isEmpty
         let isVisible = isShelfExpanded()
         toggleItem.title = isVisible
             ? String(localized: "Hide Island")

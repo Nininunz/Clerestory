@@ -28,7 +28,7 @@ extension SettingsStore {
             dragAutoAppearMode = .edgeOnly
             classicShelfHoverRevealEnabled = false
         }
-        islandDragApproachEnabled = false
+        islandDragApproachEnabled = true
         islandHoverRevealEnabled = false
         islandEnabled = true
         let builtIns: [IslandModuleID] = [.shelf, .transfers, .timer, .battery, .system, .media, .folders, .clipboard]

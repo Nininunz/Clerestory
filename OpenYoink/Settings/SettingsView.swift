@@ -107,8 +107,12 @@ struct SettingsView: View {
         switch pane {
         case .general:
             GeneralSettingsTab()
+        case .shelf:
+            ShelfSettingsTab()
         case .modules:
             ModulesSettingsTab()
+        case .clipboard:
+            ClipboardSettingsTab()
         case .appearance:
             if SideShelfAvailability.isEnabled {
                 AppearanceSettingsTab()
@@ -121,6 +125,12 @@ struct SettingsView: View {
             IgnoredAppsSettingsTab()
         case .storage:
             StorageSettingsTab()
+        case .debug:
+            #if DEBUG
+            DebugSettingsTab()
+            #else
+            GeneralSettingsTab()
+            #endif
         case .about:
             AboutSettingsTab()
         }
@@ -129,15 +139,22 @@ struct SettingsView: View {
 
 enum SettingsPane: String, CaseIterable, Identifiable {
     case general
+    case shelf
     case modules
+    case clipboard
     case appearance
     case triggers
     case ignoredApps
     case storage
+    case debug
     case about
 
     static var visibleCases: [SettingsPane] {
+        #if DEBUG
         allCases.filter { SideShelfAvailability.isEnabled || $0 != .appearance }
+        #else
+        allCases.filter { (SideShelfAvailability.isEnabled || $0 != .appearance) && $0 != .debug }
+        #endif
     }
 
     var id: Self { self }
@@ -145,11 +162,14 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     var title: LocalizedStringKey {
         switch self {
         case .general: "General"
+        case .shelf: "Shelf"
         case .modules: "Modules"
+        case .clipboard: "Clipboard"
         case .appearance: "Appearance"
         case .triggers: "Triggers"
         case .ignoredApps: "Ignored Apps"
         case .storage: "Storage"
+        case .debug: "Debug"
         case .about: "About"
         }
     }
@@ -157,11 +177,14 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     var systemImage: String {
         switch self {
         case .general: "gear"
+        case .shelf: "tray"
         case .modules: "square.grid.2x2"
+        case .clipboard: "doc.on.clipboard"
         case .appearance: "paintpalette"
         case .triggers: "keyboard"
         case .ignoredApps: "hand.raised"
         case .storage: "externaldrive"
+        case .debug: "ladybug"
         case .about: "info.circle"
         }
     }
@@ -354,8 +377,19 @@ private struct TriggerSettingsTab: View {
             }
             }
             Section("Island Reveal") {
-                Toggle("Preview Island on hover", isOn: $settings.islandHoverRevealEnabled)
-                    .disabled(!settings.islandEnabled)
+                if FloatingIslandAvailability.isEnabled {
+                    Text("Hover at the top center of the screen to open Island.")
+                        .font(.caption).foregroundStyle(.secondary)
+                } else {
+                    Toggle("Preview Island on hover", isOn: $settings.islandHoverRevealEnabled)
+                        .disabled(!settings.islandEnabled)
+                }
+                Toggle("Click compact Island to expand", isOn: $settings.islandClickRevealEnabled)
+                    .disabled(!settings.islandEnabled || FloatingIslandAvailability.isEnabled)
+                if FloatingIslandAvailability.isEnabled {
+                    Text("Not used in notchless mode, which has no compact Island.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 LabeledContent("Hover delay") {
                     Slider(value: $settings.islandHoverDelaySeconds, in: 0...0.5, step: 0.05)
                         .frame(width: 180)
@@ -364,7 +398,8 @@ private struct TriggerSettingsTab: View {
                         .monospacedDigit()
                         .frame(width: 54, alignment: .trailing)
                 }
-                .disabled(!settings.islandEnabled || !settings.islandHoverRevealEnabled)
+                .disabled(!settings.islandEnabled
+                          || (!settings.islandHoverRevealEnabled && !FloatingIslandAvailability.isEnabled))
                 LabeledContent("Leave delay") {
                     Slider(value: $settings.islandHoverLeaveDelaySeconds, in: 0...1, step: 0.05)
                         .frame(width: 180)
@@ -373,14 +408,22 @@ private struct TriggerSettingsTab: View {
                         .monospacedDigit()
                         .frame(width: 54, alignment: .trailing)
                 }
-                .disabled(!settings.islandEnabled || !settings.islandHoverRevealEnabled)
-                Text("The preview closes when you move away. Click it to keep it open.")
+                .disabled(!settings.islandEnabled
+                          || (!settings.islandHoverRevealEnabled && !FloatingIslandAvailability.isEnabled))
+                Text("The preview closes after you move away. Pin Island to keep it open.")
                     .font(.caption).foregroundStyle(.secondary)
                 Toggle("Expand Island when dragging files near the top", isOn: $settings.islandDragApproachEnabled)
                     .disabled(!settings.islandEnabled)
                     .accessibilityIdentifier("settings.islandDragApproach")
-                Text("Dropping files on the compact Island always expands it. The wider top approach area is optional.")
+                Text("This file-drag trigger works independently of Preview Island on hover.")
                     .font(.caption).foregroundStyle(.secondary)
+                if FloatingIslandAvailability.isEnabled {
+                    Text("File drags can also open Island from the top approach area.")
+                        .font(.caption).foregroundStyle(.secondary)
+                } else {
+                    Text("Dropping files on the compact Island always expands it. The wider top approach area is optional.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
             Section("Global Hot Key") {
                 Toggle("Enable", isOn: $settings.hotKeyEnabled)

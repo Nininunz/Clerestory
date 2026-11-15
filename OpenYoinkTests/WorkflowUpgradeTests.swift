@@ -105,7 +105,7 @@ final class WorkflowUpgradeTests: XCTestCase {
             XCTAssertFalse(settings.clipboardHistoryEnabled)
             XCTAssertTrue(settings.clipboardHistoryPaused)
             XCTAssertTrue(settings.isIslandModuleEnabled("future.module"))
-            XCTAssertFalse(settings.islandDragApproachEnabled)
+            XCTAssertTrue(settings.islandDragApproachEnabled)
             XCTAssertTrue(settings.islandEnabled)
         }
         XCTAssertTrue(settings.isIslandModuleEnabled(.folders))
