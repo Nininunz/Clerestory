@@ -1227,7 +1227,7 @@ struct IslandModuleLibraryView: View {
                         .accessibilityHidden(!showsCompact)
                 }
             }
-            HStack {
+            IslandModuleFooter {
                 Button(action: onOpenSettings) {
                     Image(systemName: "gearshape")
                 }

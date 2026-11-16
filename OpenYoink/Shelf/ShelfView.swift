@@ -265,7 +265,10 @@ struct ShelfView: View {
             } else {
                 itemGrid
             }
-            if shouldShowTopLevelQuickActions {
+            if presentationStyle == .island {
+                shelfFooter
+                    .padding(.top, IslandModuleLayout.headerSpacing - 4)
+            } else if shouldShowTopLevelQuickActions {
                 ShelfQuickActionBar(items: topLevelActionItems)
                     .transition(reduceMotion
                         ? .opacity
@@ -365,13 +368,79 @@ struct ShelfView: View {
                     ForEach(ShelfContentFilter.allCases) { Text($0.title).tag($0) }
                 }.labelsHidden().controlSize(.small)
                 Spacer(minLength: 2)
-                managementMenu
+                if presentationStyle == .classic { managementMenu }
             }
         }.font(.caption).buttonStyle(.plain)
     }
 
     private var visibleSelection: Set<UUID> {
         store.selection.intersection(Set(store.visibleItems.map(\.id)))
+    }
+
+    private var shelfFooter: some View {
+        IslandModuleFooter {
+            Button(interaction.isSelecting || !visibleSelection.isEmpty ? "Done" : "Select") {
+                setSelectionMode(!(interaction.isSelecting || !visibleSelection.isEmpty))
+            }
+            .buttonStyle(IslandActionButtonStyle())
+            .disabled(store.items.isEmpty)
+            .accessibilityIdentifier("shelf.selection.toggle")
+            if !visibleSelection.isEmpty {
+                Text("\(visibleSelection.count) selected")
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 4)
+            if !visibleSelection.isEmpty {
+                ShelfQuickActionBar(items: store.visibleItems.filter { visibleSelection.contains($0.id) }, inline: true)
+                Button {
+                    removeShelfItems(ids: visibleSelection)
+                } label: { Image(systemName: "trash") }
+                .buttonStyle(IslandHeaderButtonStyle())
+                .help("Remove Selected")
+                .accessibilityLabel("Remove Selected")
+                .accessibilityIdentifier("shelf.selection.remove")
+            } else {
+                Button { _ = store.undoLastRemoval() } label: {
+                    Image(systemName: "arrow.uturn.backward")
+                }
+                .buttonStyle(IslandHeaderButtonStyle())
+                .disabled(!store.canUndoRemoval)
+                .help("Undo Remove")
+                .accessibilityLabel("Undo Remove")
+                .accessibilityIdentifier("shelf.undoRemoval")
+            }
+            Menu {
+                Button(allVisibleItemsSelected ? "Deselect All" : "Select All") {
+                    if allVisibleItemsSelected {
+                        store.clearSelection()
+                    } else {
+                        setSelectionMode(true)
+                        store.selectAllVisible()
+                    }
+                }
+                .disabled(store.visibleItems.isEmpty)
+                Button("Undo Remove") { _ = store.undoLastRemoval() }
+                    .disabled(!store.canUndoRemoval)
+                Divider()
+                Button("Clear Shelf", role: .destructive) {
+                    removeShelfItems(ids: Set(store.items.map(\.id)))
+                }
+                .disabled(store.items.isEmpty)
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 12, weight: .semibold))
+                    .frame(width: 28, height: 28)
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .frame(width: 28, height: 28)
+            .background(Circle().fill(Color.white.opacity(0.08)))
+            .help("More Shelf Actions")
+            .accessibilityLabel("More Shelf Actions")
+            .accessibilityIdentifier("shelf.manage")
+        }
     }
 
     private var managementMenu: some View {
@@ -468,8 +537,7 @@ struct ShelfView: View {
             collapseStack()
             shelfFocusAction?()
         }
-        interaction.isSelecting = enabled
-        if !enabled { store.clearSelection() }
+        interaction.setSelectionMode(enabled, in: store)
     }
 
     private var allVisibleItemsSelected: Bool {
@@ -525,8 +593,13 @@ struct ShelfView: View {
                                               viewport: viewport.size)
             Group {
                 if presentationStyle == .island {
-                    IslandModuleScrollView {
-                        cardGrid(columns: gridColumns)
+                    ScrollViewReader { proxy in
+                        IslandModuleScrollView {
+                            cardGrid(columns: gridColumns)
+                        }
+                        .onChange(of: interaction.focusedItemID) { _, id in
+                            if let id { proxy.scrollTo(id) }
+                        }
                     }
                 } else if fits {
                     cardGrid(columns: gridColumns)
@@ -594,7 +667,8 @@ struct ShelfView: View {
             ShelfStackView(
                 item: item,
                 isSelected: store.selection.contains(item.id),
-                isKeyboardFocused: interaction.focusedItemID == item.id,
+                isKeyboardFocused: interaction.focusedItemID == item.id
+                    && (presentationStyle == .classic || interaction.showsKeyboardFocus),
                 isExpanded: interaction.expandedStackID == item.id,
                 onSelect: { additive in select(item.id, additive: additive) },
                 onToggleExpanded: { toggleStackExpansion(item.id) },
@@ -614,7 +688,8 @@ struct ShelfView: View {
             ShelfItemCard(
                 item: item,
                 isSelected: store.selection.contains(item.id),
-                isKeyboardFocused: interaction.focusedItemID == item.id,
+                isKeyboardFocused: interaction.focusedItemID == item.id
+                    && (presentationStyle == .classic || interaction.showsKeyboardFocus),
                 onSelect: { additive in select(item.id, additive: additive) },
                 onRemove: { store.removeForUser(ids: [item.id]) },
                 onRecover: { itemRecoveryController?.recover(item) },
@@ -837,6 +912,10 @@ struct ShelfView: View {
     }
 
     private func select(_ id: UUID, additive: Bool) {
+        searchFocused = false
+        shelfFocusAction?()
+        interaction.showsKeyboardFocus = false
+        interaction.selectionAnchorID = nil
         interaction.focusedItemID = id
         if additive || interaction.isSelecting {
             store.toggleSelection(id)

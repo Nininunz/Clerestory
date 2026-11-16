@@ -346,7 +346,8 @@ final class ShelfWindowController: NSObject {
                 })
                 .environment(\.shelfFocusAction, { [weak panel] in
                     guard let panel else { return }
-                    panel.makeKey()
+                    NSApp.activate()
+                    panel.makeKeyAndOrderFront(nil)
                     if let editor = panel.firstResponder as? NSTextView, editor.isFieldEditor {
                         panel.makeFirstResponder(nil)
                     }
@@ -697,6 +698,15 @@ final class ShelfWindowController: NSObject {
         // S6: QL 面板关闭后让 ShelfPanel 重新成为 key（nonactivating：只接
         // 键盘焦点、不激活应用），空格/Delete/Esc 保持可用。闭包内访问 panel
         // 发生在 QL 关闭时，面板早已创建，不影响 lazy 语义。
+        quickLookCoordinator.onNavigationKey = { [weak self] event in
+            guard let self else { return false }
+            let panel = self.islandPanel.isVisible ? self.islandPanel : self.classicPanel
+            return self.handleItemKeyDown(event, in: panel)
+        }
+        quickLookCoordinator.sourceWindowLevel = { [weak self] in
+            guard let self else { return .normal }
+            return self.islandPanel.isVisible ? self.islandPanel.level : self.classicPanel.level
+        }
         quickLookCoordinator.onPanelClosed = { [weak self] in
             guard let self,
                   self.appState.isShelfVisible
@@ -1286,13 +1296,12 @@ final class ShelfWindowController: NSObject {
 
     // MARK: - Item keyboard handling (S6)
 
-    /// Complete keyboard path for the visible shelf. Focus remains independent
-    /// from multi-selection; only Shift+Arrow extends selection.
+    /// Arrow keys select the focused item; Shift+Arrow adjusts an anchored range.
+    /// Quick Look forwards navigation here so preview and Shelf selection agree.
     ///
     /// 事件到达前提：卡片单击让面板成为 key（CardDragSourceAnchorView.mouseUp）。
     /// 带修饰键的组合一律放行（⌘⇧Space 等由 AppDelegate 的快捷键监听处理）；
-    /// QL 面板为 key 时键盘事件由 QL 自己接管（空格/Esc 关闭、方向键翻页），
-    /// 不会到达这里。
+    /// Quick Look retains Space/Escape handling and forwards only navigation keys.
     private func handleItemKeyDown(_ event: NSEvent, in sourcePanel: ShelfPanel) -> Bool {
         if let editor = sourcePanel.firstResponder as? NSTextView, editor.isFieldEditor { return false }
         var modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
@@ -1443,6 +1452,7 @@ final class ShelfWindowController: NSObject {
         let visible = visibleKeyboardItems()
         guard !visible.isEmpty else { return false }
         let currentIndex: Int
+        var hasCurrentItem = true
         if let focusedItemID = interaction.focusedItemID,
            let index = visible.firstIndex(where: { $0.id == focusedItemID }) {
             currentIndex = index
@@ -1451,22 +1461,22 @@ final class ShelfWindowController: NSObject {
             currentIndex = selected
         } else {
             currentIndex = 0
+            hasCurrentItem = false
         }
         let destination = ShelfKeyboardNavigator.destinationIndex(
             currentIndex: currentIndex,
             itemCount: visible.count,
-            columnCount: ShelfLayoutEngine.columnCount(forPanelWidth: panelWidth),
+            columnCount: islandPanel.isVisible && interaction.expandedStackID == nil
+                ? ShelfLayoutEngine.gridColumnCount(for: IslandExpandedLayout.contentWidth(
+                    surfaceWidth: panelWidth,
+                    hasPhysicalNotch: islandActivityCoordinator.currentLayout?.hasPhysicalNotch == true))
+                : ShelfLayoutEngine.columnCount(forPanelWidth: panelWidth),
             direction: direction
         )
-        interaction.focusedItemID = visible[destination].id
-        if extendingSelection {
-            let extendingIDs: Set<UUID> = [visible[currentIndex].id, visible[destination].id]
-            if interaction.expandedStackID != nil {
-                interaction.childSelection.formUnion(extendingIDs)
-            } else {
-                store.setSelection(store.selection.union(extendingIDs))
-            }
-        }
+        interaction.moveSelection(in: visible, from: currentIndex,
+                                  to: hasCurrentItem ? destination : 0,
+                                  extending: extendingSelection, store: store)
+        quickLookCoordinator.refreshPreview(contextItem: focusedItem())
         return true
     }
 

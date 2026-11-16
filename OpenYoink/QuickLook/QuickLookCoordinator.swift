@@ -230,6 +230,11 @@ final class QuickLookCoordinator: NSObject, @MainActor QLPreviewPanelDataSource,
     /// QL 面板（用户侧）关闭后回调 —— ShelfWindowController 借此让 ShelfPanel
     /// 重新成为 key（nonactivating：只接键盘焦点，不激活应用），空格可再次唤出预览。
     var onPanelClosed: (() -> Void)?
+    /// Resolve the currently visible source window, including the elevated Island.
+    var onNavigationKey: ((NSEvent) -> Bool)?
+    var sourceWindowLevel: (() -> NSWindow.Level)?
+    private var originalPanelLevel: NSWindow.Level?
+
 
     init(store: ShelfStore, bookmarkService: BookmarkService, tempFileService: TempFileService) {
         self.store = store
@@ -318,9 +323,14 @@ final class QuickLookCoordinator: NSObject, @MainActor QLPreviewPanelDataSource,
         panel.currentPreviewItemIndex = QuickLookPreviewPlanner.currentIndex(
             in: session.map(\.source), contextItem: contextItem
         )
+        originalPanelLevel = panel.level
+        let previewLevel = Self.previewLevel(original: panel.level, source: sourceWindowLevel?())
+        panel.level = previewLevel
         if grabKeyFocus || !panel.isVisible {
             panel.makeKeyAndOrderFront(nil)
         }
+        panel.level = previewLevel
+
     }
 
     /// 逐项解析预览 URL，建立会话；先释放上一会话的资源。单个项目解析失败
@@ -339,7 +349,17 @@ final class QuickLookCoordinator: NSObject, @MainActor QLPreviewPanelDataSource,
     }
 
     /// 释放会话资源：配对 stopAccessing，删除本会话生成的临时 .txt。
+    static func previewLevel(original: NSWindow.Level, source: NSWindow.Level?) -> NSWindow.Level {
+        guard let source else { return original }
+        return NSWindow.Level(rawValue: max(original.rawValue, source.rawValue + 1))
+    }
+
     private func endSession() {
+        if let originalPanelLevel {
+            sharedPanel?.level = originalPanelLevel
+            self.originalPanelLevel = nil
+        }
+
         for entry in session {
             if let accessedURL = entry.previewItem.accessedURL {
                 bookmarkService.stopAccessing(accessedURL)
@@ -414,6 +434,12 @@ final class QuickLookCoordinator: NSObject, @MainActor QLPreviewPanelDataSource,
 /// 数据源方法实现（conformance 声明在类上，见类注释「并发说明」）。
 /// 代理方法全部可选，v1 不实现：默认的居中缩放过渡与标准键盘处理已足够。
 extension QuickLookCoordinator {
+    func previewPanel(_ panel: QLPreviewPanel!, handle event: NSEvent!) -> Bool {
+        guard let event, event.type == .keyDown,
+              [123, 124, 125, 126].contains(event.keyCode) else { return false }
+        return onNavigationKey?(event) ?? false
+    }
+
     func numberOfPreviewItems(in panel: QLPreviewPanel!) -> Int {
         session.count
     }

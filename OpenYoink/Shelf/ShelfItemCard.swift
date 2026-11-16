@@ -124,6 +124,7 @@ struct ShelfItemCard: View {
     static let cornerRadius: CGFloat = 12
     /// 缩略图区高度（点）；宽度随网格列（~88pt）。
     static let thumbnailHeight: CGFloat = 52
+    private var previewHeight: CGFloat { presentationStyle == .island ? 76 : Self.thumbnailHeight }
 
     init(item: ShelfItem,
          isSelected: Bool,
@@ -151,16 +152,27 @@ struct ShelfItemCard: View {
         VStack(spacing: 5) {
             if item.availability == .available {
                 thumbnailArea
+                    .overlay(alignment: .bottomTrailing) {
+                        if presentationStyle == .island,
+                           let status = ShelfCardVisualStatus.resolve(item: item, transferStatus: transferStatus) {
+                            Image(systemName: status.symbolName)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(status.tint)
+                                .padding(5)
+                                .background(.black.opacity(0.85), in: Circle())
+                                .help(status.title)
+                                .accessibilityHidden(true)
+                                .accessibilityIdentifier("shelf.item.\(item.id.uuidString).status")
+                        }
+                    }
             } else {
                 availabilityArea
             }
             nameRow
-            if let status = ShelfCardVisualStatus.resolve(item: item,
+            if presentationStyle == .classic,
+               let status = ShelfCardVisualStatus.resolve(item: item,
                                                           transferStatus: transferStatus) {
                 statusRow(status)
-            } else if presentationStyle == .island {
-                statusRow(.destinationAccepted)
-                    .hidden()
             }
         }
         .padding(6)
@@ -370,7 +382,7 @@ struct ShelfItemCard: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: Self.thumbnailHeight)
+        .frame(height: previewHeight)
     }
 
     /// text 类型：文本片段预览样式（多行截断 + 文本底色）。
@@ -415,7 +427,7 @@ struct ShelfItemCard: View {
     /// 缩略图加载完成前的占位（按 kind 取符号）。
     private var kindPlaceholder: some View {
         Image(systemName: placeholderSymbolName)
-            .font(.system(size: 26))
+            .font(.system(size: presentationStyle == .island ? 38 : 26))
             .foregroundStyle(presentationStyle == .island
                              ? Color.white.opacity(0.38)
                              : Color.secondary.opacity(0.72))
@@ -455,7 +467,7 @@ struct ShelfItemCard: View {
         }
         .foregroundStyle(.primary)
         .frame(maxWidth: .infinity)
-        .frame(minHeight: Self.thumbnailHeight)
+        .frame(minHeight: previewHeight)
     }
 
     private var availabilityStatusText: String {
@@ -515,7 +527,7 @@ struct ShelfItemCard: View {
                                  : Color.primary)
                 .lineLimit(2, reservesSpace: presentationStyle == .island)
                 .truncationMode(.middle)
-                .multilineTextAlignment(.leading)
+                .multilineTextAlignment(presentationStyle == .island ? .center : .leading)
                 .fixedSize(horizontal: false, vertical: true)
                 .help(item.displayName)
         }
@@ -526,27 +538,15 @@ struct ShelfItemCard: View {
     /// precedence over the persistent managed-copy label; completed transfers
     /// return to the quiet ready state.
     private func statusRow(_ status: ShelfCardVisualStatus) -> some View {
-        let label = Label(status.title, systemImage: status.symbolName)
+        Label(status.title, systemImage: status.symbolName)
             .font(.caption2.weight(.semibold))
             .foregroundStyle(status.tint)
             .lineLimit(2)
             .multilineTextAlignment(.leading)
             .fixedSize(horizontal: false, vertical: true)
-        return Group {
-            if presentationStyle == .island {
-                // Symbol metrics must not change the card's reserved text height.
-                Text("Status")
-                    .font(.caption2.weight(.semibold))
-                    .lineLimit(2, reservesSpace: true)
-                    .hidden()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .overlay(alignment: .topLeading) { label }
-            } else {
-                label.frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-        .accessibilityHidden(true)
-        .accessibilityIdentifier("shelf.item.\(item.id.uuidString).status")
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityHidden(true)
+            .accessibilityIdentifier("shelf.item.\(item.id.uuidString).status")
     }
 
     // MARK: - Surfaces & badges
@@ -558,27 +558,27 @@ struct ShelfItemCard: View {
             .overlay {
                 if isSelected {
                     RoundedRectangle(cornerRadius: cardCornerRadius)
-                        .fill(Color.accentColor.opacity(presentationStyle == .island ? 0.14 : 0.18))
+                        .fill(Color.accentColor.opacity(0.18))
                 }
             }
             .overlay {
                 RoundedRectangle(cornerRadius: cardCornerRadius)
                     .strokeBorder(cardBorder,
-                                  lineWidth: isSelected ? 2 : 0.5)
+                                  lineWidth: isSelected ? (presentationStyle == .island ? 1 : 2) : 0.5)
             }
     }
 
     private var cardFill: Color {
         return presentationStyle == .island
-            ? Color.white.opacity(0.06)
+            ? Color.white.opacity(isHovering ? 0.06 : 0)
             : Color(nsColor: .controlBackgroundColor)
                 .opacity(reduceTransparency ? 1 : settings.appearance.cardOpacity)
     }
 
     private var cardBorder: Color {
-        if isSelected { return Color.accentColor.opacity(0.95) }
+        if isSelected { return Color.accentColor.opacity(presentationStyle == .island ? 0.60 : 0.95) }
         return presentationStyle == .island
-            ? Color.white.opacity(0.11)
+            ? Color.clear
             : Color.primary.opacity(0.08)
     }
 
@@ -679,8 +679,9 @@ struct ShelfItemCard: View {
     private func loadAssets() async {
         thumbnail = await ThumbnailLoader.thumbnail(
             for: thumbnailItem ?? item,
-            pointSize: CGSize(width: 88, height: Self.thumbnailHeight),
-            bookmarkService: bookmarkService
+            pointSize: CGSize(width: presentationStyle == .island ? previewHeight : 88, height: previewHeight),
+            bookmarkService: bookmarkService,
+            iconMode: presentationStyle == .island
         )
         sourceAppIcon = ThumbnailLoader.sourceAppIcon(bundleID: item.sourceApp?.bundleID)
     }
@@ -702,7 +703,8 @@ enum ThumbnailLoader {
     /// `startAccessing`（沙箱下重启后只有解析 security-scoped bookmark 才有
     /// 文件读取权限），加载完成后配对 `stopAccessing`；解析失败回退原始路径。
     @MainActor
-    static func thumbnail(for item: ShelfItem, pointSize: CGSize, bookmarkService: BookmarkService) async -> Image? {
+    static func thumbnail(for item: ShelfItem, pointSize: CGSize, bookmarkService: BookmarkService,
+                          iconMode: Bool = false) async -> Image? {
         guard let baseURL = item.fileURL else { return nil }
         var url = baseURL
         var accessedURL: URL?
@@ -719,7 +721,7 @@ enum ThumbnailLoader {
             }
         }
         let scale = NSScreen.main?.backingScaleFactor ?? 2
-        if let cgImage = await quickLookThumbnail(for: url, pointSize: pointSize, scale: scale) {
+        if let cgImage = await quickLookThumbnail(for: url, pointSize: pointSize, scale: scale, iconMode: iconMode) {
             // S10/C7: 登记到拖拽图像缓存，拖出时（同步路径）直接取用真实缩略图。
             DragImageCache.register(cgImage, for: item.id)
             return Image(decorative: cgImage, scale: scale)
@@ -746,10 +748,13 @@ enum ThumbnailLoader {
     /// 提取 CGImage，避免非 Sendable 值跨 actor 传递。
     private nonisolated static func quickLookThumbnail(for url: URL,
                                                        pointSize: CGSize,
-                                                       scale: CGFloat) async -> CGImage? {
+                                                       scale: CGFloat,
+                                                       iconMode: Bool) async -> CGImage? {
         let request = QLThumbnailGenerator.Request(
             fileAt: url, size: pointSize, scale: scale, representationTypes: .thumbnail
         )
+        // Use the system file-icon decoration instead of styling raw previews ourselves.
+        request.iconMode = iconMode
         // 调用方（thumbnail(for:pointSize:bookmarkService:)）已解析 bookmark 并
         // startAccessing，此处直接读取。生成失败/无缩略图时返回 nil，
         // 由调用方回退到 NSWorkspace 图标。
@@ -873,7 +878,17 @@ final class CardDragSourceAnchorView: NSView {
         }
     }
 
+    override var acceptsFirstResponder: Bool { true }
+    override var needsPanelToBecomeKey: Bool { true }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    private func takeKeyboardFocus() {
+        window?.makeKeyAndOrderFront(nil)
+        window?.makeFirstResponder(self)
+    }
+
     override func mouseDown(with event: NSEvent) {
+        takeKeyboardFocus()
         mouseDownLocation = event.locationInWindow
         dragStarted = false
     }
@@ -895,6 +910,10 @@ final class CardDragSourceAnchorView: NSView {
         // 拖拽开始后手势由 NSDraggingSession 接管，正常不会再收到 mouseUp；
         // 防御性判断，避免把拖拽结束误当点击。
         guard !dragStarted else { return }
+        // A completed click is explicit keyboard intent. Merely becoming key in
+        // a nonactivating panel can leave the previous app owning keyboard input.
+        NSApp.activate()
+        takeKeyboardFocus()
         // S6: 双击 → Quick Look（首次点击已完成选择，此处不再切换选择）。
         if event.clickCount >= 2 {
             onDoubleClick?()
@@ -902,7 +921,6 @@ final class CardDragSourceAnchorView: NSView {
         }
         // 无拖拽 → 点击选择。先让所在窗口成为 key：nonactivating 面板只接键盘
         // 焦点、不激活应用，是空格/Delete/Esc 键盘链路（ShelfPanel.keyDown）的入口。
-        window?.makeKey()
         onClick?(event.modifierFlags.contains(.command))
     }
 }

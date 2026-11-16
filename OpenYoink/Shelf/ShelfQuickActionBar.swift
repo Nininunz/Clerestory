@@ -8,10 +8,19 @@ struct ShelfQuickActionBar: View {
     @Environment(\.shelfActionRunner) private var runner
     @Environment(\.shelfPresentationStyle) private var presentationStyle
     let items: [ShelfItem]
+    var inline = false
 
     @ViewBuilder
     var body: some View {
-        if presentationStyle == .island {
+        if inline {
+            HStack(spacing: 4) {
+                ForEach(ShelfAction.allCases) { action in
+                    actionButton(action, title: "")
+                }
+            }
+            .fixedSize()
+            .accessibilityIdentifier("shelf.quickActions")
+        } else if presentationStyle == .island {
             actionRows
                 .padding(.horizontal, 6)
                 .frame(height: 34)
@@ -100,6 +109,14 @@ struct ShelfQuickActionBar: View {
         ) { anchorView in
             runner?.perform(action, on: items, relativeTo: anchorView)
         }
+        .frame(width: inline ? 28 : nil, height: inline ? 28 : nil)
+        .background {
+            if inline {
+                Circle().fill(Color.white.opacity(
+                    runner != nil && ShelfActionCatalog.canPerform(action, on: items) ? 0.08 : 0.028
+                ))
+            }
+        }
     }
 
     @ViewBuilder
@@ -155,7 +172,7 @@ private struct ShelfActionButton: NSViewRepresentable {
         button.bezelStyle = .rounded
         button.controlSize = .small
         button.image = NSImage(systemSymbolName: systemImage, accessibilityDescription: nil)
-        button.imagePosition = .imageLeading
+        button.imagePosition = title.isEmpty ? .imageOnly : .imageLeading
         button.font = .systemFont(ofSize: NSFont.smallSystemFontSize, weight: .medium)
         button.toolTip = accessibilityHint
         button.setAccessibilityLabel(accessibilityLabel)
@@ -172,6 +189,7 @@ private struct ShelfActionButton: NSViewRepresentable {
     func updateNSView(_ button: NSButton, context: Context) {
         context.coordinator.perform = perform
         button.title = title
+        button.imagePosition = title.isEmpty ? .imageOnly : .imageLeading
         button.image = NSImage(systemSymbolName: systemImage, accessibilityDescription: nil)
         button.toolTip = accessibilityHint
         button.setAccessibilityLabel(accessibilityLabel)
@@ -210,6 +228,7 @@ private struct ShelfActionButton: NSViewRepresentable {
         button.contentTintColor = foreground
         button.bezelColor = NSColor.white.withAlphaComponent(0.09)
         button.bezelStyle = .recessed
+        button.isBordered = !title.isEmpty
     }
 }
 

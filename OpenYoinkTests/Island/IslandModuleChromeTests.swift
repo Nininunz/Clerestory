@@ -28,6 +28,23 @@ final class IslandModuleChromeTests: XCTestCase {
         }
     }
 
+    func testFooterHeightStaysFixedWhenSelectionActionsAppear() throws {
+        for selected in [false, true] {
+            let footer = IslandModuleFooter {
+                Button(selected ? "Done" : "Select") {}
+                if selected { Text("12 selected") }
+                Spacer()
+                ForEach(0..<(selected ? 4 : 1), id: \.self) { _ in
+                    Button {} label: { Image(systemName: "square.and.arrow.up") }
+                }
+            }
+            .frame(width: 450)
+            let image = try render(footer)
+            XCTAssertEqual(image.pixelsHigh, 56)
+            XCTAssertEqual(image.pixelsWide, 900)
+        }
+    }
+
     func testHeaderHeightWithNoSingleAndMultipleActions() throws {
         for subtitle in [nil, "A module subtitle"] as [String?] {
             for count in 0...3 {
@@ -93,6 +110,34 @@ final class IslandModuleChromeTests: XCTestCase {
             XCTAssertEqual(probe.frames["header"], headerBefore)
             XCTAssertLessThan(contentAfter.minY, contentBefore.minY - 100)
             XCTAssertEqual(contentAfter.maxY, viewport.maxY - 1, accuracy: 1)
+        }
+    }
+
+    func testFooterStaysBelowScrollingContentWithLargeSelectionCounts() async throws {
+        for count in [0, 1, 9999] {
+            let probe = Probe()
+            let window = host(ScrollFixture(probe: probe, contentHeight: 600,
+                                            fillsViewport: true, selectionCount: count), height: 260)
+            defer { window.close() }
+            await settle(window)
+            let footer = try XCTUnwrap(probe.frames["footer"])
+            let viewport = try XCTUnwrap(probe.frames["viewport"])
+            XCTAssertEqual(footer.height, 28, accuracy: 0.5)
+            XCTAssertEqual(footer.maxY, 260, accuracy: 0.5)
+            XCTAssertEqual(footer.minY - viewport.maxY, 10, accuracy: 0.5)
+            for key in ["select", "actions"] {
+                let frame = try XCTUnwrap(probe.frames[key])
+                XCTAssertGreaterThanOrEqual(frame.minX, footer.minX)
+                XCTAssertLessThanOrEqual(frame.maxX, footer.maxX)
+                XCTAssertGreaterThanOrEqual(frame.minY, footer.minY)
+                XCTAssertLessThanOrEqual(frame.maxY, footer.maxY)
+            }
+            XCTAssertLessThanOrEqual(try XCTUnwrap(probe.frames["select"]).maxX,
+                                     try XCTUnwrap(probe.frames["actions"]).minX)
+            try XCTUnwrap(probe.scrollToBottom)()
+            await settle(window)
+            XCTAssertEqual(probe.frames["footer"], footer)
+            XCTAssertEqual(try XCTUnwrap(probe.frames["content"]).maxY, viewport.maxY - 1, accuracy: 1)
         }
     }
 
@@ -229,6 +274,7 @@ final class IslandModuleChromeTests: XCTestCase {
         let probe: Probe
         let contentHeight: CGFloat
         let fillsViewport: Bool
+        var selectionCount: Int? = nil
 
         var body: some View {
             VStack(spacing: IslandModuleLayout.headerSpacing) {
@@ -247,6 +293,25 @@ final class IslandModuleChromeTests: XCTestCase {
                     }
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { probe.frames["viewport"] = $0 }
                     .onAppear { probe.scrollToBottom = { proxy.scrollTo("content", anchor: .bottom) } }
+                }
+                if let count = selectionCount {
+                    IslandModuleFooter {
+                        HStack {
+                            Button(count > 0 ? "Done" : "Select") {}
+                                .buttonStyle(IslandActionButtonStyle())
+                            if count > 0 { Text("\(count) selected").lineLimit(1) }
+                        }
+                        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { probe.frames["select"] = $0 }
+                        Spacer(minLength: 4)
+                        HStack(spacing: 8) {
+                            ForEach(0..<(count > 0 ? 5 : 2), id: \.self) { _ in
+                                Button {} label: { Image(systemName: "ellipsis") }
+                                    .buttonStyle(IslandHeaderButtonStyle())
+                            }
+                        }
+                        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { probe.frames["actions"] = $0 }
+                    }
+                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { probe.frames["footer"] = $0 }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -458,3 +458,16 @@ struct IslandSurfaceShape: InsettableShape {
         return path
     }
 }
+
+/// Optional fixed control row, matching Quick Settings' footer layout.
+struct IslandModuleFooter<Content: View>: View {
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        HStack(spacing: 8) { content }
+            .font(.caption)
+            .frame(height: 28)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityElement(children: .contain)
+    }
+}

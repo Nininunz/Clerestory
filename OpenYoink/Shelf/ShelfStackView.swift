@@ -96,8 +96,9 @@ struct ShelfStackExpandedView: View {
                         ShelfItemCard(
                             item: child,
                             isSelected: interaction.childSelection.contains(child.id),
-                            isKeyboardFocused: interaction.focusedItemID == child.id,
+                            isKeyboardFocused: interaction.focusedItemID == child.id && interaction.showsKeyboardFocus,
                             onSelect: { additive in
+                                interaction.showsKeyboardFocus = false
                                 interaction.focusedItemID = child.id
                                 if selectionMode || additive {
                                     interaction.childSelection.formSymmetricDifference([child.id])

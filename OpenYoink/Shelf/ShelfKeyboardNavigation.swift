@@ -38,6 +38,8 @@ final class ShelfInteractionState {
             if oldValue != isSelecting { onActionSelectionDidChange?() }
         }
     }
+    var showsKeyboardFocus = false
+    var selectionAnchorID: UUID?
     var focusedItemID: UUID?
     var expandedStackID: UUID? {
         didSet {
@@ -54,6 +56,30 @@ final class ShelfInteractionState {
     /// controller uses this callback solely for compact-height recalculation.
     var onActionSelectionDidChange: (@MainActor () -> Void)?
 
+    func moveSelection(in items: [ShelfItem], from current: Int, to destination: Int,
+                       extending: Bool, store: ShelfStore) {
+        guard items.indices.contains(current), items.indices.contains(destination) else { return }
+        showsKeyboardFocus = true
+        focusedItemID = items[destination].id
+        let ids: Set<UUID>
+        if extending {
+            let anchor = selectionAnchorID.flatMap { id in items.firstIndex { $0.id == id } } ?? current
+            selectionAnchorID = items[anchor].id
+            ids = Set(items[min(anchor, destination)...max(anchor, destination)].map(\.id))
+        } else {
+            selectionAnchorID = nil
+            ids = [items[destination].id]
+        }
+        if expandedStackID != nil { childSelection = ids }
+        else { store.setSelection(ids) }
+    }
+
+    func setSelectionMode(_ enabled: Bool, in store: ShelfStore) {
+        selectionAnchorID = nil
+        isSelecting = enabled
+        if !enabled { store.clearSelection() }
+    }
+
     func visibleItems(in topLevelItems: [ShelfItem]) -> [ShelfItem] {
         guard let expandedStackID,
               let stack = topLevelItems.first(where: { $0.id == expandedStackID }),
@@ -64,6 +90,7 @@ final class ShelfInteractionState {
     }
 
     func enterStack(_ stack: ShelfItem) {
+        selectionAnchorID = nil
         guard stack.kind == .stack, let children = stack.children, !children.isEmpty else { return }
         isSelecting = false
         expandedStackID = stack.id
@@ -72,6 +99,7 @@ final class ShelfInteractionState {
     }
 
     func exitStack() {
+        selectionAnchorID = nil
         let returningFocus = expandedStackID
         expandedStackID = nil
         childSelection.removeAll()

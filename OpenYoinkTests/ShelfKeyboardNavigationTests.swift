@@ -4,6 +4,59 @@ import XCTest
 
 @MainActor
 final class ShelfKeyboardNavigationTests: XCTestCase {
+    func testArrowSelectionReplacesPreviousSelectionAndShiftCanShrinkRange() {
+        let items = (0..<8).map { ShelfItem(kind: .text, displayName: "Item \($0)", text: "text") }
+        let store = ShelfStore(items: items)
+        let interaction = ShelfInteractionState()
+        store.select(items[0].id)
+        interaction.moveSelection(in: items, from: 0, to: 1, extending: false, store: store)
+        XCTAssertEqual(store.selection, [items[1].id])
+        XCTAssertEqual(interaction.focusedItemID, items[1].id)
+        XCTAssertTrue(interaction.showsKeyboardFocus)
+        interaction.moveSelection(in: items, from: 1, to: 5, extending: true, store: store)
+        XCTAssertEqual(store.selection, Set(items[1...5].map(\.id)))
+        interaction.moveSelection(in: items, from: 5, to: 2, extending: true, store: store)
+        XCTAssertEqual(store.selection, Set(items[1...2].map(\.id)))
+        interaction.moveSelection(in: items, from: 2, to: 3, extending: false, store: store)
+        XCTAssertEqual(store.selection, [items[3].id])
+        XCTAssertNil(interaction.selectionAnchorID)
+    }
+
+    func testStackArrowSelectionDoesNotChangeTopLevelSelection() {
+        let children = (0..<3).map { ShelfItem(kind: .text, displayName: "Child \($0)", text: "text") }
+        let stack = ShelfItem(kind: .stack, displayName: "Stack", children: children)
+        let store = ShelfStore(items: [stack])
+        store.select(stack.id)
+        let interaction = ShelfInteractionState()
+        interaction.enterStack(stack)
+        interaction.moveSelection(in: children, from: 0, to: 1, extending: false, store: store)
+        XCTAssertEqual(interaction.childSelection, [children[1].id])
+        XCTAssertEqual(store.selection, [stack.id])
+    }
+
+    func testTileClickRequestsPanelFocusAndTakesFirstResponderFromTextField() throws {
+        let panel = ShelfPanel(contentRect: NSRect(x: 0, y: 0, width: 200, height: 150),
+                               styleMask: [.nonactivatingPanel, .borderless], backing: .buffered, defer: false)
+        panel.isReleasedWhenClosed = false
+        defer { panel.close() }
+        let root = NSView(frame: panel.contentRect(forFrameRect: panel.frame))
+        let field = NSTextField(frame: NSRect(x: 0, y: 100, width: 180, height: 24))
+        let tile = CardDragSourceAnchorView(frame: NSRect(x: 0, y: 0, width: 90, height: 90))
+        root.addSubview(field)
+        root.addSubview(tile)
+        panel.contentView = root
+        panel.orderFront(nil)
+        panel.makeFirstResponder(field)
+        XCTAssertTrue(tile.acceptsFirstMouse(for: nil))
+        XCTAssertTrue(tile.needsPanelToBecomeKey)
+        let event = try XCTUnwrap(NSEvent.mouseEvent(with: .leftMouseDown, location: NSPoint(x: 20, y: 20),
+            modifierFlags: [], timestamp: 0, windowNumber: panel.windowNumber, context: nil,
+            eventNumber: 1, clickCount: 1, pressure: 1))
+        tile.mouseDown(with: event)
+        XCTAssertTrue(panel.firstResponder === tile)
+        XCTAssertTrue(panel.isKeyWindow)
+    }
+
     func testNavigatorMovesAcrossRowsAndClampsAtEdges() {
         XCTAssertEqual(ShelfKeyboardNavigator.destinationIndex(
             currentIndex: 4, itemCount: 8, columnCount: 3, direction: .left), 3)
