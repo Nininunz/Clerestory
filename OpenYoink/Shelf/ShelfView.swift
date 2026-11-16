@@ -278,6 +278,8 @@ struct ShelfView: View {
                     itemGrid
                 }
             }
+            .blur(radius: showsDuplicateDropOverlay ? 6 : 0)
+            .clipped()
             .overlay { duplicateDropOverlay }
             if presentationStyle == .island {
                 shelfFooter
@@ -301,11 +303,15 @@ struct ShelfView: View {
         }
     }
 
+    private var showsDuplicateDropOverlay: Bool {
+        presentationStyle == .island && dropTargetState.isTargeted
+            && dropTargetState.hasDuplicateFiles && !dropTargetState.isReordering
+    }
+
     @ViewBuilder
     private var duplicateDropOverlay: some View {
-        if presentationStyle == .island && dropTargetState.isTargeted
-            && dropTargetState.hasDuplicateFiles && !dropTargetState.isReordering {
-            Color.black
+        if showsDuplicateDropOverlay {
+            Color.black.opacity(0.25)
                 .overlay {
                     VStack(spacing: 10) {
                         Image(systemName: "doc.on.doc")
@@ -320,7 +326,7 @@ struct ShelfView: View {
                             .multilineTextAlignment(.center)
                             .frame(maxWidth: 280)
                     }
-                    .padding(12)
+                    .padding(16)
                 }
                 .allowsHitTesting(false)
                 .accessibilityElement(children: .combine)
