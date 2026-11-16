@@ -170,10 +170,11 @@ enum IslandGeometryResolver {
                               y: topAnchor - expandedHeight,
                               width: expandedWidth,
                               height: expandedHeight)
-        let expandedFootprint = expanded.integral
-        let activationLeft = max(screen.frame.minX, expandedFootprint.minX - 16)
-        let activationRight = min(screen.frame.maxX, expandedFootprint.maxX + 16)
-        let activationBottom = max(screen.frame.minY, expandedFootprint.minY - 16)
+        // Approaching the compact Island should reveal Shelf; the expanded
+        // module's size must not turn a large part of the desktop into a trigger.
+        let activationLeft = max(screen.frame.minX, compact.minX - 32)
+        let activationRight = min(screen.frame.maxX, compact.maxX + 32)
+        let activationBottom = max(screen.frame.minY, compact.minY - 64)
         let activation = CGRect(x: activationLeft, y: activationBottom,
                                 width: activationRight - activationLeft,
                                 height: screen.frame.maxY + 1 - activationBottom)

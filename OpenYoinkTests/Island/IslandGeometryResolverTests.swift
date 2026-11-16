@@ -250,10 +250,13 @@ final class IslandGeometryResolverTests: XCTestCase {
     func testFileDragActivatesOnlyInsideTopZone() {
         let screen = geometry(x: 0, width: 1512, height: 982)
         let layout = IslandGeometryResolver.resolve(screen: screen)
-        XCTAssertEqual(layout.activationFrame.width, layout.expandedFrame.width + 32)
-        XCTAssertEqual(layout.activationFrame.minY, layout.expandedFrame.minY - 16)
+        XCTAssertEqual(layout.activationFrame.width, layout.compactFrame.width + 64)
+        XCTAssertEqual(layout.activationFrame.minY, layout.compactFrame.minY - 64)
         XCTAssertEqual(layout.activationFrame.maxY, screen.frame.maxY + 1)
-        XCTAssertTrue(layout.activationFrame.contains(layout.expandedFrame))
+        XCTAssertTrue(layout.activationFrame.contains(layout.compactFrame))
+        XCTAssertFalse(layout.activationFrame.contains(layout.expandedFrame))
+        let extended = IslandGeometryResolver.resolve(screen: screen, preferredExpandedHeight: 600)
+        XCTAssertEqual(extended.activationFrame, layout.activationFrame)
         // Probe the full approach area, including its lower corners well
         // outside the compact notch, rather than testing only the top edge.
         for x in [layout.activationFrame.minX + 1, layout.activationFrame.midX, layout.activationFrame.maxX - 1] {
