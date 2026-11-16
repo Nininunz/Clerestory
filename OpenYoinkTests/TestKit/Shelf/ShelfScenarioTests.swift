@@ -1,3 +1,4 @@
+import SwiftUI
 import AppKit
 import CryptoKit
 import XCTest
@@ -58,6 +59,23 @@ final class ShelfScenarioTests: XCTestCase {
                           "Repeated contents: \(url.lastPathComponent)")
         }
         XCTAssertEqual(payloads.count, 48)
+    }
+
+    func testDragScenariosSupplySurfaceStateAndCorrectOutlineColor() throws {
+        let context = PreviewContext()
+        defer { context.cleanUp() }
+        for (scenario, expectedColor) in [(ShelfScenario.fileDrag, Color.blue), (.duplicate, Color.red)] {
+            let content = try scenario.scenario(context: context).makeView()
+            let target = try XCTUnwrap(content.dropTarget)
+            let outline = IslandDropOutline(progress: 1, collapsedSize: CGSize(width: 290, height: 38),
+                                            attachedToScreenTop: true, state: target)
+            XCTAssertTrue(outline.isVisible)
+            XCTAssertEqual(outline.tint, expectedColor)
+            target.isTargeted = false
+            XCTAssertFalse(outline.isVisible)
+        }
+        let idle = try ShelfScenario.populated.scenario(context: context).makeView()
+        XCTAssertFalse(try XCTUnwrap(idle.dropTarget).isTargeted)
     }
 
     func testFixturesAreIndependentAndSelectionDoesNotLeak() throws {

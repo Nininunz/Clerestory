@@ -475,6 +475,26 @@ struct IslandModuleFooter<Content: View>: View {
 }
 
 /// A persistent outline whose edge follows the same reveal geometry as the content.
+/// Shared by the live root and scenario host so drag feedback has one rendering path.
+struct IslandDropOutline: View {
+    let progress: CGFloat
+    let collapsedSize: CGSize
+    let attachedToScreenTop: Bool
+    let state: DropTargetState
+
+    var isVisible: Bool { state.isTargeted && !state.isReordering }
+    var tint: Color { state.hasDuplicateFiles ? .red : .blue }
+
+    var body: some View {
+        IslandTransitionDropOutline(progress: progress, collapsedSize: collapsedSize,
+                                    attachedToScreenTop: attachedToScreenTop, isVisible: isVisible)
+            .stroke(tint.opacity(0.85), lineWidth: 2)
+            .mask { Rectangle().padding(.top, attachedToScreenTop ? 0 : 2) }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
 struct IslandTransitionDropOutline: Shape {
     var progress: CGFloat
     let collapsedSize: CGSize

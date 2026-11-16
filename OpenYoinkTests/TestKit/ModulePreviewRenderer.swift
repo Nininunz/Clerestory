@@ -66,7 +66,7 @@ final class ModulePreviewRenderer {
             let coordinator = IslandActivityCoordinator()
             coordinator.selectedModule = descriptor.id
             coordinator.setModuleExtended(state.extended, descriptor: descriptor)
-            let view = ModulePreviewHost(descriptor: descriptor, coordinator: coordinator, content: content)
+            let view = ModulePreviewHost(descriptor: descriptor, coordinator: coordinator, content: content.view, dropTarget: content.dropTarget)
             let host = NSHostingView(rootView: view)
             let window = NSWindow(contentRect: NSRect(origin: NSPoint(x: -2000, y: -2000), size: view.size),
                                   styleMask: [.borderless], backing: .buffered, defer: false)

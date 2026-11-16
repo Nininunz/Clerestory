@@ -115,16 +115,12 @@ struct IslandRootView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .overlay {
-            IslandTransitionDropOutline(
+            IslandDropOutline(
                 progress: dropOutlineProgress,
                 collapsedSize: CGSize(width: collapsedSurfaceWidth, height: collapsedSurfaceHeight),
                 attachedToScreenTop: hasPhysicalNotch,
-                isVisible: dropTargetState.isTargeted && !dropTargetState.isReordering
+                state: dropTargetState
             )
-            .stroke((dropTargetState.hasDuplicateFiles ? Color.red : Color.blue).opacity(0.85), lineWidth: 2)
-            .mask { Rectangle().padding(.top, hasPhysicalNotch ? 0 : 2) }
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
         }
         .preferredColorScheme(.dark)
         .environment(\.colorScheme, .dark)

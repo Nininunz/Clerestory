@@ -153,7 +153,7 @@ final class IslandModulePreviewTests: XCTestCase {
     private func export(_ slug: String, _ title: String, _ states: [(String, AnyView)]) async throws {
         try await renderer.export(slug, title, states.map { label, view in
             ModuleScenario(id: label.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted)
-                .filter { !$0.isEmpty }.joined(separator: "-"), label: label, makeView: { view })
+                .filter { !$0.isEmpty }.joined(separator: "-"), label: label, makeView: { ModuleScenarioContent(view: view) })
         })
     }
 }

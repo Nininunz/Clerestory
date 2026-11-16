@@ -6,7 +6,14 @@ import SwiftUI
 struct ModuleScenario {
     let id: String
     let label: String
-    let makeView: () throws -> AnyView
+    let makeView: () throws -> ModuleScenarioContent
+}
+
+/// Surface state travels with the module view, rather than being independently spoofed.
+@MainActor
+struct ModuleScenarioContent {
+    let view: AnyView
+    var dropTarget: DropTargetState? = nil
 }
 
 /// Explicit lifetime for isolated preferences used by rendered views.

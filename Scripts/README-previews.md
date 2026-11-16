@@ -24,7 +24,7 @@ Module slugs: `battery`, `timer`, `now-playing`, `ai-usage`, `clipboard`, `quick
 
 `--scenario` matches case-insensitive substrings of scenario IDs or labels. Shelf IDs are stable even when their display labels change. A filter with no matches fails rather than silently producing an empty gallery. `--list` still builds and runs the fixture catalog so its labels stay in sync with the code.
 
-The default `window` capture briefly displays each preview window and captures it with macOS's compositor, preserving blur and material backgrounds. Screen Recording permission may be required for the invoking terminal/app. `snapshot` captures offscreen without that permission, but blur and translucent materials may be missing. Captures reserve the navigation band; they don't reproduce live shortcut controls or the controller-owned drag outline. Static images do not demonstrate animation or scrolling.
+The default `window` capture briefly displays each preview window and captures it with macOS's compositor, preserving blur and material backgrounds. Screen Recording permission may be required for the invoking terminal/app. `snapshot` captures offscreen without that permission, but blur and translucent materials may be missing. Captures reserve the navigation band; they don't reproduce live shortcut controls or the live controller's drag detection. Static images do not demonstrate animation or scrolling.
 
 Each run defaults to a new `/tmp/openyoink-previews-*` directory with `index.html`, per-module contact sheets, named scenario PNGs, `manifest.json`, and `build.log`. Explicit output directories can retain older files; the manifest/gallery identify this run's results. One runner may execute at a time. The runner removes its temporary request configuration on exit.
 
@@ -52,3 +52,5 @@ The live app and previews now share `IslandModuleHost`, including extension bind
 The large-grid scenario uses 40 independently generated files/folders with different project content, and the long-name scenario uses eight additional unique files with long filenames. These live in `Project collection` and `Long filenames` beneath the sample directory. Inline text cards are isolated in the explicitly labeled `text-snippets` scenario.
 
 Collection artwork includes maps, landscapes, star charts, charts, and portrait posters. Documents contain project-specific briefs, checklists, planning notes, budgets, and reference packs. A content-hash regression test rejects duplicate payloads across all 48 collection entries.
+
+`file-drag` captures the blue outline; `duplicate` captures the red outline and duplicate overlay. Both use `IslandDropOutline`, the same surface component as the live app, and the same `DropTargetState` instance as their Shelf content. Captures show the settled expanded state, not the drag approach/transition animation.

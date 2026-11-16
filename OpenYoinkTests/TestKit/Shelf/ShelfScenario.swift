@@ -6,6 +6,7 @@ enum ShelfScenario: String, CaseIterable {
     case empty, populated, selected
     case noResults = "no-results"
     case importing, duplicate
+    case fileDrag = "file-drag"
     case expandedStack = "expanded-stack"
     case stackSelection = "stack-selection"
     case manyItems = "many-items"
@@ -20,7 +21,8 @@ enum ShelfScenario: String, CaseIterable {
         case .selected: "Selected items"
         case .noResults: "No results"
         case .importing: "Import in progress"
-        case .duplicate: "Duplicate drop / blurred files"
+        case .duplicate: "Duplicate drag / red outline + blurred files"
+        case .fileDrag: "File drag / blue outline"
         case .expandedStack: "Expanded stack"
         case .stackSelection: "Stack child selection"
         case .manyItems: "Many items / scrolling"
@@ -33,7 +35,8 @@ enum ShelfScenario: String, CaseIterable {
     @MainActor
     func scenario(context: PreviewContext) -> ModuleScenario {
         ModuleScenario(id: rawValue, label: label) {
-            try ShelfScenarioFixture(self).view(settings: context.settings())
+            let fixture = try ShelfScenarioFixture(self)
+            return ModuleScenarioContent(view: fixture.view(settings: context.settings()), dropTarget: fixture.dropTarget)
         }
     }
 }
@@ -59,6 +62,8 @@ final class ShelfScenarioFixture {
         }
         transfers = TransferStore.preview(phase: scenario == .importing ? .receiving(receivedCount: 2, expectedCount: 5) : nil)
         switch scenario {
+        case .fileDrag:
+            dropTarget.isTargeted = true
         case .duplicate:
             dropTarget.isTargeted = true
             dropTarget.hasDuplicateFiles = true

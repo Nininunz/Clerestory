@@ -17,6 +17,7 @@ struct ModulePreviewHost: View {
     let descriptor: IslandModuleDescriptor
     let coordinator: IslandActivityCoordinator
     let content: AnyView
+    var dropTarget: DropTargetState? = nil
 
     static let screen = IslandGeometryResolver.ScreenGeometry(
         frame: CGRect(x: 0, y: 0, width: 1512, height: 982),
@@ -37,6 +38,13 @@ struct ModulePreviewHost: View {
             GeometryReader { geometry in
                 IslandModuleHost(descriptor: descriptor, coordinator: coordinator) { content }
                     .frame(width: geometry.size.width, height: geometry.size.height)
+            }
+        }
+        .overlay {
+            if let dropTarget {
+                IslandDropOutline(progress: 1,
+                    collapsedSize: IslandGeometryResolver.resolve(screen: Self.screen).compactFrame.size,
+                    attachedToScreenTop: true, state: dropTarget)
             }
         }
         .environment(\.islandSurfaceHeight, size.height)
