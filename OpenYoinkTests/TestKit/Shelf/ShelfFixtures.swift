@@ -36,11 +36,16 @@ enum ShelfFixtures {
     }
 
     static func textSnippets() -> [ShelfItem] {
-        [
-            ("Concept review", "Compare the ocean and pine palettes. Keep the wordmark readable at small sizes."),
-            ("Next steps", "Finish the landing page wireframes, then prepare two identity concepts for review."),
-            ("Print checklist", "Confirm trim size, add bleed, and export a proof before sending the final artwork."),
-            ("Handoff notes", "Include editable sources, color values, and a short guide to typography and spacing.")
-        ].map { ShelfItem(kind: .text, displayName: $0.0, text: $0.1) }
+        let notes = [
+            "Concept review\nCompare the ocean and pine palettes. Keep the wordmark readable at small sizes.\n\nPrepare a dark background version and check the contrast on the printed proof. Bring both directions to Friday's review.",
+            "Finish the landing page wireframes, then prepare two identity concepts for review. Include a mobile layout, the signup form, and the empty states. We should compare the options together before sending the next round to production.",
+            "Send the proof Friday"
+        ]
+        return notes.map {
+            ShelfItem(kind: .text, displayName: DropImportCoordinator.displayName(forText: $0), text: $0)
+        } + [
+            ShelfItem(kind: .text, displayName: "Handoff notes",
+                      text: "Include editable sources, color values, and a short guide to typography and spacing.\n\nExport the screen assets at both scales. Keep the print files in a separate folder and include the approved copy alongside the final artwork.")
+        ]
     }
 }

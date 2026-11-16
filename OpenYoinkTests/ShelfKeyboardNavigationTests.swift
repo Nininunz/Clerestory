@@ -4,6 +4,28 @@ import XCTest
 
 @MainActor
 final class ShelfKeyboardNavigationTests: XCTestCase {
+    func testStacksAreDisabledWithoutChangingSelectionOrStoredChildren() {
+        let children = ShelfFixtures.notes(count: 3)
+        let stack = ShelfItem(kind: .stack, displayName: "Retained stack", children: children)
+        let store = ShelfStore(items: [stack])
+        store.select(stack.id)
+        let interaction = ShelfInteractionState()
+        interaction.focusedItemID = stack.id
+        interaction.selectionAnchorID = stack.id
+        interaction.isSelecting = true
+
+        interaction.enterStack(stack)
+
+        XCTAssertFalse(interaction.stacksEnabled)
+        XCTAssertNil(interaction.expandedStackID)
+        XCTAssertTrue(interaction.childSelection.isEmpty)
+        XCTAssertEqual(interaction.focusedItemID, stack.id)
+        XCTAssertEqual(interaction.selectionAnchorID, stack.id)
+        XCTAssertTrue(interaction.isSelecting)
+        XCTAssertEqual(store.selection, [stack.id])
+        XCTAssertEqual(store.items.first?.children?.map(\.id), children.map(\.id))
+    }
+
     func testArrowSelectionReplacesPreviousSelectionAndShiftCanShrinkRange() {
         let items = ShelfFixtures.notes(count: 8)
         let store = ShelfStore(items: items)
@@ -27,7 +49,7 @@ final class ShelfKeyboardNavigationTests: XCTestCase {
         let stack = ShelfItem(kind: .stack, displayName: "Stack", children: children)
         let store = ShelfStore(items: [stack])
         store.select(stack.id)
-        let interaction = ShelfInteractionState()
+        let interaction = ShelfInteractionState(stacksEnabled: true)
         interaction.enterStack(stack)
         interaction.moveSelection(in: children, from: 0, to: 1, extending: false, store: store)
         XCTAssertEqual(interaction.childSelection, [children[1].id])
@@ -71,7 +93,7 @@ final class ShelfKeyboardNavigationTests: XCTestCase {
         let children = (0..<4).map { ShelfItem(kind: .text, displayName: "Child \($0)", text: "text") }
         let stack = ShelfItem(kind: .stack, displayName: "Stack", children: children)
         let store = ShelfStore(items: [stack])
-        let interaction = ShelfInteractionState()
+        let interaction = ShelfInteractionState(stacksEnabled: true)
         store.select(stack.id)
         interaction.enterStack(stack)
         interaction.clickSelection(children[1].id, in: children, additive: false, extending: false, store: store)
@@ -128,7 +150,7 @@ final class ShelfKeyboardNavigationTests: XCTestCase {
             ShelfItem(kind: .text, displayName: "b", text: "b")
         ]
         let stack = ShelfItem(kind: .stack, displayName: "Stack", children: children)
-        let interaction = ShelfInteractionState()
+        let interaction = ShelfInteractionState(stacksEnabled: true)
         interaction.focusedItemID = stack.id
         interaction.childSelection = [children[1].id]
 
@@ -148,7 +170,7 @@ final class ShelfKeyboardNavigationTests: XCTestCase {
     func testNormalizeDropsOnlyInvalidFocusAndChildSelection() {
         let child = ShelfItem(kind: .text, displayName: "a", text: "a")
         let stack = ShelfItem(kind: .stack, displayName: "Stack", children: [child])
-        let interaction = ShelfInteractionState()
+        let interaction = ShelfInteractionState(stacksEnabled: true)
         interaction.enterStack(stack)
         interaction.childSelection = [child.id, UUID()]
 

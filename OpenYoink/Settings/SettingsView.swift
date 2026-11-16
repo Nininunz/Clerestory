@@ -431,13 +431,13 @@ private struct TriggerSettingsTab: View {
                           || (!settings.islandHoverRevealEnabled && !FloatingIslandAvailability.isEnabled))
                 Text("The preview closes after you move away. Pin Island to keep it open.")
                     .font(.caption).foregroundStyle(.secondary)
-                Toggle("Expand Island when dragging files near the top", isOn: $settings.islandDragApproachEnabled)
+                Toggle("Expand Island when dragging files or text near the top", isOn: $settings.islandDragApproachEnabled)
                     .disabled(!settings.islandEnabled)
                     .accessibilityIdentifier("settings.islandDragApproach")
                 Text("This file-drag trigger works independently of Preview Island on hover.")
                     .font(.caption).foregroundStyle(.secondary)
                 if FloatingIslandAvailability.isEnabled {
-                    Text("File drags can also open Island from the top approach area.")
+                    Text("File and text drags can also open Island from the top approach area.")
                         .font(.caption).foregroundStyle(.secondary)
                 } else {
                     Text("Dropping files on the compact Island always expands it. The wider top approach area is optional.")

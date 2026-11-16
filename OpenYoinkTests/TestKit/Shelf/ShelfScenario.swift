@@ -14,6 +14,12 @@ enum ShelfScenario: String, CaseIterable {
     case textSnippets = "text-snippets"
     case keyboardFocus = "keyboard-focus"
 
+    static var previewCases: [Self] {
+        allCases.filter {
+            ShelfStackAvailability.isEnabled || ($0 != .expandedStack && $0 != .stackSelection)
+        }
+    }
+
     var label: String {
         switch self {
         case .empty: "Empty / drop target"
@@ -45,11 +51,14 @@ enum ShelfScenario: String, CaseIterable {
 @MainActor
 final class ShelfScenarioFixture {
     let store: ShelfStore
-    let interaction = ShelfInteractionState()
+    let interaction: ShelfInteractionState
     let dropTarget = DropTargetState()
     let transfers: TransferStore
 
     init(_ scenario: ShelfScenario) throws {
+        // Dormant stack fixtures still exercise the retained implementation in unit tests.
+        interaction = ShelfInteractionState(stacksEnabled:
+            scenario == .expandedStack || scenario == .stackSelection || ShelfStackAvailability.isEnabled)
         let items = try ShelfFixtures.mixedItems()
         let stack = ShelfItem(kind: .stack, displayName: "Project resources", children: Array(items.prefix(3)))
         switch scenario {

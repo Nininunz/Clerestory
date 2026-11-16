@@ -704,7 +704,7 @@ final class DropImportCoordinator {
     }
 
     /// 文本项目显示名：首行截断（60 字符），空白文本回退为本地化「Text」。
-    static func displayName(forText text: String) -> String {
+    nonisolated static func displayName(forText text: String) -> String {
         let firstLine = text.components(separatedBy: .newlines)
             .first?
             .trimmingCharacters(in: .whitespaces) ?? ""

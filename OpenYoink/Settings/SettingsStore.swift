@@ -369,7 +369,7 @@ final class SettingsStore {
         didSet { defaults.set(islandHoverLeaveDelaySeconds, forKey: Keys.islandHoverLeaveDelaySeconds) }
     }
 
-    /// Expands the Island Shelf when a file drag approaches the top center.
+    /// Expands the Island Shelf when a file or text drag approaches the top center.
     /// Independent of pointer hover and Side Shelf drag preferences.
     var islandDragApproachEnabled: Bool {
         didSet {

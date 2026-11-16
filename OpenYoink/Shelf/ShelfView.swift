@@ -733,7 +733,7 @@ struct ShelfView: View {
 
     @ViewBuilder
     private func cellContent(for item: ShelfItem) -> some View {
-        if item.kind == .stack {
+        if ShelfStackAvailability.isEnabled, item.kind == .stack {
             ShelfStackView(
                 item: item,
                 isSelected: store.selection.contains(item.id),
@@ -911,7 +911,8 @@ struct ShelfView: View {
 
     @ViewBuilder
     private var expandedStackOverlay: some View {
-        if let stackID = interaction.expandedStackID,
+        if ShelfStackAvailability.isEnabled,
+           let stackID = interaction.expandedStackID,
            let stack = store.item(withID: stackID),
            stack.kind == .stack {
             // 半透明遮罩：点击外部收起。
@@ -946,6 +947,7 @@ struct ShelfView: View {
     }
 
     private func toggleStackExpansion(_ id: UUID) {
+        guard ShelfStackAvailability.isEnabled else { return }
         withAnimation(reduceMotion ? nil : Self.cardAnimation) {
             if interaction.expandedStackID == id {
                 interaction.exitStack()
@@ -1040,6 +1042,10 @@ struct ShelfView: View {
             $0.kind == .stack && ($0.children ?? []).contains { $0.id == itemID }
         }) else { return }
         store.select(stack.id)
+        guard ShelfStackAvailability.isEnabled else {
+            interaction.focusedItemID = stack.id
+            return
+        }
         interaction.enterStack(stack)
         interaction.focusedItemID = itemID
         interaction.childSelection = [itemID]
@@ -1066,7 +1072,7 @@ struct ShelfView: View {
 
 // MARK: - Preview fixtures
 
-/// SwiftUI Preview mock 数据：覆盖 file/folder/image/text/url/stack/stale 各形态。
+/// SwiftUI Preview mock 数据：覆盖 file/folder/image/text/url/stale 各形态。
 /// 路径指向系统自带文件，保证 NSWorkspace 图标在预览中可解析；缩略图走与
 /// 运行时相同的 QL → 图标回退链路。
 enum ShelfPreviewFixtures {
@@ -1111,7 +1117,7 @@ enum ShelfPreviewFixtures {
             displayName: "moved-file.png"
         )
         stale.isStale = true
-        return [app, folder, image, text, url, sampleStack(), stale]
+        return [app, folder, image, text, url, stale]
     }
 
     static func sampleStack() -> ShelfItem {

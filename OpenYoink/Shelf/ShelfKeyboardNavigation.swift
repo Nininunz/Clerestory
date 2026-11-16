@@ -28,11 +28,22 @@ enum ShelfKeyboardNavigator {
     }
 }
 
+/// Stack implementation is retained for a future grouping UI.
+enum ShelfStackAvailability {
+    static let isEnabled = false
+}
+
 /// Runtime-only keyboard focus and expanded-stack interaction state.
 /// Focus is intentionally independent from ShelfStore.selection.
 @MainActor
 @Observable
 final class ShelfInteractionState {
+    let stacksEnabled: Bool
+
+    init(stacksEnabled: Bool = ShelfStackAvailability.isEnabled) {
+        self.stacksEnabled = stacksEnabled
+    }
+
     var isSelecting = false {
         didSet {
             if oldValue != isSelecting { onActionSelectionDidChange?() }
@@ -126,6 +137,7 @@ final class ShelfInteractionState {
     }
 
     func enterStack(_ stack: ShelfItem) {
+        guard stacksEnabled else { return }
         selectionAnchorID = nil
         guard stack.kind == .stack, let children = stack.children, !children.isEmpty else { return }
         isSelecting = false

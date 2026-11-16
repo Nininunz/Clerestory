@@ -240,9 +240,9 @@ final class ShelfWindowController: NSObject {
         panel.contentView = DragContainerView(
             store: store, coordinator: importCoordinator,
             dropTargetState: islandDropTargetState, gridGeometry: islandGridGeometry,
-            onNativeFileDrag: { [weak self] in
+            onNativeShelfDrag: { [weak self] in
                 guard let self else { return }
-                self.dragStartMonitor.confirmFileDragFromDestination(at: NSEvent.mouseLocation)
+                self.dragStartMonitor.confirmShelfDragFromDestination(at: NSEvent.mouseLocation)
                 guard self.islandActivityCoordinator.surfaceState.isExpanded,
                       self.dragZoneHandoffTask == nil else { return }
                 NSAnimationContext.runAnimationGroup { context in
@@ -256,7 +256,7 @@ final class ShelfWindowController: NSObject {
                     guard !Task.isCancelled else { return }
                     self?.islandDragZonePanel.orderOut(nil)
                 }
-            }, fileDragsOnly: true, contentViewController: content)
+            }, isApproachZone: true, contentViewController: content)
         return panel
     }
 
@@ -392,9 +392,9 @@ final class ShelfWindowController: NSObject {
                 guard presentationStyle == .classic else { return }
                 self?.onClassicDestinationEnded?(sequenceNumber, accepted)
             },
-            onNativeFileDrag: { [weak self] in
+            onNativeShelfDrag: { [weak self] in
                 guard presentationStyle == .island else { return }
-                self?.dragStartMonitor.confirmFileDragFromDestination(at: NSEvent.mouseLocation)
+                self?.dragStartMonitor.confirmShelfDragFromDestination(at: NSEvent.mouseLocation)
             },
             contentViewController: hostingController
         )
@@ -1532,6 +1532,7 @@ final class ShelfWindowController: NSObject {
             return true
         }
         if item.kind == .stack {
+            guard ShelfStackAvailability.isEnabled else { return false }
             if interaction.expandedStackID == item.id {
                 interaction.exitStack()
             } else {

@@ -7,7 +7,7 @@ final class ShelfBulkActionsTests: XCTestCase {
     func testEnteringStackEndsTopLevelBulkMode() {
         let child = ShelfItem(kind: .text, displayName: "Child", text: "note")
         let stack = ShelfItem(kind: .stack, displayName: "Stack", children: [child])
-        let interaction = ShelfInteractionState()
+        let interaction = ShelfInteractionState(stacksEnabled: true)
         interaction.isSelecting = true
         interaction.enterStack(stack)
         XCTAssertFalse(interaction.isSelecting)

@@ -132,7 +132,7 @@ struct DragAutoShowSession: Sendable, Equatable {
     }
 }
 
-/// Global file-drag monitor. A fresh drag pasteboard change establishes the
+/// Global Shelf-content drag monitor. A fresh drag pasteboard change establishes the
 /// session; a common-run-loop poll fills gaps in AppKit mouse event delivery.
 ///
 /// 沙箱合规：`NSEvent.addGlobalMonitorForEvents` 监听
@@ -144,7 +144,7 @@ struct DragAutoShowSession: Sendable, Equatable {
 /// `stop` 之间；`start` 幂等。
 ///
 /// 回调语义：
-/// - `onDragStart`：首次检测到新文件拖拽（忽略列表前台时经 `shouldSuppress` 抑制）；
+/// - `onDragStart`：首次检测到新文件或文本拖拽（忽略列表前台时经 `shouldSuppress` 抑制）；
 /// - `onDragEnd`：已确认拖拽的左键抬起（不被抑制 —— 抑制即无会话，
 ///   配合 `DragAutoShowSession` 空转安全）。
 ///
@@ -161,7 +161,7 @@ final class DragStartMonitor {
     private(set) var isDragInProgress = false
 
     private var gestureTracker = DragGestureTracker()
-    private var fileDragTracker = EdgeFileDragTracker()
+    private var dragPayloadTracker = DragPasteboardTracker()
     private var globalMonitor: Any?
     private var localMonitor: Any?
     private var dragPollTimer: Timer?
@@ -196,7 +196,7 @@ final class DragStartMonitor {
         guard !isMonitoring else { return }
         let initialChangeCount = DragPasteboardSnapshot.current().changeCount
         lastIdlePasteboardChangeCount = initialChangeCount
-        fileDragTracker.mouseDown(changeCount: initialChangeCount)
+        dragPayloadTracker.mouseDown(changeCount: initialChangeCount)
         gestureTracker.mouseDown(at: NSEvent.mouseLocation)
 
         let mask: NSEvent.EventTypeMask = [.leftMouseDown, .leftMouseDragged, .leftMouseUp]
@@ -221,7 +221,7 @@ final class DragStartMonitor {
         }
         // Native Finder drags can stop delivering ordinary mouse-drag events,
         // particularly after Show Desktop. Poll the drag pasteboard and pointer
-        // while the gesture is active so the Island still sees the file drag.
+        // while the gesture is active so the Island still sees the content drag.
         let timer = Timer(timeInterval: 0.05, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.pollDrag() }
         }
@@ -243,7 +243,7 @@ final class DragStartMonitor {
         dragPollTimer?.invalidate()
         dragPollTimer = nil
         setPotentialDrag(false)
-        fileDragTracker.reset()
+        dragPayloadTracker.reset()
         gestureTracker.reset()
         isMonitoring = false
         isDragInProgress = false
@@ -258,9 +258,9 @@ final class DragStartMonitor {
             setPotentialDrag(false)
             finishDrag()
             // Keep a baseline while idle. The drag pasteboard retains the
-            // previous file, so only a new change may start another session.
+            // previous payload, so only a new change may start another session.
             lastIdlePasteboardChangeCount = snapshot.changeCount
-            fileDragTracker.mouseDown(changeCount: snapshot.changeCount)
+            dragPayloadTracker.mouseDown(changeCount: snapshot.changeCount)
             gestureTracker.mouseDown(at: NSEvent.mouseLocation)
             return
         }
@@ -268,14 +268,14 @@ final class DragStartMonitor {
     }
 
     private func sampleDrag(at point: CGPoint, snapshot: DragPasteboardSnapshot) {
-        let hasSharedFileDrag = fileDragTracker.mouseDragged(
+        let hasSharedShelfDrag = dragPayloadTracker.mouseDragged(
             changeCount: snapshot.changeCount,
-            hasFileContent: PasteboardTypes.hasFileDragContent(in: snapshot.types)
+            hasEligibleContent: PasteboardTypes.hasShelfApproachContent(in: snapshot.types)
         )
         let movedFarEnough = gestureTracker.mouseDragged(to: point)
             || gestureTracker.phase == .dragging
         setPotentialDrag(movedFarEnough && !shouldSuppress())
-        guard hasSharedFileDrag else { return }
+        guard hasSharedShelfDrag else { return }
         if !isDragInProgress {
             isDragInProgress = true
             dragSessionSuppressed = shouldSuppress()
@@ -299,7 +299,7 @@ final class DragStartMonitor {
 
     /// The Island destination has the session's real pasteboard even when
     /// cross-process drag data never appears on the shared pasteboard.
-    func confirmFileDragFromDestination(at point: CGPoint) {
+    func confirmShelfDragFromDestination(at point: CGPoint) {
         guard isMonitoring else { return }
         if !isDragInProgress {
             isDragInProgress = true
@@ -320,14 +320,14 @@ final class DragStartMonitor {
             // The drag pasteboard may already have changed by the time the
             // mouse-down event reaches us after Show Desktop. Use the last
             // idle sample so that early change still belongs to this gesture.
-            fileDragTracker.mouseDown(
+            dragPayloadTracker.mouseDown(
                 changeCount: lastIdlePasteboardChangeCount ?? snapshot.changeCount
             )
         case .leftMouseDragged:
             sampleDrag(at: point, snapshot: snapshot)
         case .leftMouseUp:
             setPotentialDrag(false)
-            fileDragTracker.mouseUp()
+            dragPayloadTracker.mouseUp()
             gestureTracker.reset()
             finishDrag()
         default:

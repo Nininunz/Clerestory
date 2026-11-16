@@ -2,6 +2,13 @@ import AppKit
 import QuickLookThumbnailing
 import SwiftUI
 
+/// Presentation-only text; copying and exporting still use the original snippet.
+enum ShelfTextDocumentPreview {
+    static func body(for item: ShelfItem) -> String {
+        item.text ?? ""
+    }
+}
+
 /// Visible, non-color-only card state. Completed transfers deliberately resolve
 /// to nil so the normal ready card remains quiet.
 enum ShelfCardVisualStatus: Equatable {
@@ -395,23 +402,47 @@ struct ShelfItemCard: View {
         .frame(height: previewHeight)
     }
 
-    /// text 类型：文本片段预览样式（多行截断 + 文本底色）。
+    /// A miniature page shares the file thumbnail bounds, rather than filling the tile.
     private var textSnippetPreview: some View {
-        Text(item.text ?? "")
-            .font(.caption2)
-            .foregroundStyle(presentationStyle == .island
-                             ? Color.white.opacity(0.66)
-                             : Color.secondary)
-            .multilineTextAlignment(.leading)
-            .lineLimit(3)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .padding(4)
-            .background {
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(presentationStyle == .island
-                          ? Color.white.opacity(0.055)
-                          : Color(nsColor: .textBackgroundColor))
+        let body = ShelfTextDocumentPreview.body(for: item)
+        return ZStack(alignment: .topLeading) {
+            Color(red: 0.94, green: 0.94, blue: 0.92)
+            if body.isEmpty {
+                Image(systemName: "doc.text")
+                    .font(.system(size: previewHeight * 0.28, weight: .light))
+                    .foregroundStyle(Color.black.opacity(0.22))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                Text(body)
+                    .font(.system(size: previewHeight * 0.075, weight: .regular))
+                    .fontWeight(.regular)
+                    .foregroundStyle(Color.black.opacity(0.72))
+                    .multilineTextAlignment(.leading)
+                    .lineSpacing(1)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(width: previewHeight * 0.55, height: previewHeight * 0.83, alignment: .topLeading)
+                    .clipped()
+                    .padding(previewHeight * 0.085)
             }
+        }
+        .frame(width: previewHeight * 0.72, height: previewHeight, alignment: .topLeading)
+        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.25), lineWidth: 0.5)
+        }
+        .overlay(alignment: .bottomTrailing) {
+            Image(systemName: "quote.opening")
+                .font(.system(size: presentationStyle == .island ? 9 : 7, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: presentationStyle == .island ? 18 : 14,
+                       height: presentationStyle == .island ? 18 : 14)
+                .background(Color(white: 0.20), in: Circle())
+                .overlay { Circle().strokeBorder(Color.black.opacity(0.8), lineWidth: 1.5) }
+                .offset(x: 4, y: 2)
+                .allowsHitTesting(false)
+        }
+        .accessibilityHidden(true)
     }
 
     /// url 类型：SF Symbol 链接占位 + 域名（S10 可替换为真实 favicon）。
@@ -545,13 +576,25 @@ struct ShelfItemCard: View {
                     .resizable()
                     .frame(width: 12, height: 12)
             }
-            Text(item.displayName)
+            ZStack(alignment: .top) {
+                if item.kind == .text {
+                    // Reserve the same two-line name height as neighboring file tiles.
+                    Text(item.displayName)
+                        .lineLimit(2, reservesSpace: presentationStyle == .island)
+                        .hidden()
+                    Text(item.displayName)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                } else {
+                    Text(item.displayName)
+                        .lineLimit(2, reservesSpace: presentationStyle == .island)
+                        .truncationMode(.middle)
+                }
+            }
                 .font(.caption)
                 .foregroundStyle(presentationStyle == .island
                                  ? Color.white.opacity(0.90)
                                  : Color.primary)
-                .lineLimit(2, reservesSpace: presentationStyle == .island)
-                .truncationMode(.middle)
                 .multilineTextAlignment(presentationStyle == .island ? .center : .leading)
                 .fixedSize(horizontal: false, vertical: true)
                 .help(item.displayName)

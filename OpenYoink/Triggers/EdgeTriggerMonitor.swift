@@ -51,30 +51,30 @@ struct EdgeDwellTracker: Sendable, Equatable {
 /// Associates drag-pasteboard content with the current mouse gesture.
 ///
 /// `NSPasteboard.Name.drag` retains the previous drag after that gesture ends.
-/// Non-file drags can therefore leave a stale `public.file-url` from an earlier
-/// Finder drag visible to an out-of-session type check.
-/// A file drag is eligible only after the pasteboard change count advances
+/// Window moves or text selection can therefore leave stale content from an
+/// earlier drag visible to an out-of-session type check.
+/// A content drag is eligible only after the pasteboard change count advances
 /// beyond the value captured for this gesture's mouse-down event.
-struct EdgeFileDragTracker: Sendable, Equatable {
+struct DragPasteboardTracker: Sendable, Equatable {
     private var mouseDownChangeCount: Int?
     private var observedChangeCount: Int?
-    private(set) var hasFreshFileContent = false
+    private(set) var hasFreshContent = false
 
     mutating func mouseDown(changeCount: Int) {
         mouseDownChangeCount = changeCount
         observedChangeCount = changeCount
-        hasFreshFileContent = false
+        hasFreshContent = false
     }
 
-    mutating func mouseDragged(changeCount: Int, hasFileContent: Bool) -> Bool {
+    mutating func mouseDragged(changeCount: Int, hasEligibleContent: Bool) -> Bool {
         guard let mouseDownChangeCount else { return false }
-        guard observedChangeCount != changeCount else { return hasFreshFileContent }
+        guard observedChangeCount != changeCount else { return hasFreshContent }
 
         observedChangeCount = changeCount
         if changeCount != mouseDownChangeCount {
-            hasFreshFileContent = hasFileContent
+            hasFreshContent = hasEligibleContent
         }
-        return hasFreshFileContent
+        return hasFreshContent
     }
 
     mutating func mouseUp() {
@@ -84,7 +84,7 @@ struct EdgeFileDragTracker: Sendable, Equatable {
     mutating func reset() {
         mouseDownChangeCount = nil
         observedChangeCount = nil
-        hasFreshFileContent = false
+        hasFreshContent = false
     }
 }
 
@@ -128,7 +128,7 @@ final class EdgeTriggerMonitor {
     private(set) var isMonitoring = false
 
     private var tracker: EdgeDwellTracker?
-    private var fileDragTracker = EdgeFileDragTracker()
+    private var fileDragTracker = DragPasteboardTracker()
     private var side: SettingsStore.ShelfPosition = .right
     private var bandWidth: CGFloat = 4
     private var globalMonitor: Any?
@@ -223,7 +223,7 @@ final class EdgeTriggerMonitor {
         let screen = ShelfWindowController.screen(containing: point)
         let isFileDrag = fileDragTracker.mouseDragged(
             changeCount: snapshot.changeCount,
-            hasFileContent: PasteboardTypes.hasFileDragContent(in: snapshot.types)
+            hasEligibleContent: PasteboardTypes.hasFileDragContent(in: snapshot.types)
         )
         let inside = isFileDrag && Self.isInsideEdgeBand(point,
                                                          screenFrame: screen.frame,

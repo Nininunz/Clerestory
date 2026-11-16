@@ -113,9 +113,10 @@ final class ShelfScenarioTests: XCTestCase {
     func testScenarioCatalogHasUniqueStableIDs() {
         let context = PreviewContext()
         defer { context.cleanUp() }
-        let scenarios = ShelfScenario.allCases.map { $0.scenario(context: context) }
+        let scenarios = ShelfScenario.previewCases.map { $0.scenario(context: context) }
         XCTAssertEqual(Set(scenarios.map(\.id)).count, scenarios.count)
-        XCTAssertTrue(scenarios.contains { $0.id == "expanded-stack" })
+        XCTAssertFalse(scenarios.contains { $0.id == "expanded-stack" })
+        XCTAssertFalse(scenarios.contains { $0.id == "stack-selection" })
         XCTAssertTrue(scenarios.contains { $0.id == "duplicate" })
     }
 }

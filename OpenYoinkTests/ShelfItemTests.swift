@@ -2,6 +2,24 @@ import XCTest
 @testable import OpenYoink
 
 final class ShelfItemTests: XCTestCase {
+    func testTextDocumentPreviewStartsAtBeginningRegardlessOfTitle() {
+        let texts = [
+            "Review notes\n\nCheck the final artwork.",
+            String(repeating: "a ", count: 28) + "identity concepts",
+            "Review notes\r\nCheck the final artwork.",
+            String(repeating: "Long paragraph ", count: 20),
+            "Send the proof",
+            "    Indented note\nSecond line"
+        ]
+        for text in texts {
+            for title in [DropImportCoordinator.displayName(forText: text), "Custom title"] {
+                let item = ShelfItem(kind: .text, displayName: title, text: text)
+                XCTAssertEqual(ShelfTextDocumentPreview.body(for: item), text)
+                XCTAssertEqual(item.text, text)
+            }
+        }
+    }
+
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 

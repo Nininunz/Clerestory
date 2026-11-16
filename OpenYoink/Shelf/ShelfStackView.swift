@@ -190,27 +190,3 @@ struct ShelfStackExpandedView: View {
         }
     }
 }
-
-// MARK: - Previews
-
-#Preview("Stack card") {
-    let stack = ShelfPreviewFixtures.sampleStack()
-    ShelfStackView(item: stack,
-                   isSelected: false,
-                   isExpanded: false,
-                   onSelect: { _ in },
-                   onToggleExpanded: {},
-                   onRemove: {})
-        .frame(width: 100)
-        .padding()
-        .environment(SettingsStore())
-}
-
-#Preview("Stack expanded") {
-    ShelfStackExpandedView(stack: ShelfPreviewFixtures.sampleStack(),
-                           onDismiss: {},
-                           interaction: ShelfInteractionState())
-        .frame(width: 288)
-        .padding()
-        .environment(SettingsStore())
-}

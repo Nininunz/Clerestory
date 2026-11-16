@@ -11,7 +11,7 @@ Scripts/render-module-previews.sh --list
 Scripts/render-module-previews.sh --module shelf --list
 
 # Capture several matching scenarios; repeated filters are combined with OR
-Scripts/render-module-previews.sh --module shelf --scenario duplicate --scenario stack
+Scripts/render-module-previews.sh --module shelf --scenario duplicate --scenario file-drag
 
 # Multiple modules, offscreen capture, no browser
 Scripts/render-module-previews.sh --module shelf --module battery --capture snapshot --no-open
@@ -28,7 +28,7 @@ The default `window` capture briefly displays each preview window and captures i
 
 Each run defaults to a new `/tmp/openyoink-previews-*` directory with `index.html`, per-module contact sheets, named scenario PNGs, `manifest.json`, and `build.log`. Explicit output directories can retain older files; the manifest/gallery identify this run's results. One runner may execute at a time. The runner removes its temporary request configuration on exit.
 
-Add Shelf cases to `OpenYoinkTests/TestKit/Shelf/ShelfScenario.swift` using real state/store inputs. Other modules still use the compatibility adapter in `IslandModulePreviewTests.swift`. All added cases automatically appear in listing, filtering, the manifest, and the gallery. Shelf includes empty, populated, selected, search-empty, importing, duplicate-drop, expanded-stack, stack-selection, long-name, large-grid, and keyboard-focus samples.
+Add Shelf cases to `OpenYoinkTests/TestKit/Shelf/ShelfScenario.swift` using real state/store inputs. Other modules still use the compatibility adapter in `IslandModulePreviewTests.swift`. Enabled cases automatically appear in listing, filtering, the manifest, and the gallery. Shelf includes empty, populated, selected, search-empty, importing, duplicate-drop, file-drag, long-name, large-grid, and keyboard-focus samples.
 
 ## Test kit structure
 
@@ -41,9 +41,9 @@ Add Shelf cases to `OpenYoinkTests/TestKit/Shelf/ShelfScenario.swift` using real
 - `OpenYoinkTests/Island/IslandModulePreviewTests.swift`: export orchestration and remaining module catalogs.
 - `Scripts/render-module-previews.py`: CLI and external macOS screenshot worker.
 
-To add a Shelf scenario, give its enum case an explicit stable ID, add a label, and prepare its state in `ShelfScenarioFixture`. Keep data generation in `ShelfFixtures`. The catalog automatically discovers all enum cases. View creation happens after filtering, once per captured Shelf scenario. Add behavioral assertions separately when the scenario exercises a rule, rather than asserting only that a screenshot exists.
+To add a Shelf scenario, give its enum case an explicit stable ID, add a label, and prepare its state in `ShelfScenarioFixture`. Keep data generation in `ShelfFixtures`. The catalog uses `ShelfScenario.previewCases`; stack cases are retained but excluded while stacks are disabled. View creation happens after filtering, once per captured Shelf scenario. Add behavioral assertions separately when the scenario exercises a rule, rather than asserting only that a screenshot exists.
 
-Example: `--module shelf --scenario expanded-stack` produces `shelf-expanded-stack-regular.png` and `shelf-expanded-stack-extended.png`. Modules that support extension (Shelf and Quick Settings) automatically capture both height modes. Manifest entries contain the capture `id`, stable `scenarioID`, `scenario` label, `heightMode`, and measured dimensions. Other modules retain label-derived IDs until migrated.
+Example: `--module shelf --scenario populated` produces `shelf-populated-regular.png` and `shelf-populated-extended.png`. Modules that support extension (Shelf and Quick Settings) automatically capture both height modes. Manifest entries contain the capture `id`, stable `scenarioID`, `scenario` label, `heightMode`, and measured dimensions. Other modules retain label-derived IDs until migrated.
 
 Shelf generates six real sample files/folders in a fresh `/tmp/openyoink-sample-files-*` directory: two PNG illustrations, a formatted RTF brief, TXT meeting notes, a CSV budget, and a folder containing palette notes. Their locations appear in the runner output and `samples.json`; you can drag these files into the app manually. They contain only synthetic data. One deliberately missing document remains to exercise recovery UI. Samples are disposable and retained for manual testing; remove their directory when finished. All rendered screens use current app components. Capture success validates export, not visual correctness; there are no automatic pixel baselines.
 
