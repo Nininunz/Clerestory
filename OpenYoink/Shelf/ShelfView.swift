@@ -281,6 +281,8 @@ struct ShelfView: View {
             .blur(radius: showsDuplicateDropOverlay ? 6 : 0)
             .clipped()
             .overlay { duplicateDropOverlay }
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.18),
+                       value: showsDuplicateDropOverlay)
             if presentationStyle == .island {
                 shelfFooter
                     .padding(.top, IslandModuleLayout.headerSpacing - 4)
@@ -331,7 +333,7 @@ struct ShelfView: View {
                 .allowsHitTesting(false)
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("shelf.duplicateDrop")
-                .transition(.identity)
+                .transition(.opacity)
         }
     }
 
