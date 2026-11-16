@@ -1700,6 +1700,9 @@ final class ShelfWindowController: NSObject {
         } else if oldState.isExpanded, !newState.isExpanded {
             resetIslandHoverPreview(restoreSelection: true)
         }
+        if !oldState.isExpanded, newState.isExpanded {
+            moduleToRestoreAfterHoverCollapse = nil
+        }
         islandLogger.notice("surface-transition \(String(describing: oldState), privacy: .public) -> \(String(describing: newState), privacy: .public) id=\(self.islandActivityCoordinator.surfaceTransitionID)")
         guard settings.islandEnabled, hasAvailableIslandDisplay,
               !oldState.isExpanded,
@@ -2449,6 +2452,9 @@ final class ShelfWindowController: NSObject {
     }
 
     private var effectiveIslandOpenModule: IslandModuleID {
+        if let recent = islandActivityCoordinator.reentryModule(isEnabled: islandModuleRegistry.isEnabled) {
+            return recent
+        }
         let display = settings.compactDisplay
         if let moduleID = display.moduleID, islandModuleRegistry.isEnabled(moduleID) {
             return moduleID

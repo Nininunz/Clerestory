@@ -948,6 +948,7 @@ struct IslandRootView: View {
     }
 
     private var defaultOpenModule: IslandModuleID {
+        if let recent = coordinator.reentryModule(isEnabled: registry.isEnabled) { return recent }
         if let moduleID = compactDisplay.moduleID, registry.isEnabled(moduleID) {
             return moduleID
         }
@@ -1177,6 +1178,7 @@ private struct IslandEmptyModuleSlot: View {
 
 struct IslandModuleLibraryView: View {
     @Environment(SettingsStore.self) private var settings
+    @Environment(IslandActivityCoordinator.self) private var coordinator
     @Environment(IslandModuleRegistry.self) private var registry
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -1188,7 +1190,10 @@ struct IslandModuleLibraryView: View {
     @State private var compactRowFrames: [IslandModuleID: CGRect] = [:]
     @GestureState private var compactDragActive = false
     @Namespace private var shortcutSwitcher
-    @State private var showsCompact = false
+    private var showsCompact: Bool {
+        get { coordinator.quickSettingsShowsCompact }
+        nonmutating set { coordinator.quickSettingsShowsCompact = newValue }
+    }
 
     let onOpenSettings: () -> Void
 
@@ -1205,32 +1210,29 @@ struct IslandModuleLibraryView: View {
                 pageSwitcher
             }
             IslandModuleScrollView {
-                VStack(alignment: .leading, spacing: 7) {
-                    if showsCompact {
-                        compactEditor
-                    } else {
-                    ForEach(0..<IslandModuleConfiguration.shortcutPositionCount, id: \.self) { index in
-                        positionRow(index)
-                    }
-                    HStack {
-                        Label("One position must contain Quick Settings", systemImage: "lock")
-                            .font(.caption2).foregroundStyle(.secondary)
-                        Spacer(minLength: 8)
-                        Button("Restore Defaults") { settings.restoreDefaultIslandShortcuts() }
-                            .buttonStyle(IslandActionButtonStyle())
-                            .controlSize(.small)
-                            .help("Restore shortcut positions without changing enabled modules")
-                    }
-                    .padding(.vertical, 4)
-                    }
+                // Both pages contribute their natural height, while only the selected
+                // page is visible or interactive. Extension therefore fits the taller
+                // page before the user has visited it, with no resize on switching.
+                ZStack(alignment: .topLeading) {
+                    expandedEditor
+                        .opacity(showsCompact ? 0 : 1)
+                        .allowsHitTesting(!showsCompact)
+                        .disabled(showsCompact)
+                        .accessibilityHidden(showsCompact)
+                    compactEditor
+                        .opacity(showsCompact ? 1 : 0)
+                        .allowsHitTesting(showsCompact)
+                        .disabled(!showsCompact)
+                        .accessibilityHidden(!showsCompact)
                 }
             }
-            .id(showsCompact)
-            .transition(.opacity)
             HStack {
-                Button("Module Settings", action: onOpenSettings)
-                    .buttonStyle(IslandActionButtonStyle())
-                    .controlSize(.small)
+                Button(action: onOpenSettings) {
+                    Image(systemName: "gearshape")
+                }
+                .buttonStyle(IslandHeaderButtonStyle())
+                .help("Settings")
+                .accessibilityLabel(Text("Settings"))
                 Spacer()
                 IslandModuleExtendButton()
             }
@@ -1242,6 +1244,24 @@ struct IslandModuleLibraryView: View {
         .onDisappear {
             hoveredCompactHandle = nil
             clearCompactDrag()
+        }
+    }
+
+    private var expandedEditor: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            ForEach(0..<IslandModuleConfiguration.shortcutPositionCount, id: \.self) { index in
+                positionRow(index)
+            }
+            HStack {
+                Label("One position must contain Quick Settings", systemImage: "lock")
+                    .font(.caption2).foregroundStyle(.secondary)
+                Spacer(minLength: 8)
+                Button("Restore Defaults") { settings.restoreDefaultIslandShortcuts() }
+                    .buttonStyle(IslandActionButtonStyle())
+                    .controlSize(.small)
+                    .help("Restore shortcut positions without changing enabled modules")
+            }
+            .padding(.vertical, 4)
         }
     }
 

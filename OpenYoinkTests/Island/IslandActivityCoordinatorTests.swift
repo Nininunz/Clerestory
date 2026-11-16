@@ -3,6 +3,31 @@ import XCTest
 
 @MainActor
 final class IslandActivityCoordinatorTests: XCTestCase {
+    func testReentryGraceRestoresLastModuleUntilDeadlineAndSkipsDisabledModules() {
+        let coordinator = IslandActivityCoordinator()
+        coordinator.selectedModule = .quickSettings
+        coordinator.quickSettingsShowsCompact = true
+        coordinator.rememberDeparture(at: 100)
+        coordinator.selectedModule = .shelf
+        XCTAssertEqual(coordinator.reentryModule(at: 102.99, isEnabled: { _ in true }), .quickSettings)
+        XCTAssertNil(coordinator.reentryModule(at: 103, isEnabled: { _ in true }))
+        XCTAssertNil(coordinator.reentryModule(at: 101, isEnabled: { _ in false }))
+        XCTAssertTrue(coordinator.quickSettingsShowsCompact)
+        coordinator.selectedModule = .timer
+        coordinator.rememberDeparture(at: 110)
+        XCTAssertEqual(coordinator.reentryModule(at: 111, isEnabled: { _ in true }), .timer)
+    }
+
+    func testCollapseRecordsDepartedModuleBeforeSelectionRestoration() {
+        let coordinator = IslandActivityCoordinator()
+        coordinator.show(module: .quickSettings)
+        coordinator.collapse()
+        coordinator.selectedModule = .shelf
+        XCTAssertEqual(coordinator.reentryModule(isEnabled: { _ in true }), .quickSettings)
+        coordinator.collapse()
+        XCTAssertEqual(coordinator.reentryModule(isEnabled: { _ in true }), .quickSettings)
+    }
+
     func testContentSizedExtensionIsOptInAndIndependentPerModule() {
         let coordinator = IslandActivityCoordinator()
         let first = IslandModuleDescriptor(id: .quickSettings, title: "First", systemImage: "gear",

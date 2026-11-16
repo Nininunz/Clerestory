@@ -303,6 +303,23 @@ final class IslandActivityCoordinator {
     var shortcutSwipeOffset: CGFloat = 0
     var shortcutSwipeTarget: IslandModuleID?
     private(set) var shortcutNavigationRevision: UInt64 = 0
+    static let reentryGraceSeconds: TimeInterval = 3
+    private var lastDepartedModule: IslandModuleID?
+    private var reentryDeadline: TimeInterval = 0
+    var quickSettingsShowsCompact = false
+
+    func rememberDeparture(at uptime: TimeInterval = ProcessInfo.processInfo.systemUptime) {
+        lastDepartedModule = selectedModule
+        reentryDeadline = uptime + Self.reentryGraceSeconds
+    }
+
+    func reentryModule(at uptime: TimeInterval = ProcessInfo.processInfo.systemUptime,
+                       isEnabled: (IslandModuleID) -> Bool) -> IslandModuleID? {
+        guard uptime < reentryDeadline, let module = lastDepartedModule,
+              isEnabled(module) else { return nil }
+        return module
+    }
+
     private(set) var extendedModuleIDs = Set<IslandModuleID>()
     private(set) var moduleContentHeights: [IslandModuleID: CGFloat] = [:]
 
@@ -364,6 +381,7 @@ final class IslandActivityCoordinator {
             shortcutSwipeTarget = nil
         }
         let previousState = surfaceState
+        if previousState.isExpanded, state == .compact { rememberDeparture() }
         onSurfaceStateWillChange?(previousState, state)
         surfaceState = state
         surfaceTransitionID &+= 1
