@@ -86,7 +86,7 @@ struct ShelfStackExpandedView: View {
     var onRecoverChild: ((ShelfItem) -> Void)? = nil
     var onCopyChild: ((ShelfItem) -> Void)? = nil
 
-    private let columns = [GridItem(.adaptive(minimum: 88), spacing: 12)]
+    private let columns = [GridItem(.adaptive(minimum: 88), spacing: 12, alignment: .top)]
 
     var body: some View {
         VStack(spacing: 8) {

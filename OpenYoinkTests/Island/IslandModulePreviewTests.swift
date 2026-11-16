@@ -7,13 +7,13 @@ import XCTest
 /// Captures real module views; fixtures never start services or use standard defaults.
 @MainActor
 final class IslandModulePreviewTests: XCTestCase {
-    private let output = URL(fileURLWithPath: "/tmp/openyoink-module-previews", isDirectory: true)
-    private var suites: [String] = []
-    private var sheets: [(String, String)] = []
+    private var renderer: ModulePreviewRenderer!
+    private let context = PreviewContext()
+    private var output: URL { renderer.output }
 
     func testExportModuleStateCatalog() async throws {
-        try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
-        defer { for suite in suites { UserDefaults.standard.removePersistentDomain(forName: suite) } }
+        renderer = try ModulePreviewRenderer()
+        defer { context.cleanUp() }
         try await battery()
         try await timer()
         try await media()
@@ -24,23 +24,11 @@ final class IslandModulePreviewTests: XCTestCase {
         try await transfers()
         try await system()
         try await quickSettings()
-        let html = """
-        <!doctype html><meta charset="utf-8"><title>OpenYoink module state previews</title>
-        <style>body{background:#171717;color:#eee;font:16px system-ui;margin:32px}img{max-width:100%;height:auto}nav a{color:#aaa;margin-right:18px}section{margin:48px 0}</style>
-        <h1>OpenYoink module state previews</h1><p>Actual module views with isolated sample data. Buttons are the real controls; these images are static. Each panel shows the initial scroll position. No invented loading/error screens.</p>
-        <nav>\(sheets.map { "<a href='#\($0.0)'>\($0.1)</a>" }.joined())</nav>
-        \(sheets.map { "<section id='\($0.0)'><h2>\($0.1)</h2><img src='\($0.0).png'></section>" }.joined())
-        """
-        try html.write(to: output.appendingPathComponent("index.html"), atomically: true, encoding: .utf8)
-        XCTAssertEqual(sheets.count, 10)
+        try renderer.finish()
     }
 
-    private func defaults() -> UserDefaults {
-        let name = "OpenYoink.ModulePreview.\(UUID().uuidString)"
-        suites.append(name)
-        return UserDefaults(suiteName: name)!
-    }
-    private func settings() -> SettingsStore { SettingsStore(defaults: defaults()) }
+    private func defaults() -> UserDefaults { context.defaults() }
+    private func settings() -> SettingsStore { context.settings() }
     private func entry<V: View>(_ label: String, _ view: V) -> (String, AnyView) { (label, AnyView(view)) }
 
     private func battery() async throws {
@@ -107,25 +95,7 @@ final class IslandModulePreviewTests: XCTestCase {
         try await export("quick-access", "Quick Access", views)
     }
     private func shelf() async throws {
-        var offline = ShelfItem(kind: .file, displayName: "Project proposal.pdf")
-        offline.availability = .externalFileOffline
-        let items = [
-            ShelfItem(kind: .text, displayName: "Project note", text: "A sample note"),
-            ShelfItem(kind: .url, displayName: "Example", urlString: "https://example.com"),
-            ShelfItem(kind: .text, displayName: "A longer project note with a descriptive title", text: "Meeting notes and next steps"),
-            offline,
-            ShelfItem(kind: .folder, displayName: "Assets"),
-            ShelfItem(kind: .image, displayName: "Screenshot.png"),
-            ShelfItem(kind: .file, displayName: "Archive.zip", isCut: true)
-        ]
-        var views: [(String, AnyView)] = []
-        for state in ["Empty / drop target", "Items / search + filter", "Selected items", "No results", "Import in progress"] {
-            let store = ShelfStore(items: state == "Empty / drop target" ? [] : items)
-            if state == "No results" { store.searchQuery = "no matching item" }
-            if state == "Selected items" { store.select(items[0].id); store.select(items[1].id, additive: true) }
-            views.append(entry(state, IslandShelfModuleView().environment(store).environment(settings()).environment(DropTargetState()).environment(ShelfGridGeometry()).environment(ShelfNoticeModel()).environment(ShelfInteractionState()).environment(TransferStore.preview(phase: state == "Import in progress" ? .receiving(receivedCount: 2, expectedCount: 5) : nil))))
-        }
-        try await export("shelf", "Shelf", views)
+        try await renderer.export("shelf", "Shelf", ShelfScenario.allCases.map { $0.scenario(context: context) })
     }
     private func transfers() async throws {
         let failure = TransferFailure(reason: .externalFileOffline, itemName: "Project.pdf", recoveryAction: .locateExternalFile(itemID: UUID()))
@@ -179,52 +149,11 @@ final class IslandModulePreviewTests: XCTestCase {
         func send(_ command: NowPlayingCommand) async -> Bool { true }
     }
 
+    // Compatibility adapter while other modules migrate to explicit scenario IDs.
     private func export(_ slug: String, _ title: String, _ states: [(String, AnyView)]) async throws {
-        var images: [NSImage] = []
-        for (index, state) in states.enumerated() {
-            let view = IslandExpandedSurface(hasPhysicalNotch: true) {
-                // Reserve the real navigation/notch band; this catalog isolates
-                // module states rather than duplicating the app's shortcut UI.
-                Color.clear.frame(height: 32 + IslandGeometryResolver.physicalNotchClickExtension)
-            } content: {
-                GeometryReader { geometry in
-                    state.1.frame(width: geometry.size.width, height: geometry.size.height)
-                }
-            }
-                .frame(width: 492, height: IslandGeometryResolver.expandedPreferredHeight)
-                .environment(\.colorScheme, .dark)
-            let host = NSHostingView(rootView: view)
-            let window = NSWindow(contentRect: NSRect(x: -2000, y: -2000, width: 492, height: IslandGeometryResolver.expandedPreferredHeight), styleMask: [.borderless], backing: .buffered, defer: false)
-            window.isReleasedWhenClosed = false
-            window.contentView = host
-            window.orderFront(nil)
-            host.layoutSubtreeIfNeeded()
-            try await Task.sleep(for: .milliseconds(100))
-            let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
-            host.cacheDisplay(in: host.bounds, to: bitmap)
-            window.close()
-            let image = NSImage(cgImage: try XCTUnwrap(bitmap.cgImage), size: NSSize(width: 492, height: IslandGeometryResolver.expandedPreferredHeight))
-            images.append(image)
-            try XCTUnwrap(bitmap.representation(using: .png, properties: [:])).write(to: output.appendingPathComponent("\(slug)-\(index + 1).png"))
-        }
-        let gallery = VStack(alignment: .leading, spacing: 16) {
-            Text(title).font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
-            Text("Live outer layout • navigation band reserved • sample data").font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))
-            ForEach(0..<((images.count + 1) / 2), id: \.self) { row in
-                HStack(alignment: .top, spacing: 16) {
-                    ForEach((row * 2)..<min(row * 2 + 2, images.count), id: \.self) { index in
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(states[index].0).font(.system(size: 12, weight: .medium)).foregroundStyle(.white.opacity(0.8))
-                            Image(nsImage: images[index])
-                        }
-                    }
-                }
-            }
-        }.padding(20).background(Color(white: 0.12))
-        let renderer = ImageRenderer(content: gallery)
-        renderer.scale = 2
-        let bitmap = NSBitmapImageRep(cgImage: try XCTUnwrap(renderer.cgImage))
-        try XCTUnwrap(bitmap.representation(using: .png, properties: [:])).write(to: output.appendingPathComponent("\(slug).png"))
-        sheets.append((slug, title))
+        try await renderer.export(slug, title, states.map { label, view in
+            ModuleScenario(id: label.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted)
+                .filter { !$0.isEmpty }.joined(separator: "-"), label: label, makeView: { view })
+        })
     }
 }

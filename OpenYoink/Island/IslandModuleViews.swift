@@ -906,25 +906,17 @@ struct IslandRootView: View {
     }
 
     private func modulePage(_ module: IslandModuleID) -> some View {
-        moduleContainer.contentView(
-            for: module,
-            context: IslandModuleViewContext(
-                onPerformRecovery: onPerformRecovery,
-                onOpenModule: { coordinator.selectedModule = $0 },
-                onOpenSettings: openSettings
+        IslandModuleHost(descriptor: moduleContainer.registration(for: module)?.descriptor,
+                         coordinator: coordinator) {
+            moduleContainer.contentView(
+                for: module,
+                context: IslandModuleViewContext(
+                    onPerformRecovery: onPerformRecovery,
+                    onOpenModule: { coordinator.selectedModule = $0 },
+                    onOpenSettings: openSettings
+                )
             )
-        )
-        .environment(\.islandModuleExtension, moduleExtensionContext(for: module))
-    }
-
-    private func moduleExtensionContext(for module: IslandModuleID) -> IslandModuleExtensionContext? {
-        guard let descriptor = moduleContainer.registration(for: module)?.descriptor,
-              descriptor.supportsExtendedHeight else { return nil }
-        return IslandModuleExtensionContext(
-            isExtended: Binding(get: { coordinator.isModuleExtended(descriptor) },
-                                set: { coordinator.setModuleExtended($0, descriptor: descriptor) }),
-            reportHeight: { coordinator.recordModuleContentHeight($0, descriptor: descriptor) }
-        )
+        }
     }
 
     private var compactAccessibilityLabel: String {

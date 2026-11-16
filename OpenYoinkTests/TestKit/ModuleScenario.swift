@@ -1,0 +1,29 @@
+import SwiftUI
+@testable import OpenYoink
+
+/// IDs are part of the CLI/manifest contract; labels can change independently.
+@MainActor
+struct ModuleScenario {
+    let id: String
+    let label: String
+    let makeView: () throws -> AnyView
+}
+
+/// Explicit lifetime for isolated preferences used by rendered views.
+@MainActor
+final class PreviewContext {
+    private var suites: [String] = []
+
+    func defaults() -> UserDefaults {
+        let name = "OpenYoink.TestKit.\(UUID().uuidString)"
+        suites.append(name)
+        return UserDefaults(suiteName: name)!
+    }
+
+    func settings() -> SettingsStore { SettingsStore(defaults: defaults()) }
+
+    func cleanUp() {
+        for name in suites { UserDefaults.standard.removePersistentDomain(forName: name) }
+        suites.removeAll()
+    }
+}

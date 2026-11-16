@@ -635,7 +635,7 @@ struct ShelfView: View {
             // and non-scrolling grid agree; `adaptive` used to drop to two
             // columns inside the slightly narrower scroll container.
             let gridColumns = Array(
-                repeating: GridItem(.flexible(minimum: 0), spacing: Self.gridSpacing),
+                repeating: GridItem(.flexible(minimum: 0), spacing: Self.gridSpacing, alignment: .top),
                 count: ShelfLayoutEngine.gridColumnCount(for: viewport.size.width)
             )
             let fits = presentationStyle == .classic

@@ -5,7 +5,7 @@ import XCTest
 @MainActor
 final class ShelfKeyboardNavigationTests: XCTestCase {
     func testArrowSelectionReplacesPreviousSelectionAndShiftCanShrinkRange() {
-        let items = (0..<8).map { ShelfItem(kind: .text, displayName: "Item \($0)", text: "text") }
+        let items = ShelfFixtures.notes(count: 8)
         let store = ShelfStore(items: items)
         let interaction = ShelfInteractionState()
         store.select(items[0].id)
@@ -35,7 +35,7 @@ final class ShelfKeyboardNavigationTests: XCTestCase {
     }
 
     func testShiftClickUsesVisibleOrderAndSharesAnchorWithArrows() {
-        let items = (0..<7).map { ShelfItem(kind: .text, displayName: "Item \($0)", text: "text") }
+        let items = ShelfFixtures.notes(count: 7)
         let store = ShelfStore(items: items)
         let interaction = ShelfInteractionState()
         let visible = [items[0], items[2], items[4], items[6]]

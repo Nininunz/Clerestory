@@ -169,6 +169,13 @@ struct ShelfItemCard: View {
                 availabilityArea
             }
             nameRow
+            if presentationStyle == .island, item.availability != .available {
+                Text(item.kind == .stack ? "Unavailable" : "Missing")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color.white.opacity(0.45))
+                    .lineLimit(1)
+                    .accessibilityHidden(true)
+            }
             if presentationStyle == .classic,
                let status = ShelfCardVisualStatus.resolve(item: item,
                                                           transferStatus: transferStatus) {
@@ -190,16 +197,16 @@ struct ShelfItemCard: View {
         //（mouseDown 记录 → mouseDragged 超阈值开始拖拽；mouseUp 无拖拽回落为
         // 点击选择 / 双击 Quick Look）。右键（contextMenu）与滚动透传给 SwiftUI。
         .overlay {
-            if item.availability == .available {
+            if item.availability == .available || presentationStyle == .island {
                 CardDragSourceBridge(
                     itemID: item.id,
-                    onClick: { additive in onSelect(selectionMode || additive) },
+                    onClick: { additive in activateCard(additive: additive) },
                     onDoubleClick: {
-                        guard !selectionMode else { return }
+                        guard !selectionMode, item.availability == .available else { return }
                         quickLookCoordinator?.toggle(contextItem: item)
                     },
                     onDragBegin: { sourceView, event in
-                        guard let dragOutController else { return }
+                        guard item.availability == .available, let dragOutController else { return }
                         let contents = dragContentsProvider?(item)
                             ?? DragOutContents(items: [item], topLevelIDs: [item.id])
                         dragOutController.beginDrag(contents: contents,
@@ -226,7 +233,7 @@ struct ShelfItemCard: View {
         .accessibilityLabel(cardAccessibilityLabel)
         .accessibilityHint(Text(cardAccessibilityHint))
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
-        .accessibilityAction { onSelect(selectionMode) }
+        .accessibilityAction { activateCard(additive: selectionMode) }
         .accessibilityActions {
             if item.availability == .available,
                quickLookCoordinator != nil,
@@ -258,10 +265,20 @@ struct ShelfItemCard: View {
             }
         }
         .simultaneousGesture(TapGesture().onEnded {
-            guard item.availability != .available else { return }
+            guard presentationStyle == .classic, item.availability != .available else { return }
             onSelect(selectionMode || NSEvent.modifierFlags.contains(.command))
         })
         .task(id: item) { await loadAssets() }
+    }
+
+    private func activateCard(additive: Bool) {
+        if presentationStyle == .island, item.availability != .available,
+           !selectionMode, !additive, !NSEvent.modifierFlags.contains(.shift),
+           let onRecover {
+            onRecover()
+        } else {
+            onSelect(selectionMode || additive)
+        }
     }
 
     /// UX4: 悬停浮现的移除小圆钮（SF Symbol xmark，material 底保证在各种
@@ -447,27 +464,42 @@ struct ShelfItemCard: View {
 
     // MARK: - Availability
 
-    /// Fixed-height status content replaces the thumbnail for unavailable
-    /// items, keeping the grid geometry stable while exposing a real button.
+    @ViewBuilder
     private var availabilityArea: some View {
-        VStack(spacing: 2) {
-            Label(availabilityStatusText, systemImage: availabilitySymbolName)
-                .font(.caption2.weight(.semibold))
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-            if let onRecover {
-                Button(availabilityActionTitle, action: onRecover)
-                    .buttonStyle(.borderless)
-                    .controlSize(.small)
-                    .frame(minHeight: 24)
-                    .accessibilityIdentifier("shelf.item.\(item.id.uuidString).recover")
-                    .accessibilityHint(Text(availabilityActionHint))
+        if presentationStyle == .island {
+            Image(systemName: item.kind == .folder ? "folder.fill" : "doc.fill")
+                .font(.system(size: 48, weight: .regular))
+                .foregroundStyle(Color.white.opacity(0.25))
+                .overlay(alignment: .bottomTrailing) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.65), Color.black)
+                        .offset(x: 5, y: 2)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: previewHeight)
+                .help(availabilityActionHint)
+                .accessibilityHidden(true)
+        } else {
+            VStack(spacing: 2) {
+                Label(availabilityStatusText, systemImage: availabilitySymbolName)
+                    .font(.caption2.weight(.semibold))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let onRecover {
+                    Button(availabilityActionTitle, action: onRecover)
+                        .buttonStyle(.borderless)
+                        .controlSize(.small)
+                        .frame(minHeight: 24)
+                        .accessibilityIdentifier("shelf.item.\(item.id.uuidString).recover")
+                        .accessibilityHint(Text(availabilityActionHint))
+                }
             }
+            .foregroundStyle(.primary)
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: previewHeight)
         }
-        .foregroundStyle(.primary)
-        .frame(maxWidth: .infinity)
-        .frame(minHeight: previewHeight)
     }
 
     private var availabilityStatusText: String {
@@ -483,7 +515,7 @@ struct ShelfItemCard: View {
         if item.kind == .stack { return String(localized: "Review…") }
         switch item.availability {
         case .available: return ""
-        case .externalFileOffline: return String(localized: "Locate…")
+        case .externalFileOffline: return String(localized: "Locate Original…")
         case .managedCopyMissing: return String(localized: "Recovery…")
         }
     }
@@ -582,11 +614,10 @@ struct ShelfItemCard: View {
             : Color.primary.opacity(0.08)
     }
 
-    /// Unavailable state uses a dashed shape in addition to icon/text, so the
-    /// distinction remains visible with “Differentiate Without Color”.
+    /// Classic Shelf retains its outlined recovery presentation.
     @ViewBuilder
     private var availabilityBorder: some View {
-        if item.availability != .available {
+        if presentationStyle == .classic, item.availability != .available {
             RoundedRectangle(cornerRadius: cardCornerRadius)
                 .strokeBorder(
                     Color.primary.opacity(0.48),
