@@ -1190,6 +1190,7 @@ struct IslandModuleLibraryView: View {
     @State private var compactRowFrames: [IslandModuleID: CGRect] = [:]
     @GestureState private var compactDragActive = false
     @Namespace private var shortcutSwitcher
+    @Namespace private var compactRowMotion
     private var showsCompact: Bool {
         get { coordinator.quickSettingsShowsCompact }
         nonmutating set { coordinator.quickSettingsShowsCompact = newValue }
@@ -1256,9 +1257,14 @@ struct IslandModuleLibraryView: View {
                 Label("One position must contain Quick Settings", systemImage: "lock")
                     .font(.caption2).foregroundStyle(.secondary)
                 Spacer(minLength: 8)
-                Button("Restore Defaults") { settings.restoreDefaultIslandShortcuts() }
-                    .buttonStyle(IslandActionButtonStyle())
-                    .controlSize(.small)
+                Button { settings.restoreDefaultIslandShortcuts() } label: {
+                    Text("Restore Defaults")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6)
+                        .frame(minHeight: 28)
+                }
+                    .buttonStyle(IslandPressFeedbackStyle())
                     .help("Restore shortcut positions without changing enabled modules")
             }
             .padding(.vertical, 4)
@@ -1301,16 +1307,31 @@ struct IslandModuleLibraryView: View {
         let rows = order + IslandCompactDisplay.cycleOrder.filter { !order.contains($0) }
         return VStack(spacing: 7) {
             ForEach(rows, id: \.self) { id in
+                if !order.isEmpty, id == rows.dropFirst(order.count).first {
+                    Rectangle()
+                        .fill(Color.white.opacity(0.08))
+                        .frame(height: 1)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 3)
+                        .accessibilityHidden(true)
+                }
                 if let descriptor = registry.descriptor(for: id) {
                     compactRow(descriptor)
+                        .matchedGeometryEffect(id: descriptor.id, in: compactRowMotion, properties: .position)
                 }
             }
             HStack {
-                Text("Drag included modules or use arrows to set cycling order.")
+                Label("Drag included modules or use arrows to set cycling order.", systemImage: "arrow.up.arrow.down")
                     .font(.caption2).foregroundStyle(.secondary)
                 Spacer()
-                Button("Restore Defaults") { settings.compactModuleOrder = IslandCompactDisplay.cycleOrder }
-                    .buttonStyle(IslandActionButtonStyle())
+                Button { settings.compactModuleOrder = IslandCompactDisplay.cycleOrder } label: {
+                    Text("Restore Defaults")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6)
+                        .frame(minHeight: 28)
+                }
+                    .buttonStyle(IslandPressFeedbackStyle())
             }
         }
         .coordinateSpace(name: "compactOrder")
@@ -1322,39 +1343,40 @@ struct IslandModuleLibraryView: View {
         let order = compactDragOrder ?? settings.compactModuleOrder
         let index = order.firstIndex(of: descriptor.id)
         let row = HStack(spacing: 8) {
-            if index != nil {
-                Image(systemName: "line.3.horizontal")
-                    .foregroundStyle(.secondary)
-                    .frame(width: 22, height: 32)
-                    .contentShape(Rectangle())
-                    .gesture(compactReorderGesture(descriptor.id))
-                    .onContinuousHover { phase in
-                        switch phase {
-                        case .active:
-                            hoveredCompactHandle = descriptor.id
-                        case .ended:
-                            if hoveredCompactHandle == descriptor.id { hoveredCompactHandle = nil }
-                        }
-                        updateCompactDragCursor()
+            HStack(spacing: 8) {
+                Image(systemName: descriptor.systemImage).frame(width: 22)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(descriptor.title).font(.system(size: 12, weight: .medium))
+                    if !settings.isIslandModuleEnabled(descriptor.id) {
+                        Text("Disabled in Modules").font(.caption2).foregroundStyle(.secondary)
                     }
-                    .help("Drag to reorder")
-            }
-            Image(systemName: descriptor.systemImage).frame(width: 22)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(descriptor.title).font(.system(size: 12, weight: .medium))
-                if !settings.isIslandModuleEnabled(descriptor.id) {
-                    Text("Disabled in Modules").font(.caption2).foregroundStyle(.secondary)
                 }
+            }
+            .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
+            .contentShape(Rectangle())
+            .gesture(compactReorderGesture(descriptor.id), including: index != nil ? .all : .none)
+            .onContinuousHover { phase in
+                switch phase {
+                case .active:
+                    if index != nil { hoveredCompactHandle = descriptor.id }
+                case .ended:
+                    if hoveredCompactHandle == descriptor.id { hoveredCompactHandle = nil }
+                }
+                updateCompactDragCursor()
             }
             Spacer(minLength: 4)
             if let index {
                 Button {
-                    settings.moveCompactModule(descriptor.id, to: order[index - 1])
+                    withAnimation(reduceMotion ? nil : .smooth(duration: 0.24)) {
+                        settings.moveCompactModule(descriptor.id, to: order[index - 1])
+                    }
                 } label: { Image(systemName: "arrow.up").frame(width: 24, height: 24) }
                 .disabled(index == 0)
                 .accessibilityLabel(Text("Move earlier"))
                 Button {
-                    settings.moveCompactModule(descriptor.id, to: order[index + 1])
+                    withAnimation(reduceMotion ? nil : .smooth(duration: 0.24)) {
+                        settings.moveCompactModule(descriptor.id, to: order[index + 1])
+                    }
                 } label: { Image(systemName: "arrow.down").frame(width: 24, height: 24) }
                 .disabled(index == order.count - 1)
                 .accessibilityLabel(Text("Move later"))

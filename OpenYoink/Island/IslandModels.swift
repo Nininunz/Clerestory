@@ -279,6 +279,16 @@ final class IslandModuleRegistry {
 @MainActor
 @Observable
 final class IslandActivityCoordinator {
+    @ObservationIgnored private let extensionDefaults: UserDefaults?
+    private static let extendedModulesKey = "OpenYoink.extendedModuleIDs"
+
+    init(defaults: UserDefaults? = nil) {
+        extensionDefaults = defaults
+        if let saved = defaults?.stringArray(forKey: Self.extendedModulesKey) {
+            extendedModuleIDs = Set(saved.map(IslandModuleID.init(rawValue:)))
+        }
+    }
+
     private(set) var surfaceState: IslandSurfaceState = .compact
     /// A completion belongs to one specific transition, even when rapid
     /// close/open/close gestures return to the same surface state.
@@ -332,7 +342,10 @@ final class IslandActivityCoordinator {
         let wasExtended = extendedModuleIDs.contains(descriptor.id)
         if extended { extendedModuleIDs.insert(descriptor.id) }
         else { extendedModuleIDs.remove(descriptor.id) }
-        if wasExtended != extended, selectedModule == descriptor.id { onStateDidChange?() }
+        if wasExtended != extended {
+            extensionDefaults?.set(extendedModuleIDs.map(\.rawValue).sorted(), forKey: Self.extendedModulesKey)
+            if selectedModule == descriptor.id { onStateDidChange?() }
+        }
     }
 
     func recordModuleContentHeight(_ height: CGFloat, descriptor: IslandModuleDescriptor) {

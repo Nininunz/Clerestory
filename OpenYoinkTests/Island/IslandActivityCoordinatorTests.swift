@@ -3,6 +3,28 @@ import XCTest
 
 @MainActor
 final class IslandActivityCoordinatorTests: XCTestCase {
+    func testExtendedModuleChoicesPersistIndependentlyAcrossRestart() throws {
+        let suite = "OpenYoink.ExtensionPersistence.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let first = IslandModuleRegistry.quickSettingsDescriptor
+        let second = IslandModuleDescriptor(id: .timer, title: "Timer", systemImage: "timer",
+            order: 1, isCore: false, supportsExtendedHeight: true)
+        let original = IslandActivityCoordinator(defaults: defaults)
+        original.setModuleExtended(true, descriptor: first)
+        original.setModuleExtended(true, descriptor: second)
+        let restored = IslandActivityCoordinator(defaults: defaults)
+        XCTAssertTrue(restored.isModuleExtended(first))
+        XCTAssertTrue(restored.isModuleExtended(second))
+        restored.setModuleExtended(false, descriptor: first)
+        let restarted = IslandActivityCoordinator(defaults: defaults)
+        XCTAssertFalse(restarted.isModuleExtended(first))
+        XCTAssertTrue(restarted.isModuleExtended(second))
+        XCTAssertTrue(restarted.moduleContentHeights.isEmpty,
+                      "Content heights must be remeasured for the current display")
+        XCTAssertFalse(IslandActivityCoordinator().isModuleExtended(second))
+    }
+
     func testReentryGraceRestoresLastModuleUntilDeadlineAndSkipsDisabledModules() {
         let coordinator = IslandActivityCoordinator()
         coordinator.selectedModule = .quickSettings

@@ -454,7 +454,7 @@ final class ShelfWindowController: NSObject {
         self.clipboardHistoryStore = clipboardHistoryStore
         self.dragStartMonitor = dragStartMonitor
         self.onOpenSettings = onOpenSettings
-        let islandActivityCoordinator = IslandActivityCoordinator()
+        let islandActivityCoordinator = IslandActivityCoordinator(defaults: settings.defaultsStore)
         let islandModuleRegistry = IslandModuleRegistry()
         let islandTimerStore = IslandTimerStore(defaults: settings.defaultsStore)
         let powerSourceMonitor = PowerSourceMonitor(
