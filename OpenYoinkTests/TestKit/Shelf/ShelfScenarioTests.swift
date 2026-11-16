@@ -1,4 +1,5 @@
 import AppKit
+import CryptoKit
 import XCTest
 @testable import OpenYoink
 
@@ -19,9 +20,44 @@ final class ShelfScenarioTests: XCTestCase {
         let document = try NSAttributedString(url: brief, options: [:], documentAttributes: nil)
         XCTAssertTrue(document.string.contains("Project brief"))
         let csv = try XCTUnwrap(urls.first { $0.pathExtension == "csv" })
-        XCTAssertTrue(try String(contentsOf: csv, encoding: .utf8).contains("4250"))
+        let csvText = try String(contentsOf: csv, encoding: .utf8)
+        XCTAssertEqual(csvText.split(separator: "\n").count, 34)
+        XCTAssertTrue(csvText.contains("All phases"))
+        XCTAssertGreaterThan(document.string.split(whereSeparator: \.isWhitespace).count, 500)
         let folder = try XCTUnwrap(urls.first { $0.hasDirectoryPath })
         XCTAssertTrue(FileManager.default.fileExists(atPath: folder.appendingPathComponent("Palette.txt").path))
+    }
+
+    func testLargeGridAndLongNamesUseDistinctRealFiles() throws {
+        for (scenario, count) in [(ShelfScenario.manyItems, 40), (.longNames, 8)] {
+            let fixture = try ShelfScenarioFixture(scenario)
+            let items = fixture.store.items
+            XCTAssertEqual(items.count, count)
+            let urls = try items.map { try XCTUnwrap($0.fileURL) }
+            XCTAssertEqual(Set(urls).count, count)
+            XCTAssertTrue(urls.allSatisfy { FileManager.default.fileExists(atPath: $0.path) })
+            XCTAssertTrue(items.allSatisfy { $0.kind != .text && $0.displayName == $0.fileURL?.lastPathComponent })
+            XCTAssertTrue(items.contains { $0.kind == .image })
+            XCTAssertTrue(items.contains { $0.kind == .folder })
+            if scenario == .longNames { XCTAssertTrue(items.allSatisfy { $0.displayName.count > 90 }) }
+        }
+        let snippets = try ShelfScenarioFixture(.textSnippets)
+        XCTAssertTrue(snippets.store.items.allSatisfy { $0.kind == .text && $0.fileURL == nil })
+    }
+
+    func testGeneratedCollectionsDoNotReuseFileContents() throws {
+        let urls = try ShelfSampleFiles.manyItems.get() + ShelfSampleFiles.longNames.get()
+        var payloads = Set<Data>()
+        for url in urls {
+            let files = url.hasDirectoryPath
+                ? try FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil).sorted { $0.lastPathComponent < $1.lastPathComponent }
+                : [url]
+            var bytes = Data()
+            for file in files { bytes.append(try Data(contentsOf: file)) }
+            XCTAssertTrue(payloads.insert(Data(SHA256.hash(data: bytes))).inserted,
+                          "Repeated contents: \(url.lastPathComponent)")
+        }
+        XCTAssertEqual(payloads.count, 48)
     }
 
     func testFixturesAreIndependentAndSelectionDoesNotLeak() throws {

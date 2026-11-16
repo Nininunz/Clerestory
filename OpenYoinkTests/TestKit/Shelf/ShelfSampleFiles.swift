@@ -11,6 +11,17 @@ enum ShelfSampleFiles {
         return urls
     }
 
+    static let manyItems = Result { try variants(count: 40, longNames: false) }
+    static let longNames = Result { try variants(count: 8, longNames: true) }
+
+    private static func variants(count: Int, longNames: Bool) throws -> [URL] {
+        let sources = try shared.get()
+        let directory = sources[0].deletingLastPathComponent()
+            .appendingPathComponent(longNames ? "Long filenames" : "Project collection", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return try createCollection(in: directory, count: count, longNames: longNames)
+    }
+
     static func create(in directory: URL) throws -> [URL] {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let landscape = directory.appendingPathComponent("Coastal study.png")
@@ -47,45 +58,27 @@ enum ShelfSampleFiles {
                 NSBezierPath(roundedRect: NSRect(x: 64 + i * 145, y: 60, width: 100, height: height), xRadius: 8, yRadius: 8).fill()
             }
         }
-        let brief = directory.appendingPathComponent("Northline — project brief.rtf")
-        let text = NSMutableAttributedString(string: "NORTHLINE STUDIO\nProject brief\n\nCoastal identity refresh\nNovember 2026 · Draft 03\n\nOverview\nCreate a calm, approachable identity for a fictional coastal design studio. The system should work across print, web, and small-screen interfaces.\n\nDeliverables\n• Identity concepts and color studies\n• Responsive landing page\n• Social launch templates\n\nMilestones\nDiscovery — November 18\nConcept review — November 25\nFinal handoff — December 4\n\nSuccess criteria\nClear typography, accessible contrast, and consistent spacing across every surface.\n\nSynthetic sample document for OpenYoink previews.\n", attributes: [.font: NSFont.systemFont(ofSize: 14)])
-        text.addAttribute(.font, value: NSFont.boldSystemFont(ofSize: 28), range: (text.string as NSString).range(of: "Project brief"))
-        try text.data(from: NSRange(location: 0, length: text.length), documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf]).write(to: brief)
+        let brief = directory.appendingPathComponent("Northline - project brief.rtf")
+        try writeProjectDocument(title: "Project brief", project: "Northline",
+                                 goal: "a coastal design studio launch",
+                                 deliverable: "Identity concepts, a landing page, and launch templates", seed: 0, to: brief)
         let notes = directory.appendingPathComponent("Kickoff notes.txt")
-        try """
-        NORTHLINE — KICKOFF NOTES
-        November 16, 2026
-
-        Agenda
-        1. Confirm project scope and audience
-        2. Review the coastal color studies
-        3. Agree on the first milestone
-
-        Decisions
-        - Keep navigation simple and labels short.
-        - Use the blue-green palette as the starting point.
-        - Prepare two concepts for next week's review.
-
-        Next steps
-        [ ] Draft wireframes
-        [ ] Collect typography samples
-        [ ] Schedule concept review
-
-        Fictional project. Generated test content only.
-        """.write(to: notes, atomically: true, encoding: .utf8)
+        try planningNotes(project: "Northline", goal: "a coastal design studio launch",
+                          deliverable: "Identity concepts, a landing page, and launch templates", seed: 0)
+            .write(to: notes, atomically: true, encoding: .utf8)
         let budget = directory.appendingPathComponent("Production budget.csv")
-        try "Category,Description,Quantity,Unit Cost,Total\nDesign,Identity concepts,3,450,1350\nWeb,Landing page,1,1800,1800\nPrint,Sample cards,250,2,500\nPhotography,Studio session,1,600,600\nTotal,,,,4250\n".write(to: budget, atomically: true, encoding: .utf8)
+        try budgetCSV(project: "Northline", seed: 0).write(to: budget, atomically: true, encoding: .utf8)
         let folder = directory.appendingPathComponent("Brand assets", isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         try "Northline palette\nOcean #2B6E87\nSand #F6D895\nPine #265054\n".write(to: folder.appendingPathComponent("Palette.txt"), atomically: true, encoding: .utf8)
         return [landscape, brief, dashboard, notes, budget, folder]
     }
 
-    private static func label(_ text: String, at point: NSPoint, size: CGFloat, color: NSColor) {
+    static func label(_ text: String, at point: NSPoint, size: CGFloat, color: NSColor) {
         (text as NSString).draw(at: point, withAttributes: [.font: NSFont.systemFont(ofSize: size, weight: .medium), .foregroundColor: color])
     }
 
-    private static func artwork(size: NSSize, to url: URL, draw: () -> Void) throws {
+    static func artwork(size: NSSize, to url: URL, draw: () -> Void) throws {
         let image = NSImage(size: size)
         image.lockFocus()
         draw()

@@ -10,6 +10,7 @@ enum ShelfScenario: String, CaseIterable {
     case stackSelection = "stack-selection"
     case manyItems = "many-items"
     case longNames = "long-names"
+    case textSnippets = "text-snippets"
     case keyboardFocus = "keyboard-focus"
 
     var label: String {
@@ -25,6 +26,7 @@ enum ShelfScenario: String, CaseIterable {
         case .manyItems: "Many items / scrolling"
         case .longNames: "Long names"
         case .keyboardFocus: "Keyboard focus"
+        case .textSnippets: "Text snippets / inline notes"
         }
     }
 
@@ -49,8 +51,9 @@ final class ShelfScenarioFixture {
         let stack = ShelfItem(kind: .stack, displayName: "Project resources", children: Array(items.prefix(3)))
         switch scenario {
         case .empty: store = ShelfStore(items: [])
-        case .manyItems: store = ShelfStore(items: ShelfFixtures.notes(count: 40))
-        case .longNames: store = ShelfStore(items: ShelfFixtures.longNames())
+        case .manyItems: store = ShelfStore(items: try ShelfFixtures.manyFiles())
+        case .longNames: store = ShelfStore(items: try ShelfFixtures.longNames())
+        case .textSnippets: store = ShelfStore(items: ShelfFixtures.textSnippets())
         case .expandedStack, .stackSelection: store = ShelfStore(items: [stack] + Array(items.suffix(4)))
         default: store = ShelfStore(items: items)
         }

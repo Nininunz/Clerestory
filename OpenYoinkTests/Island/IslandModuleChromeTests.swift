@@ -28,6 +28,35 @@ final class IslandModuleChromeTests: XCTestCase {
         }
     }
 
+    func testShelfAvailabilityDoesNotChangeTileOrGridHeight() throws {
+        let suite = "ShelfAvailabilityLayout.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = SettingsStore(defaults: defaults)
+        for width: CGFloat in [88, 107, 140] {
+            for name in ["File.txt", "Archived project proposal with a long filename.pdf"] {
+                var tileHeights = Set<Int>()
+                var gridHeights = Set<Int>()
+                for availability: ItemAvailability in [.available, .externalFileOffline, .managedCopyMissing] {
+                    var item = ShelfItem(kind: .file, displayName: name)
+                    item.availability = availability
+                    let card = ShelfItemCard(item: item, isSelected: false, onSelect: { _ in }, onRecover: {})
+                        .environment(settings)
+                        .environment(\.shelfPresentationStyle, .island)
+                        .frame(width: width)
+                    tileHeights.insert(try render(card).pixelsHigh)
+                    let grid = LazyVGrid(columns: [GridItem(.fixed(width), alignment: .top)], spacing: 12) {
+                        card
+                        card
+                    }.frame(width: width)
+                    gridHeights.insert(try render(grid).pixelsHigh)
+                }
+                XCTAssertEqual(tileHeights.count, 1, "Availability changed tile height at \(width)")
+                XCTAssertEqual(gridHeights.count, 1, "Availability changed grid height at \(width)")
+            }
+        }
+    }
+
     func testFooterHeightStaysFixedWhenSelectionActionsAppear() throws {
         for selected in [false, true] {
             let footer = IslandModuleFooter {

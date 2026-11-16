@@ -169,13 +169,6 @@ struct ShelfItemCard: View {
                 availabilityArea
             }
             nameRow
-            if presentationStyle == .island, item.availability != .available {
-                Text(item.kind == .stack ? "Unavailable" : "Missing")
-                    .font(.system(size: 10))
-                    .foregroundStyle(Color.white.opacity(0.45))
-                    .lineLimit(1)
-                    .accessibilityHidden(true)
-            }
             if presentationStyle == .classic,
                let status = ShelfCardVisualStatus.resolve(item: item,
                                                           transferStatus: transferStatus) {

@@ -20,9 +20,27 @@ enum ShelfFixtures {
         return items
     }
 
-    static func longNames() -> [ShelfItem] {
-        (1...8).map { ShelfItem(kind: .text,
-            displayName: "A very long project document title with version numbers and extra detail \($0).txt",
-            text: "A longer excerpt to check the text preview and filename truncation.") }
+    @MainActor
+    static func manyFiles() throws -> [ShelfItem] {
+        try ShelfSampleFiles.manyItems.get().map(fileItem)
+    }
+
+    @MainActor
+    static func longNames() throws -> [ShelfItem] {
+        try ShelfSampleFiles.longNames.get().map(fileItem)
+    }
+
+    private static func fileItem(_ url: URL) -> ShelfItem {
+        ShelfItem(kind: url.hasDirectoryPath ? .folder : url.pathExtension == "png" ? .image : .file,
+                  path: url.path, displayName: url.lastPathComponent)
+    }
+
+    static func textSnippets() -> [ShelfItem] {
+        [
+            ("Concept review", "Compare the ocean and pine palettes. Keep the wordmark readable at small sizes."),
+            ("Next steps", "Finish the landing page wireframes, then prepare two identity concepts for review."),
+            ("Print checklist", "Confirm trim size, add bleed, and export a proof before sending the final artwork."),
+            ("Handoff notes", "Include editable sources, color values, and a short guide to typography and spacing.")
+        ].map { ShelfItem(kind: .text, displayName: $0.0, text: $0.1) }
     }
 }
