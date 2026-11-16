@@ -26,6 +26,8 @@ struct DragContainerDropContext {
 final class DropTargetState {
     /// A drag is hovering over the shelf and can be accepted.
     var isTargeted = false
+    var hasDuplicateFiles = false
+    private var destinationOwner: UUID?
     /// 插入位置（目标 index 卡片前缘；等于 items.count 时画在末卡片后缘）。
     var insertionIndex: Int?
     /// F-05: 当前悬停的拖入模式（⌘ 按下为 .move），驱动 ShelfView 的
@@ -34,8 +36,20 @@ final class DropTargetState {
     /// Internal Shelf-card drags reorder existing items instead of importing.
     var isReordering = false
 
+    func target(destination: UUID) {
+        destinationOwner = destination
+        isTargeted = true
+    }
+
+    func leave(destination: UUID) {
+        guard destinationOwner == destination else { return }
+        reset()
+    }
+
     func reset() {
+        destinationOwner = nil
         isTargeted = false
+        hasDuplicateFiles = false
         insertionIndex = nil
         mode = .copy
         isReordering = false
@@ -60,6 +74,7 @@ final class DropTargetState {
 /// 就绪时回退「追加到末尾」（Yoink 语义）。
 @MainActor
 final class DragContainerView: NSView {
+    private let destinationID = UUID()
     private static let reorderActivationRatio: CGFloat = 0.10
     private let store: ShelfStore
     private let coordinator: DropImportCoordinator
@@ -154,7 +169,7 @@ final class DragContainerView: NSView {
                 dropTargetState.reset()
                 return []
             }
-            dropTargetState.isTargeted = true
+            dropTargetState.target(destination: destinationID)
             dropTargetState.insertionIndex = nil
             dropTargetState.mode = .copy
             dropTargetState.isReordering = false
@@ -162,7 +177,7 @@ final class DragContainerView: NSView {
         }
         if let source = shelfReorderSource(from: sender) {
             resetReorderTravel()
-            dropTargetState.isTargeted = true
+            dropTargetState.target(destination: destinationID)
             dropTargetState.mode = .copy
             dropTargetState.isReordering = true
             updateReorderInsertionIndex(sender, source: source)
@@ -176,9 +191,10 @@ final class DragContainerView: NSView {
             return []
         }
         guard Self.hasImportableContent(sender.draggingPasteboard) else { return [] }
-        dropTargetState.isTargeted = true
+        dropTargetState.target(destination: destinationID)
         dropTargetState.isReordering = false
         updateDropMode(sender)
+        updateDuplicateFeedback(sender)
         updateExternalInsertionIndex(sender)
         return .copy
     }
@@ -196,12 +212,12 @@ final class DragContainerView: NSView {
                 dropTargetState.reset()
                 return []
             }
-            dropTargetState.isTargeted = true
+            dropTargetState.target(destination: destinationID)
             dropTargetState.isReordering = false
             return .copy
         }
         if let source = shelfReorderSource(from: sender) {
-            dropTargetState.isTargeted = true
+            dropTargetState.target(destination: destinationID)
             dropTargetState.isReordering = true
             updateReorderInsertionIndex(sender, source: source)
             return .copy
@@ -211,9 +227,11 @@ final class DragContainerView: NSView {
             return []
         }
         guard Self.hasImportableContent(sender.draggingPasteboard) else { return [] }
+        dropTargetState.target(destination: destinationID)
         dropTargetState.isReordering = false
         // F-05: ⌘ 状态在拖动期间可能变化，实时刷新模式（高亮色调/提示随之切换）。
         updateDropMode(sender)
+        updateDuplicateFeedback(sender)
         // C6: 拖动期间实时更新插入位置（行列映射见 DropInsertionLocator）。
         updateExternalInsertionIndex(sender)
         // 始终回 .copy（含 ⌘ 剪切模式）：剪切由我们自管（copy+trash，
@@ -225,7 +243,7 @@ final class DragContainerView: NSView {
 
     override func draggingExited(_ sender: NSDraggingInfo?) {
         resetReorderTravel()
-        dropTargetState.reset()
+        dropTargetState.leave(destination: destinationID)
         dropOverride?.reset()
     }
 
@@ -286,17 +304,25 @@ final class DragContainerView: NSView {
         guard currentDestinationSequenceNumber == sender.draggingSequenceNumber else { return }
         currentDestinationSequenceNumber = nil
         resetReorderTravel()
-        dropTargetState.reset()
+        dropTargetState.leave(destination: destinationID)
         dropOverride?.reset()
     }
 
     override func concludeDragOperation(_ sender: NSDraggingInfo?) {
         resetReorderTravel()
-        dropTargetState.reset()
+        dropTargetState.leave(destination: destinationID)
         dropOverride?.reset()
     }
 
     // MARK: - Helpers
+
+    private func updateDuplicateFeedback(_ sender: NSDraggingInfo) {
+        let urls = sender.draggingPasteboard.readObjects(
+            forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]
+        ) as? [URL] ?? []
+        dropTargetState.hasDuplicateFiles = dropTargetState.mode == .copy
+            && urls.contains { store.containsFileReference(at: $0) }
+    }
 
     private func dropContext(_ sender: NSDraggingInfo) -> DragContainerDropContext {
         .init(pasteboard: sender.draggingPasteboard,

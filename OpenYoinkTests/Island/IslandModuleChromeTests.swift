@@ -45,6 +45,28 @@ final class IslandModuleChromeTests: XCTestCase {
         }
     }
 
+    func testDragOutlineGrowsFromCompactBoundsAndRemainsVisibleAtCompletion() {
+        let rect = CGRect(x: 0, y: 0, width: 492, height: 330)
+        var previous = CGRect.zero
+        for progress: CGFloat in [0, 0.25, 0.5, 0.75, 1] {
+            let outline = IslandTransitionDropOutline(progress: progress,
+                collapsedSize: CGSize(width: 290, height: 38), attachedToScreenTop: true, isVisible: true)
+            let path = outline.path(in: rect)
+            XCTAssertFalse(path.isEmpty)
+            let bounds = path.boundingRect
+            XCTAssertEqual(bounds.midX, rect.midX, accuracy: 0.01)
+            XCTAssertEqual(bounds.minY, 1, accuracy: 0.01)
+            XCTAssertGreaterThanOrEqual(bounds.width, previous.width)
+            XCTAssertGreaterThanOrEqual(bounds.height, previous.height)
+            previous = bounds
+        }
+        XCTAssertEqual(previous.width, 490, accuracy: 0.01)
+        XCTAssertEqual(previous.height, 328, accuracy: 0.01)
+        XCTAssertTrue(IslandTransitionDropOutline(progress: 1,
+            collapsedSize: CGSize(width: 290, height: 38), attachedToScreenTop: true,
+            isVisible: false).path(in: rect).isEmpty)
+    }
+
     func testHeaderHeightWithNoSingleAndMultipleActions() throws {
         for subtitle in [nil, "A module subtitle"] as [String?] {
             for count in 0...3 {

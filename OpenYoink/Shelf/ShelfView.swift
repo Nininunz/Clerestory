@@ -138,6 +138,7 @@ struct ShelfView: View {
     @Environment(\.shelfFocusAction) private var shelfFocusAction
     @Environment(\.shelfUserRemovalAction) private var shelfUserRemovalAction
     @State private var showsManagementActions = false
+    @State private var duplicateHighlightIDs: Set<UUID> = []
     @FocusState private var searchFocused: Bool
 
     /// 卡片弹入/让位动画（§3：spring, response 0.35, damping 0.7）。
@@ -158,6 +159,17 @@ struct ShelfView: View {
                 dropTargetState.reset()
                 interaction.normalize(for: store.visibleItems)
                 if store.items.isEmpty { interaction.isSelecting = false }
+            }
+            .task(id: store.duplicateDrop?.id) {
+                duplicateHighlightIDs = []
+                guard let drop = store.duplicateDrop,
+                      Date().timeIntervalSince(drop.occurredAt) < 1.5 else { return }
+                duplicateHighlightIDs = drop.cardIDs
+                do { try await Task.sleep(for: .seconds(1.5)) }
+                catch { return }
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.25)) {
+                    duplicateHighlightIDs = []
+                }
             }
             .onDisappear { showsManagementActions = false }
             .onChange(of: store.searchQuery) { normalizeSearch() }
@@ -199,7 +211,6 @@ struct ShelfView: View {
         } else {
             Color.clear
                 .overlay { content }
-                .overlay { dropTargetHighlight }
                 .overlay { expandedStackOverlay }
                 .overlay(alignment: .top) { noticeBanner }
                 .overlay(alignment: .bottom) { dropModeHint }
@@ -231,40 +242,43 @@ struct ShelfView: View {
                         ? .opacity
                         : .opacity.combined(with: .move(edge: .top)))
             }
-            if store.items.isEmpty {
-                Group {
-                    if presentationStyle == .island {
-                        IslandEmptyState(title: "Drop files here",
-                                         message: "Hold ⌘ while dropping to move the original here",
-                                         systemImage: "tray.and.arrow.down")
-                            .accessibilityElement(children: .combine)
-                            .accessibilityIdentifier("shelf.emptyState")
-                    } else {
-                        ShelfEmptyState()
-                    }
-                }
-                .contentShape(Rectangle())
-                .onTapGesture(perform: clearSelectionAndCollapse)
-            } else if store.visibleItems.isEmpty {
-                Group {
-                    if presentationStyle == .island {
-                        IslandModuleState(title: "No Results", message: "Try a different search or filter.",
-                                          systemImage: "magnifyingglass") {
-                            Button("Clear Search and Filters") {
-                                store.searchQuery = ""
-                                store.contentFilter = .all
-                            }
+            Group {
+                if store.items.isEmpty {
+                    Group {
+                        if presentationStyle == .island {
+                            IslandEmptyState(title: "Drop files here",
+                                             message: "Hold ⌘ while dropping to move the original here",
+                                             systemImage: "tray.and.arrow.down")
+                                .accessibilityElement(children: .combine)
+                                .accessibilityIdentifier("shelf.emptyState")
+                        } else {
+                            ShelfEmptyState()
                         }
-                    } else {
-                        Text("No Results").foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
+                    .contentShape(Rectangle())
+                    .onTapGesture(perform: clearSelectionAndCollapse)
+                } else if store.visibleItems.isEmpty {
+                    Group {
+                        if presentationStyle == .island {
+                            IslandModuleState(title: "No Results", message: "Try a different search or filter.",
+                                              systemImage: "magnifyingglass") {
+                                Button("Clear Search and Filters") {
+                                    store.searchQuery = ""
+                                    store.contentFilter = .all
+                                }
+                            }
+                        } else {
+                            Text("No Results").foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture(perform: clearSelectionAndCollapse)
+                } else {
+                    itemGrid
                 }
-                .contentShape(Rectangle())
-                .onTapGesture(perform: clearSelectionAndCollapse)
-            } else {
-                itemGrid
             }
+            .overlay { duplicateDropOverlay }
             if presentationStyle == .island {
                 shelfFooter
                     .padding(.top, IslandModuleLayout.headerSpacing - 4)
@@ -284,6 +298,34 @@ struct ShelfView: View {
                     .contentShape(Rectangle())
                     .onTapGesture(perform: clearSelectionAndCollapse)
             }
+        }
+    }
+
+    @ViewBuilder
+    private var duplicateDropOverlay: some View {
+        if presentationStyle == .island && dropTargetState.isTargeted
+            && dropTargetState.hasDuplicateFiles && !dropTargetState.isReordering {
+            Color.black
+                .overlay {
+                    VStack(spacing: 10) {
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 28, weight: .medium))
+                            .foregroundStyle(Color.red)
+                        Text("Already on Shelf")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.white)
+                        Text("Existing files will be skipped. New files will still be added.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: 280)
+                    }
+                    .padding(12)
+                }
+                .allowsHitTesting(false)
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("shelf.duplicateDrop")
+                .transition(.identity)
         }
     }
 
@@ -600,6 +642,11 @@ struct ShelfView: View {
                         .onChange(of: interaction.focusedItemID) { _, id in
                             if let id { proxy.scrollTo(id) }
                         }
+                        .onChange(of: store.duplicateDrop) { _, drop in
+                            if let id = store.visibleItems.first(where: { drop?.cardIDs.contains($0.id) == true })?.id {
+                                proxy.scrollTo(id)
+                            }
+                        }
                     }
                 } else if fits {
                     cardGrid(columns: gridColumns)
@@ -642,6 +689,16 @@ struct ShelfView: View {
     private func gridCell(for item: ShelfItem) -> some View {
         let index = store.index(ofItemWithID: item.id)
         return cellContent(for: item)
+            .overlay {
+                RoundedRectangle(cornerRadius: ShelfItemCard.cornerRadius)
+                    .fill(Color.accentColor.opacity(duplicateHighlightIDs.contains(item.id) ? 0.18 : 0))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: ShelfItemCard.cornerRadius)
+                            .strokeBorder(Color.accentColor.opacity(duplicateHighlightIDs.contains(item.id) ? 0.7 : 0), lineWidth: 1)
+                    }
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
             // C5/C6: 上报卡片在窗口 .global 坐标系中的 frame（含滚动偏移），
             // 供框选命中与拖入插入定位使用；cell 离屏/移除时清除，避免陈旧几何。
             .modifier(ShelfCardGeometryReporter(itemID: item.id))
@@ -748,15 +805,13 @@ struct ShelfView: View {
     }
 
     /// F-05: 悬停期间的模式提示（面板底部胶囊；notice 横幅在顶部，互不遮挡）。
-    /// ⌘ 剪切态提示「松开将原文件移动到此处」，复制态提示「松开以添加引用」。
+    /// Only show a hint for reordering or moving the original file.
     @ViewBuilder
     private var dropModeHint: some View {
-        if dropTargetState.isTargeted {
+        if dropTargetState.isTargeted && (dropTargetState.isReordering || dropTargetState.mode == .move) {
             Text(dropTargetState.isReordering
                  ? String(localized: "Release to reorder")
-                 : dropTargetState.mode == .move
-                 ? String(localized: "Release to move the original here ⌘")
-                 : String(localized: "Release to add a reference"))
+                 : String(localized: "Release to move the original here ⌘"))
                 .font(.caption)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)

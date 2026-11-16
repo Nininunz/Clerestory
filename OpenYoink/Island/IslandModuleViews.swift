@@ -24,6 +24,7 @@ struct ShelfPresentationRootView: View {
 struct IslandRootView: View {
     @Environment(SettingsStore.self) private var settings
     @Environment(ShelfStore.self) private var shelfStore
+    @Environment(DropTargetState.self) private var dropTargetState
     @Environment(TransferStore.self) private var transferStore
     @Environment(IslandActivityCoordinator.self) private var coordinator
     @Environment(IslandModuleRegistry.self) private var registry
@@ -44,6 +45,7 @@ struct IslandRootView: View {
     @State private var isSendingCompactMediaCommand = false
     @State private var mediaAccent = ArtworkAccent.fallback
     @State private var compactArtworkImage: NSImage?
+    @State private var dropOutlineProgress: CGFloat = 0
     @State private var renderedSurfaceState: IslandSurfaceState = .compact
     @State private var activeSurfaceAnimation: UUID?
     @State private var requestedSurfaceTransitionID: UInt64 = 0
@@ -112,6 +114,18 @@ struct IslandRootView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .overlay {
+            IslandTransitionDropOutline(
+                progress: dropOutlineProgress,
+                collapsedSize: CGSize(width: collapsedSurfaceWidth, height: collapsedSurfaceHeight),
+                attachedToScreenTop: hasPhysicalNotch,
+                isVisible: dropTargetState.isTargeted && !dropTargetState.isReordering
+            )
+            .stroke((dropTargetState.hasDuplicateFiles ? Color.red : Color.blue).opacity(0.85), lineWidth: 2)
+            .mask { Rectangle().padding(.top, hasPhysicalNotch ? 0 : 2) }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        }
         .preferredColorScheme(.dark)
         .environment(\.colorScheme, .dark)
         .accessibilityElement(children: .contain)
@@ -154,6 +168,7 @@ struct IslandRootView: View {
         if reduceMotion {
             activeSurfaceAnimation = nil
             renderedSurfaceState = state
+            dropOutlineProgress = state.isExpanded ? 1 : 0
             coordinator.completeSurfaceTransition(requestedSurfaceTransitionID)
             return
         }
@@ -169,6 +184,7 @@ struct IslandRootView: View {
         activeSurfaceAnimation = animationID
         withAnimation(surfaceAnimation(for: state), completionCriteria: .removed) {
             renderedSurfaceState = state
+            dropOutlineProgress = state.isExpanded ? 1 : 0
         } completion: {
             guard activeSurfaceAnimation == animationID else { return }
             activeSurfaceAnimation = nil

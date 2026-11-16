@@ -391,6 +391,7 @@ struct IslandExpandedSurface<Navigation: View, Content: View>: View {
             if !hasPhysicalNotch {
                 shape.strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
             }
+
         }
     }
 }
@@ -409,6 +410,7 @@ struct IslandSurfaceShape: InsettableShape {
     var attachedToScreenTop: Bool
     var cornerRadius: CGFloat
     var insetAmount: CGFloat = 0
+    var includesTopEdge = true
 
     func inset(by amount: CGFloat) -> IslandSurfaceShape {
         var copy = self
@@ -454,7 +456,7 @@ struct IslandSurfaceShape: InsettableShape {
             control1: CGPoint(x: rightBody, y: rect.minY + topCut * 0.45),
             control2: CGPoint(x: rect.maxX - topCut * 0.55, y: rect.minY)
         )
-        path.closeSubpath()
+        if includesTopEdge { path.closeSubpath() }
         return path
     }
 }
@@ -469,5 +471,31 @@ struct IslandModuleFooter<Content: View>: View {
             .frame(height: 28)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityElement(children: .contain)
+    }
+}
+
+/// A persistent outline whose edge follows the same reveal geometry as the content.
+struct IslandTransitionDropOutline: Shape {
+    var progress: CGFloat
+    let collapsedSize: CGSize
+    let attachedToScreenTop: Bool
+    var isVisible: Bool
+
+    var animatableData: CGFloat {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    func path(in rect: CGRect) -> Path {
+        guard isVisible else { return Path() }
+        let p = min(max(progress, 0), 1)
+        let width = min(collapsedSize.width, rect.width)
+            + (rect.width - min(collapsedSize.width, rect.width)) * p
+        let height = min(collapsedSize.height, rect.height)
+            + (rect.height - min(collapsedSize.height, rect.height)) * p
+        let frame = CGRect(x: rect.midX - width / 2, y: rect.minY, width: width, height: height)
+        return IslandSurfaceShape(attachedToScreenTop: attachedToScreenTop, cornerRadius: 26,
+                                  includesTopEdge: false)
+            .inset(by: 1).path(in: frame)
     }
 }

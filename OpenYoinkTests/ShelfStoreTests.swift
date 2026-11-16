@@ -16,6 +16,43 @@ final class ShelfStoreTests: XCTestCase {
         XCTAssertEqual(store.items[1].id, existing.id)
     }
 
+    func testDuplicateFeedbackTargetsExistingCardsAndRepeatsWithoutChangingSelection() throws {
+        let file = makeItem("existing.txt")
+        let child = makeItem("stacked.txt")
+        let stack = ShelfItem(kind: .stack, displayName: "Stack", children: [child])
+        let store = ShelfStore(items: [file, stack])
+        store.select(stack.id)
+        store.add(contentsOf: [makeItem("existing.txt"), makeItem("stacked.txt")])
+        let first = try XCTUnwrap(store.duplicateDrop)
+        XCTAssertEqual(first.cardIDs, [file.id, stack.id])
+        XCTAssertEqual(first.skippedCount, 2)
+        XCTAssertEqual(store.selection, [stack.id])
+        XCTAssertEqual(store.items, [file, stack])
+        store.add(makeItem("existing.txt"))
+        XCTAssertNotEqual(store.duplicateDrop?.id, first.id)
+        XCTAssertEqual(store.duplicateDrop?.cardIDs, [file.id])
+    }
+
+    func testDragPreflightFindsExistingFilesIncludingStacksWithoutChangingStore() {
+        let file = makeItem("existing.txt")
+        let child = makeItem("stacked.txt")
+        let store = ShelfStore(items: [file, ShelfItem(kind: .stack, displayName: "Stack", children: [child])])
+        XCTAssertTrue(store.containsFileReference(at: URL(fileURLWithPath: "/tmp/existing.txt")))
+        XCTAssertTrue(store.containsFileReference(at: URL(fileURLWithPath: "/tmp/stacked.txt")))
+        XCTAssertFalse(store.containsFileReference(at: URL(fileURLWithPath: "/elsewhere/existing.txt")))
+        XCTAssertNil(store.duplicateDrop)
+        XCTAssertEqual(store.items.count, 2)
+    }
+
+    func testDuplicateWithinNewBatchHighlightsRetainedEntry() {
+        let store = ShelfStore()
+        let file = makeItem("new.txt")
+        store.add(contentsOf: [file, makeItem("new.txt")])
+        XCTAssertEqual(store.items, [file])
+        XCTAssertEqual(store.duplicateDrop?.cardIDs, [file.id])
+        XCTAssertEqual(store.duplicateDrop?.skippedCount, 1)
+    }
+
     func testDeduplicationUsesCanonicalPathsNotDisplayNamesOrText() throws {
         let root = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
