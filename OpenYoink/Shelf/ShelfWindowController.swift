@@ -1389,21 +1389,13 @@ final class ShelfWindowController: NSObject {
                 quickLookCoordinator.dismiss()
                 return true
             }
-            if interaction.isSelecting {
-                interaction.isSelecting = false
-                store.clearSelection()
-                return true
-            }
-            if sourcePanel === islandPanel {
-                collapseIsland(animated: !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
-                return true
-            }
+            if interaction.clearActiveSelection(in: store) { return true }
             if interaction.expandedStackID != nil {
                 interaction.exitStack()
                 return true
             }
-            if !store.selection.isEmpty {
-                store.clearSelection()
+            if sourcePanel === islandPanel {
+                collapseIsland(animated: !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
                 return true
             }
             hideShelf(animated: !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)

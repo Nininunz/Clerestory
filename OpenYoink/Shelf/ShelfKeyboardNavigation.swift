@@ -74,6 +74,42 @@ final class ShelfInteractionState {
         else { store.setSelection(ids) }
     }
 
+    func clickSelection(_ id: UUID, in items: [ShelfItem], additive: Bool,
+                        extending: Bool, store: ShelfStore) {
+        guard let destination = items.firstIndex(where: { $0.id == id }) else { return }
+        if extending {
+            let current = focusedItemID.flatMap { focused in items.firstIndex { $0.id == focused } }
+                ?? destination
+            moveSelection(in: items, from: current, to: destination, extending: true, store: store)
+        } else {
+            selectionAnchorID = id
+            focusedItemID = id
+            if expandedStackID != nil {
+                if additive || isSelecting { childSelection.formSymmetricDifference([id]) }
+                else { childSelection = [id] }
+            } else if additive || isSelecting {
+                store.toggleSelection(id)
+            } else {
+                store.select(id)
+            }
+        }
+        showsKeyboardFocus = false
+    }
+
+    /// Escape clears the active selection before dismissing its container.
+    @discardableResult
+    func clearActiveSelection(in store: ShelfStore) -> Bool {
+        let hasSelection = expandedStackID == nil ? !store.selection.isEmpty : !childSelection.isEmpty
+        guard hasSelection || isSelecting else { return false }
+        isSelecting = false
+        selectionAnchorID = nil
+        focusedItemID = nil
+        showsKeyboardFocus = false
+        if expandedStackID != nil { childSelection.removeAll() }
+        else { store.clearSelection() }
+        return true
+    }
+
     func setSelectionMode(_ enabled: Bool, in store: ShelfStore) {
         selectionAnchorID = nil
         isSelecting = enabled

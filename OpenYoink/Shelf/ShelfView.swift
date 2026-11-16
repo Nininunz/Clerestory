@@ -676,11 +676,16 @@ struct ShelfView: View {
     }
 
     private func scrollingGrid(columns: [GridItem]) -> some View {
-        ScrollView(.vertical) {
-            cardGrid(columns: columns)
+        ScrollViewReader { proxy in
+            ScrollView(.vertical) {
+                cardGrid(columns: columns)
+            }
+            .scrollIndicators(presentationStyle == .island ? .automatic : .hidden)
+            .scrollBounceBehavior(.basedOnSize)
+            .onChange(of: interaction.focusedItemID) { _, id in
+                if let id { proxy.scrollTo(id) }
+            }
         }
-        .scrollIndicators(presentationStyle == .island ? .automatic : .hidden)
-        .scrollBounceBehavior(.basedOnSize)
     }
 
     private func cardGrid(columns: [GridItem]) -> some View {
@@ -977,14 +982,8 @@ struct ShelfView: View {
     private func select(_ id: UUID, additive: Bool) {
         searchFocused = false
         shelfFocusAction?()
-        interaction.showsKeyboardFocus = false
-        interaction.selectionAnchorID = nil
-        interaction.focusedItemID = id
-        if additive || interaction.isSelecting {
-            store.toggleSelection(id)
-        } else {
-            store.select(id)
-        }
+        interaction.clickSelection(id, in: store.visibleItems, additive: additive,
+                                   extending: NSEvent.modifierFlags.contains(.shift), store: store)
         // S6: Quick Look 面板打开期间，预览跟随选中变化（含 ⌘点击增减多选）。
         quickLookCoordinator?.refreshPreview(contextItem: store.item(withID: id))
     }
@@ -994,8 +993,8 @@ struct ShelfView: View {
         shelfFocusAction?()
         showsManagementActions = false
         collapseStack()
-        interaction.isSelecting = false
-        store.clearSelection()
+        interaction.clearActiveSelection(in: store)
+        interaction.showsKeyboardFocus = false
     }
 
     private func copyToClipboard(_ items: [ShelfItem]) {

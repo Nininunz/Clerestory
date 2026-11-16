@@ -34,6 +34,56 @@ final class ShelfKeyboardNavigationTests: XCTestCase {
         XCTAssertEqual(store.selection, [stack.id])
     }
 
+    func testShiftClickUsesVisibleOrderAndSharesAnchorWithArrows() {
+        let items = (0..<7).map { ShelfItem(kind: .text, displayName: "Item \($0)", text: "text") }
+        let store = ShelfStore(items: items)
+        let interaction = ShelfInteractionState()
+        let visible = [items[0], items[2], items[4], items[6]]
+        interaction.clickSelection(items[2].id, in: visible, additive: false, extending: false, store: store)
+        interaction.clickSelection(items[6].id, in: visible, additive: false, extending: true, store: store)
+        XCTAssertEqual(store.selection, Set([items[2].id, items[4].id, items[6].id]))
+        interaction.moveSelection(in: visible, from: 3, to: 2, extending: true, store: store)
+        XCTAssertEqual(store.selection, Set([items[2].id, items[4].id]))
+        interaction.clickSelection(items[0].id, in: visible, additive: false, extending: true, store: store)
+        XCTAssertEqual(store.selection, Set([items[0].id, items[2].id]))
+        XCTAssertFalse(interaction.showsKeyboardFocus)
+        interaction.clickSelection(items[0].id, in: visible, additive: true, extending: false, store: store)
+        XCTAssertEqual(store.selection, [items[2].id])
+    }
+
+    func testClearingSelectionConsumesOnlyFirstEscapeAndResetsFocus() {
+        let item = ShelfItem(kind: .text, displayName: "Item", text: "text")
+        let store = ShelfStore(items: [item])
+        let interaction = ShelfInteractionState()
+        interaction.moveSelection(in: [item], from: 0, to: 0, extending: false, store: store)
+        XCTAssertTrue(interaction.clearActiveSelection(in: store))
+        XCTAssertTrue(store.selection.isEmpty)
+        XCTAssertNil(interaction.focusedItemID)
+        XCTAssertNil(interaction.selectionAnchorID)
+        XCTAssertFalse(interaction.showsKeyboardFocus)
+        XCTAssertFalse(interaction.clearActiveSelection(in: store))
+        interaction.isSelecting = true
+        XCTAssertTrue(interaction.clearActiveSelection(in: store))
+        XCTAssertFalse(interaction.isSelecting)
+    }
+
+    func testStackClickRangeAndClearPreserveParentSelection() {
+        let children = (0..<4).map { ShelfItem(kind: .text, displayName: "Child \($0)", text: "text") }
+        let stack = ShelfItem(kind: .stack, displayName: "Stack", children: children)
+        let store = ShelfStore(items: [stack])
+        let interaction = ShelfInteractionState()
+        store.select(stack.id)
+        interaction.enterStack(stack)
+        interaction.clickSelection(children[1].id, in: children, additive: false, extending: false, store: store)
+        interaction.clickSelection(children[3].id, in: children, additive: false, extending: true, store: store)
+        XCTAssertEqual(interaction.childSelection, Set(children[1...3].map(\.id)))
+        XCTAssertTrue(interaction.clearActiveSelection(in: store))
+        XCTAssertTrue(interaction.childSelection.isEmpty)
+        XCTAssertEqual(interaction.expandedStackID, stack.id)
+        XCTAssertEqual(store.selection, [stack.id])
+        XCTAssertFalse(interaction.clearActiveSelection(in: store))
+    }
+
     func testTileClickRequestsPanelFocusAndTakesFirstResponderFromTextField() throws {
         let panel = ShelfPanel(contentRect: NSRect(x: 0, y: 0, width: 200, height: 150),
                                styleMask: [.nonactivatingPanel, .borderless], backing: .buffered, defer: false)
