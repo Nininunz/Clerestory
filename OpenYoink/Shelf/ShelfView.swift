@@ -41,22 +41,6 @@ extension EnvironmentValues {
     }
 }
 
-private struct ShelfActionStripReveal: ViewModifier, @MainActor Animatable {
-    var progress: CGFloat
-
-    var animatableData: CGFloat {
-        get { progress }
-        set { progress = newValue }
-    }
-
-    func body(content: Content) -> some View {
-        content
-            .frame(width: 130 * max(0, min(1, progress)), alignment: .trailing)
-            .clipped()
-            .opacity(progress)
-    }
-}
-
 private struct ShelfIconButtonStyle: ButtonStyle {
     var active = false
     var expanded = false
@@ -175,6 +159,7 @@ struct ShelfView: View {
                 interaction.normalize(for: store.visibleItems)
                 if store.items.isEmpty { interaction.isSelecting = false }
             }
+            .onDisappear { showsManagementActions = false }
             .onChange(of: store.searchQuery) { normalizeSearch() }
             .onChange(of: store.contentFilter) { normalizeSearch() }
             .onChange(of: transferStore.currentTask, initial: true) { _, task in
@@ -391,46 +376,46 @@ struct ShelfView: View {
 
     private var managementMenu: some View {
         HStack(spacing: 0) {
-            if showsManagementActions {
-                HStack(spacing: 0) {
-                    managementAction("Batch Selection", symbol: interaction.isSelecting ? "checkmark.circle.fill" : "checkmark.circle",
-                                     identifier: "shelf.selection.toggle", enabled: !store.items.isEmpty,
-                                     active: interaction.isSelecting) {
-                        setSelectionMode(!interaction.isSelecting)
-                    }
-                    managementAction(allVisibleItemsSelected ? "Deselect All" : "Select All",
-                                     symbol: allVisibleItemsSelected ? "checkmark.rectangle.stack.fill" : "checkmark.rectangle.stack",
-                                     identifier: "shelf.selection.all", enabled: !store.visibleItems.isEmpty) {
-                        if allVisibleItemsSelected {
-                            store.clearSelection()
-                        } else {
-                            setSelectionMode(true)
-                            store.selectAllVisible()
-                        }
-                    }
-                    managementDivider
-                    managementAction("Remove Selected", symbol: "trash",
-                                     identifier: "shelf.selection.remove", enabled: !visibleSelection.isEmpty,
-                                     destructive: true) {
-                        removeShelfItems(ids: visibleSelection)
-                    }
-                    managementAction("Clear Shelf", symbol: "xmark.bin",
-                                     identifier: "shelf.clear", enabled: !store.items.isEmpty,
-                                     destructive: true) {
-                        removeShelfItems(ids: Set(store.items.map(\.id)))
-                    }
-                    managementDivider
-                    managementAction("Undo Remove", symbol: "arrow.uturn.backward",
-                                     identifier: "shelf.undoRemoval", enabled: store.canUndoRemoval) {
-                        _ = store.undoLastRemoval()
+            HStack(spacing: 0) {
+                managementAction("Batch Selection", symbol: interaction.isSelecting ? "checkmark.circle.fill" : "checkmark.circle",
+                                 identifier: "shelf.selection.toggle", enabled: !store.items.isEmpty,
+                                 active: interaction.isSelecting) {
+                    setSelectionMode(!interaction.isSelecting)
+                }
+                managementAction(allVisibleItemsSelected ? "Deselect All" : "Select All",
+                                 symbol: allVisibleItemsSelected ? "checkmark.rectangle.stack.fill" : "checkmark.rectangle.stack",
+                                 identifier: "shelf.selection.all", enabled: !store.visibleItems.isEmpty) {
+                    if allVisibleItemsSelected {
+                        store.clearSelection()
+                    } else {
+                        setSelectionMode(true)
+                        store.selectAllVisible()
                     }
                 }
-                .fixedSize()
-                .transition(.modifier(active: ShelfActionStripReveal(progress: 0),
-                                      identity: ShelfActionStripReveal(progress: 1)))
-                .allowsHitTesting(showsManagementActions)
-                .accessibilityHidden(!showsManagementActions)
+                managementDivider
+                managementAction("Remove Selected", symbol: "trash",
+                                 identifier: "shelf.selection.remove", enabled: !visibleSelection.isEmpty,
+                                 destructive: true) {
+                    removeShelfItems(ids: visibleSelection)
+                }
+                managementAction("Clear Shelf", symbol: "xmark.bin",
+                                 identifier: "shelf.clear", enabled: !store.items.isEmpty,
+                                 destructive: true) {
+                    removeShelfItems(ids: Set(store.items.map(\.id)))
+                }
+                managementDivider
+                managementAction("Undo Remove", symbol: "arrow.uturn.backward",
+                                 identifier: "shelf.undoRemoval", enabled: store.canUndoRemoval) {
+                    _ = store.undoLastRemoval()
+                }
             }
+            .fixedSize()
+            .frame(width: showsManagementActions ? 130 : 0, alignment: .trailing)
+            .clipped()
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.28),
+                       value: showsManagementActions)
+            .allowsHitTesting(showsManagementActions)
+            .accessibilityHidden(!showsManagementActions)
             Button {
                 shelfFocusAction?()
                 showsManagementActions.toggle()
@@ -445,10 +430,7 @@ struct ShelfView: View {
             .help(Text("Manage Shelf"))
             .accessibilityLabel("Manage Shelf")
             .accessibilityIdentifier("shelf.manage")
-
         }
-        .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.88),
-                   value: showsManagementActions)
     }
 
     private var managementDivider: some View {
