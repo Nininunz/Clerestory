@@ -107,11 +107,22 @@ final class IslandModulePreviewTests: XCTestCase {
         try await export("quick-access", "Quick Access", views)
     }
     private func shelf() async throws {
-        let items = [ShelfItem(kind: .text, displayName: "Project note", text: "A sample note"), ShelfItem(kind: .url, displayName: "Example", urlString: "https://example.com")]
+        var offline = ShelfItem(kind: .file, displayName: "Project proposal.pdf")
+        offline.availability = .externalFileOffline
+        let items = [
+            ShelfItem(kind: .text, displayName: "Project note", text: "A sample note"),
+            ShelfItem(kind: .url, displayName: "Example", urlString: "https://example.com"),
+            ShelfItem(kind: .text, displayName: "A longer project note with a descriptive title", text: "Meeting notes and next steps"),
+            offline,
+            ShelfItem(kind: .folder, displayName: "Assets"),
+            ShelfItem(kind: .image, displayName: "Screenshot.png"),
+            ShelfItem(kind: .file, displayName: "Archive.zip", isCut: true)
+        ]
         var views: [(String, AnyView)] = []
-        for state in ["Empty / drop target", "Items / search + filter", "No results", "Import in progress"] {
+        for state in ["Empty / drop target", "Items / search + filter", "Selected items", "No results", "Import in progress"] {
             let store = ShelfStore(items: state == "Empty / drop target" ? [] : items)
             if state == "No results" { store.searchQuery = "no matching item" }
+            if state == "Selected items" { store.select(items[0].id); store.select(items[1].id, additive: true) }
             views.append(entry(state, IslandShelfModuleView().environment(store).environment(settings()).environment(DropTargetState()).environment(ShelfGridGeometry()).environment(ShelfNoticeModel()).environment(ShelfInteractionState()).environment(TransferStore.preview(phase: state == "Import in progress" ? .receiving(receivedCount: 2, expectedCount: 5) : nil))))
         }
         try await export("shelf", "Shelf", views)

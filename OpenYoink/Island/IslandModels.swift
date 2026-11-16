@@ -237,7 +237,7 @@ final class IslandModuleRegistry {
         systemImage: "square.grid.2x2", order: -1, isCore: true, supportsExtendedHeight: true)
     private(set) var descriptors: [IslandModuleDescriptor] = [
         .init(id: .shelf, title: String(localized: "Shelf"),
-              systemImage: "tray.full", order: 0, isCore: true),
+              systemImage: "tray.full", order: 0, isCore: true, supportsExtendedHeight: true),
         .init(id: .transfers, title: String(localized: "Transfers"),
               systemImage: "arrow.up.arrow.down", order: 1, isCore: true),
         .init(id: .timer, title: String(localized: "Timer"),

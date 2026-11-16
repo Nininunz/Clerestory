@@ -263,8 +263,13 @@ struct ShelfView: View {
             } else if store.visibleItems.isEmpty {
                 Group {
                     if presentationStyle == .island {
-                        IslandEmptyState(title: "No Results", message: "Try a different search or filter.",
-                                         systemImage: "magnifyingglass")
+                        IslandModuleState(title: "No Results", message: "Try a different search or filter.",
+                                          systemImage: "magnifyingglass") {
+                            Button("Clear Search and Filters") {
+                                store.searchQuery = ""
+                                store.contentFilter = .all
+                            }
+                        }
                     } else {
                         Text("No Results").foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -537,7 +542,11 @@ struct ShelfView: View {
                 && ShelfLayoutEngine.gridFits(itemCount: store.visibleItems.count,
                                               viewport: viewport.size)
             Group {
-                if fits {
+                if presentationStyle == .island {
+                    IslandModuleScrollView {
+                        cardGrid(columns: gridColumns)
+                    }
+                } else if fits {
                     cardGrid(columns: gridColumns)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 } else {

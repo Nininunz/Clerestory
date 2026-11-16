@@ -3,11 +3,21 @@ import SwiftUI
 struct IslandShelfModuleView: View {
     @Environment(ShelfStore.self) private var shelfStore
 
+    private var subtitle: String {
+        if !shelfStore.selection.isEmpty {
+            return String(localized: "\(shelfStore.selection.count) selected · \(shelfStore.items.count) items")
+        }
+        if shelfStore.visibleItems.count != shelfStore.items.count {
+            return String(localized: "\(shelfStore.visibleItems.count) of \(shelfStore.items.count) items")
+        }
+        return String(localized: "\(shelfStore.items.count) items")
+    }
+
     var body: some View {
         VStack(spacing: IslandModuleLayout.headerSpacing) {
             IslandModuleHeader(
                 title: "Shelf",
-                subtitle: String(localized: "\(shelfStore.items.count) items"),
+                subtitle: subtitle,
                 systemImage: "tray.full"
             )
             ShelfView(presentationStyle: .island)

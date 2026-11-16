@@ -5,6 +5,29 @@ import XCTest
 
 @MainActor
 final class IslandModuleChromeTests: XCTestCase {
+    func testShelfCardsKeepHeightAcrossNamesAndTransferStates() throws {
+        let suite = "ShelfCardLayoutTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = SettingsStore(defaults: defaults)
+        for width: CGFloat in [88, 107, 140] {
+            var heights: Set<Int> = []
+            for name in ["Note", "A very long project document name with multiple words.txt"] {
+                for status: TransferItemAccessibilityStatus? in [nil, .receiving, .destinationAccepted, .deliveryFailed] {
+                    let card = ShelfItemCard(
+                        item: ShelfItem(kind: .text, displayName: name, text: "Sample"),
+                        isSelected: false, onSelect: { _ in }, transferStatus: status
+                    )
+                    .environment(settings)
+                    .environment(\.shelfPresentationStyle, .island)
+                    .frame(width: width)
+                    heights.insert(try render(card).pixelsHigh)
+                }
+            }
+            XCTAssertEqual(heights.count, 1, "Uneven cards at width \(width): \(heights)")
+        }
+    }
+
     func testHeaderHeightWithNoSingleAndMultipleActions() throws {
         for subtitle in [nil, "A module subtitle"] as [String?] {
             for count in 0...3 {

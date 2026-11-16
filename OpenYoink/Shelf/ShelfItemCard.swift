@@ -158,6 +158,9 @@ struct ShelfItemCard: View {
             if let status = ShelfCardVisualStatus.resolve(item: item,
                                                           transferStatus: transferStatus) {
                 statusRow(status)
+            } else if presentationStyle == .island {
+                statusRow(.destinationAccepted)
+                    .hidden()
             }
         }
         .padding(6)
@@ -510,9 +513,11 @@ struct ShelfItemCard: View {
                 .foregroundStyle(presentationStyle == .island
                                  ? Color.white.opacity(0.90)
                                  : Color.primary)
-                .lineLimit(2)
+                .lineLimit(2, reservesSpace: presentationStyle == .island)
+                .truncationMode(.middle)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
+                .help(item.displayName)
         }
         .frame(maxWidth: .infinity)
     }
@@ -521,15 +526,27 @@ struct ShelfItemCard: View {
     /// precedence over the persistent managed-copy label; completed transfers
     /// return to the quiet ready state.
     private func statusRow(_ status: ShelfCardVisualStatus) -> some View {
-        Label(status.title, systemImage: status.symbolName)
+        let label = Label(status.title, systemImage: status.symbolName)
             .font(.caption2.weight(.semibold))
             .foregroundStyle(status.tint)
             .lineLimit(2)
             .multilineTextAlignment(.leading)
             .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityHidden(true)
-            .accessibilityIdentifier("shelf.item.\(item.id.uuidString).status")
+        return Group {
+            if presentationStyle == .island {
+                // Symbol metrics must not change the card's reserved text height.
+                Text("Status")
+                    .font(.caption2.weight(.semibold))
+                    .lineLimit(2, reservesSpace: true)
+                    .hidden()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .overlay(alignment: .topLeading) { label }
+            } else {
+                label.frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .accessibilityHidden(true)
+        .accessibilityIdentifier("shelf.item.\(item.id.uuidString).status")
     }
 
     // MARK: - Surfaces & badges
