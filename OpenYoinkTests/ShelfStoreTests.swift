@@ -3,6 +3,35 @@ import XCTest
 
 @MainActor
 final class ShelfStoreTests: XCTestCase {
+    func testRepeatedFileDropsAreIgnoredAcrossBatchesAndInsideStacks() {
+        let existing = makeItem("existing.txt")
+        let stacked = makeItem("stacked.txt")
+        let store = ShelfStore(items: [existing, ShelfItem(kind: .stack, displayName: "Stack", children: [stacked])])
+        store.add(makeItem("existing.txt"))
+        store.add(makeItem("stacked.txt"))
+        let fresh = makeItem("new.txt")
+        store.add(contentsOf: [fresh, makeItem("new.txt"), makeItem("existing.txt")], at: 0)
+        XCTAssertEqual(store.items.count, 3)
+        XCTAssertEqual(store.items.first?.id, fresh.id)
+        XCTAssertEqual(store.items[1].id, existing.id)
+    }
+
+    func testDeduplicationUsesCanonicalPathsNotDisplayNamesOrText() throws {
+        let root = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("original.txt")
+        try Data("sample".utf8).write(to: file)
+        let alias = root.appendingPathComponent("alias.txt")
+        try FileManager.default.createSymbolicLink(at: alias, withDestinationURL: file)
+        let store = ShelfStore()
+        store.add(ShelfItem(kind: .file, path: file.path, displayName: "Same name"))
+        store.add(ShelfItem(kind: .file, path: alias.path, displayName: "Alias"))
+        store.add(ShelfItem(kind: .file, path: root.appendingPathComponent("different.txt").path, displayName: "Same name"))
+        store.add(ShelfItem(kind: .text, displayName: "Note", text: "same"))
+        store.add(ShelfItem(kind: .text, displayName: "Note", text: "same"))
+        XCTAssertEqual(store.items.count, 4)
+    }
+
     // MARK: - Helpers
 
     private func makeItem(_ name: String, kind: ItemKind = .file) -> ShelfItem {

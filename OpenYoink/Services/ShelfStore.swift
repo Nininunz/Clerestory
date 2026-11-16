@@ -148,9 +148,7 @@ final class ShelfStore {
 
     /// Inserts an item at `index` (clamped to bounds), or appends when nil.
     func add(_ item: ShelfItem, at index: Int? = nil) {
-        let insertionIndex = min(max(index ?? items.count, 0), items.count)
-        items.insert(item, at: insertionIndex)
-        persist()
+        add(contentsOf: [item], at: index)
     }
 
     /// Appends multiple items, preserving their order.
@@ -162,10 +160,22 @@ final class ShelfStore {
     /// preserving their order; nil appends (S10/C6: drop-in at the indicated
     /// insertion position).
     func add(contentsOf newItems: [ShelfItem], at index: Int?) {
-        guard !newItems.isEmpty else { return }
+        // Entries have fresh UUIDs on each import; compare the referenced file
+        // instead. Resolve path spelling/symlinks, never filenames or contents.
+        var knownFiles = Set(DragPayloadBuilder.flattenedItems(items).compactMap(Self.fileIdentity))
+        let uniqueItems = newItems.filter { item in
+            guard let identity = Self.fileIdentity(item) else { return true }
+            return knownFiles.insert(identity).inserted
+        }
+        guard !uniqueItems.isEmpty else { return }
         let insertionIndex = min(max(index ?? items.count, 0), items.count)
-        items.insert(contentsOf: newItems, at: insertionIndex)
+        items.insert(contentsOf: uniqueItems, at: insertionIndex)
         persist()
+    }
+
+    private static func fileIdentity(_ item: ShelfItem) -> String? {
+        guard [.file, .folder, .image].contains(item.kind), let url = item.fileURL else { return nil }
+        return url.standardizedFileURL.resolvingSymlinksInPath().path
     }
 
     /// Adds an item only after the resulting shelf snapshot has been written
