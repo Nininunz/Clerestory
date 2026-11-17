@@ -5,6 +5,28 @@ import XCTest
 
 @MainActor
 final class IslandModuleChromeTests: XCTestCase {
+    func testThumbnailVisibleBoundsExcludeTransparentPaddingAndFaintShadow() throws {
+        let width = 20, height = 20
+        var pixels = [UInt8](repeating: 0, count: width * height * 4)
+        for y in 4..<12 {
+            for x in 4..<14 {
+                pixels[(y * width + x) * 4 + 3] = 255
+            }
+        }
+        pixels[3] = 20 // A faint shadow must not pull the control toward the canvas edge.
+        let provider = try XCTUnwrap(CGDataProvider(data: Data(pixels) as CFData))
+        let image = try XCTUnwrap(CGImage(width: width, height: height, bitsPerComponent: 8,
+                                         bitsPerPixel: 32, bytesPerRow: width * 4,
+                                         space: CGColorSpaceCreateDeviceRGB(),
+                                         bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
+                                         provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent))
+        let bounds = ShelfThumbnail.visibleBounds(in: image)
+        XCTAssertEqual(bounds.minX, 0.2, accuracy: 0.001)
+        XCTAssertEqual(bounds.minY, 0.2, accuracy: 0.001)
+        XCTAssertEqual(bounds.width, 0.5, accuracy: 0.001)
+        XCTAssertEqual(bounds.height, 0.4, accuracy: 0.001)
+    }
+
     func testShelfCardsKeepHeightAcrossNamesAndTransferStates() throws {
         let suite = "ShelfCardLayoutTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))

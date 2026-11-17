@@ -9,6 +9,14 @@ enum ShelfTextDocumentPreview {
     }
 }
 
+private struct ShelfThumbnailBoundsKey: PreferenceKey {
+    static var defaultValue: Anchor<CGRect>? { nil }
+
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = nextValue() ?? value
+    }
+}
+
 /// Visible, non-color-only card state. Completed transfers deliberately resolve
 /// to nil so the normal ready card remains quiet.
 enum ShelfCardVisualStatus: Equatable {
@@ -103,7 +111,7 @@ struct ShelfItemCard: View {
     var dragContentsProvider: ((ShelfItem) -> DragOutContents)?
 
     /// QL / Workspace 缩略图（已合成 SwiftUI Image，Sendable，跨任务传递安全）。
-    @State private var thumbnail: Image?
+    @State private var thumbnail: ShelfThumbnail?
     /// 来源应用小图标（按 `sourceApp.bundleID` 经 LaunchServices 解析）。
     @State private var sourceAppIcon: NSImage?
     /// UX4: 卡片悬停态（驱动右上角 ✕ 移除按钮淡入淡出）。
@@ -220,7 +228,22 @@ struct ShelfItemCard: View {
         // UX4: 悬停 ✕ 移除按钮。z 序在拖出事件层之上 —— 命中测试先到达
         // SwiftUI Button，落在 ✕ 上的点击不会触发选择或拖出；未悬停时
         // 透明且关闭命中测试，不影响卡片的点击/拖拽/框选。
-        .overlay(alignment: .topTrailing) { removeButton }
+        .overlayPreferenceValue(ShelfThumbnailBoundsKey.self) { anchor in
+            GeometryReader { geometry in
+                if let anchor {
+                    let frame = geometry[anchor]
+                    let content = item.availability == .available
+                        ? thumbnail?.contentBounds ?? CGRect(x: 0, y: 0, width: 1, height: 1)
+                        : CGRect(x: 0, y: 0, width: 1, height: 1)
+                    let bounds = CGRect(x: frame.minX + frame.width * content.minX,
+                                        y: frame.minY + frame.height * content.minY,
+                                        width: frame.width * content.width,
+                                        height: frame.height * content.height)
+                    removeButton
+                        .position(x: bounds.maxX - 4, y: bounds.minY + 4)
+                }
+            }
+        }
         .onHover { isHovering = $0 }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: isHovering)
         .contextMenu { contextMenu }
@@ -289,14 +312,14 @@ struct ShelfItemCard: View {
         if !selectionMode, let onRemove {
             Button(action: onRemove) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 8, weight: .bold))
+                    .font(.system(size: 8, weight: .semibold))
                     .foregroundStyle(presentationStyle == .island
-                                     ? Color.white.opacity(0.72)
+                                     ? Color.white.opacity(0.88)
                                      : Color.secondary)
-                    .frame(width: 22, height: 22)
+                    .frame(width: 18, height: 18)
                     .background {
                         if presentationStyle == .island {
-                            Circle().fill(Color.black.opacity(0.76))
+                            Circle().fill(Color(white: 0.22))
                         } else {
                             Circle().fill(.regularMaterial)
                         }
@@ -308,9 +331,10 @@ struct ShelfItemCard: View {
                                           : Color.primary.opacity(0.12),
                                           lineWidth: 0.5)
                     }
+                    .frame(width: 28, height: 28)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .padding(4)
             .opacity(isHovering || isKeyboardFocused ? 1 : 0)
             .allowsHitTesting(isHovering || isKeyboardFocused)
             .help("Remove from Shelf")
@@ -386,13 +410,15 @@ struct ShelfItemCard: View {
             switch item.kind {
             case .text:
                 textSnippetPreview
+                    .anchorPreference(key: ShelfThumbnailBoundsKey.self, value: .bounds) { $0 }
             case .url:
                 urlPlaceholder
             case .file, .folder, .image, .stack:
                 if let thumbnail {
-                    thumbnail
+                    thumbnail.image
                         .resizable()
                         .aspectRatio(contentMode: .fit)
+                        .anchorPreference(key: ShelfThumbnailBoundsKey.self, value: .bounds) { $0 }
                 } else {
                     kindPlaceholder
                 }
@@ -462,6 +488,7 @@ struct ShelfItemCard: View {
         .foregroundStyle(presentationStyle == .island
                          ? Color.white.opacity(0.62)
                          : Color.secondary)
+        .anchorPreference(key: ShelfThumbnailBoundsKey.self, value: .bounds) { $0 }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -472,6 +499,7 @@ struct ShelfItemCard: View {
             .foregroundStyle(presentationStyle == .island
                              ? Color.white.opacity(0.38)
                              : Color.secondary.opacity(0.72))
+            .anchorPreference(key: ShelfThumbnailBoundsKey.self, value: .bounds) { $0 }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -500,6 +528,7 @@ struct ShelfItemCard: View {
                         .foregroundStyle(Color.white.opacity(0.65), Color.black)
                         .offset(x: 5, y: 2)
                 }
+                .anchorPreference(key: ShelfThumbnailBoundsKey.self, value: .bounds) { $0 }
                 .frame(maxWidth: .infinity)
                 .frame(height: previewHeight)
                 .help(availabilityActionHint)
@@ -521,6 +550,7 @@ struct ShelfItemCard: View {
                 }
             }
             .foregroundStyle(.primary)
+            .anchorPreference(key: ShelfThumbnailBoundsKey.self, value: .bounds) { $0 }
             .frame(maxWidth: .infinity)
             .frame(minHeight: previewHeight)
         }
@@ -754,6 +784,40 @@ struct ShelfItemCard: View {
     }
 }
 
+/// Visible image bounds exclude the transparent padding in system file icons.
+struct ShelfThumbnail {
+    let image: Image
+    let contentBounds: CGRect
+
+    static func visibleBounds(in image: CGImage) -> CGRect {
+        let unit = CGRect(x: 0, y: 0, width: 1, height: 1)
+        let scale = min(1, 256 / CGFloat(max(image.width, image.height)))
+        let width = max(1, Int(CGFloat(image.width) * scale))
+        let height = max(1, Int(CGFloat(image.height) * scale))
+        var pixels = [UInt8](repeating: 0, count: width * height * 4)
+        return pixels.withUnsafeMutableBytes { buffer in
+            guard let context = CGContext(data: buffer.baseAddress, width: width, height: height,
+                                          bitsPerComponent: 8, bytesPerRow: width * 4,
+                                          space: CGColorSpaceCreateDeviceRGB(),
+                                          bitmapInfo: CGBitmapInfo.byteOrder32Big.rawValue
+                                            | CGImageAlphaInfo.premultipliedLast.rawValue) else { return unit }
+            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+            let bytes = buffer.bindMemory(to: UInt8.self)
+            var minX = width, minY = height, maxX = -1, maxY = -1
+            for y in 0..<height {
+                for x in 0..<width where bytes[(y * width + x) * 4 + 3] >= 64 {
+                    minX = min(minX, x); minY = min(minY, y)
+                    maxX = max(maxX, x); maxY = max(maxY, y)
+                }
+            }
+            guard maxX >= minX, maxY >= minY else { return unit }
+            return CGRect(x: CGFloat(minX) / CGFloat(width), y: CGFloat(minY) / CGFloat(height),
+                          width: CGFloat(maxX - minX + 1) / CGFloat(width),
+                          height: CGFloat(maxY - minY + 1) / CGFloat(height))
+        }
+    }
+}
+
 // MARK: - ThumbnailLoader
 
 /// 卡片缩略图加载：`QLThumbnailGenerator` 真实缩略图 + `NSWorkspace` 图标回退。
@@ -771,7 +835,7 @@ enum ThumbnailLoader {
     /// 文件读取权限），加载完成后配对 `stopAccessing`；解析失败回退原始路径。
     @MainActor
     static func thumbnail(for item: ShelfItem, pointSize: CGSize, bookmarkService: BookmarkService,
-                          iconMode: Bool = false) async -> Image? {
+                          iconMode: Bool = false) async -> ShelfThumbnail? {
         guard let baseURL = item.fileURL else { return nil }
         var url = baseURL
         var accessedURL: URL?
@@ -791,14 +855,16 @@ enum ThumbnailLoader {
         if let cgImage = await quickLookThumbnail(for: url, pointSize: pointSize, scale: scale, iconMode: iconMode) {
             // S10/C7: 登记到拖拽图像缓存，拖出时（同步路径）直接取用真实缩略图。
             DragImageCache.register(cgImage, for: item.id)
-            return Image(decorative: cgImage, scale: scale)
+            return ShelfThumbnail(image: Image(decorative: cgImage, scale: scale),
+                                  contentBounds: ShelfThumbnail.visibleBounds(in: cgImage))
         }
         let icon = NSWorkspace.shared.icon(forFile: url.path)
         var proposedRect = NSRect(origin: .zero, size: icon.size)
         if let cgIcon = icon.cgImage(forProposedRect: &proposedRect, context: nil, hints: nil) {
             DragImageCache.register(cgIcon, for: item.id)
+            return ShelfThumbnail(image: Image(nsImage: icon), contentBounds: ShelfThumbnail.visibleBounds(in: cgIcon))
         }
-        return Image(nsImage: icon)
+        return ShelfThumbnail(image: Image(nsImage: icon), contentBounds: CGRect(x: 0, y: 0, width: 1, height: 1))
     }
 
     /// 来源应用小图标；bundleID 缺失或无法解析时返回 nil。
