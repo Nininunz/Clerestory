@@ -5,11 +5,12 @@ import XCTest
 final class OpenYoinkSmokeUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
-        // Older builds share the bundle ID and can intercept the test's drops.
+        // Both fork and upstream builds can intercept the test's drops.
         // Refuse to run over a normal session; never terminate it automatically.
         let testAppURL = Bundle.main.bundleURL.deletingLastPathComponent()
             .appendingPathComponent("OpenYoink.app").resolvingSymlinksInPath()
-        let otherBuilds = NSRunningApplication.runningApplications(withBundleIdentifier: "com.nininunz.OpenYoink")
+        let otherBuilds = ["com.nininunz.OpenYoink", "com.weijue.OpenYoink"]
+            .flatMap { NSRunningApplication.runningApplications(withBundleIdentifier: $0) }
             .filter { $0.bundleURL?.resolvingSymlinksInPath() != testAppURL }
         XCTAssertTrue(otherBuilds.isEmpty, "Quit other OpenYoink builds before running UI tests: \(otherBuilds.compactMap { $0.bundleURL?.path })")
     }

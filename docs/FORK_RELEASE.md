@@ -64,8 +64,8 @@ Automatic migration is not implemented by this identity change.
    `DEVELOPMENT_TEAM_ID`, and `NOTARY_PROFILE`. Do not publish ad-hoc artifacts.
 5. Upload the signed/notarized DMG to this fork's matching GitHub release, then
    deploy the generated feed. Validate with `Scripts/verify-update-feed.sh`.
-6. Test a real update between two signed fork builds, including relaunch and
-   persistence. Source checks do not establish that end-to-end updates work.
+6. Smoke-test the deployed HTTPS feed and release download. The local signed
+   update test below covers installation, relaunch, and persistence.
 
 The Developer ID certificate is installed in the maintainer's login Keychain
 (expires December 17, 2027), and the notarization profile has been validated
@@ -73,4 +73,19 @@ with Apple. Pages hosting is configured. No public release or feed deployment
 has been performed. Local candidate `1.8.11 (52)` passed Apple notarization,
 DMG ticket stapling, Gatekeeper checks for both the DMG and mounted app, and
 Sparkle signature verification. The candidate is universal (arm64 and x86_64).
-An actual installed-app update and daily-use data migration still need testing.
+
+## Signed update verification
+
+On November 17, 2026, Sparkle automatically discovered a loopback test feed and
+updated an installed signed/notarized `1.8.11 (52)` to `1.8.12 (53)`. The user
+approved installation; Sparkle downloaded the DMG, replaced the app at the same
+path, and relaunched it. About displayed the target version. The updated app
+passed strict signature verification and Gatekeeper accepted it as Notarized
+Developer ID under team `8KB55P2YKQ`.
+
+A synthetic shelf file, its contents, a text snippet, and the 370 ms hover-delay
+preference survived. Temporary preferences were restored and synthetic shelf
+data removed afterward. The local server was stopped; neither candidate nor
+feed was published. This verifies automatic discovery with user-approved
+installation, not unattended silent installation. Public HTTPS feed delivery
+and daily-use data migration still require verification.
