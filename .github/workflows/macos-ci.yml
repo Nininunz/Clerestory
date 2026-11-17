@@ -16,11 +16,21 @@ concurrency:
 
 jobs:
   build-and-unit-tests:
-    name: Build and unit tests
-    runs-on: macos-26
+    name: ${{ matrix.check-name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - check-name: Build and unit tests (Xcode 27)
+            runner: xcode-27
+            xcode: '27.2'
+          - check-name: Compatibility (Xcode 26)
+            runner: macos-26
+            xcode: '26.6'
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     env:
-      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode }}.app/Contents/Developer
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -33,7 +43,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: macos-ci-results
+          name: macos-ci-results-xcode-${{ matrix.xcode }}
           path: |
             ${{ runner.temp }}/openyoink-ci/*.log
             ${{ runner.temp }}/openyoink-ci/unit-tests.xcresult

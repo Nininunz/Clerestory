@@ -1,6 +1,13 @@
 # macOS build and unit-test checks
 
-The `macOS CI` workflow runs on pull requests targeting `main`, pushes to `main`, and manual dispatch. Its stable check name is **Build and unit tests**. It uses GitHub's Apple Silicon `macos-26` runner with Xcode 26.6 selected explicitly.
+The `macOS CI` workflow runs on pull requests targeting `main`, pushes to `main`, and manual dispatch. It runs two independent checks on GitHub's Apple Silicon runners:
+
+| Check | Runner | Selected Xcode | Purpose |
+| --- | --- | --- | --- |
+| **Build and unit tests (Xcode 27)** | `xcode-27` | 27.2 | Main development toolchain |
+| **Compatibility (Xcode 26)** | `macos-26` | 26.6 | Older supported toolchain and OS |
+
+Both checks run the full pipeline below. A failure in one does not cancel the other, and neither is allowed to fail silently. GitHub currently labels the `xcode-27` runner image as a public preview; see its [installed software](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md).
 
 `Scripts/test-ci.sh` runs the module-core Swift package tests, builds the Release app, then runs the Debug app-hosted `OpenYoinkTests` suite serially. Local ad-hoc signing needs no Apple account or signing secrets. Shell pipeline failures propagate, individual tests have time limits, and the job has a 30-minute timeout. A newer revision cancels an older run for the same PR or branch.
 
@@ -14,6 +21,6 @@ Scripts/test-ci.sh
 
 The script prints a fresh temporary results directory. Set `OPENYOINK_CI_OUTPUT` to an empty directory to choose its location. An existing `unit-tests.xcresult` makes Xcode refuse the run, so use a fresh output directory for each run. `DEVELOPER_DIR` can select the installed Xcode version locally; CI pins it in the workflow.
 
-Every completed job attempts to upload `macos-ci-results`, containing toolchain/build/test logs and the unit-test `.xcresult` bundle, retained for 14 days. No app binary or full DerivedData directory is uploaded. The workflow has read-only repository access and does not deploy or publish releases. Pages deployment remains a separate workflow.
+Every completed job attempts to upload `macos-ci-results-xcode-<version>`, containing toolchain/build/test logs and the unit-test `.xcresult` bundle, retained for 14 days. Each toolchain has its own artifact. No app binary or full DerivedData directory is uploaded. The workflow has read-only repository access and does not deploy or publish releases. Pages deployment remains a separate workflow.
 
-Adding a workflow does not itself make its check mandatory for merging. To enforce it, select **Build and unit tests** in the repository's `main` branch protection or ruleset after the first successful run.
+Adding a workflow does not itself make its checks mandatory for merging. To enforce both, select **Build and unit tests (Xcode 27)** and **Compatibility (Xcode 26)** in the repository's `main` branch protection or ruleset after their first successful run.
