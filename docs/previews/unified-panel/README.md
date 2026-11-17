@@ -5,7 +5,7 @@ Current review baseline for `codex/separate-expanded-panel`, following the [sepa
 ## Settings organization
 
 - **General**: startup, menu bar icon, language, and update checks.
-- **Panel**: enablement, target display, hover/click/drag opening, delays, Shelf shortcut, shortcut positions, and ignored apps.
+- **Panel**: target display, hover/click/drag opening, delays, Shelf shortcut, shortcut positions, and ignored apps.
 - **Notch**: optional notch companion, cycling shortcut, and module inclusion/order.
 - **Modules**: experimental gate, module enablement, and each module's settings. Shortcut placement and notch inclusion are separate choices.
 - **Storage**, **Debug** (debug builds), and **About** retain their dedicated pages.

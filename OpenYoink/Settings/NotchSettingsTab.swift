@@ -10,12 +10,8 @@ struct NotchSettingsTab: View {
             Section("Notch") {
                 Toggle("Show in notch", isOn: $settings.showNotch)
                     .accessibilityIdentifier("settings.showCompactIsland")
-                Text("Appears only on notched displays when the panel is enabled. Your preference is saved for when a notched display is in use.")
+                Text("Appears only on notched displays. Your preference is saved for when a notched display is in use.")
                     .font(.caption).foregroundStyle(.secondary)
-                if !settings.islandEnabled {
-                    Text("The panel is off. You can still configure the notch here.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
             }
             Section("Cycling Shortcut") {
                 LabeledContent("Cycle notch modules") {

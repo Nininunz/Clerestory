@@ -5,7 +5,6 @@
     "Show in notch" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Show in notch"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "在刘海处显示"}}}},
     "Configure Notch…" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Configure Notch…"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "配置刘海…"}}}},
     "Configure the optional notch display in Notch." : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Configure the optional notch display in Notch."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "在“刘海”中配置可选的刘海显示。"}}}},
-    "The panel is off. You can still configure the notch here." : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "The panel is off. You can still configure the notch here."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "面板已关闭。仍可在此配置刘海显示。"}}}},
     "Uses the same panel while hiding the notch display. Your opening controls in Panel still apply. Turn this off to use the real display geometry." : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Uses the same panel while hiding the notch display. Your opening controls in Panel still apply. Turn this off to use the real display geometry."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "使用相同面板并隐藏刘海显示。“面板”中的打开方式仍然有效。关闭此项以使用真实的显示器布局。"}}}},
     "Use the notch display when visible, or the top-center screen edge when it is hidden." : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Use the notch display when visible, or the top-center screen edge when it is hidden."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "刘海显示可见时使用它；隐藏时使用屏幕顶部中央边缘。"}}}},
     "Dropping files or text on the notch display always opens Shelf. The wider approach area is optional." : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Dropping files or text on the notch display always opens Shelf. The wider approach area is optional."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "将文件或文本放到刘海显示上始终会打开暂存架。更大的靠近触发区域可按需启用。"}}}},
@@ -70,12 +69,6 @@
       "localizations" : {
         "en" : {"stringUnit": {"state": "translated", "value": "Enable shelf shortcut"}},
         "zh-Hans" : {"stringUnit": {"state": "translated", "value": "启用暂存架快捷键"}}
-      }
-    },
-    "Enable panel" : {
-      "localizations" : {
-        "en" : {"stringUnit": {"state": "translated", "value": "Enable panel"}},
-        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "启用面板"}}
       }
     },
 
@@ -192,10 +185,10 @@
         "zh-Hans" : {"stringUnit": {"state": "translated", "value": "在选择其他显示器之前，面板会保持在此显示器上。"}}
       }
     },
-    "Appears only on notched displays when the panel is enabled. Your preference is saved for when a notched display is in use." : {
+    "Appears only on notched displays. Your preference is saved for when a notched display is in use." : {
       "localizations" : {
-        "en" : {"stringUnit": {"state": "translated", "value": "Appears only on notched displays when the panel is enabled. Your preference is saved for when a notched display is in use."}},
-        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "仅在面板启用且显示器带有刘海时显示。此偏好会保留，以便使用刘海屏时生效。"}}
+        "en" : {"stringUnit": {"state": "translated", "value": "Appears only on notched displays. Your preference is saved for when a notched display is in use."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "仅在带有刘海的显示器上显示。此偏好会保留，以便使用刘海屏时生效。"}}
       }
     },
 
@@ -209,12 +202,6 @@
       "localizations" : {
         "en" : {"stringUnit": {"state": "translated", "value": "Inclusion here controls cycling, not whether a module is enabled. Enable modules in Modules. These choices are shared with Quick Settings."}},
         "zh-Hans" : {"stringUnit": {"state": "translated", "value": "此处决定模块是否参与循环切换。请在“模块”中启用模块。这些选择与快速设置共用。"}}
-      }
-    },
-    "The panel is off. You can still configure its modules here." : {
-      "localizations" : {
-        "en" : {"stringUnit": {"state": "translated", "value": "The panel is off. You can still configure its modules here."}},
-        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "面板已关闭。仍可在此配置其模块。"}}
       }
     },
     "Quick Settings is always available and must occupy one panel shortcut position." : {

@@ -93,10 +93,6 @@ struct ModulesSettingsTab: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Modules") {
-                if !settings.islandEnabled {
-                    Text("The panel is off. You can still configure its modules here.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
                 ForEach(destinations) { destination in
                     HStack(spacing: 12) {
                         Button {

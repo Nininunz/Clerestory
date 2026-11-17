@@ -9,44 +9,40 @@ struct PanelDisplaySettingsSection: View {
         @Bindable var settings = settings
         Group {
             Section("Panel") {
-                Toggle("Enable panel", isOn: $settings.islandEnabled)
+                Text("The same panel is used on every display. Choose where it opens below.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
 
-                if settings.islandEnabled {
-                    Text("The same panel is used on every display. Choose where it opens below.")
+                if islandScreens.isEmpty {
+                    Text("Connect a display to show the panel.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-
-                    if islandScreens.isEmpty {
-                        Text("Connect a display to show the panel.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Picker("Display", selection: $settings.islandDisplayTarget) {
-                            Text("Main Display")
-                                .tag(SettingsStore.IslandDisplayTarget.main)
-                            Text("Follow Pointer")
-                                .tag(SettingsStore.IslandDisplayTarget.automatic)
-                            ForEach(islandScreens) { screen in
-                                Text(islandScreenTitle(screen))
-                                    .tag(SettingsStore.IslandDisplayTarget.display(screen.id))
-                            }
-                            if case let .display(id) = settings.islandDisplayTarget,
-                               !islandScreens.contains(where: { $0.id == id }) {
-                                Text("Unavailable Display")
-                                    .tag(SettingsStore.IslandDisplayTarget.display(id))
-                            }
+                } else {
+                    Picker("Display", selection: $settings.islandDisplayTarget) {
+                        Text("Main Display")
+                            .tag(SettingsStore.IslandDisplayTarget.main)
+                        Text("Follow Pointer")
+                            .tag(SettingsStore.IslandDisplayTarget.automatic)
+                        ForEach(islandScreens) { screen in
+                            Text(islandScreenTitle(screen))
+                                .tag(SettingsStore.IslandDisplayTarget.display(screen.id))
                         }
-                        .pickerStyle(.menu)
-                        .accessibilityIdentifier("settings.islandDisplay")
-
-                        Text(islandDisplayDescription)
-                            .font(.caption)
-                            .foregroundStyle(isSelectedIslandDisplayUnavailable
-                                             ? Color.orange : Color.secondary)
-
-                        Text("Configure the optional notch display in Notch.")
-                            .font(.caption).foregroundStyle(.secondary)
+                        if case let .display(id) = settings.islandDisplayTarget,
+                           !islandScreens.contains(where: { $0.id == id }) {
+                            Text("Unavailable Display")
+                                .tag(SettingsStore.IslandDisplayTarget.display(id))
+                        }
                     }
+                    .pickerStyle(.menu)
+                    .accessibilityIdentifier("settings.islandDisplay")
+
+                    Text(islandDisplayDescription)
+                        .font(.caption)
+                        .foregroundStyle(isSelectedIslandDisplayUnavailable
+                                         ? Color.orange : Color.secondary)
+
+                    Text("Configure the optional notch display in Notch.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
             }
 

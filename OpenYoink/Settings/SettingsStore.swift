@@ -956,7 +956,9 @@ final class SettingsStore {
         // while ensuring classic-only users still have a visible surface.
         let activateIsland = !SideShelfAvailability.isEnabled && hadPersistedOnboardingVersion
             && resolvedClassicShelfEnabled && !resolvedIslandEnabled
-        islandEnabled = resolvedIslandEnabled || activateIsland
+        // The panel is the primary surface while Side Shelf is unavailable.
+        // Ignore the retired master toggle so an old off preference cannot strand users.
+        islandEnabled = !SideShelfAvailability.isEnabled || resolvedIslandEnabled
         menuBarIconEnabled = defaults.bool(forKey: Keys.menuBarIconEnabled)
         islandDisplayTarget = IslandDisplayTarget(
             persistedValue: defaults.string(forKey: Keys.islandDisplayTarget)

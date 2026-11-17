@@ -130,14 +130,14 @@ final class AppearanceSettingsTests: XCTestCase {
     func testResetKeepsExistingPlacementAndTriggers() throws {
         try withStore { store, defaults in
             store.shelfPosition = .left
-            store.islandEnabled = false
+            store.showNotch = false
             store.autoHide = true
             store.appearance.tint = .pink
             store.resetAppearance()
             let reloaded = SettingsStore(defaults: defaults)
             XCTAssertEqual(reloaded.appearance, .default)
             XCTAssertEqual(reloaded.shelfPosition, .left)
-            XCTAssertFalse(reloaded.islandEnabled)
+            XCTAssertFalse(reloaded.showNotch)
             XCTAssertTrue(reloaded.autoHide)
         }
     }
@@ -160,12 +160,12 @@ final class AppearanceSettingsTests: XCTestCase {
 
     func testDamagedAppearanceFallsBackWithoutResettingOtherPreferences() throws {
         try withStore { store, defaults in
-            store.islandEnabled = false
+            store.showNotch = false
             store.shelfWidth = 400
             defaults.set(Data("not JSON".utf8), forKey: "OpenYoink.appearance.v1")
             let reloaded = SettingsStore(defaults: defaults)
             XCTAssertEqual(reloaded.appearance, .default)
-            XCTAssertFalse(reloaded.islandEnabled)
+            XCTAssertFalse(reloaded.showNotch)
             XCTAssertEqual(reloaded.shelfWidth, 400)
         }
     }
