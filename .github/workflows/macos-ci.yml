@@ -1,0 +1,40 @@
+name: macOS CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-unit-tests:
+    name: Build and unit tests
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      OPENYOINK_CI_OUTPUT: ${{ runner.temp }}/openyoink-ci
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Build Release and run unit tests
+        run: Scripts/test-ci.sh
+      - name: Upload logs and test results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: macos-ci-results
+          path: |
+            ${{ env.OPENYOINK_CI_OUTPUT }}/*.log
+            ${{ env.OPENYOINK_CI_OUTPUT }}/unit-tests.xcresult
+          if-no-files-found: warn
+          retention-days: 14
