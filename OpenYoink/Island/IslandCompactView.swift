@@ -18,7 +18,7 @@ struct IslandCompactView: View {
     @State private var compactArtworkImage: NSImage?
 
     var body: some View {
-        Button { coordinator.show(module: defaultOpenModule) } label: {
+        Button { coordinator.showFromCompact(module: defaultOpenModule) } label: {
             physicalNotchCompactContent
         }
         .buttonStyle(.plain)

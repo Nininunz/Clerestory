@@ -126,6 +126,36 @@ final class IslandSurfaceAnimationTests: XCTestCase {
         }
     }
 
+    func testNativeHitRegionMatchesContinuousCornersAtRegularAndExtendedHeights() {
+        let owner = IslandExpandedWindowController {
+            ShelfPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel],
+                       backing: .buffered, defer: false)
+        }
+        owner.configure()
+        for height: CGFloat in [330, 600] {
+            let surface = CGRect(x: -600, y: 100, width: 492, height: height)
+            owner.panel.setFrame(IslandSurfaceShadow.windowFrame(for: surface), display: false)
+            let visible = RoundedRectangle(cornerRadius: 26, style: .continuous).path(in: surface)
+            var mismatches = 0
+            for x in stride(from: 0.5, to: 40.0, by: 1) {
+                for y in stride(from: 0.5, to: 40.0, by: 1) {
+                    for px in [surface.minX + x, surface.maxX - x] {
+                        for py in [surface.minY + y, surface.maxY - y] {
+                            let point = CGPoint(x: px, y: py)
+                            if owner.panel.containsInteractionPoint(point) != visible.contains(point) {
+                                mismatches += 1
+                            }
+                        }
+                    }
+                }
+            }
+            XCTAssertEqual(mismatches, 0, "Native input and visible corners must agree at height \(height)")
+            // Previously accepted by the circular AppKit path, outside the continuous corner.
+            owner.updatePointer(at: CGPoint(x: surface.minX + 0.5, y: surface.minY + 21.5))
+            XCTAssertTrue(owner.panel.ignoresMouseEvents)
+        }
+    }
+
     func testShadowCanvasDoesNotEnlargePointerOrDropSurface() {
         let surface = CGRect(x: 300, y: 500, width: 492, height: 330)
         let owner = IslandExpandedWindowController {

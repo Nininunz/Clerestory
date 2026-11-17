@@ -10,12 +10,13 @@ Current review baseline for `codex/separate-expanded-panel`, following the [sepa
 - Expanded shortcuts use one left-to-right configuration with up to eight positions. Visible capacity follows enabled modules, and Quick Settings occupies one required, movable position. Existing floating positions win the one-time migration; otherwise saved positions migrate in visual order. Compact ordering remains separate.
 - `IslandCompactView` renders the companion; `IslandExpandedView` renders the expanded content. `IslandPresentationController` owns placement, native window coordination, and hover/swipe behavior. `ShelfWindowController` retains Shelf imports, keyboard routing, and the shared drag-host factory.
 - `IslandSurfaceAnimationHost` keeps content mounted until closing finishes. A new opening cancels a stale close completion. One reveal value drives the background, border, shadow, and content mask.
-- The shadow has drawing room outside the interactive surface. Those transparent margins do not accept clicks or file drops. Detached Shelf notices anchor to the visible panel, not its shadow canvas.
+- Activating the compact companion preserves an existing pin while selecting its module; reopening an unpinned panel does not pin it.
+- The shadow has drawing room outside the interactive surface. Those transparent margins do not accept clicks or file drops. Native hit testing uses the same continuous corner path as the visible surface, verified at regular and extended heights. Detached Shelf notices anchor to the visible panel, not its shadow canvas.
 - File drags show a complete blue outline; duplicate drags show red. Insets use the same continuous rounded shape as the panel, including intermediate animation sizes.
 
 ## Automated validation — 2026-11-16
 
-- **858 app tests passed**, with preview export run separately. Includes preference migration, display selection, compact visibility, click-trigger settings, shared module layout, drop bounds, rendering geometry, and interrupted close/reopen behavior.
+- **860 app tests passed**, with preview export run separately. Includes preference migration, display selection, compact visibility, click-trigger settings, shared module layout, drop bounds, rendering geometry, and interrupted close/reopen behavior.
 - **146 preview captures exported successfully**: 140 Shelf and six Quick Settings images, covering regular/extended heights, complete blue/red drag outlines, notices, and transfer/recovery states. Representative populated, extended, outline, and Quick Settings captures were visually inspected; the entire gallery is available for review.
 - **11 module-core tests passed**, including parameterized shortcut capacities from zero through twelve enabled modules, fixed positions, required Quick Settings, and persistence.
 - The corner rendering regression failed with the old inset geometry and passed after using SwiftUI's rounded-shape inset. It compares both drag colors and all four corners at five reveal sizes against an independent rounded-rectangle reference.

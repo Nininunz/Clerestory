@@ -3,6 +3,28 @@ import XCTest
 
 @MainActor
 final class IslandActivityCoordinatorTests: XCTestCase {
+    func testCompactActivationPreservesPinWhileSwitchingModules() {
+        let coordinator = IslandActivityCoordinator()
+        coordinator.show(module: .quickSettings, pinned: true)
+        coordinator.completeSurfaceTransition(coordinator.surfaceTransitionID)
+        let transition = coordinator.surfaceTransitionID
+
+        coordinator.showFromCompact(module: .shelf)
+
+        XCTAssertEqual(coordinator.selectedModule, .shelf)
+        XCTAssertEqual(coordinator.surfaceState, .pinned)
+        XCTAssertEqual(coordinator.surfaceTransitionID, transition)
+        XCTAssertFalse(coordinator.isSurfaceTransitionPending)
+
+        coordinator.setPinned(false)
+        coordinator.showFromCompact(module: .quickSettings)
+        XCTAssertEqual(coordinator.surfaceState, .expanded)
+        coordinator.collapse()
+        coordinator.showFromCompact(module: .shelf)
+        XCTAssertEqual(coordinator.selectedModule, .shelf)
+        XCTAssertEqual(coordinator.surfaceState, .expanded, "Reopening must not restore a released pin")
+    }
+
     func testExtendedModuleChoicesPersistIndependentlyAcrossRestart() throws {
         let suite = "OpenYoink.ExtensionPersistence.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))

@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 
 /// Shelf 面板窗口。窗口行为集中于此（见实施计划 §2.3）：
 /// non-activating、borderless、浮动于其他窗口之上、跨 Space、全屏辅助，
@@ -17,8 +18,8 @@ final class ShelfPanel: NSPanel {
     var interactionFrame: CGRect { frame.insetBy(dx: interactionInset, dy: interactionInset) }
 
     func containsInteractionPoint(_ point: CGPoint) -> Bool {
-        NSBezierPath(roundedRect: interactionFrame, xRadius: interactionCornerRadius,
-                     yRadius: interactionCornerRadius).contains(point)
+        IslandSurfaceShape(attachedToScreenTop: false, cornerRadius: interactionCornerRadius)
+            .path(in: interactionFrame).contains(point)
     }
 
     /// S6: 键盘事件回调（空格 Quick Look / Delete 移除 / Esc 取消选择或关 QL）。
