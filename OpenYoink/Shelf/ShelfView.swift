@@ -190,7 +190,6 @@ struct ShelfView: View {
                     .overlay { content }
                     .overlay { dropTargetHighlight }
                     .overlay { expandedStackOverlay }
-                    .overlay(alignment: .top) { noticeBanner }
                     .overlay(alignment: .bottom) { dropModeHint }
             }
             .animation(reduceMotion ? nil : Self.cardAnimation,
@@ -212,7 +211,6 @@ struct ShelfView: View {
             Color.clear
                 .overlay { content }
                 .overlay { expandedStackOverlay }
-                .overlay(alignment: .top) { noticeBanner }
                 .overlay(alignment: .bottom) { dropModeHint }
                 .animation(reduceMotion ? nil : Self.cardAnimation,
                            value: interaction.expandedStackID)
@@ -281,6 +279,9 @@ struct ShelfView: View {
             .blur(radius: showsDuplicateDropOverlay ? 6 : 0)
             .clipped()
             .overlay { duplicateDropOverlay }
+            .overlay(alignment: .bottom) {
+                if presentationStyle == .classic { noticeBanner }
+            }
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.18),
                        value: showsDuplicateDropOverlay)
             if presentationStyle == .island {
@@ -306,8 +307,8 @@ struct ShelfView: View {
     }
 
     private var showsDuplicateDropOverlay: Bool {
-        presentationStyle == .island && dropTargetState.isTargeted
-            && dropTargetState.hasDuplicateFiles && !dropTargetState.isReordering
+        ShelfDuplicateFeedback.usesFileOverlay && presentationStyle == .island
+            && ShelfDuplicateFeedback.isDuplicateTarget(dropTargetState)
     }
 
     @ViewBuilder
@@ -601,9 +602,9 @@ struct ShelfView: View {
                 guard !removed.isEmpty else { return }
                 interaction.normalize(for: store.visibleItems)
                 quickLookCoordinator?.refreshPreview(contextItem: nil)
-                notices.show(String(localized: "Removed from Shelf. Undo with ⌘Z, or recover in Settings → Storage."))
+                notices.show(.removed)
             } catch {
-                notices.show(String(localized: "Could not save a recovery copy. Nothing was removed."))
+                notices.show(.removalFailed)
             }
         }
         if let shelfUserRemovalAction {
@@ -1001,7 +1002,7 @@ struct ShelfView: View {
 
     private func copyToClipboard(_ items: [ShelfItem]) {
         let result = ClipboardController.copy(items, bookmarkService: bookmarkService)
-        notices.show(ClipboardController.statusMessage(for: result))
+        notices.show(ClipboardController.notice(for: result))
     }
 
     private func stackTransferStatus(for stack: ShelfItem) -> TransferItemAccessibilityStatus? {
@@ -1051,23 +1052,18 @@ struct ShelfView: View {
         interaction.childSelection = [itemID]
     }
 
-    // MARK: - Inline notice (D10)
+    // MARK: - Transient feedback
 
-    /// 拖入/物化失败的瞬态提示胶囊（标题栏下方，自动消失；选内联而非
-    /// NSAlert 的理由见 `ShelfNoticeModel`）。
     @ViewBuilder
     private var noticeBanner: some View {
-        if let message = notices.message {
-            Label(message, systemImage: "exclamationmark.triangle.fill")
-                .font(.caption)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background { Capsule().fill(.regularMaterial) }
-                .padding(.top, 34)
-                .transition(.opacity.combined(with: .move(edge: .top)))
-                .allowsHitTesting(false)
+        if let notice = notices.current, !dropTargetState.isTargeted {
+            ShelfNoticeToast(notice: notice, onPerformRecovery: performRecovery)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 8)
+                .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom)))
         }
     }
+
 }
 
 // MARK: - Preview fixtures

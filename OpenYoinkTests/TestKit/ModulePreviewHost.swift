@@ -18,6 +18,7 @@ struct ModulePreviewHost: View {
     let coordinator: IslandActivityCoordinator
     let content: AnyView
     var dropTarget: DropTargetState? = nil
+    var notices: ShelfNoticeModel? = nil
 
     static let screen = IslandGeometryResolver.ScreenGeometry(
         frame: CGRect(x: 0, y: 0, width: 1512, height: 982),
@@ -26,12 +27,42 @@ struct ModulePreviewHost: View {
         auxiliaryTopLeftArea: CGRect(x: 0, y: 950, width: 666, height: 32),
         auxiliaryTopRightArea: CGRect(x: 846, y: 950, width: 666, height: 32))
 
-    var size: CGSize {
+    var surfaceSize: CGSize {
         IslandGeometryResolver.resolve(screen: Self.screen,
             preferredExpandedHeight: coordinator.preferredExpandedHeight(for: descriptor)).expandedFrame.size
     }
 
+    private var notice: ShelfNoticeContent? {
+        var presentation = ShelfNoticePresentation()
+        let phase = presentation.update(revision: notices?.current == nil ? nil : notices?.revision,
+            context: .init(isEnabled: true, surface: .pinned, isTransitioning: false,
+                           isDragging: dropTarget?.isTargeted == true))
+        return phase == .visible ? notices?.current : nil
+    }
+
+    var size: CGSize {
+        var result = surfaceSize
+        if let notice {
+            result.height += ShelfNoticePlacement.gap + ShelfNoticePlacement.pillSize(for: notice).height
+                + ShelfNoticePlacement.shadowInset
+        }
+        return result
+    }
+
     var body: some View {
+        VStack(spacing: ShelfNoticePlacement.gap) {
+            surface
+            if let notice {
+                ShelfNoticeToast(notice: notice, onPerformRecovery: { _ in })
+                    .frame(width: ShelfNoticePlacement.width)
+                    .padding(.bottom, ShelfNoticePlacement.shadowInset)
+            }
+        }
+        .frame(width: size.width, height: size.height, alignment: .top)
+        .environment(\.colorScheme, .dark)
+    }
+
+    private var surface: some View {
         IslandExpandedSurface(hasPhysicalNotch: true) {
             Color.clear.frame(height: 32 + IslandGeometryResolver.physicalNotchClickExtension)
         } content: {
@@ -47,9 +78,9 @@ struct ModulePreviewHost: View {
                     attachedToScreenTop: true, state: dropTarget)
             }
         }
-        .environment(\.islandSurfaceHeight, size.height)
+        .environment(\.islandSurfaceHeight, surfaceSize.height)
         .environment(\.colorScheme, .dark)
-        .frame(width: size.width, height: size.height)
+        .frame(width: surfaceSize.width, height: surfaceSize.height)
     }
 
     static func descriptor(for slug: String) -> IslandModuleDescriptor? {

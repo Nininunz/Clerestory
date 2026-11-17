@@ -218,6 +218,8 @@ final class ShelfWindowController: NSObject {
         dragOutController: islandDragOutController
     )
 
+    private var islandNoticePanel: ShelfNoticePanelController?
+
     private var dragZoneHandoffTask: Task<Void, Never>?
     private var islandDragZoneOutline: NSHostingView<IslandDragZonePreview>?
     private lazy var islandDragZonePanel = makeIslandDragZonePanel()
@@ -414,6 +416,13 @@ final class ShelfWindowController: NSObject {
                     name: name, object: panel
                 )
             }
+        }
+        if presentationStyle == .island {
+            islandNoticePanel = ShelfNoticePanelController(
+                anchor: panel, notices: importCoordinator.noticeCenter,
+                coordinator: islandActivityCoordinator, settings: settings,
+                dropTarget: islandDropTargetState,
+                onRecovery: { [weak self] in self?.itemRecoveryController.perform($0) })
         }
         return panel
     }
@@ -754,6 +763,7 @@ final class ShelfWindowController: NSObject {
     // MARK: - Public API
 
     func shutdown() {
+        islandNoticePanel?.stop()
         setIslandDragZoneActive(false)
         favoriteFolderDropCoordinator.cancelCopy()
         quickActionLayoutTask?.cancel()
@@ -1507,7 +1517,7 @@ final class ShelfWindowController: NSObject {
             items,
             bookmarkService: importCoordinator.bookmarkService
         )
-        importCoordinator.noticeCenter.show(ClipboardController.statusMessage(for: result))
+        importCoordinator.noticeCenter.show(ClipboardController.notice(for: result))
         return true
     }
 
@@ -1561,7 +1571,7 @@ final class ShelfWindowController: NSObject {
             do {
                 try store.removeBatchForUser(ids: ids)
             } catch {
-                importCoordinator.noticeCenter.show(String(localized: "Could not save a recovery copy. Nothing was removed."))
+                importCoordinator.noticeCenter.show(.removalFailed)
                 return true
             }
         }
@@ -2295,9 +2305,11 @@ final class ShelfWindowController: NSObject {
     }
 
     private func handleIslandEvent(_ event: NSEvent, at point: CGPoint) {
+        islandNoticePanel?.updatePointer(at: point)
         guard settings.islandEnabled, islandTrackingMenus.isEmpty else { return }
         switch event.type {
         case .leftMouseDown:
+            if islandNoticePanel?.contains(point) == true { return }
             if !islandActivityCoordinator.surfaceState.isExpanded {
                 let layout = islandLayout(at: point)
                 guard settings.islandClickRevealEnabled,
@@ -2374,7 +2386,8 @@ final class ShelfWindowController: NSObject {
     }
 
     private func hoverKeepAliveFrame(for layout: IslandGeometryResolver.Layout) -> CGRect {
-        let frame = islandPanel.frame.insetBy(dx: -8, dy: -8)
+        var frame = islandPanel.frame.insetBy(dx: -8, dy: -8)
+        if let noticeFrame = islandNoticePanel?.interactionFrame { frame = frame.union(noticeFrame) }
         guard !layout.hasPhysicalNotch else { return frame }
         return CGRect(x: frame.minX, y: frame.minY,
                       width: frame.width,

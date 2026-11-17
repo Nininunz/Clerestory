@@ -110,9 +110,9 @@ final class ItemRecoveryController {
                 bookmark: bookmark
             ) else { return }
             guard try store.updateRecursivelyAndPersistNow(relocated) else { return }
-            notices.show(String(localized: "The shelf item was reconnected."))
+            notices.show(.reconnected)
         } catch {
-            notices.show(String(localized: "The file could not be reconnected. The original shelf item was kept."))
+            notices.show(.reconnectFailed)
         }
     }
 }

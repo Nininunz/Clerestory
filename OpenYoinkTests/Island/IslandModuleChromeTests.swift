@@ -317,6 +317,34 @@ final class IslandModuleChromeTests: XCTestCase {
         }
     }
 
+    func testToastShadowFadesBeforeWindowEdges() throws {
+        for message in [ShelfNoticeMessage.reconnected, .receivedAwaitingRecovery] {
+            let bitmap = try render(ShelfNoticePanelContent(notice: message.presentation, onRecovery: { _ in }))
+            var edgeAlpha: CGFloat = 0
+            for x in 0..<bitmap.pixelsWide {
+                edgeAlpha = max(edgeAlpha, try XCTUnwrap(bitmap.colorAt(x: x, y: 0)).alphaComponent)
+                edgeAlpha = max(edgeAlpha, try XCTUnwrap(bitmap.colorAt(x: x, y: bitmap.pixelsHigh - 1)).alphaComponent)
+            }
+            for y in 0..<bitmap.pixelsHigh {
+                edgeAlpha = max(edgeAlpha, try XCTUnwrap(bitmap.colorAt(x: 0, y: y)).alphaComponent)
+                edgeAlpha = max(edgeAlpha, try XCTUnwrap(bitmap.colorAt(x: bitmap.pixelsWide - 1, y: y)).alphaComponent)
+            }
+            XCTAssertLessThanOrEqual(edgeAlpha, 1.0 / 255.0, "Shadow must not end at a visible rectangular crop")
+        }
+    }
+
+    func testShelfNoticesFitCompactToastAtBothModuleWidths() throws {
+        for sample in ShelfFeedbackScenario.notices {
+            for width in [CGFloat(260), 464] {
+                let toast = ShelfNoticeToast(notice: sample.notice, onPerformRecovery: { _ in })
+                    .frame(width: width)
+                let bitmap = try render(toast)
+                XCTAssertEqual(bitmap.pixelsWide, Int(width * 2), sample.id)
+                XCTAssertLessThanOrEqual(bitmap.pixelsHigh, 150, sample.id)
+            }
+        }
+    }
+
     private func render<V: View>(_ view: V) throws -> NSBitmapImageRep {
         let renderer = ImageRenderer(content: view)
         renderer.scale = 2

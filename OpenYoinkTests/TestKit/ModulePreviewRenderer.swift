@@ -29,7 +29,7 @@ final class ModulePreviewRenderer {
         <style>body{background:#171717;color:#eee;font:16px system-ui;margin:32px}img{max-width:100%;height:auto}nav a{color:#aaa;margin-right:18px}section{margin:48px 0}</style>
         <h1>OpenYoink module state previews</h1><p>Actual module views with isolated sample data. Buttons are the real controls; these images are static. Each panel shows the initial scroll position. No invented loading/error screens.</p>
         <nav>\(sheets.map { "<a href='#\($0.0)'>\($0.1)</a>" }.joined())</nav>
-        \(sheets.map { "<section id='\($0.0)'><h2>\($0.1)</h2><img src='\($0.0).png'></section>" }.joined())
+        \(sheets.map { "<section id='\($0.0)'><h2>\($0.1)</h2><img loading='lazy' src='\($0.0).png'></section>" }.joined())
         """
         try html.write(to: output.appendingPathComponent("index.html"), atomically: true, encoding: .utf8)
         try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys])
@@ -66,7 +66,7 @@ final class ModulePreviewRenderer {
             let coordinator = IslandActivityCoordinator()
             coordinator.selectedModule = descriptor.id
             coordinator.setModuleExtended(state.extended, descriptor: descriptor)
-            let view = ModulePreviewHost(descriptor: descriptor, coordinator: coordinator, content: content.view, dropTarget: content.dropTarget)
+            let view = ModulePreviewHost(descriptor: descriptor, coordinator: coordinator, content: content.view, dropTarget: content.dropTarget, notices: content.notices)
             let host = NSHostingView(rootView: view)
             let window = NSWindow(contentRect: NSRect(origin: NSPoint(x: -2000, y: -2000), size: view.size),
                                   styleMask: [.borderless], backing: .buffered, defer: false)
@@ -120,24 +120,33 @@ final class ModulePreviewRenderer {
             images.append(image)
         }
         guard !images.isEmpty else { return }
-        let gallery = VStack(alignment: .leading, spacing: 16) {
-            Text(title).font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
-            Text("Live outer layout • navigation band reserved • sample data").font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))
-            ForEach(0..<((images.count + 1) / 2), id: \.self) { row in
-                HStack(alignment: .top, spacing: 16) {
-                    ForEach((row * 2)..<min(row * 2 + 2, images.count), id: \.self) { index in
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(captures[index].label).font(.system(size: 12, weight: .medium)).foregroundStyle(.white.opacity(0.8))
-                            Image(nsImage: images[index])
+        // Keep large feedback catalogs below bitmap limits and practical memory sizes.
+        let pageSize = 12
+        let pageCount = (images.count + pageSize - 1) / pageSize
+        for page in 0..<pageCount {
+            let first = page * pageSize
+            let end = min(first + pageSize, images.count)
+            let pageSlug = page == 0 ? slug : "\(slug)-\(page + 1)"
+            let pageTitle = pageCount == 1 ? title : "\(title) · \(page + 1) / \(pageCount)"
+            let gallery = VStack(alignment: .leading, spacing: 16) {
+                Text(pageTitle).font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
+                Text("Live outer layout • navigation band reserved • sample data").font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))
+                ForEach(0..<((end - first + 1) / 2), id: \.self) { row in
+                    HStack(alignment: .top, spacing: 16) {
+                        ForEach((first + row * 2)..<min(first + row * 2 + 2, end), id: \.self) { index in
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(captures[index].label).font(.system(size: 12, weight: .medium)).foregroundStyle(.white.opacity(0.8))
+                                Image(nsImage: images[index])
+                            }
                         }
                     }
                 }
-            }
-        }.padding(20).background(Color(white: 0.12))
-        let renderer = ImageRenderer(content: gallery)
-        renderer.scale = 2
-        let bitmap = NSBitmapImageRep(cgImage: try XCTUnwrap(renderer.cgImage))
-        try XCTUnwrap(bitmap.representation(using: .png, properties: [:])).write(to: output.appendingPathComponent("\(slug).png"))
-        sheets.append((slug, title))
+            }.padding(20).background(Color(white: 0.12))
+            let renderer = ImageRenderer(content: gallery)
+            renderer.scale = 2
+            let bitmap = NSBitmapImageRep(cgImage: try XCTUnwrap(renderer.cgImage))
+            try XCTUnwrap(bitmap.representation(using: .png, properties: [:])).write(to: output.appendingPathComponent("\(pageSlug).png"))
+            sheets.append((pageSlug, pageTitle))
+        }
     }
 }

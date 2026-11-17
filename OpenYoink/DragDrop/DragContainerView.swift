@@ -286,11 +286,12 @@ final class DragContainerView: NSView {
             }
         ) { [weak self] item in
             // 异步物化完成（promise / 图片数据 / 剪切失败回退）：逐个追加入架。
-            self?.store.add(item)
+            guard let self else { return }
+            self.coordinator.addDroppedItems([item], to: self.store)
         }
         guard result.handled else { return false }
         // C6: 同步项目插入到指示线所示位置（无指示线时追加到末尾）。
-        store.add(contentsOf: result.items, at: dropTargetState.insertionIndex)
+        coordinator.addDroppedItems(result.items, to: store, at: dropTargetState.insertionIndex)
         coordinator.noteSynchronousTutorialImport(from: sender.draggingPasteboard,
                                                    items: result.items)
         accepted = true
@@ -438,7 +439,7 @@ final class DragContainerView: NSView {
             return true
         } catch {
             store.add(item)
-            coordinator.noticeCenter.show(String(localized: "The moved item is being kept for recovery because the shelf could not be saved immediately."))
+            coordinator.noticeCenter.show(.moveAwaitingSave)
             return false
         }
     }
@@ -452,7 +453,7 @@ final class DragContainerView: NSView {
             try store.addAndPersistNow(item)
             return true
         } catch {
-            coordinator.noticeCenter.show(String(localized: "The received file was kept safely. Open Recovery to finish importing it."))
+            coordinator.noticeCenter.show(.receivedAwaitingRecovery)
             return false
         }
     }

@@ -7,6 +7,8 @@ enum ShelfScenario: String, CaseIterable {
     case noResults = "no-results"
     case importing, duplicate
     case fileDrag = "file-drag"
+    case moveDrag = "drag-move-hint"
+    case reorderDrag = "drag-reorder-hint"
     case expandedStack = "expanded-stack"
     case stackSelection = "stack-selection"
     case manyItems = "many-items"
@@ -20,6 +22,11 @@ enum ShelfScenario: String, CaseIterable {
         }
     }
 
+    @MainActor
+    static func catalog(context: PreviewContext) -> [ModuleScenario] {
+        previewCases.map { $0.scenario(context: context) } + ShelfFeedbackScenario.scenarios(context: context)
+    }
+
     var label: String {
         switch self {
         case .empty: "Empty / drop target"
@@ -27,8 +34,10 @@ enum ShelfScenario: String, CaseIterable {
         case .selected: "Selected items"
         case .noResults: "No results"
         case .importing: "Import in progress"
-        case .duplicate: "Duplicate drag / red outline + blurred files"
+        case .duplicate: "Duplicate drag / red outline"
         case .fileDrag: "File drag / blue outline"
+        case .moveDrag: "Drag / Move original hint"
+        case .reorderDrag: "Drag / Reorder hint"
         case .expandedStack: "Expanded stack"
         case .stackSelection: "Stack child selection"
         case .manyItems: "Many items / scrolling"
@@ -54,12 +63,19 @@ final class ShelfScenarioFixture {
     let interaction: ShelfInteractionState
     let dropTarget = DropTargetState()
     let transfers: TransferStore
+    let notices: ShelfNoticeModel
 
-    init(_ scenario: ShelfScenario) throws {
+    init(_ scenario: ShelfScenario, notice: ShelfNoticeContent? = nil, transfer: ShelfTransferSample? = nil) throws {
+        notices = .preview(notice: notice)
         // Dormant stack fixtures still exercise the retained implementation in unit tests.
         interaction = ShelfInteractionState(stacksEnabled:
             scenario == .expandedStack || scenario == .stackSelection || ShelfStackAvailability.isEnabled)
-        let items = try ShelfFixtures.mixedItems()
+        var items = try ShelfFixtures.mixedItems()
+        if transfer == .exportMissingOriginal { items[0].availability = .externalFileOffline }
+        if transfer == .exportMissingManaged {
+            items[0].isCut = true
+            items[0].availability = .managedCopyMissing
+        }
         let stack = ShelfItem(kind: .stack, displayName: "Project resources", children: Array(items.prefix(3)))
         switch scenario {
         case .empty: store = ShelfStore(items: [])
@@ -69,10 +85,17 @@ final class ShelfScenarioFixture {
         case .expandedStack, .stackSelection: store = ShelfStore(items: [stack] + Array(items.suffix(4)))
         default: store = ShelfStore(items: items)
         }
-        transfers = TransferStore.preview(phase: scenario == .importing ? .receiving(receivedCount: 2, expectedCount: 5) : nil)
+        transfers = transfer?.store(items: store.items) ?? TransferStore.preview(phase: scenario == .importing ? .receiving(receivedCount: 2, expectedCount: 5) : nil)
         switch scenario {
         case .fileDrag:
             dropTarget.isTargeted = true
+        case .moveDrag:
+            dropTarget.isTargeted = true
+            dropTarget.mode = .move
+        case .reorderDrag:
+            dropTarget.isTargeted = true
+            dropTarget.isReordering = true
+            dropTarget.insertionIndex = 2
         case .duplicate:
             dropTarget.isTargeted = true
             dropTarget.hasDuplicateFiles = true
@@ -92,7 +115,7 @@ final class ShelfScenarioFixture {
 
     func view(settings: SettingsStore) -> AnyView {
         AnyView(IslandShelfModuleView().environment(store).environment(settings)
-            .environment(dropTarget).environment(ShelfGridGeometry()).environment(ShelfNoticeModel())
+            .environment(dropTarget).environment(ShelfGridGeometry()).environment(notices)
             .environment(interaction).environment(transfers))
     }
 }

@@ -95,7 +95,7 @@ final class IslandModulePreviewTests: XCTestCase {
         try await export("quick-access", "Quick Access", views)
     }
     private func shelf() async throws {
-        try await renderer.export("shelf", "Shelf", ShelfScenario.previewCases.map { $0.scenario(context: context) })
+        try await renderer.export("shelf", "Shelf", ShelfScenario.catalog(context: context))
     }
     private func transfers() async throws {
         let failure = TransferFailure(reason: .externalFileOffline, itemName: "Project.pdf", recoveryAction: .locateExternalFile(itemID: UUID()))

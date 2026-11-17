@@ -60,6 +60,11 @@ enum ClipboardController {
         )
     }
 
+    static func notice(for result: Result) -> ShelfNoticeContent {
+        ShelfNoticeContent(message: statusMessage(for: result),
+                           kind: !result.didWrite ? .error : (result.skippedCount > 0 ? .warning : .success))
+    }
+
     static func copy(_ items: [ShelfItem],
                      to pasteboard: NSPasteboard = .general,
                      bookmarkService: BookmarkService) -> Result {

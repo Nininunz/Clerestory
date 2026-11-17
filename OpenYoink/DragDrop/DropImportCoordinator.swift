@@ -119,6 +119,16 @@ final class DropImportCoordinator {
                                                    transferStore: self.transferStore)
     }
 
+    /// Publish duplicate feedback only when a released drop actually skips files.
+    func addDroppedItems(_ items: [ShelfItem], to store: ShelfStore, at index: Int? = nil) {
+        let previousDuplicate = store.duplicateDrop?.id
+        store.add(contentsOf: items, at: index)
+        if !ShelfDuplicateFeedback.usesFileOverlay,
+           store.duplicateDrop?.id != previousDuplicate {
+            noticeCenter.show(.alreadyOnShelf)
+        }
+    }
+
     // MARK: - Entry point
 
     /// F-05: 修饰键 → 拖入模式（纯函数，单测直断）。⌘ 且拖放含 fileURL
@@ -272,7 +282,7 @@ final class DropImportCoordinator {
                                       onAsyncItemReady: onAsyncItemReady)
         guard !fallback.items.isEmpty || fallback.pending > 0 else {
             logger.warning("Drop contained no importable content; declared types: \(types.map(\.rawValue), privacy: .public)")
-            noticeCenter.show(String(localized: "That content can't be added to the shelf yet."))
+            noticeCenter.show(.unsupportedContent)
             return .unhandled
         }
         // A heterogeneous fallback drop can contain synchronous rich text/URL
@@ -404,7 +414,7 @@ final class DropImportCoordinator {
                                            logger: logger)
         } catch {
             logger.error("Failed to materialize dropped rich text: \(error.localizedDescription, privacy: .public)")
-            noticeCenter.show(String(localized: "Couldn't add the dropped item."))
+            noticeCenter.show(.importFailed)
             return nil
         }
     }

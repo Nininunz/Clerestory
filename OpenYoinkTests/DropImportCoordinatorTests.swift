@@ -10,6 +10,25 @@ import XCTest
 /// 来源应用创建（无法在测试中实例化），该链路列入手动回归清单。
 @MainActor
 final class DropImportCoordinatorTests: XCTestCase {
+    func testReleasedDuplicateDropShowsNoticeAndStillAddsNewFiles() {
+        let context = makeContext()
+        defer { context.cleanup() }
+        let existing = ShelfItem(kind: .file, path: "/tmp/existing.txt", displayName: "existing.txt")
+        let fresh = ShelfItem(kind: .file, path: "/tmp/new.txt", displayName: "new.txt")
+        let store = ShelfStore(items: [existing])
+        XCTAssertNil(context.coordinator.noticeCenter.current)
+        context.coordinator.addDroppedItems([existing, fresh], to: store)
+        XCTAssertEqual(store.items.count, 2)
+        XCTAssertEqual(context.coordinator.noticeCenter.current, ShelfNoticeMessage.alreadyOnShelf.presentation)
+        context.coordinator.noticeCenter.show(.reconnected)
+        context.coordinator.addDroppedItems([], to: store)
+        XCTAssertEqual(context.coordinator.noticeCenter.current, ShelfNoticeMessage.reconnected.presentation,
+                       "Old duplicate state must not produce another toast")
+        context.coordinator.addDroppedItems([existing], to: store)
+        XCTAssertEqual(context.coordinator.noticeCenter.current, ShelfNoticeMessage.alreadyOnShelf.presentation)
+        XCTAssertEqual(store.items.count, 2)
+    }
+
     /// 每个用例的 fixtures：就地构造、用例末尾 `cleanup()`（经 defer）。
     /// 不使用 setUp/tearDown —— XCTestCase 的这两个 override 是非隔离的，
     /// 在 @MainActor 测试类中访问隔离状态会产生告警（与 ShelfStoreTests 的

@@ -6,6 +6,26 @@ import XCTest
 
 @MainActor
 final class ShelfScenarioTests: XCTestCase {
+    func testNoticeSemanticsAndRecoveryActions() {
+        XCTAssertEqual(ShelfNoticeMessage.reconnected.presentation.kind, .success)
+        XCTAssertEqual(ShelfNoticeMessage.clipboardEmpty.presentation.kind, .info)
+        XCTAssertEqual(ShelfNoticeMessage.importFailed.presentation.kind, .error)
+        for message in [ShelfNoticeMessage.moveAwaitingSave, .receivedAwaitingRecovery,
+                        .moveRecoveryNeedsAttention, .partialMoveRecoveryNeedsAttention,
+                        .interruptedImportRecovered, .importRecoveryNeedsAttention] {
+            XCTAssertEqual(message.presentation.kind, .warning)
+            XCTAssertEqual(message.presentation.recoveryAction, .openStorageRecovery)
+            XCTAssertEqual(message.presentation.details, message.text)
+        }
+        XCTAssertEqual(ClipboardController.notice(for: .init(copiedCount: 3, skippedCount: 0, didWrite: true)).kind, .success)
+        XCTAssertEqual(ClipboardController.notice(for: .init(copiedCount: 2, skippedCount: 1, didWrite: true)).kind, .warning)
+        XCTAssertEqual(ClipboardController.notice(for: .init(copiedCount: 0, skippedCount: 3, didWrite: false)).kind, .error)
+        for make in [ShelfActionRunner.pathCopyNotice, ShelfActionRunner.revealNotice, ShelfActionRunner.shareNotice] {
+            XCTAssertEqual(make(3, 0).kind, .success)
+            XCTAssertEqual(make(2, 1).kind, .warning)
+        }
+    }
+
     func testGeneratedSamplesContainReadableDocumentsAndImages() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
@@ -110,10 +130,72 @@ final class ShelfScenarioTests: XCTestCase {
         XCTAssertEqual(search.store.visibleItems.count, 7)
     }
 
+    func testFeedbackCatalogCoversNoticesAndTransferStates() throws {
+        let context = PreviewContext()
+        defer { context.cleanUp() }
+        let ids = Set(ShelfScenario.catalog(context: context).map(\.id))
+        for notice in ShelfNoticeMessage.allCases {
+            XCTAssertTrue(ids.contains("notice-" + notice.rawValue))
+            let fixture = try ShelfScenarioFixture(.populated, notice: notice.presentation)
+            XCTAssertEqual(fixture.notices.message, notice.text)
+        }
+        for sample in ShelfTransferSample.allCases {
+            XCTAssertTrue(ids.contains("transfer-" + sample.rawValue))
+            let fixture = try ShelfScenarioFixture(.populated, transfer: sample)
+            let task = try XCTUnwrap(fixture.transfers.currentTask)
+            XCTAssertFalse(task.safetyMessage.isEmpty)
+            XCTAssertTrue(Set(task.itemIDs).isSubset(of: Set(fixture.store.items.map(\.id))))
+            fixture.transfers.dismiss(taskID: task.id)
+            XCTAssertFalse(fixture.transfers.hasVisibleActivity)
+        }
+        XCTAssertTrue(ids.contains("drag-move-hint"))
+        XCTAssertTrue(ids.contains("drag-reorder-hint"))
+    }
+
+    func testFeedbackPreviewsKeepRuntimeRecoveryActionsAndCardStatuses() throws {
+        let checks: [(ShelfTransferSample, String)] = [
+            (.exportMissingOriginal, "Locate…"), (.exportMissingManaged, "Open Recovery"),
+            (.exportFailed, "Select Item"), (.importPersistenceFailed, "Open Recovery")
+        ]
+        for (sample, title) in checks {
+            let fixture = try ShelfScenarioFixture(.populated, transfer: sample)
+            let task = try XCTUnwrap(fixture.transfers.currentTask)
+            XCTAssertEqual(ShelfActivityStrip.primaryRecovery(for: task)?.title, title)
+        }
+        let receiving = try ShelfScenarioFixture(.populated, transfer: .importReceiving)
+        XCTAssertEqual(receiving.transfers.currentTask?.itemIDs.count, 2)
+        XCTAssertEqual(receiving.transfers.accessibilityStatus(for: receiving.store.items[0].id), .receiving)
+        XCTAssertNil(receiving.transfers.accessibilityStatus(for: receiving.store.items[2].id))
+        let accepted = try ShelfScenarioFixture(.populated, transfer: .exportAccepted)
+        XCTAssertEqual(accepted.transfers.accessibilityStatus(for: accepted.store.items[0].id), .destinationAccepted)
+        let failed = try ShelfScenarioFixture(.populated, transfer: .exportFailed)
+        XCTAssertEqual(failed.transfers.accessibilityStatus(for: failed.store.items[0].id), .deliveryFailed)
+        let partial = try ShelfScenarioFixture(.populated, transfer: .exportPartial)
+        XCTAssertEqual(partial.transfers.accessibilityStatus(for: partial.store.items[0].id), .delivered)
+        XCTAssertEqual(partial.transfers.accessibilityStatus(for: partial.store.items[3].id), .deliveryFailed)
+        let move = try ShelfScenarioFixture(.moveDrag)
+        XCTAssertEqual(move.dropTarget.mode, .move)
+        XCTAssertTrue(move.dropTarget.isTargeted)
+        let reorder = try ShelfScenarioFixture(.reorderDrag)
+        XCTAssertTrue(reorder.dropTarget.isReordering)
+        XCTAssertTrue(reorder.dropTarget.isTargeted)
+    }
+
+    func testPreviewFeedbackDoesNotExpireButRuntimeNoticesStillDo() async throws {
+        let preview = try ShelfScenarioFixture(.populated, notice: ShelfNoticeMessage.removed.presentation,
+                                               transfer: .importDelivered)
+        let runtime = ShelfNoticeModel()
+        runtime.show(.removed)
+        try await Task.sleep(for: .seconds(ShelfNoticeModel.displayDuration + 0.3))
+        XCTAssertNil(runtime.message)
+        XCTAssertEqual(preview.notices.message, ShelfNoticeMessage.removed.text)
+        XCTAssertEqual(preview.transfers.currentTask?.phase, .delivered)
+    }
+
     func testScenarioCatalogHasUniqueStableIDs() {
         let context = PreviewContext()
         defer { context.cleanUp() }
-        let scenarios = ShelfScenario.previewCases.map { $0.scenario(context: context) }
+        let scenarios = ShelfScenario.catalog(context: context)
         XCTAssertEqual(Set(scenarios.map(\.id)).count, scenarios.count)
         XCTAssertFalse(scenarios.contains { $0.id == "expanded-stack" })
         XCTAssertFalse(scenarios.contains { $0.id == "stack-selection" })

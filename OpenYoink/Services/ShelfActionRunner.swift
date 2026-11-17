@@ -186,7 +186,7 @@ final class ShelfActionRunner: NSObject {
         switch action {
         case .share:
             guard let anchorView else {
-                notices.show(String(localized: "The selected items could not be shared."))
+                notices.show(.shareUnavailable)
                 return Result(state: .unavailable, succeededCount: 0,
                               skippedCount: DragPayloadBuilder.flattenedItems(items).count)
             }
@@ -203,7 +203,7 @@ final class ShelfActionRunner: NSObject {
         defer { stopAccessing(batch.accessedURLs) }
 
         guard !batch.urls.isEmpty else {
-            notices.show(String(localized: "The selected file paths could not be copied."))
+            notices.show(.copyPathsFailed)
             return Result(state: .unavailable, succeededCount: 0,
                           skippedCount: batch.skippedCount)
         }
@@ -212,12 +212,12 @@ final class ShelfActionRunner: NSObject {
         pasteboard.clearContents()
         let didWrite = pasteboard.setString(paths, forType: PasteboardTypes.plainText)
         guard didWrite else {
-            notices.show(String(localized: "The selected file paths could not be copied."))
+            notices.show(.copyPathsFailed)
             return Result(state: .unavailable, succeededCount: 0,
                           skippedCount: batch.skippedCount + batch.urls.count)
         }
 
-        notices.show(pathCopyStatus(copied: batch.urls.count, skipped: batch.skippedCount))
+        notices.show(Self.pathCopyNotice(copied: batch.urls.count, skipped: batch.skippedCount))
         return Result(state: .completed, succeededCount: batch.urls.count,
                       skippedCount: batch.skippedCount)
     }
@@ -227,20 +227,20 @@ final class ShelfActionRunner: NSObject {
         defer { stopAccessing(batch.accessedURLs) }
 
         guard !batch.urls.isEmpty else {
-            notices.show(String(localized: "The selected items could not be shown in Finder."))
+            notices.show(.revealFailed)
             return Result(state: .unavailable, succeededCount: 0,
                           skippedCount: batch.skippedCount)
         }
 
         revealFiles(batch.urls)
-        notices.show(revealStatus(shown: batch.urls.count, skipped: batch.skippedCount))
+        notices.show(Self.revealNotice(shown: batch.urls.count, skipped: batch.skippedCount))
         return Result(state: .completed, succeededCount: batch.urls.count,
                       skippedCount: batch.skippedCount)
     }
 
     private func presentShare(_ items: [ShelfItem], relativeTo anchorView: NSView) -> Result {
         guard activeShare == nil else {
-            notices.show(String(localized: "A share is already in progress."))
+            notices.show(.shareInProgress)
             return Result(state: .busy, succeededCount: 0, skippedCount: 0)
         }
 
@@ -267,7 +267,7 @@ final class ShelfActionRunner: NSObject {
 
         guard !payload.isEmpty else {
             stopAccessing(accessedURLs)
-            notices.show(String(localized: "The selected items could not be shared."))
+            notices.show(.shareUnavailable)
             return Result(state: .unavailable, succeededCount: 0,
                           skippedCount: flattened.count)
         }
@@ -292,7 +292,7 @@ final class ShelfActionRunner: NSObject {
             guard let action = menuItem.action,
                   NSApp.sendAction(action, to: menuItem.target, from: menuItem) else {
                 finishShare(success: false)
-                notices.show(String(localized: "The selected items could not be shared."))
+                notices.show(.shareUnavailable)
                 return Result(state: .unavailable, succeededCount: 0,
                               skippedCount: flattened.count)
             }
@@ -344,11 +344,16 @@ final class ShelfActionRunner: NSObject {
         activeShare = nil
         stopAccessing(share.accessedURLs)
         if success {
-            notices.show(shareStatus(shared: share.sharedCount, skipped: share.skippedCount))
+            notices.show(Self.shareNotice(shared: share.sharedCount, skipped: share.skippedCount))
         }
     }
 
-    private func pathCopyStatus(copied: Int, skipped: Int) -> String {
+    nonisolated static func pathCopyNotice(copied: Int, skipped: Int) -> ShelfNoticeContent {
+        ShelfNoticeContent(message: pathCopyStatus(copied: copied, skipped: skipped),
+                           kind: skipped > 0 ? .warning : .success)
+    }
+
+    nonisolated static func pathCopyStatus(copied: Int, skipped: Int) -> String {
         if skipped > 0 {
             return String(
                 format: String(localized: "%lld file paths copied; %lld unavailable items skipped."),
@@ -361,7 +366,12 @@ final class ShelfActionRunner: NSObject {
         )
     }
 
-    private func revealStatus(shown: Int, skipped: Int) -> String {
+    nonisolated static func revealNotice(shown: Int, skipped: Int) -> ShelfNoticeContent {
+        ShelfNoticeContent(message: revealStatus(shown: shown, skipped: skipped),
+                           kind: skipped > 0 ? .warning : .success)
+    }
+
+    nonisolated static func revealStatus(shown: Int, skipped: Int) -> String {
         if skipped > 0 {
             return String(
                 format: String(localized: "%lld items shown in Finder; %lld unavailable items skipped."),
@@ -374,7 +384,12 @@ final class ShelfActionRunner: NSObject {
         )
     }
 
-    private func shareStatus(shared: Int, skipped: Int) -> String {
+    nonisolated static func shareNotice(shared: Int, skipped: Int) -> ShelfNoticeContent {
+        ShelfNoticeContent(message: shareStatus(shared: shared, skipped: skipped),
+                           kind: skipped > 0 ? .warning : .success)
+    }
+
+    nonisolated static func shareStatus(shared: Int, skipped: Int) -> String {
         if skipped > 0 {
             return String(
                 format: String(localized: "%lld items shared; %lld unavailable items skipped."),
@@ -418,7 +433,7 @@ extension ShelfActionRunner: @preconcurrency NSSharingServicePickerDelegate,
            cocoaError.code == CocoaError.Code.userCancelled.rawValue {
             return
         }
-        notices.show(String(localized: "Sharing failed. The selected items remain on the shelf."))
+        notices.show(.shareFailed)
     }
 }
 

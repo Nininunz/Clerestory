@@ -520,7 +520,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         guard result.handled else {
             if appState.isShelfVisible {
-                shelfNotice.show(String(localized: "Clipboard is empty or has nothing the shelf can hold."))
+                shelfNotice.show(.clipboardEmpty)
             }
             return
         }
@@ -609,7 +609,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let loadResult = managedMoveJournal.loadResult()
         guard case .loaded(let records) = loadResult, !records.isEmpty else {
             if loadResult == .failed {
-                shelfNotice.show(String(localized: "Managed move recovery data needs attention. Automatic cleanup is disabled."))
+                shelfNotice.show(.moveRecoveryNeedsAttention)
             }
             return
         }
@@ -670,7 +670,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 for record in resolved {
                     try? managedMoveJournal.remove(id: record.id)
                 }
-                shelfNotice.show(String(localized: "Recovered an interrupted managed move."))
+                shelfNotice.show(.moveRecovered)
             } catch {
                 logger.error("Failed to persist recovered managed moves: \(error.localizedDescription, privacy: .public)")
                 unresolvedCount += resolved.count
@@ -678,7 +678,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         if unresolvedCount > 0 {
-            shelfNotice.show(String(localized: "Some managed move recovery data needs attention. Automatic cleanup is disabled."))
+            shelfNotice.show(.partialMoveRecoveryNeedsAttention)
         }
     }
 
@@ -713,10 +713,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
             if remainingCount > 0 {
-                shelfNotice.show(String(localized: "A received file was kept safely. Open Recovery to finish importing it."))
+                shelfNotice.show(.interruptedImportRecovered)
             }
         case .failed:
-            shelfNotice.show(String(localized: "Pending import recovery data needs attention. Automatic cleanup is disabled."))
+            shelfNotice.show(.importRecoveryNeedsAttention)
         case .missing:
             break
         }

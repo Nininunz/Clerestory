@@ -1,34 +1,59 @@
 import Foundation
 import Observation
 
-/// S10: shelf 内联轻量提示（拖入/物化失败等瞬态反馈）。
-///
-/// 选内联提示而非 NSAlert：失败发生在拖放会话末尾，模态框会打断「放下后
-/// 继续操作」的心流，且 LSUIElement 下弹窗还需激活应用（见
-/// `DragSessionController.askWhetherToRemove` 的说明）；标题栏下方一枚自动
-/// 消失的胶囊既不阻塞也不打扰，与 OSLog 记录互补（日志仍保留完整错误）。
-///
-/// 由 `DropImportCoordinator` / `FilePromiseReceiver` 的失败路径调用 `show`，
-/// `ShelfView` 观察 `message` 渲染胶囊。消息在调用点本地化后传入。
+/// Transient Shelf feedback. Presentation carries semantics rather than guessing
+/// an icon from localized text; full details remain available for accessibility.
 @MainActor
 @Observable
 final class ShelfNoticeModel {
-    /// 当前展示的消息；nil 表示无提示。
-    private(set) var message: String?
+    /// Latest feedback; the panel decides when it can first become visible.
+    private(set) var current: ShelfNoticeContent?
+    private(set) var revision: UInt64 = 0
+    var message: String? { current?.details ?? current?.message }
 
-    /// 自动消失时长（秒）。
+    /// Visible duration in seconds, excluding time queued for presentation.
     static let displayDuration: TimeInterval = 4
 
-    private var dismissalTask: Task<Void, Never>?
+    @ObservationIgnored private var dismissalTask: Task<Void, Never>?
+    @ObservationIgnored private var presentationDeferred = false
 
-    /// 展示一条提示；新提示替换旧提示并重置计时。
+    func show(_ notice: ShelfNoticeMessage) { show(notice.presentation) }
+
+    #if DEBUG
+    /// Static fixture: no dismissal timer and no runtime services.
+    static func preview(notice: ShelfNoticeContent?) -> ShelfNoticeModel {
+        let model = ShelfNoticeModel()
+        model.current = notice
+        return model
+    }
+    #endif
+
+    /// New feedback replaces the previous notice and starts a fresh lifetime.
     func show(_ message: String) {
+        show(ShelfNoticeContent(message: message, kind: .info))
+    }
+
+    func show(_ notice: ShelfNoticeContent) {
         dismissalTask?.cancel()
-        self.message = message
+        revision &+= 1
+        self.current = notice
+        scheduleDismissal()
+    }
+
+    /// Queued feedback gets its full display duration once it can actually appear.
+    func setPresentationDeferred(_ deferred: Bool) {
+        guard presentationDeferred != deferred else { return }
+        presentationDeferred = deferred
+        dismissalTask?.cancel()
+        if !deferred { scheduleDismissal() }
+    }
+
+    private func scheduleDismissal() {
+        guard current != nil, !presentationDeferred else { return }
         dismissalTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(Self.displayDuration))
             guard !Task.isCancelled else { return }
-            self?.message = nil
+            self?.current = nil
         }
     }
 }
