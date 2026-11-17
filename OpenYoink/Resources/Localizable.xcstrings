@@ -72,12 +72,6 @@
         "zh-Hans" : {"stringUnit": {"state": "translated", "value": "启用暂存架快捷键"}}
       }
     },
-    "Shake the mouse to open panel" : {
-      "localizations" : {
-        "en" : {"stringUnit": {"state": "translated", "value": "Shake the mouse to open panel"}},
-        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "晃动鼠标以打开面板"}}
-      }
-    },
     "Enable panel" : {
       "localizations" : {
         "en" : {"stringUnit": {"state": "translated", "value": "Enable panel"}},
@@ -243,10 +237,10 @@
     },
 
 
-    "Mouse shake and drag triggers are suppressed while these apps are frontmost. Clipboard recording also skips them. Keyboard shortcuts still work." : {
+    "Drag triggers are suppressed while these apps are frontmost. Clipboard recording also skips them. Keyboard shortcuts still work." : {
       "localizations" : {
-        "en" : {"stringUnit": {"state": "translated", "value": "Mouse shake and drag triggers are suppressed while these apps are frontmost. Clipboard recording also skips them. Keyboard shortcuts still work."}},
-        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "这些应用在前台时，鼠标晃动和拖动触发会暂停，剪贴板记录也会跳过它们。键盘快捷键仍然有效。"}}
+        "en" : {"stringUnit": {"state": "translated", "value": "Drag triggers are suppressed while these apps are frontmost. Clipboard recording also skips them. Keyboard shortcuts still work."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "这些应用在前台时，拖动触发会暂停，剪贴板记录也会跳过它们。键盘快捷键仍然有效。"}}
       }
     },
     "Use Shelf and Transfers for files." : {
@@ -3317,13 +3311,6 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "中" } }
       }
     },
-    "Mouse Shake" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Mouse Shake" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "鼠标摇动" } }
-      }
-    },
     "Moved into the shelf — will be delivered on drag out" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3469,20 +3456,6 @@
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Settings…" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "设置…" } }
-      }
-    },
-    "Shake and drag triggers stay silent while one of these apps is frontmost. The global hot key is never filtered." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shake and drag triggers stay silent while one of these apps is frontmost. The global hot key is never filtered." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当这些应用位于前台时，摇动与拖拽触发保持静默。全局快捷键不受影响。" } }
-      }
-    },
-    "Shake the mouse to show the shelf" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shake the mouse to show the shelf" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "摇动鼠标以显示暂存架" } }
       }
     },
     "Shelf" : {

@@ -205,13 +205,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         onPress: { [weak self] in self?.clipboardHistoryWindowController.show() },
         onDoublePress: {}
     )
-    /// S7: 鼠标摇动触发（识别核心 ShakeDetector 为纯类型，见 Triggers/）。
-    private lazy var mouseShakeMonitor = MouseShakeMonitor(shouldSuppress: { [weak self] in
-        guard let self else { return false }
-        return IgnoreListService.frontmostAppIsIgnored(in: self.settingsStore.ignoredAppBundleIDs)
-    }, onTrigger: { [weak self] in
-        self?.toggleShelf()
-    })
     /// UX2: 屏幕边缘触发（拖拽版）。仅「唤出」不「隐藏」：贴边的意图是取用
     /// shelf（通常紧接着要向该侧投放），再次贴边反而隐藏会产生往复开关的
     /// 挫败感；隐藏仍由快捷键/菜单与 UX1 拖空无落入自动收回承担。
@@ -432,7 +425,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         clipboardHotKeyMonitor.setEnabled(false)
         notchCycleHotKeyMonitor.setEnabled(false)
         notchReverseCycleHotKeyMonitor.setEnabled(false)
-        mouseShakeMonitor.stop()
         edgeTriggerMonitor.stop()
         dragStartMonitor.stop()
     }
@@ -822,12 +814,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsStore.notchCycleShortcutError = cycleConflict
             ? String(localized: "Choose a notch shortcut whose forward and reverse combinations differ from the shelf and clipboard shortcuts.")
             : notchCycleHotKeyMonitor.registrationError ?? notchReverseCycleHotKeyMonitor.registrationError
-
-        if settingsStore.shakeTriggerEnabled {
-            mouseShakeMonitor.start(parameters: settingsStore.shakeSensitivity.shakeParameters)
-        } else {
-            mouseShakeMonitor.stop()
-        }
 
         let classicActive = SideShelfAvailability.isEnabled && settingsStore.classicShelfEnabled
         let edgeActive = classicActive

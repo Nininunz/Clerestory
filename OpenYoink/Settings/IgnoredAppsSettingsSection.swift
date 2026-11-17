@@ -57,7 +57,7 @@ struct IgnoredAppsSettingsSection: View {
             } header: {
                 Text("Ignored Apps")
             } footer: {
-                Text("Mouse shake and drag triggers are suppressed while these apps are frontmost. Clipboard recording also skips them. Keyboard shortcuts still work.")
+                Text("Drag triggers are suppressed while these apps are frontmost. Clipboard recording also skips them. Keyboard shortcuts still work.")
                     .font(.caption)
             }
         }

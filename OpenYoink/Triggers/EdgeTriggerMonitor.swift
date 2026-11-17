@@ -120,7 +120,7 @@ struct DragPasteboardSnapshot: Sendable {
 /// layout uses — so the trigger edge always matches the edge the panel will
 /// appear on.
 ///
-/// Registration lifecycle mirrors `MouseShakeMonitor`: monitors exist only
+/// Monitors exist only
 /// between `start` and `stop`.
 @MainActor
 final class EdgeTriggerMonitor {

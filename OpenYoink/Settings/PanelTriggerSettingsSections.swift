@@ -108,15 +108,6 @@ struct PanelTriggerSettingsSections: View {
             }
 
             }
-            Section("Mouse Shake") {
-                Toggle("Shake the mouse to open panel", isOn: $settings.shakeTriggerEnabled)
-                Picker("Sensitivity", selection: $settings.shakeSensitivity) {
-                    Text("Low").tag(TriggerSensitivity.low)
-                    Text("Medium").tag(TriggerSensitivity.medium)
-                    Text("High").tag(TriggerSensitivity.high)
-                }
-                .disabled(!settings.shakeTriggerEnabled)
-            }
         }
     }
 

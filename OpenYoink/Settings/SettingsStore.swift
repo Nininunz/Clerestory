@@ -11,7 +11,7 @@ enum SideShelfAvailability {
 ///
 /// All keys are prefixed with `OpenYoink.` to avoid collisions. Defaults are
 /// registered on init, so reads always return meaningful values. Trigger
-/// settings are consumed by `HotKeyMonitor` / `MouseShakeMonitor` /
+/// settings are consumed by `HotKeyMonitor` /
 /// `EdgeTriggerMonitor` (S7); the settings UI lives in `SettingsView` (S8).
 @MainActor
 @Observable
@@ -647,12 +647,6 @@ final class SettingsStore {
         didSet { defaults.set(hotKeyEnabled, forKey: Keys.hotKeyEnabled) }
     }
 
-    /// Mouse-shake gesture shows the shelf. Default: false (off until the
-    /// heuristic proves reliable, see plan §6).
-    var shakeTriggerEnabled: Bool {
-        didSet { defaults.set(shakeTriggerEnabled, forKey: Keys.shakeTriggerEnabled) }
-    }
-
     /// Resting the cursor on a screen edge shows the shelf. Default: false.
     ///
     /// UX2: legacy pre-UX-batch semantic (hover dwell). The UX batch replaced
@@ -677,13 +671,6 @@ final class SettingsStore {
     /// single presses. Default: true.
     var hotKeyDoublePressSavesClipboard: Bool {
         didSet { defaults.set(hotKeyDoublePressSavesClipboard, forKey: Keys.hotKeyDoublePressSavesClipboard) }
-    }
-
-    /// Shake sensitivity (three tiers; higher = triggers more easily).
-    /// Default: medium. Mapped to heuristic parameters by
-    /// `TriggerSensitivity.shakeParameters`.
-    var shakeSensitivity: TriggerSensitivity {
-        didSet { defaults.set(shakeSensitivity.rawValue, forKey: Keys.shakeSensitivity) }
     }
 
     /// Edge-trigger sensitivity (three tiers; higher = shorter dwell time and
@@ -711,7 +698,7 @@ final class SettingsStore {
 
     // MARK: - Ignore list
 
-    /// Bundle identifiers of apps in which shake/edge triggers stay silent.
+    /// Bundle identifiers of apps in which drag triggers stay silent.
     var ignoredAppBundleIDs: [String] {
         didSet { defaults.set(ignoredAppBundleIDs, forKey: Keys.ignoredAppBundleIDs) }
     }
@@ -801,10 +788,8 @@ final class SettingsStore {
         static let customShelfFrame = prefix + "customShelfFrame"
         static let hotKeyEnabled = prefix + "hotKeyEnabled"
         static let hotKeyDoublePressSavesClipboard = prefix + "hotKeyDoublePressSavesClipboard"
-        static let shakeTriggerEnabled = prefix + "shakeTriggerEnabled"
         static let edgeTriggerEnabled = prefix + "edgeTriggerEnabled"
         static let dragAutoAppearMode = prefix + "dragAutoAppearMode"
-        static let shakeSensitivity = prefix + "shakeSensitivity"
         static let edgeTriggerSensitivity = prefix + "edgeTriggerSensitivity"
         static let hotKeyShortcut = prefix + "hotKeyShortcut"
         static let ignoredAppBundleIDs = prefix + "ignoredAppBundleIDs"
@@ -894,9 +879,7 @@ final class SettingsStore {
             Keys.autoUpdateCheckEnabled: true,
             Keys.hotKeyEnabled: true,
             Keys.hotKeyDoublePressSavesClipboard: true,
-            Keys.shakeTriggerEnabled: false,
             Keys.edgeTriggerEnabled: false,
-            Keys.shakeSensitivity: TriggerSensitivity.medium.rawValue,
             Keys.edgeTriggerSensitivity: TriggerSensitivity.medium.rawValue,
             Keys.ignoredAppBundleIDs: [String](),
         ])
@@ -1087,7 +1070,6 @@ final class SettingsStore {
         }
         hotKeyEnabled = defaults.bool(forKey: Keys.hotKeyEnabled)
         hotKeyDoublePressSavesClipboard = defaults.bool(forKey: Keys.hotKeyDoublePressSavesClipboard)
-        shakeTriggerEnabled = defaults.bool(forKey: Keys.shakeTriggerEnabled)
         edgeTriggerEnabled = defaults.bool(forKey: Keys.edgeTriggerEnabled)
         if let persistedDragMode {
             dragAutoAppearMode = DragAutoAppearMode(rawValue: persistedDragMode) ?? .edgeOnly
@@ -1098,9 +1080,6 @@ final class SettingsStore {
         } else {
             dragAutoAppearMode = .edgeOnly
         }
-        shakeSensitivity = TriggerSensitivity(
-            rawValue: defaults.string(forKey: Keys.shakeSensitivity) ?? ""
-        ) ?? .medium
         edgeTriggerSensitivity = TriggerSensitivity(
             rawValue: defaults.string(forKey: Keys.edgeTriggerSensitivity) ?? ""
         ) ?? .medium

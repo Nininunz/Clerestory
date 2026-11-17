@@ -14,7 +14,6 @@ final class SupportControllerTests: XCTestCase {
         dragAutoAppearMode: .immediate,
         edgeTabEnabled: true,
         hotKeyEnabled: true,
-        shakeTriggerEnabled: false,
         autoHide: false,
         autoHideWhenEmpty: true,
         dragOutRemovalPolicy: .keep,
@@ -29,7 +28,6 @@ final class SupportControllerTests: XCTestCase {
         XCTAssertTrue(summary.contains("Architecture: arm64"))
         XCTAssertFalse(summary.contains("Shelf position:"))
         XCTAssertFalse(summary.contains("Edge tab:"))
-        XCTAssertTrue(summary.contains("Mouse shake: disabled"))
         XCTAssertFalse(summary.contains("/Users/"))
         XCTAssertFalse(summary.localizedCaseInsensitiveContains("clipboard:"))
         XCTAssertFalse(summary.localizedCaseInsensitiveContains("file name:"))

@@ -140,7 +140,7 @@ struct DragAutoShowSession: Sendable, Equatable {
 /// （只读、不消费事件）。global monitor 覆盖其他应用内的拖拽，local
 /// monitor 覆盖从本应用窗口（shelf 卡片拖出等）起始的拖拽。
 ///
-/// 注册生命周期与 `MouseShakeMonitor` 一致：monitor 只存在于 `start` 与
+/// monitor 只存在于 `start` 与
 /// `stop` 之间；`start` 幂等。
 ///
 /// 回调语义：
