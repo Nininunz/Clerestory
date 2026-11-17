@@ -70,6 +70,32 @@ final class OnboardingSessionStoreTests: XCTestCase {
 }
 
 final class OnboardingPolicyAndLayoutTests: XCTestCase {
+    @MainActor
+    func testFreshEvidenceIsCapturedBeforeSettingsMigration() throws {
+        let name = "OnboardingFresh-" + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let evidence = OnboardingLaunchPolicy.hasExistingInstallation(
+            preferences: defaults.persistentDomain(forName: name) ?? [:], supportEntries: [])
+        let settings = SettingsStore(defaults: defaults)
+        XCTAssertFalse(evidence)
+        XCTAssertFalse((defaults.persistentDomain(forName: name) ?? [:]).isEmpty,
+                       "Settings migration writes must not be mistaken for an older installation")
+        XCTAssertTrue(OnboardingLaunchPolicy.shouldAutomaticallyShow(
+            onboardingVersion: settings.onboardingVersion,
+            hadPersistedVersion: settings.hadPersistedOnboardingVersion,
+            hasLegacyInstallEvidence: evidence, hasPendingSession: false))
+    }
+
+    func testExistingEvidenceExcludesTutorialOnlyAndIncludesOldData() {
+        XCTAssertFalse(OnboardingLaunchPolicy.hasExistingInstallation(
+            preferences: ["OpenYoink.onboardingVersion": 0], supportEntries: ["Tutorial"]))
+        XCTAssertTrue(OnboardingLaunchPolicy.hasExistingInstallation(
+            preferences: ["OpenYoink.language": "english"], supportEntries: []))
+        XCTAssertTrue(OnboardingLaunchPolicy.hasExistingInstallation(
+            preferences: [:], supportEntries: ["shelf.json"]))
+    }
+
     func testFreshInstallShowsOnce() {
         XCTAssertTrue(OnboardingLaunchPolicy.shouldAutomaticallyShow(
             onboardingVersion: 0,

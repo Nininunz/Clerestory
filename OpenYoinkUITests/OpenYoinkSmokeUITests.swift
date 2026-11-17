@@ -15,6 +15,20 @@ final class OpenYoinkSmokeUITests: XCTestCase {
         XCTAssertTrue(otherBuilds.isEmpty, "Quit other OpenYoink builds before running UI tests: \(otherBuilds.compactMap { $0.bundleURL?.path })")
     }
 
+    func testFreshLaunchShowsOnboardingAndSkipClosesIt() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["OPENYOINK_UI_TESTING"] = "1"
+        app.launchArguments = ["--ui-testing-onboarding", "-OpenYoink.autoUpdateCheckEnabled", "NO",
+                               "-AppleLanguages", "(en)"]
+        addTeardownBlock { @MainActor in app.terminate() }
+        app.launch()
+        let practice = element("onboarding.practice-file", in: app)
+        XCTAssertTrue(practice.waitForExistence(timeout: 5))
+        XCTAssertTrue(expandedPanel(in: app).waitForExistence(timeout: 3))
+        element("onboarding.skip", in: app).click()
+        XCTAssertTrue(practice.waitForNonExistence(timeout: 3))
+    }
+
     func testShelfLaunchesIntoAccessibleEmptyState() throws {
         let app = launch(surface: "--ui-testing-show-shelf")
 

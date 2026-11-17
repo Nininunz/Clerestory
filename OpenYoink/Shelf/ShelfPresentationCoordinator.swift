@@ -67,8 +67,8 @@ final class ShelfPresentationCoordinator {
         windowController.islandDragApproachedTop(at: point)
     }
 
-    func dragEnded(imported: Bool) {
-        windowController.islandDragEnded(imported: imported)
+    func dragEnded(imported: Bool, hasPendingNotice: Bool = false) {
+        windowController.islandDragEnded(imported: imported, hasPendingNotice: hasPendingNotice)
     }
 
     func shutdown() {

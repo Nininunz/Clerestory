@@ -17,6 +17,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return defaults
     }
 
+    // Capture before SettingsStore migrations and services create persistent data.
+    private static func makeStartupSettings() -> (settings: SettingsStore, hadLegacyInstall: Bool) {
+        let defaults = makeSettingsDefaults()
+        let domain = isUITestingEnvironment ? uiTestingDefaultsSuite
+            : (Bundle.main.bundleIdentifier ?? "com.nininunz.OpenYoink")
+        let evidence = OnboardingLaunchPolicy.hasExistingInstallation(
+            preferences: defaults.persistentDomain(forName: domain) ?? [:],
+            supportEntries: (try? FileManager.default.contentsOfDirectory(
+                atPath: AppDirectories.applicationSupport().path)) ?? []
+        )
+        return (SettingsStore(defaults: defaults), evidence)
+    }
+
+    private let startup = AppDelegate.makeStartupSettings()
     private let appState = AppState()
     /// JSON 持久化（原子写 + 500ms 防抖）；store 的一切变更经它落盘。
     private let persistence = PersistenceController()
@@ -54,7 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                                                    pendingImportJournal: pendingImportJournal)
     /// 用户设置（S5 起拖出后移除策略被 DragSessionController 读取；S8 由
     /// SettingsView 编辑）。internal：OpenYoinkApp 的 Settings scene 注入环境用。
-    let settingsStore = SettingsStore(defaults: AppDelegate.makeSettingsDefaults())
+    var settingsStore: SettingsStore { startup.settings }
     lazy var clipboardHistoryStore: ClipboardHistoryStore = {
         let history = ClipboardHistoryStore(settings: settingsStore)
         history.onAddToShelf = { [weak self] content in self?.addHistoryToShelf(content) }
@@ -246,6 +260,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// UX1/2: 拖拽自动唤出会话裁决（纯逻辑状态机，见 Triggers/DragStartMonitor）。
     private var dragAutoShowSession = DragAutoShowSession()
     private var islandDragWasActivated = false
+    private var noticeRevisionBeforeDrag: UInt64 = 0
 
     /// EdgeTab: 贴屏幕边缘的常驻拉环（单击展开 / 拖入接收 / 沿边拖动换位）。
     /// 拉环与 shelf 互斥（shelf 展开时拉环隐藏；shelf 的外缘隐形热区承担
@@ -362,7 +377,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         // 引导必须排在 shelf 读取、事务恢复、bookmark 解析和安全清理之后，
         // 此时「空架」才是可信事实。
-        if isUITesting {
+        if isUITesting && !ProcessInfo.processInfo.arguments.contains("--ui-testing-onboarding") {
             presentRequestedUITestSurface()
         } else {
             onboardingController.startAtLaunch(
@@ -440,17 +455,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             break
         }
 
-        if let names = try? FileManager.default.contentsOfDirectory(
-            atPath: persistence.directoryURL.path
-        ), names.contains(where: { $0 != "Tutorial" }) {
-            return true
-        }
-
-        let domainName = Bundle.main.bundleIdentifier ?? "com.nininunz.OpenYoink"
-        let persistent = UserDefaults.standard.persistentDomain(forName: domainName) ?? [:]
-        return persistent.keys.contains { key in
-            key != "OpenYoink.onboardingVersion"
-        }
+        return startup.hadLegacyInstall
     }
 
     func toggleShelf() {
@@ -468,6 +473,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// shelf 不可见时立即唤出并打自动唤出标记（拖拽前已可见 = 用户手动
     /// 唤出，不标记、不动它）。`.edgeOnly` 只做记帐，唤出交给边缘触发。
     private func handleDragStart() {
+        noticeRevisionBeforeDrag = shelfNotice.revision
         dragAutoShowSession.dragBegan()
         guard settingsStore.effectivePreferredShelfSurface == .classic else { return }
         guard settingsStore.classicShelfEnabled else { return }
@@ -500,7 +506,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             keepShelfOpenAfterDrop: settingsStore.keepShelfOpenAfterDrop
         )
         if islandDragWasActivated {
-            shelfPresentationCoordinator.dragEnded(imported: imported)
+            shelfPresentationCoordinator.dragEnded(
+                imported: imported,
+                hasPendingNotice: shelfNotice.current != nil && shelfNotice.revision != noticeRevisionBeforeDrag
+            )
             islandDragWasActivated = false
         }
         guard shouldHideClassic, appState.isShelfVisible else { return }
