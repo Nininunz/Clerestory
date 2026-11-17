@@ -118,6 +118,43 @@ final class IslandModuleChromeTests: XCTestCase {
             isVisible: false).path(in: rect).isEmpty)
     }
 
+    func testFloatingDragOutlineKeepsTopEdgeAndRoundedCornersDuringReveal() throws {
+        let size = CGSize(width: 492, height: 330)
+        let state = DropTargetState()
+        state.isTargeted = true
+        for duplicate in [false, true] {
+            state.hasDuplicateFiles = duplicate
+            for progress: CGFloat in [0, 0.25, 0.5, 0.75, 1] {
+                let reveal = IslandSurfaceReveal(progress: progress)
+                let frame = reveal.frame(in: size)
+                let outline = IslandDropOutline(progress: progress, collapsedSize: reveal.collapsedSize,
+                                                attachedToScreenTop: false, state: state)
+                let actual = try render(outline.frame(width: size.width, height: size.height))
+                let expected = try render(
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .inset(by: 1).path(in: frame)
+                        .stroke(outline.tint.opacity(0.85), lineWidth: 2)
+                        .frame(width: size.width, height: size.height)
+                )
+                XCTAssertGreaterThan(try XCTUnwrap(actual.colorAt(x: 492, y: 1)).alphaComponent, 0.8,
+                                     "Top edge missing at reveal progress \(progress)")
+                // Use SwiftUI's inset curve as an independent reference for all four corners.
+                let bottom = Int(frame.maxY * 2)
+                let rows = Set(Array(0..<52) + Array(max(0, bottom - 52)..<bottom))
+                var largestAlphaDifference: CGFloat = 0
+                for y in rows {
+                    for x in 0..<actual.pixelsWide {
+                        largestAlphaDifference = max(largestAlphaDifference,
+                            abs(actual.colorAt(x: x, y: y)!.alphaComponent
+                                - expected.colorAt(x: x, y: y)!.alphaComponent))
+                    }
+                }
+                XCTAssertLessThan(largestAlphaDifference, 0.01,
+                                  "Corner curve differs from the panel at reveal progress \(progress)")
+            }
+        }
+    }
+
     func testHeaderHeightWithNoSingleAndMultipleActions() throws {
         for subtitle in [nil, "A module subtitle"] as [String?] {
             for count in 0...3 {

@@ -462,12 +462,13 @@ struct IslandSurfaceShape: InsettableShape {
     }
 
     func path(in rect: CGRect) -> Path {
-        let rect = rect.insetBy(dx: insetAmount, dy: insetAmount)
         guard attachedToScreenTop else {
             return RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .inset(by: insetAmount)
                 .path(in: rect)
         }
 
+        let rect = rect.insetBy(dx: insetAmount, dy: insetAmount)
         let bottomRadius = min(cornerRadius, rect.width / 2, rect.height / 2)
         let topCut = Self.bodyInset(cornerRadius: bottomRadius)
         let leftBody = rect.minX + topCut
@@ -528,7 +529,6 @@ struct IslandDropOutline: View {
         IslandTransitionDropOutline(progress: progress, collapsedSize: collapsedSize,
                                     attachedToScreenTop: attachedToScreenTop, isVisible: isVisible)
             .stroke(tint.opacity(0.85), lineWidth: 2)
-            .mask { Rectangle().padding(.top, attachedToScreenTop ? 0 : 2) }
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -553,8 +553,7 @@ struct IslandTransitionDropOutline: Shape {
         let height = min(collapsedSize.height, rect.height)
             + (rect.height - min(collapsedSize.height, rect.height)) * p
         let frame = CGRect(x: rect.midX - width / 2, y: rect.minY, width: width, height: height)
-        return IslandSurfaceShape(attachedToScreenTop: attachedToScreenTop, cornerRadius: 26,
-                                  includesTopEdge: false)
+        return IslandSurfaceShape(attachedToScreenTop: attachedToScreenTop, cornerRadius: 26)
             .inset(by: 1).path(in: frame)
     }
 }
