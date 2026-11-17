@@ -215,7 +215,7 @@ final class QuickLookCoordinator: NSObject, @MainActor QLPreviewPanelDataSource,
     private let store: ShelfStore
     private let bookmarkService: BookmarkService
     private let tempFileService: TempFileService
-    private let logger = Logger(subsystem: "com.weijue.OpenYoink", category: "QuickLook")
+    private let logger = Logger(subsystem: "com.nininunz.OpenYoink", category: "QuickLook")
 
     /// QLPreviewPanel 进程内共享单例。SDK 声明返回可选值（实践中恒非 nil），
     /// 统一经此访问以避免散落解包。

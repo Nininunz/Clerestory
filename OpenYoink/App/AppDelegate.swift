@@ -3,7 +3,7 @@ import OSLog
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private static let uiTestingDefaultsSuite = "com.weijue.OpenYoink.UITests"
+    private static let uiTestingDefaultsSuite = "com.nininunz.OpenYoink.UITests"
     private static var isUITestingEnvironment: Bool {
         ProcessInfo.processInfo.environment["OPENYOINK_UI_TESTING"] == "1"
     }
@@ -36,7 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let shelfNotice = ShelfNoticeModel()
     /// 仅承载活动 tutorial item 的 token，避免 shelf 与 onboarding lazy init 成环。
     private let onboardingDragContext = OnboardingDragContext()
-    private let logger = Logger(subsystem: "com.weijue.OpenYoink", category: "App")
+    private let logger = Logger(subsystem: "com.nininunz.OpenYoink", category: "App")
     private var isUITesting: Bool {
         Self.isUITestingEnvironment
     }
@@ -446,7 +446,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return true
         }
 
-        let domainName = Bundle.main.bundleIdentifier ?? "com.weijue.OpenYoink"
+        let domainName = Bundle.main.bundleIdentifier ?? "com.nininunz.OpenYoink"
         let persistent = UserDefaults.standard.persistentDomain(forName: domainName) ?? [:]
         return persistent.keys.contains { key in
             key != "OpenYoink.onboardingVersion"

@@ -24,8 +24,8 @@ final class SupportController {
         let autoUpdateCheckEnabled: Bool
     }
 
-    static let helpURL = URL(string: "https://muqy1818.github.io/OpenYoink/#usage")!
-    private static let newIssueURL = URL(string: "https://github.com/MuQY1818/OpenYoink/issues/new")!
+    static let helpURL = URL(string: "https://nininunz.github.io/OpenYoink/#usage")!
+    private static let newIssueURL = URL(string: "https://github.com/Nininunz/OpenYoink/issues/new")!
 
     private let settings: SettingsStore
 

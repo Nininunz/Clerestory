@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitepress'
 
-const repository = 'https://github.com/MuQY1818/OpenYoink'
-const siteURL = 'https://muqy1818.github.io/OpenYoink/'
+const repository = 'https://github.com/Nininunz/OpenYoink'
+const siteURL = 'https://nininunz.github.io/OpenYoink/'
 const rootDescription = '免费的开源 macOS 拖拽暂存架与灵动岛。跨窗口、Space 和全屏应用搬运文件、图片、文本与链接。'
 const englishDescription = 'A free, open-source drag-and-drop shelf and Dynamic Island for macOS. Move files, images, text, and links across windows and Spaces.'
 const socialImageURL = new URL('images/usage-demo-poster.jpg', siteURL).href

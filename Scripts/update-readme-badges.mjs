@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 const run = promisify(execFile);
 const root = new URL('../', import.meta.url);
 const output = new URL('docs/badges/', root);
-const repository = 'MuQY1818/OpenYoink';
+const repository = 'Nininunz/OpenYoink';
 const args = process.argv.slice(2);
 if (args.length && (args.length !== 2 || args[0] !== '--version'
     || !/^\d+\.\d+\.\d+$/.test(args[1]))) {

@@ -29,22 +29,22 @@ function validateJSONLD(html, label) {
 const pages = [
   {
     file: 'index.html',
-    canonical: 'https://muqy1818.github.io/OpenYoink/',
+    canonical: 'https://nininunz.github.io/OpenYoink/',
     title: 'OpenYoink — 免费开源的 macOS 拖拽暂存架与灵动岛'
   },
   {
     file: 'en/index.html',
-    canonical: 'https://muqy1818.github.io/OpenYoink/en/',
+    canonical: 'https://nininunz.github.io/OpenYoink/en/',
     title: 'OpenYoink — Free, open-source drag shelf and Dynamic Island for macOS'
   },
   {
     file: 'guide/open-source-drag-shelf.html',
-    canonical: 'https://muqy1818.github.io/OpenYoink/guide/open-source-drag-shelf',
+    canonical: 'https://nininunz.github.io/OpenYoink/guide/open-source-drag-shelf',
     title: '免费开源的 macOS 拖拽暂存架 | OpenYoink'
   },
   {
     file: 'en/guide/open-source-drag-shelf.html',
-    canonical: 'https://muqy1818.github.io/OpenYoink/en/guide/open-source-drag-shelf',
+    canonical: 'https://nininunz.github.io/OpenYoink/en/guide/open-source-drag-shelf',
     title: 'A free, open-source drag shelf for macOS | OpenYoink'
   }
 ]
@@ -68,9 +68,9 @@ expectIncludes(homepage, '"@type":"SoftwareApplication"', 'homepage')
 expectIncludes(homepage, '免费的开源 macOS 拖拽暂存架', 'homepage content')
 
 const sitemap = await read('sitemap.xml')
-expectIncludes(sitemap, '<loc>https://muqy1818.github.io/OpenYoink/</loc>', 'sitemap')
-expectIncludes(sitemap, '<loc>https://muqy1818.github.io/OpenYoink/guide/open-source-drag-shelf</loc>', 'sitemap')
-expectIncludes(sitemap, '<loc>https://muqy1818.github.io/OpenYoink/en/guide/open-source-drag-shelf</loc>', 'sitemap')
+expectIncludes(sitemap, '<loc>https://nininunz.github.io/OpenYoink/</loc>', 'sitemap')
+expectIncludes(sitemap, '<loc>https://nininunz.github.io/OpenYoink/guide/open-source-drag-shelf</loc>', 'sitemap')
+expectIncludes(sitemap, '<loc>https://nininunz.github.io/OpenYoink/en/guide/open-source-drag-shelf</loc>', 'sitemap')
 if (sitemap.includes('/README')) fail('sitemap exposes the internal website README')
 
 console.log(`SEO validation passed for ${pages.length} representative pages in ${fileURLToPath(distURL)}`)

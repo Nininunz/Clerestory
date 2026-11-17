@@ -44,7 +44,7 @@ final class RecentItemsService {
     /// 存储目录；测试中注入临时目录。
     let directoryURL: URL
 
-    private let logger = Logger(subsystem: "com.weijue.OpenYoink", category: "RecentItems")
+    private let logger = Logger(subsystem: "com.nininunz.OpenYoink", category: "RecentItems")
 
     private var fileURL: URL {
         directoryURL.appendingPathComponent("recents.json")

@@ -35,4 +35,4 @@ OpenYoink 是一个常驻菜单栏的 macOS 拖拽暂存架。当目标窗口暂
 
 - 应用打不开、更新失败或拖不进去：查看[常见问题](./troubleshooting)。
 - 想确认某个操作会不会删除原文件：查看[文件安全与隐私](./file-safety)。
-- 发现 Bug：前往 [GitHub Issues](https://github.com/MuQY1818/OpenYoink/issues)，附上 macOS 版本、OpenYoink 版本与复现步骤。
+- 发现 Bug：前往 [GitHub Issues](https://github.com/Nininunz/OpenYoink/issues)，附上 macOS 版本、OpenYoink 版本与复现步骤。

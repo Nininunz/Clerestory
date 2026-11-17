@@ -86,7 +86,7 @@ final class DropImportCoordinator {
     let transferStore: TransferStore
     private let tempFileService: TempFileService
     private let promiseReceiver: FilePromiseReceiver
-    private let logger = Logger(subsystem: "com.weijue.OpenYoink", category: "DropImport")
+    private let logger = Logger(subsystem: "com.nininunz.OpenYoink", category: "DropImport")
 
     init(bookmarkService: BookmarkService,
          tempFileService: TempFileService,

@@ -59,7 +59,7 @@ ARCHIVE_PATH="export/OpenYoink.xcarchive"
 APP_PATH="export/OpenYoink.app"
 DMG_PATH="export/OpenYoink-$VERSION.dmg"
 APPCAST="docs/appcast.xml"
-RELEASE_URL="https://github.com/MuQY1818/OpenYoink/releases/download/v$VERSION/OpenYoink-$VERSION.dmg"
+RELEASE_URL="https://github.com/Nininunz/OpenYoink/releases/download/v$VERSION/OpenYoink-$VERSION.dmg"
 
 if ! command -v node >/dev/null 2>&1; then
     echo "error: README 徽章刷新需要 Node.js 18+。请先安装 Node.js。" >&2
@@ -100,11 +100,20 @@ if [ ! -x "$SIGN_UPDATE" ]; then
 fi
 echo "==> sign_update: $SIGN_UPDATE"
 
+# Refuse to publish with a different Keychain key than the one trusted by the app.
+EXPECTED_PUBLIC_KEY="$(/usr/libexec/PlistBuddy -c 'Print SUPublicEDKey' OpenYoink/App/Info.plist)"
+ACTUAL_PUBLIC_KEY="$("$SPARKLE_BIN/generate_keys" --account com.nininunz.OpenYoink -p)"
+if [ "$EXPECTED_PUBLIC_KEY" != "$ACTUAL_PUBLIC_KEY" ]; then
+    echo "error: Fork Sparkle signing key does not match Info.plist." >&2
+    exit 1
+fi
+
+
 # ---- build number（评审 P2）：sparkle:version 必须严格递增，否则老用户
 # 不会把新包视为更新。不传 BUILD 时自动取 appcast 最大 sparkle:version + 1；
 # 传入时校验必须大于该最大值，防止误发「看似新版实则同 build」的更新。
 MAX_BUILD="$(grep -o '<sparkle:version>[0-9]*' "$APPCAST" 2>/dev/null | grep -o '[0-9]*' | sort -n | tail -1 || true)"
-MAX_BUILD="${MAX_BUILD:-0}"
+MAX_BUILD="${MAX_BUILD:-51}"
 EXISTING_VERSION_BUILD="$(python3 - "$APPCAST" "$VERSION" <<'PYEOF'
 import sys
 import xml.etree.ElementTree as ET
@@ -233,7 +242,7 @@ fi
 
 # ---- 5. EdDSA 签名（必须在公证/装订后执行，因为 DMG 字节已改变）----
 echo "==> sign_update"
-SIGN_OUTPUT="$("$SIGN_UPDATE" "$DMG_PATH")"
+SIGN_OUTPUT="$("$SIGN_UPDATE" --account com.nininunz.OpenYoink "$DMG_PATH")"
 echo "    $SIGN_OUTPUT"
 # 输出形如：sparkle:edSignature="..." length="..."
 ED_SIGNATURE="$(printf '%s' "$SIGN_OUTPUT" | sed -n 's/.*sparkle:edSignature="\([^"]*\)".*/\1/p')"

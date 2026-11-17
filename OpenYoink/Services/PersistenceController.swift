@@ -61,7 +61,7 @@ final class PersistenceController {
     private static let removalSnapshotPrefix = "shelf.json.corrupt-removed-"
     private var pendingItems: [ShelfItem]?
     private var saveTask: Task<Void, Never>?
-    private let logger = Logger(subsystem: "com.weijue.OpenYoink", category: "Persistence")
+    private let logger = Logger(subsystem: "com.nininunz.OpenYoink", category: "Persistence")
 
     private let encoder: JSONEncoder = {
         let encoder = JSONEncoder()

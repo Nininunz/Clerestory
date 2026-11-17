@@ -22,7 +22,7 @@ final class FilePromiseReceiver {
     private let pendingImportJournal: PendingImportJournal
     private let transferStore: TransferStore
     private let operationQueue: OperationQueue
-    private let logger = Logger(subsystem: "com.weijue.OpenYoink", category: "FilePromiseReceiver")
+    private let logger = Logger(subsystem: "com.nininunz.OpenYoink", category: "FilePromiseReceiver")
 
     init(tempFileService: TempFileService,
          bookmarkService: BookmarkService,
@@ -33,7 +33,7 @@ final class FilePromiseReceiver {
         self.pendingImportJournal = pendingImportJournal
         self.transferStore = transferStore
         self.operationQueue = OperationQueue()
-        self.operationQueue.name = "com.weijue.OpenYoink.FilePromiseReceive"
+        self.operationQueue.name = "com.nininunz.OpenYoink.FilePromiseReceive"
         // 计划 §2.3：promise 写入放后台队列，QoS userInitiated。
         self.operationQueue.qualityOfService = .userInitiated
     }

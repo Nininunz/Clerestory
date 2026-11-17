@@ -82,7 +82,7 @@ for helper in "$SPARKLE_ROOT/XPCServices/Installer.xpc" "$SPARKLE_ROOT/Updater.a
         echo "error: Sparkle helper 错误继承了主 app sandbox：$helper" >&2
         exit 1
     fi
-    if grep -Fq 'com.weijue.OpenYoink' "$file"; then
+    if grep -Fq 'com.nininunz.OpenYoink' "$file"; then
         echo "error: Sparkle helper 错误继承了 OpenYoink application identifier：$helper" >&2
         exit 1
     fi

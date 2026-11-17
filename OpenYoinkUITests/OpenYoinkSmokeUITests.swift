@@ -9,7 +9,7 @@ final class OpenYoinkSmokeUITests: XCTestCase {
         // Refuse to run over a normal session; never terminate it automatically.
         let testAppURL = Bundle.main.bundleURL.deletingLastPathComponent()
             .appendingPathComponent("OpenYoink.app").resolvingSymlinksInPath()
-        let otherBuilds = NSRunningApplication.runningApplications(withBundleIdentifier: "com.weijue.OpenYoink")
+        let otherBuilds = NSRunningApplication.runningApplications(withBundleIdentifier: "com.nininunz.OpenYoink")
             .filter { $0.bundleURL?.resolvingSymlinksInPath() != testAppURL }
         XCTAssertTrue(otherBuilds.isEmpty, "Quit other OpenYoink builds before running UI tests: \(otherBuilds.compactMap { $0.bundleURL?.path })")
     }

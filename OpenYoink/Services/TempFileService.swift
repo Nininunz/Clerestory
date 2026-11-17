@@ -26,7 +26,7 @@ final class TempFileService: Sendable {
     /// 必须共用它，否则目录会永远清不到，或在文件仍写入时被提前删除。
     private static let promiseStagingPrefix = "PromiseStaging-"
 
-    private let logger = Logger(subsystem: "com.weijue.OpenYoink", category: "TempFileService")
+    private let logger = Logger(subsystem: "com.nininunz.OpenYoink", category: "TempFileService")
 
     init(directoryURL: URL? = nil) {
         self.directoryURL = directoryURL

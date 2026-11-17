@@ -26,7 +26,7 @@ npm run build
 产物位于 `website/.vitepress/dist`。构建脚本会把现有 `docs/appcast.xml` 复制到产物根目录，确保 Sparkle 更新地址继续保持：
 
 ```text
-https://muqy1818.github.io/OpenYoink/appcast.xml
+https://nininunz.github.io/OpenYoink/appcast.xml
 ```
 
 正式切换 GitHub Pages 前，应先在预览环境检查所有页面，再确认 Pages 部署源和自定义工作流；不要在没有复制 `appcast.xml` 的情况下替换现有站点。

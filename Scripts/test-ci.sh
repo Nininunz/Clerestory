@@ -6,6 +6,7 @@ output_dir="${OPENYOINK_CI_OUTPUT:-$(mktemp -d "${TMPDIR:-/tmp}/openyoink-ci.XXX
 mkdir -p "$output_dir"
 output_dir="$(cd "$output_dir" && pwd)"
 cd "$repo_dir"
+python3 Scripts/check-fork-identity.py
 
 echo "CI logs and results: $output_dir"
 {
