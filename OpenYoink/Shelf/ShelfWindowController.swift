@@ -253,6 +253,8 @@ final class ShelfWindowController: NSObject {
         panel.acceptsKeyboardFocus = islandRole == .expanded
         if presentationStyle == .island {
             panel.title = islandRole == .compact ? "OpenYoink Compact" : "OpenYoink Island"
+            panel.setAccessibilityIdentifier(islandRole == .compact
+                                            ? "island.window.compact" : "island.window.expanded")
         }
         // SwiftUI presentation preferences alone don't set AppKit controls'
         // appearance inside this custom, non-activating Island panel.
@@ -318,6 +320,8 @@ final class ShelfWindowController: NSObject {
             // The controller owns both window frames. A disappearing module's
             // SwiftUI minimum size must not resize or move the hidden panel.
             hostingController.sizingOptions = []
+            hostingController.view.setAccessibilityLabel(islandRole == .compact
+                ? String(localized: "Compact Island") : String(localized: "Expanded Island"))
         }
         let dropOverride: DragContainerDropOverride? = presentationStyle == .island && islandRole == .expanded
             ? DragContainerDropOverride(

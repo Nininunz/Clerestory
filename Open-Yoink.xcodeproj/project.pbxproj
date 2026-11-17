@@ -21,6 +21,7 @@
 			remoteGlobalIDString = 0E00000000000000000001;
 			remoteInfo = OpenYoink;
 		};
+		A10000000000000000000001 = {isa = PBXContainerItemProxy; containerPortal = 0D00000000000000000001; proxyType = 1; remoteGlobalIDString = A10000000000000000000002; remoteInfo = OpenYoinkUITestDragSource; };
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXBuildFile section */
@@ -32,6 +33,7 @@
 		0F00000000000000000001 /* OpenYoink.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenYoink.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0F00000000000000000002 /* OpenYoinkTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenYoinkTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0F00000000000000000003 /* OpenYoinkUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenYoinkUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000003 = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenYoinkUITestDragSource.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -63,6 +65,7 @@
 			path = OpenYoinkUITests;
 			sourceTree = "<group>";
 		};
+		A10000000000000000000004 = {isa = PBXFileSystemSynchronizedRootGroup; path = OpenYoinkUITestDragSource; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -89,6 +92,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A10000000000000000000005 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -98,6 +102,7 @@
 				110000000000000000002 /* OpenYoink */,
 				110000000000000000003 /* OpenYoinkTests */,
 				110000000000000000005 /* OpenYoinkUITests */,
+				A10000000000000000000004 /* OpenYoinkUITestDragSource */,
 				110000000000000000004 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -108,6 +113,7 @@
 				0F00000000000000000001 /* OpenYoink.app */,
 				0F00000000000000000002 /* OpenYoinkTests.xctest */,
 				0F00000000000000000003 /* OpenYoinkUITests.xctest */,
+				A10000000000000000000003 /* OpenYoinkUITestDragSource.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -172,6 +178,7 @@
 			);
 			dependencies = (
 				150000000000000000002 /* PBXTargetDependency */,
+				A10000000000000000000008 /* UI drag source */,
 			);
 			fileSystemSynchronizedGroups = (
 				110000000000000000005 /* OpenYoinkUITests */,
@@ -182,6 +189,16 @@
 			productName = OpenYoinkUITests;
 			productReference = 0F00000000000000000003 /* OpenYoinkUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		A10000000000000000000002 /* OpenYoinkUITestDragSource */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000000000000000000009;
+			buildPhases = (A10000000000000000000006, A10000000000000000000005, A10000000000000000000007);
+			buildRules = (); dependencies = ();
+			fileSystemSynchronizedGroups = (A10000000000000000000004);
+			name = OpenYoinkUITestDragSource; productName = OpenYoinkUITestDragSource;
+			productReference = A10000000000000000000003;
+			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
@@ -223,6 +240,7 @@
 				0E00000000000000000001 /* OpenYoink */,
 				0E00000000000000000002 /* OpenYoinkTests */,
 				0E00000000000000000003 /* OpenYoinkUITests */,
+				A10000000000000000000002 /* OpenYoinkUITestDragSource */,
 			);
 		};
 /* End PBXProject section */
@@ -249,6 +267,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A10000000000000000000007 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -273,6 +292,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A10000000000000000000006 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -286,6 +306,7 @@
 			target = 0E00000000000000000001 /* OpenYoink */;
 			targetProxy = 0C00000000000000000002 /* PBXContainerItemProxy */;
 		};
+		A10000000000000000000008 = {isa = PBXTargetDependency; target = A10000000000000000000002; targetProxy = A10000000000000000000001; };
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -538,6 +559,28 @@
 			};
 			name = Release;
 		};
+		A10000000000000000000010 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES; MACOSX_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.weijue.OpenYoinkUITestDragSource;
+				PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 6.0;
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		A10000000000000000000011 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES; MACOSX_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.weijue.OpenYoinkUITestDragSource;
+				PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 6.0;
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -577,6 +620,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		A10000000000000000000009 = {isa = XCConfigurationList; buildConfigurations = (A10000000000000000000010, A10000000000000000000011); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */

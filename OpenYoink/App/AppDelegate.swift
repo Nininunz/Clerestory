@@ -4,7 +4,6 @@ import OSLog
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let uiTestingDefaultsSuite = "com.weijue.OpenYoink.UITests"
-
     private static var isUITestingEnvironment: Bool {
         ProcessInfo.processInfo.environment["OPENYOINK_UI_TESTING"] == "1"
     }
@@ -281,11 +280,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// 设置页注明「重启后生效」：运行期切换只写偏好，下次启动由此应用。
     func applicationWillFinishLaunching(_ notification: Notification) {
         if isUITesting {
-            // This is a fixed child of the app container's temporary
-            // directory, selected only by the explicit UI-test environment.
-            // Clearing it makes every launch deterministic without touching
-            // the user's real Application Support data.
-            try? FileManager.default.removeItem(at: AppDirectories.applicationSupport())
+            settingsStore.islandEnabled = true
+            settingsStore.showCompactIsland = !ProcessInfo.processInfo.arguments.contains("--ui-testing-hide-compact")
+            settingsStore.islandHoverRevealEnabled = ProcessInfo.processInfo.arguments.contains("--ui-testing-hover")
         }
         if !isUITesting {
             applyLanguageOverride()
@@ -383,10 +380,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func presentRequestedUITestSurface() {
         let arguments = ProcessInfo.processInfo.arguments
+        #if DEBUG
+        if arguments.contains("--ui-testing-shelf-files") {
+            do {
+                let fixture = try ShelfUITestFixture()
+                fixture.seed(shelfStore)
+            } catch {
+                fatalError("Unable to create isolated Shelf UI fixtures: \(error)")
+            }
+        }
+        if arguments.contains("--ui-testing-drag-source") { dragStartMonitor.start() }
+        #endif
         if arguments.contains("--ui-testing-open-settings") {
             settingsWindowController.show(pane: .general)
-        } else if SideShelfAvailability.isEnabled && arguments.contains("--ui-testing-show-shelf") {
-            shelfWindowController.showShelf(animated: false)
+        } else if arguments.contains("--ui-testing-show-shelf") {
+            shelfWindowController.showIslandShelf(takeKeyboardFocus: true)
         }
     }
 

@@ -3,14 +3,16 @@ import OSLog
 
 /// Shared locations inside the app's sandbox container.
 enum AppDirectories {
+    private static let uiTestDirectory = FileManager.default.temporaryDirectory
+        .appendingPathComponent("OpenYoinkUITests-" + UUID().uuidString, isDirectory: true)
+
     /// `Application Support/OpenYoink` inside the sandbox container.
     static func applicationSupport() -> URL {
-        // UI automation launches the real app process, so isolate all file
-        // mutations from the user's shelf. AppDelegate clears this exact
-        // app-owned directory before each UI-test launch.
+        // Allocate before any service can load state. Clearing a shared test
+        // directory in applicationWillFinishLaunching is too late for stores
+        // initialized by SwiftUI while constructing the app scene.
         if ProcessInfo.processInfo.environment["OPENYOINK_UI_TESTING"] == "1" {
-            return FileManager.default.temporaryDirectory
-                .appendingPathComponent("OpenYoinkUITests", isDirectory: true)
+            return uiTestDirectory
         }
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory

@@ -133,6 +133,9 @@ final class IslandPresentationController: NSObject {
     ) {
         if newState == .pinned {
             performIslandHoverActions(islandHoverPreview.handle(.committed))
+        } else if oldState == .pinned, newState == .expanded {
+            let inside = hoverKeepAliveFrame(for: islandLayout()).contains(NSEvent.mouseLocation)
+            performIslandHoverActions(islandHoverPreview.handle(.unpinned(pointerInside: inside)))
         } else if oldState.isExpanded, !newState.isExpanded {
             resetIslandHoverPreview(restoreSelection: true)
         }
@@ -427,16 +430,13 @@ final class IslandPresentationController: NSObject {
                 !islandActivityCoordinator.surfaceState.isExpanded
                     && interactiveFrame.contains(point)
             )
-            guard settings.islandHoverRevealEnabled else {
-                let wasPreview = islandHoverPreview.phase == .preview
-                    || islandHoverPreview.phase == .leaving
-                resetIslandHoverPreview(restoreSelection: true)
-                if wasPreview { collapseIsland(animated: true) }
-                return
-            }
             if islandHoverPreview.phase == .preview || islandHoverPreview.phase == .leaving {
                 let inside = hoverKeepAliveFrame(for: layout).contains(point)
                 performIslandHoverActions(islandHoverPreview.handle(inside ? .entered : .left))
+                return
+            }
+            guard settings.islandHoverRevealEnabled else {
+                resetIslandHoverPreview(restoreSelection: true)
                 return
             }
             let canStart = islandActivityCoordinator.canRevealOnHover

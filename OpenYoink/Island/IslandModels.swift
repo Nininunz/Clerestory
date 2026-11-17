@@ -135,7 +135,7 @@ enum IslandCompactDisplay: Hashable {
 /// Hover expansion is temporary until the user clicks or pins the Island.
 struct IslandHoverPreviewStateMachine {
     enum Phase: Equatable { case idle, dwelling, preview, leaving }
-    enum Event { case entered, left, dwellElapsed, exitElapsed, committed, reset, menuOpened, menuClosed(pointerInside: Bool) }
+    enum Event { case entered, left, dwellElapsed, exitElapsed, committed, unpinned(pointerInside: Bool), reset, menuOpened, menuClosed(pointerInside: Bool) }
     enum Action: Equatable {
         case scheduleDwell, cancelDwell, showPreview
         case scheduleExit, cancelExit, dismissPreview, commitPreview
@@ -146,6 +146,11 @@ struct IslandHoverPreviewStateMachine {
 
     mutating func handle(_ event: Event) -> [Action] {
         switch event {
+        case .unpinned(let pointerInside):
+            // The panel is already open; resume dismissal without revealing it
+            // again or changing the module the user was working in.
+            phase = .preview
+            return [.cancelDwell, .cancelExit] + (pointerInside ? [] : handle(.left))
         case .menuOpened:
             isMenuOpen = true
             if phase == .leaving { phase = .preview; return [.cancelExit] }
