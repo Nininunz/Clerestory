@@ -62,3 +62,14 @@ The Shelf catalog also includes every `ShelfNoticeMessage`, copy/path/share/Find
 Notice wording is shared with the app, and count-based messages use the runtime formatters. Shelf notice captures include the detached pill below the Island, using the production pill and gap; the extra capture height does not change the module viewport. Expanded notice samples represent a pinned-open Island. At runtime, an unpinned Island queues notices until its closing animation completes, then starts their display timer. Once shown, reopening pushes the same toast below the expanded surface without hiding it or restarting that timer. Debug fixtures hold transient notices and transfer completion states visible without changing runtime dismissal timing. Transfer samples use the fixture item IDs so card badges match the status strip. Captures use the same module host in both regular and extended height modes. Recovery and sharing actions are represented visually; the capture does not invoke native file pickers, share panels, or modify files.
 
 Large catalogs are split into contact sheets of at most 12 captures: `shelf.png`, `shelf-2.png`, and so on. The HTML gallery links every page, and the manifest retains every individual scenario image.
+
+## Unified panel review
+
+The current architecture, validation results, live acceptance matrix, and representative captures are in [Unified Island panel](../docs/previews/unified-panel/README.md). To refresh the complete Shelf and Quick Settings gallery, run:
+
+```sh
+Scripts/render-module-previews.sh --module shelf --module quick-settings \
+  --capture snapshot --output /tmp/openyoink-unified-panel-review --no-open
+```
+
+Expanded presentation is identical on notched and notchless displays. The fixed notched-screen fixture affects placement and the height cap, not a different panel shape or shortcut layout.

@@ -8,15 +8,13 @@ struct ModuleCoreTests {
     func visibleShortcutCapacity(enabledCount: Int) {
         let ids = (0..<enabledCount).map { IslandModuleID(rawValue: "module.\($0)") }
         let configuration = IslandModuleConfiguration(enabledModuleIDs: ids, pinnedModuleIDs: [])
-        for notched in [false, true] {
-            let indices = configuration.visibleShortcutIndices(hasPhysicalNotch: notched)
-            #expect(indices.count == min(enabledCount + 1, 8))
-            #expect(Set(indices).count == indices.count)
-            #expect(indices.contains(configuration.shortcutPositions.firstIndex(of: IslandModuleConfiguration.requiredShortcut)!))
-        }
+        let indices = configuration.visibleShortcutIndices()
+        #expect(indices.count == min(enabledCount + 1, 8))
+        #expect(Set(indices).count == indices.count)
+        #expect(indices.contains(configuration.shortcutPositions.firstIndex(of: IslandModuleConfiguration.requiredShortcut)!))
     }
 
-    @Test("Slot shrinking preserves occupied positions and fills from the notch or left edge")
+    @Test("Slot shrinking preserves occupied positions and fills from the left edge")
     func visibleShortcutPlacement() {
         let shelf: IslandModuleID = "shelf"
         let timer: IslandModuleID = "timer"
@@ -24,16 +22,15 @@ struct ModuleCoreTests {
         var configuration = IslandModuleConfiguration(enabledModuleIDs: [shelf], pinnedModuleIDs: [])
         configuration.assignShortcut(required, at: 4)
         configuration.assignShortcut(shelf, at: 3)
-        #expect(configuration.visibleShortcutIndices(hasPhysicalNotch: true) == [3, 4])
+        #expect(configuration.visibleShortcutIndices() == [3, 4])
         configuration.setEnabled(true, for: timer)
-        #expect(configuration.visibleShortcutIndices(hasPhysicalNotch: true) == [2, 3, 4])
-        #expect(configuration.visibleShortcutIndices(hasPhysicalNotch: false) == [0, 3, 4])
+        #expect(configuration.visibleShortcutIndices() == [0, 3, 4])
         configuration.assignShortcut(timer, at: 7)
-        #expect(configuration.visibleShortcutIndices(hasPhysicalNotch: true) == [3, 4, 7])
+        #expect(configuration.visibleShortcutIndices() == [3, 4, 7])
         configuration.setEnabled(false, for: shelf)
-        #expect(configuration.visibleShortcutIndices(hasPhysicalNotch: true) == [4, 7])
+        #expect(configuration.visibleShortcutIndices() == [4, 7])
         configuration.setEnabled(false, for: timer)
-        #expect(configuration.visibleShortcutIndices(hasPhysicalNotch: true) == [4])
+        #expect(configuration.visibleShortcutIndices() == [4])
     }
 
     @Test("Configuration removes duplicates and caps pinned modules")
@@ -51,7 +48,7 @@ struct ModuleCoreTests {
     @Test("Pin controls follow shortcut capacity and always allow unpinning")
     func pinControlCapacity() {
         let capacity = IslandModuleConfiguration.maximumPinnedModules
-        #expect(capacity == IslandModuleConfiguration.shortcutSlotsPerSide * 2 - 1)
+        #expect(capacity == IslandModuleConfiguration.shortcutPositionCount - 1)
         let ids = (0...capacity).map { IslandModuleID(rawValue: "module.\($0)") }
         var configuration = IslandModuleConfiguration(enabledModuleIDs: ids, pinnedModuleIDs: [])
         for id in ids.prefix(capacity) {

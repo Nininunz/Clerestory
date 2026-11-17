@@ -162,7 +162,7 @@ struct ModulesSettingsTab: View {
                         set: { settings.setIslandModulePinned($0, id: destination.moduleID) }
                     ))
                     .disabled(!settings.islandModuleConfiguration.canTogglePin(for: destination.moduleID))
-                    Text("\(settings.effectiveIslandShortcuts.pinnedModuleIDs.count + 1) of \(settings.effectiveIslandShortcuts.visibleShortcutIndices(hasPhysicalNotch: false).count) shortcut positions used.")
+                    Text("\(settings.effectiveIslandShortcuts.pinnedModuleIDs.count + 1) of \(settings.effectiveIslandShortcuts.visibleShortcutIndices().count) shortcut positions used.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 specificSettings(destination)

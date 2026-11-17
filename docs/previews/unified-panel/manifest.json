@@ -1,0 +1,1462 @@
+[
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "empty-regular",
+    "image" : "shelf-empty-regular.png",
+    "module" : "shelf",
+    "scenario" : "Empty \/ drop target \/ Regular",
+    "scenarioID" : "empty",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "extended",
+    "id" : "empty-extended",
+    "image" : "shelf-empty-extended.png",
+    "module" : "shelf",
+    "scenario" : "Empty \/ drop target \/ Extended",
+    "scenarioID" : "empty",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "populated-regular",
+    "image" : "shelf-populated-regular.png",
+    "module" : "shelf",
+    "scenario" : "Items \/ search + filter \/ Regular",
+    "scenarioID" : "populated",
+    "width" : "492.0"
+  },
+  {
+    "height" : "455.0",
+    "heightMode" : "extended",
+    "id" : "populated-extended",
+    "image" : "shelf-populated-extended.png",
+    "module" : "shelf",
+    "scenario" : "Items \/ search + filter \/ Extended",
+    "scenarioID" : "populated",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "selected-regular",
+    "image" : "shelf-selected-regular.png",
+    "module" : "shelf",
+    "scenario" : "Selected items \/ Regular",
+    "scenarioID" : "selected",
+    "width" : "492.0"
+  },
+  {
+    "height" : "455.0",
+    "heightMode" : "extended",
+    "id" : "selected-extended",
+    "image" : "shelf-selected-extended.png",
+    "module" : "shelf",
+    "scenario" : "Selected items \/ Extended",
+    "scenarioID" : "selected",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "no-results-regular",
+    "image" : "shelf-no-results-regular.png",
+    "module" : "shelf",
+    "scenario" : "No results \/ Regular",
+    "scenarioID" : "no-results",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "extended",
+    "id" : "no-results-extended",
+    "image" : "shelf-no-results-extended.png",
+    "module" : "shelf",
+    "scenario" : "No results \/ Extended",
+    "scenarioID" : "no-results",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "importing-regular",
+    "image" : "shelf-importing-regular.png",
+    "module" : "shelf",
+    "scenario" : "Import in progress \/ Regular",
+    "scenarioID" : "importing",
+    "width" : "492.0"
+  },
+  {
+    "height" : "499.0",
+    "heightMode" : "extended",
+    "id" : "importing-extended",
+    "image" : "shelf-importing-extended.png",
+    "module" : "shelf",
+    "scenario" : "Import in progress \/ Extended",
+    "scenarioID" : "importing",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "duplicate-regular",
+    "image" : "shelf-duplicate-regular.png",
+    "module" : "shelf",
+    "scenario" : "Duplicate drag \/ red outline \/ Regular",
+    "scenarioID" : "duplicate",
+    "width" : "492.0"
+  },
+  {
+    "height" : "455.0",
+    "heightMode" : "extended",
+    "id" : "duplicate-extended",
+    "image" : "shelf-duplicate-extended.png",
+    "module" : "shelf",
+    "scenario" : "Duplicate drag \/ red outline \/ Extended",
+    "scenarioID" : "duplicate",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "file-drag-regular",
+    "image" : "shelf-file-drag-regular.png",
+    "module" : "shelf",
+    "scenario" : "File drag \/ blue outline \/ Regular",
+    "scenarioID" : "file-drag",
+    "width" : "492.0"
+  },
+  {
+    "height" : "455.0",
+    "heightMode" : "extended",
+    "id" : "file-drag-extended",
+    "image" : "shelf-file-drag-extended.png",
+    "module" : "shelf",
+    "scenario" : "File drag \/ blue outline \/ Extended",
+    "scenarioID" : "file-drag",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "drag-move-hint-regular",
+    "image" : "shelf-drag-move-hint-regular.png",
+    "module" : "shelf",
+    "scenario" : "Drag \/ Move original hint \/ Regular",
+    "scenarioID" : "drag-move-hint",
+    "width" : "492.0"
+  },
+  {
+    "height" : "455.0",
+    "heightMode" : "extended",
+    "id" : "drag-move-hint-extended",
+    "image" : "shelf-drag-move-hint-extended.png",
+    "module" : "shelf",
+    "scenario" : "Drag \/ Move original hint \/ Extended",
+    "scenarioID" : "drag-move-hint",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "drag-reorder-hint-regular",
+    "image" : "shelf-drag-reorder-hint-regular.png",
+    "module" : "shelf",
+    "scenario" : "Drag \/ Reorder hint \/ Regular",
+    "scenarioID" : "drag-reorder-hint",
+    "width" : "492.0"
+  },
+  {
+    "height" : "455.0",
+    "heightMode" : "extended",
+    "id" : "drag-reorder-hint-extended",
+    "image" : "shelf-drag-reorder-hint-extended.png",
+    "module" : "shelf",
+    "scenario" : "Drag \/ Reorder hint \/ Extended",
+    "scenarioID" : "drag-reorder-hint",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "many-items-regular",
+    "image" : "shelf-many-items-regular.png",
+    "module" : "shelf",
+    "scenario" : "Many items \/ scrolling \/ Regular",
+    "scenarioID" : "many-items",
+    "width" : "492.0"
+  },
+  {
+    "height" : "551.0",
+    "heightMode" : "extended",
+    "id" : "many-items-extended",
+    "image" : "shelf-many-items-extended.png",
+    "module" : "shelf",
+    "scenario" : "Many items \/ scrolling \/ Extended",
+    "scenarioID" : "many-items",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "long-names-regular",
+    "image" : "shelf-long-names-regular.png",
+    "module" : "shelf",
+    "scenario" : "Long names \/ Regular",
+    "scenarioID" : "long-names",
+    "width" : "492.0"
+  },
+  {
+    "height" : "453.0",
+    "heightMode" : "extended",
+    "id" : "long-names-extended",
+    "image" : "shelf-long-names-extended.png",
+    "module" : "shelf",
+    "scenario" : "Long names \/ Extended",
+    "scenarioID" : "long-names",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "text-snippets-regular",
+    "image" : "shelf-text-snippets-regular.png",
+    "module" : "shelf",
+    "scenario" : "Text snippets \/ inline notes \/ Regular",
+    "scenarioID" : "text-snippets",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "extended",
+    "id" : "text-snippets-extended",
+    "image" : "shelf-text-snippets-extended.png",
+    "module" : "shelf",
+    "scenario" : "Text snippets \/ inline notes \/ Extended",
+    "scenarioID" : "text-snippets",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "keyboard-focus-regular",
+    "image" : "shelf-keyboard-focus-regular.png",
+    "module" : "shelf",
+    "scenario" : "Keyboard focus \/ Regular",
+    "scenarioID" : "keyboard-focus",
+    "width" : "492.0"
+  },
+  {
+    "height" : "455.0",
+    "heightMode" : "extended",
+    "id" : "keyboard-focus-extended",
+    "image" : "shelf-keyboard-focus-extended.png",
+    "module" : "shelf",
+    "scenario" : "Keyboard focus \/ Extended",
+    "scenarioID" : "keyboard-focus",
+    "width" : "492.0"
+  },
+  {
+    "height" : "401.0",
+    "heightMode" : "regular",
+    "id" : "notice-already-on-shelf-regular",
+    "image" : "shelf-notice-already-on-shelf-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Already On Shelf \/ Regular",
+    "scenarioID" : "notice-already-on-shelf",
+    "width" : "492.0"
+  },
+  {
+    "height" : "526.0",
+    "heightMode" : "extended",
+    "id" : "notice-already-on-shelf-extended",
+    "image" : "shelf-notice-already-on-shelf-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Already On Shelf \/ Extended",
+    "scenarioID" : "notice-already-on-shelf",
+    "width" : "492.0"
+  },
+  {
+    "height" : "402.0",
+    "heightMode" : "regular",
+    "id" : "notice-reconnected-regular",
+    "image" : "shelf-notice-reconnected-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Reconnected \/ Regular",
+    "scenarioID" : "notice-reconnected",
+    "width" : "492.0"
+  },
+  {
+    "height" : "527.0",
+    "heightMode" : "extended",
+    "id" : "notice-reconnected-extended",
+    "image" : "shelf-notice-reconnected-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Reconnected \/ Extended",
+    "scenarioID" : "notice-reconnected",
+    "width" : "492.0"
+  },
+  {
+    "height" : "401.0",
+    "heightMode" : "regular",
+    "id" : "notice-reconnect-failed-regular",
+    "image" : "shelf-notice-reconnect-failed-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Reconnect Failed \/ Regular",
+    "scenarioID" : "notice-reconnect-failed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "526.0",
+    "heightMode" : "extended",
+    "id" : "notice-reconnect-failed-extended",
+    "image" : "shelf-notice-reconnect-failed-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Reconnect Failed \/ Extended",
+    "scenarioID" : "notice-reconnect-failed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "411.0",
+    "heightMode" : "regular",
+    "id" : "notice-move-awaiting-save-regular",
+    "image" : "shelf-notice-move-awaiting-save-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Move Awaiting Save \/ Regular",
+    "scenarioID" : "notice-move-awaiting-save",
+    "width" : "492.0"
+  },
+  {
+    "height" : "536.0",
+    "heightMode" : "extended",
+    "id" : "notice-move-awaiting-save-extended",
+    "image" : "shelf-notice-move-awaiting-save-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Move Awaiting Save \/ Extended",
+    "scenarioID" : "notice-move-awaiting-save",
+    "width" : "492.0"
+  },
+  {
+    "height" : "415.0",
+    "heightMode" : "regular",
+    "id" : "notice-received-awaiting-recovery-regular",
+    "image" : "shelf-notice-received-awaiting-recovery-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Received Awaiting Recovery \/ Regular",
+    "scenarioID" : "notice-received-awaiting-recovery",
+    "width" : "492.0"
+  },
+  {
+    "height" : "540.0",
+    "heightMode" : "extended",
+    "id" : "notice-received-awaiting-recovery-extended",
+    "image" : "shelf-notice-received-awaiting-recovery-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Received Awaiting Recovery \/ Extended",
+    "scenarioID" : "notice-received-awaiting-recovery",
+    "width" : "492.0"
+  },
+  {
+    "height" : "402.0",
+    "heightMode" : "regular",
+    "id" : "notice-clipboard-empty-regular",
+    "image" : "shelf-notice-clipboard-empty-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Clipboard Empty \/ Regular",
+    "scenarioID" : "notice-clipboard-empty",
+    "width" : "492.0"
+  },
+  {
+    "height" : "527.0",
+    "heightMode" : "extended",
+    "id" : "notice-clipboard-empty-extended",
+    "image" : "shelf-notice-clipboard-empty-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Clipboard Empty \/ Extended",
+    "scenarioID" : "notice-clipboard-empty",
+    "width" : "492.0"
+  },
+  {
+    "height" : "411.0",
+    "heightMode" : "regular",
+    "id" : "notice-move-recovery-needs-attention-regular",
+    "image" : "shelf-notice-move-recovery-needs-attention-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Move Recovery Needs Attention \/ Regular",
+    "scenarioID" : "notice-move-recovery-needs-attention",
+    "width" : "492.0"
+  },
+  {
+    "height" : "536.0",
+    "heightMode" : "extended",
+    "id" : "notice-move-recovery-needs-attention-extended",
+    "image" : "shelf-notice-move-recovery-needs-attention-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Move Recovery Needs Attention \/ Extended",
+    "scenarioID" : "notice-move-recovery-needs-attention",
+    "width" : "492.0"
+  },
+  {
+    "height" : "402.0",
+    "heightMode" : "regular",
+    "id" : "notice-move-recovered-regular",
+    "image" : "shelf-notice-move-recovered-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Move Recovered \/ Regular",
+    "scenarioID" : "notice-move-recovered",
+    "width" : "492.0"
+  },
+  {
+    "height" : "527.0",
+    "heightMode" : "extended",
+    "id" : "notice-move-recovered-extended",
+    "image" : "shelf-notice-move-recovered-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Move Recovered \/ Extended",
+    "scenarioID" : "notice-move-recovered",
+    "width" : "492.0"
+  },
+  {
+    "height" : "411.0",
+    "heightMode" : "regular",
+    "id" : "notice-partial-move-recovery-needs-attention-regular",
+    "image" : "shelf-notice-partial-move-recovery-needs-attention-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Partial Move Recovery Needs Attention \/ Regular",
+    "scenarioID" : "notice-partial-move-recovery-needs-attention",
+    "width" : "492.0"
+  },
+  {
+    "height" : "536.0",
+    "heightMode" : "extended",
+    "id" : "notice-partial-move-recovery-needs-attention-extended",
+    "image" : "shelf-notice-partial-move-recovery-needs-attention-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Partial Move Recovery Needs Attention \/ Extended",
+    "scenarioID" : "notice-partial-move-recovery-needs-attention",
+    "width" : "492.0"
+  },
+  {
+    "height" : "415.0",
+    "heightMode" : "regular",
+    "id" : "notice-interrupted-import-recovered-regular",
+    "image" : "shelf-notice-interrupted-import-recovered-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Interrupted Import Recovered \/ Regular",
+    "scenarioID" : "notice-interrupted-import-recovered",
+    "width" : "492.0"
+  },
+  {
+    "height" : "540.0",
+    "heightMode" : "extended",
+    "id" : "notice-interrupted-import-recovered-extended",
+    "image" : "shelf-notice-interrupted-import-recovered-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Interrupted Import Recovered \/ Extended",
+    "scenarioID" : "notice-interrupted-import-recovered",
+    "width" : "492.0"
+  },
+  {
+    "height" : "411.0",
+    "heightMode" : "regular",
+    "id" : "notice-import-recovery-needs-attention-regular",
+    "image" : "shelf-notice-import-recovery-needs-attention-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Import Recovery Needs Attention \/ Regular",
+    "scenarioID" : "notice-import-recovery-needs-attention",
+    "width" : "492.0"
+  },
+  {
+    "height" : "536.0",
+    "heightMode" : "extended",
+    "id" : "notice-import-recovery-needs-attention-extended",
+    "image" : "shelf-notice-import-recovery-needs-attention-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Import Recovery Needs Attention \/ Extended",
+    "scenarioID" : "notice-import-recovery-needs-attention",
+    "width" : "492.0"
+  },
+  {
+    "height" : "401.0",
+    "heightMode" : "regular",
+    "id" : "notice-unsupported-content-regular",
+    "image" : "shelf-notice-unsupported-content-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Unsupported Content \/ Regular",
+    "scenarioID" : "notice-unsupported-content",
+    "width" : "492.0"
+  },
+  {
+    "height" : "526.0",
+    "heightMode" : "extended",
+    "id" : "notice-unsupported-content-extended",
+    "image" : "shelf-notice-unsupported-content-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Unsupported Content \/ Extended",
+    "scenarioID" : "notice-unsupported-content",
+    "width" : "492.0"
+  },
+  {
+    "height" : "401.0",
+    "heightMode" : "regular",
+    "id" : "notice-import-failed-regular",
+    "image" : "shelf-notice-import-failed-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Import Failed \/ Regular",
+    "scenarioID" : "notice-import-failed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "526.0",
+    "heightMode" : "extended",
+    "id" : "notice-import-failed-extended",
+    "image" : "shelf-notice-import-failed-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Import Failed \/ Extended",
+    "scenarioID" : "notice-import-failed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "402.0",
+    "heightMode" : "regular",
+    "id" : "notice-removed-regular",
+    "image" : "shelf-notice-removed-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Removed \/ Regular",
+    "scenarioID" : "notice-removed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "527.0",
+    "heightMode" : "extended",
+    "id" : "notice-removed-extended",
+    "image" : "shelf-notice-removed-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Removed \/ Extended",
+    "scenarioID" : "notice-removed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "415.0",
+    "heightMode" : "regular",
+    "id" : "notice-removal-failed-regular",
+    "image" : "shelf-notice-removal-failed-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Removal Failed \/ Regular",
+    "scenarioID" : "notice-removal-failed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "540.0",
+    "heightMode" : "extended",
+    "id" : "notice-removal-failed-extended",
+    "image" : "shelf-notice-removal-failed-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Removal Failed \/ Extended",
+    "scenarioID" : "notice-removal-failed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "401.0",
+    "heightMode" : "regular",
+    "id" : "notice-share-unavailable-regular",
+    "image" : "shelf-notice-share-unavailable-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Share Unavailable \/ Regular",
+    "scenarioID" : "notice-share-unavailable",
+    "width" : "492.0"
+  },
+  {
+    "height" : "526.0",
+    "heightMode" : "extended",
+    "id" : "notice-share-unavailable-extended",
+    "image" : "shelf-notice-share-unavailable-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Share Unavailable \/ Extended",
+    "scenarioID" : "notice-share-unavailable",
+    "width" : "492.0"
+  },
+  {
+    "height" : "401.0",
+    "heightMode" : "regular",
+    "id" : "notice-copy-paths-failed-regular",
+    "image" : "shelf-notice-copy-paths-failed-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Copy Paths Failed \/ Regular",
+    "scenarioID" : "notice-copy-paths-failed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "526.0",
+    "heightMode" : "extended",
+    "id" : "notice-copy-paths-failed-extended",
+    "image" : "shelf-notice-copy-paths-failed-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Copy Paths Failed \/ Extended",
+    "scenarioID" : "notice-copy-paths-failed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "401.0",
+    "heightMode" : "regular",
+    "id" : "notice-reveal-failed-regular",
+    "image" : "shelf-notice-reveal-failed-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Reveal Failed \/ Regular",
+    "scenarioID" : "notice-reveal-failed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "526.0",
+    "heightMode" : "extended",
+    "id" : "notice-reveal-failed-extended",
+    "image" : "shelf-notice-reveal-failed-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Reveal Failed \/ Extended",
+    "scenarioID" : "notice-reveal-failed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "402.0",
+    "heightMode" : "regular",
+    "id" : "notice-share-in-progress-regular",
+    "image" : "shelf-notice-share-in-progress-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Share In Progress \/ Regular",
+    "scenarioID" : "notice-share-in-progress",
+    "width" : "492.0"
+  },
+  {
+    "height" : "527.0",
+    "heightMode" : "extended",
+    "id" : "notice-share-in-progress-extended",
+    "image" : "shelf-notice-share-in-progress-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Share In Progress \/ Extended",
+    "scenarioID" : "notice-share-in-progress",
+    "width" : "492.0"
+  },
+  {
+    "height" : "401.0",
+    "heightMode" : "regular",
+    "id" : "notice-share-failed-regular",
+    "image" : "shelf-notice-share-failed-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Share Failed \/ Regular",
+    "scenarioID" : "notice-share-failed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "526.0",
+    "heightMode" : "extended",
+    "id" : "notice-share-failed-extended",
+    "image" : "shelf-notice-share-failed-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Share Failed \/ Extended",
+    "scenarioID" : "notice-share-failed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "402.0",
+    "heightMode" : "regular",
+    "id" : "notice-copy-success-regular",
+    "image" : "shelf-notice-copy-success-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Copied \/ Regular",
+    "scenarioID" : "notice-copy-success",
+    "width" : "492.0"
+  },
+  {
+    "height" : "527.0",
+    "heightMode" : "extended",
+    "id" : "notice-copy-success-extended",
+    "image" : "shelf-notice-copy-success-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Copied \/ Extended",
+    "scenarioID" : "notice-copy-success",
+    "width" : "492.0"
+  },
+  {
+    "height" : "401.0",
+    "heightMode" : "regular",
+    "id" : "notice-copy-partial-regular",
+    "image" : "shelf-notice-copy-partial-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Copy skipped unavailable items \/ Regular",
+    "scenarioID" : "notice-copy-partial",
+    "width" : "492.0"
+  },
+  {
+    "height" : "526.0",
+    "heightMode" : "extended",
+    "id" : "notice-copy-partial-extended",
+    "image" : "shelf-notice-copy-partial-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Copy skipped unavailable items \/ Extended",
+    "scenarioID" : "notice-copy-partial",
+    "width" : "492.0"
+  },
+  {
+    "height" : "401.0",
+    "heightMode" : "regular",
+    "id" : "notice-copy-failed-regular",
+    "image" : "shelf-notice-copy-failed-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Copy failed \/ Regular",
+    "scenarioID" : "notice-copy-failed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "526.0",
+    "heightMode" : "extended",
+    "id" : "notice-copy-failed-extended",
+    "image" : "shelf-notice-copy-failed-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Copy failed \/ Extended",
+    "scenarioID" : "notice-copy-failed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "402.0",
+    "heightMode" : "regular",
+    "id" : "notice-paths-success-regular",
+    "image" : "shelf-notice-paths-success-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Paths copied \/ Regular",
+    "scenarioID" : "notice-paths-success",
+    "width" : "492.0"
+  },
+  {
+    "height" : "527.0",
+    "heightMode" : "extended",
+    "id" : "notice-paths-success-extended",
+    "image" : "shelf-notice-paths-success-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Paths copied \/ Extended",
+    "scenarioID" : "notice-paths-success",
+    "width" : "492.0"
+  },
+  {
+    "height" : "415.0",
+    "heightMode" : "regular",
+    "id" : "notice-paths-partial-regular",
+    "image" : "shelf-notice-paths-partial-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Paths skipped unavailable items \/ Regular",
+    "scenarioID" : "notice-paths-partial",
+    "width" : "492.0"
+  },
+  {
+    "height" : "540.0",
+    "heightMode" : "extended",
+    "id" : "notice-paths-partial-extended",
+    "image" : "shelf-notice-paths-partial-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Paths skipped unavailable items \/ Extended",
+    "scenarioID" : "notice-paths-partial",
+    "width" : "492.0"
+  },
+  {
+    "height" : "402.0",
+    "heightMode" : "regular",
+    "id" : "notice-finder-success-regular",
+    "image" : "shelf-notice-finder-success-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Shown in Finder \/ Regular",
+    "scenarioID" : "notice-finder-success",
+    "width" : "492.0"
+  },
+  {
+    "height" : "527.0",
+    "heightMode" : "extended",
+    "id" : "notice-finder-success-extended",
+    "image" : "shelf-notice-finder-success-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Shown in Finder \/ Extended",
+    "scenarioID" : "notice-finder-success",
+    "width" : "492.0"
+  },
+  {
+    "height" : "415.0",
+    "heightMode" : "regular",
+    "id" : "notice-finder-partial-regular",
+    "image" : "shelf-notice-finder-partial-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Finder skipped unavailable items \/ Regular",
+    "scenarioID" : "notice-finder-partial",
+    "width" : "492.0"
+  },
+  {
+    "height" : "540.0",
+    "heightMode" : "extended",
+    "id" : "notice-finder-partial-extended",
+    "image" : "shelf-notice-finder-partial-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Finder skipped unavailable items \/ Extended",
+    "scenarioID" : "notice-finder-partial",
+    "width" : "492.0"
+  },
+  {
+    "height" : "402.0",
+    "heightMode" : "regular",
+    "id" : "notice-share-success-regular",
+    "image" : "shelf-notice-share-success-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Shared \/ Regular",
+    "scenarioID" : "notice-share-success",
+    "width" : "492.0"
+  },
+  {
+    "height" : "527.0",
+    "heightMode" : "extended",
+    "id" : "notice-share-success-extended",
+    "image" : "shelf-notice-share-success-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Shared \/ Extended",
+    "scenarioID" : "notice-share-success",
+    "width" : "492.0"
+  },
+  {
+    "height" : "401.0",
+    "heightMode" : "regular",
+    "id" : "notice-share-partial-regular",
+    "image" : "shelf-notice-share-partial-regular.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Share skipped unavailable items \/ Regular",
+    "scenarioID" : "notice-share-partial",
+    "width" : "492.0"
+  },
+  {
+    "height" : "526.0",
+    "heightMode" : "extended",
+    "id" : "notice-share-partial-extended",
+    "image" : "shelf-notice-share-partial-extended.png",
+    "module" : "shelf",
+    "scenario" : "Notice \/ Share skipped unavailable items \/ Extended",
+    "scenarioID" : "notice-share-partial",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-import-preparing-regular",
+    "image" : "shelf-transfer-import-preparing-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Preparing \/ Regular",
+    "scenarioID" : "transfer-import-preparing",
+    "width" : "492.0"
+  },
+  {
+    "height" : "498.0",
+    "heightMode" : "extended",
+    "id" : "transfer-import-preparing-extended",
+    "image" : "shelf-transfer-import-preparing-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Preparing \/ Extended",
+    "scenarioID" : "transfer-import-preparing",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-import-receiving-batch-regular",
+    "image" : "shelf-transfer-import-receiving-batch-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Receiving Batch \/ Regular",
+    "scenarioID" : "transfer-import-receiving-batch",
+    "width" : "492.0"
+  },
+  {
+    "height" : "498.0",
+    "heightMode" : "extended",
+    "id" : "transfer-import-receiving-batch-extended",
+    "image" : "shelf-transfer-import-receiving-batch-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Receiving Batch \/ Extended",
+    "scenarioID" : "transfer-import-receiving-batch",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-import-receiving-single-regular",
+    "image" : "shelf-transfer-import-receiving-single-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Receiving Single \/ Regular",
+    "scenarioID" : "transfer-import-receiving-single",
+    "width" : "492.0"
+  },
+  {
+    "height" : "498.0",
+    "heightMode" : "extended",
+    "id" : "transfer-import-receiving-single-extended",
+    "image" : "shelf-transfer-import-receiving-single-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Receiving Single \/ Extended",
+    "scenarioID" : "transfer-import-receiving-single",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-import-receiving-unknown-count-regular",
+    "image" : "shelf-transfer-import-receiving-unknown-count-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Receiving Unknown Count \/ Regular",
+    "scenarioID" : "transfer-import-receiving-unknown-count",
+    "width" : "492.0"
+  },
+  {
+    "height" : "498.0",
+    "heightMode" : "extended",
+    "id" : "transfer-import-receiving-unknown-count-extended",
+    "image" : "shelf-transfer-import-receiving-unknown-count-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Receiving Unknown Count \/ Extended",
+    "scenarioID" : "transfer-import-receiving-unknown-count",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-import-receiving-waiting-regular",
+    "image" : "shelf-transfer-import-receiving-waiting-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Receiving Waiting \/ Regular",
+    "scenarioID" : "transfer-import-receiving-waiting",
+    "width" : "492.0"
+  },
+  {
+    "height" : "498.0",
+    "heightMode" : "extended",
+    "id" : "transfer-import-receiving-waiting-extended",
+    "image" : "shelf-transfer-import-receiving-waiting-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Receiving Waiting \/ Extended",
+    "scenarioID" : "transfer-import-receiving-waiting",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-import-finalizing-regular",
+    "image" : "shelf-transfer-import-finalizing-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Finalizing \/ Regular",
+    "scenarioID" : "transfer-import-finalizing",
+    "width" : "492.0"
+  },
+  {
+    "height" : "498.0",
+    "heightMode" : "extended",
+    "id" : "transfer-import-finalizing-extended",
+    "image" : "shelf-transfer-import-finalizing-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Finalizing \/ Extended",
+    "scenarioID" : "transfer-import-finalizing",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-managed-move-receiving-regular",
+    "image" : "shelf-transfer-managed-move-receiving-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Managed Move Receiving \/ Regular",
+    "scenarioID" : "transfer-managed-move-receiving",
+    "width" : "492.0"
+  },
+  {
+    "height" : "498.0",
+    "heightMode" : "extended",
+    "id" : "transfer-managed-move-receiving-extended",
+    "image" : "shelf-transfer-managed-move-receiving-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Managed Move Receiving \/ Extended",
+    "scenarioID" : "transfer-managed-move-receiving",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-import-added-regular",
+    "image" : "shelf-transfer-import-added-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Added \/ Regular",
+    "scenarioID" : "transfer-import-added",
+    "width" : "492.0"
+  },
+  {
+    "height" : "497.0",
+    "heightMode" : "extended",
+    "id" : "transfer-import-added-extended",
+    "image" : "shelf-transfer-import-added-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Added \/ Extended",
+    "scenarioID" : "transfer-import-added",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-import-partial-regular",
+    "image" : "shelf-transfer-import-partial-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Partial \/ Regular",
+    "scenarioID" : "transfer-import-partial",
+    "width" : "492.0"
+  },
+  {
+    "height" : "498.0",
+    "heightMode" : "extended",
+    "id" : "transfer-import-partial-extended",
+    "image" : "shelf-transfer-import-partial-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Partial \/ Extended",
+    "scenarioID" : "transfer-import-partial",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-import-reference-fallback-regular",
+    "image" : "shelf-transfer-import-reference-fallback-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Reference Fallback \/ Regular",
+    "scenarioID" : "transfer-import-reference-fallback",
+    "width" : "492.0"
+  },
+  {
+    "height" : "498.0",
+    "heightMode" : "extended",
+    "id" : "transfer-import-reference-fallback-extended",
+    "image" : "shelf-transfer-import-reference-fallback-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Reference Fallback \/ Extended",
+    "scenarioID" : "transfer-import-reference-fallback",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-import-added-with-warnings-regular",
+    "image" : "shelf-transfer-import-added-with-warnings-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Added With Warnings \/ Regular",
+    "scenarioID" : "transfer-import-added-with-warnings",
+    "width" : "492.0"
+  },
+  {
+    "height" : "498.0",
+    "heightMode" : "extended",
+    "id" : "transfer-import-added-with-warnings-extended",
+    "image" : "shelf-transfer-import-added-with-warnings-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Added With Warnings \/ Extended",
+    "scenarioID" : "transfer-import-added-with-warnings",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-import-unsupported-regular",
+    "image" : "shelf-transfer-import-unsupported-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Unsupported \/ Regular",
+    "scenarioID" : "transfer-import-unsupported",
+    "width" : "492.0"
+  },
+  {
+    "height" : "498.0",
+    "heightMode" : "extended",
+    "id" : "transfer-import-unsupported-extended",
+    "image" : "shelf-transfer-import-unsupported-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Unsupported \/ Extended",
+    "scenarioID" : "transfer-import-unsupported",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-import-source-unavailable-regular",
+    "image" : "shelf-transfer-import-source-unavailable-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Source Unavailable \/ Regular",
+    "scenarioID" : "transfer-import-source-unavailable",
+    "width" : "492.0"
+  },
+  {
+    "height" : "498.0",
+    "heightMode" : "extended",
+    "id" : "transfer-import-source-unavailable-extended",
+    "image" : "shelf-transfer-import-source-unavailable-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Source Unavailable \/ Extended",
+    "scenarioID" : "transfer-import-source-unavailable",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-import-promise-failed-regular",
+    "image" : "shelf-transfer-import-promise-failed-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Promise Failed \/ Regular",
+    "scenarioID" : "transfer-import-promise-failed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "498.0",
+    "heightMode" : "extended",
+    "id" : "transfer-import-promise-failed-extended",
+    "image" : "shelf-transfer-import-promise-failed-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Promise Failed \/ Extended",
+    "scenarioID" : "transfer-import-promise-failed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-import-materialization-failed-regular",
+    "image" : "shelf-transfer-import-materialization-failed-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Materialization Failed \/ Regular",
+    "scenarioID" : "transfer-import-materialization-failed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "498.0",
+    "heightMode" : "extended",
+    "id" : "transfer-import-materialization-failed-extended",
+    "image" : "shelf-transfer-import-materialization-failed-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Materialization Failed \/ Extended",
+    "scenarioID" : "transfer-import-materialization-failed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-import-bookmark-failed-regular",
+    "image" : "shelf-transfer-import-bookmark-failed-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Bookmark Failed \/ Regular",
+    "scenarioID" : "transfer-import-bookmark-failed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "498.0",
+    "heightMode" : "extended",
+    "id" : "transfer-import-bookmark-failed-extended",
+    "image" : "shelf-transfer-import-bookmark-failed-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Bookmark Failed \/ Extended",
+    "scenarioID" : "transfer-import-bookmark-failed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-import-persistence-failed-regular",
+    "image" : "shelf-transfer-import-persistence-failed-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Persistence Failed \/ Regular",
+    "scenarioID" : "transfer-import-persistence-failed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "511.0",
+    "heightMode" : "extended",
+    "id" : "transfer-import-persistence-failed-extended",
+    "image" : "shelf-transfer-import-persistence-failed-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Persistence Failed \/ Extended",
+    "scenarioID" : "transfer-import-persistence-failed",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-import-cancelled-regular",
+    "image" : "shelf-transfer-import-cancelled-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Cancelled \/ Regular",
+    "scenarioID" : "transfer-import-cancelled",
+    "width" : "492.0"
+  },
+  {
+    "height" : "497.0",
+    "heightMode" : "extended",
+    "id" : "transfer-import-cancelled-extended",
+    "image" : "shelf-transfer-import-cancelled-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Import Cancelled \/ Extended",
+    "scenarioID" : "transfer-import-cancelled",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-export-preparing-regular",
+    "image" : "shelf-transfer-export-preparing-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Export Preparing \/ Regular",
+    "scenarioID" : "transfer-export-preparing",
+    "width" : "492.0"
+  },
+  {
+    "height" : "498.0",
+    "heightMode" : "extended",
+    "id" : "transfer-export-preparing-extended",
+    "image" : "shelf-transfer-export-preparing-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Export Preparing \/ Extended",
+    "scenarioID" : "transfer-export-preparing",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-export-delivering-batch-regular",
+    "image" : "shelf-transfer-export-delivering-batch-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Export Delivering Batch \/ Regular",
+    "scenarioID" : "transfer-export-delivering-batch",
+    "width" : "492.0"
+  },
+  {
+    "height" : "498.0",
+    "heightMode" : "extended",
+    "id" : "transfer-export-delivering-batch-extended",
+    "image" : "shelf-transfer-export-delivering-batch-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Export Delivering Batch \/ Extended",
+    "scenarioID" : "transfer-export-delivering-batch",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-export-delivering-single-regular",
+    "image" : "shelf-transfer-export-delivering-single-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Export Delivering Single \/ Regular",
+    "scenarioID" : "transfer-export-delivering-single",
+    "width" : "492.0"
+  },
+  {
+    "height" : "498.0",
+    "heightMode" : "extended",
+    "id" : "transfer-export-delivering-single-extended",
+    "image" : "shelf-transfer-export-delivering-single-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Export Delivering Single \/ Extended",
+    "scenarioID" : "transfer-export-delivering-single",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-export-destination-accepted-regular",
+    "image" : "shelf-transfer-export-destination-accepted-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Export Destination Accepted \/ Regular",
+    "scenarioID" : "transfer-export-destination-accepted",
+    "width" : "492.0"
+  },
+  {
+    "height" : "498.0",
+    "heightMode" : "extended",
+    "id" : "transfer-export-destination-accepted-extended",
+    "image" : "shelf-transfer-export-destination-accepted-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Export Destination Accepted \/ Extended",
+    "scenarioID" : "transfer-export-destination-accepted",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-export-delivered-regular",
+    "image" : "shelf-transfer-export-delivered-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Export Delivered \/ Regular",
+    "scenarioID" : "transfer-export-delivered",
+    "width" : "492.0"
+  },
+  {
+    "height" : "497.0",
+    "heightMode" : "extended",
+    "id" : "transfer-export-delivered-extended",
+    "image" : "shelf-transfer-export-delivered-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Export Delivered \/ Extended",
+    "scenarioID" : "transfer-export-delivered",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-export-partial-regular",
+    "image" : "shelf-transfer-export-partial-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Export Partial \/ Regular",
+    "scenarioID" : "transfer-export-partial",
+    "width" : "492.0"
+  },
+  {
+    "height" : "511.0",
+    "heightMode" : "extended",
+    "id" : "transfer-export-partial-extended",
+    "image" : "shelf-transfer-export-partial-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Export Partial \/ Extended",
+    "scenarioID" : "transfer-export-partial",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-export-failed-select-item-regular",
+    "image" : "shelf-transfer-export-failed-select-item-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Export Failed Select Item \/ Regular",
+    "scenarioID" : "transfer-export-failed-select-item",
+    "width" : "492.0"
+  },
+  {
+    "height" : "511.0",
+    "heightMode" : "extended",
+    "id" : "transfer-export-failed-select-item-extended",
+    "image" : "shelf-transfer-export-failed-select-item-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Export Failed Select Item \/ Extended",
+    "scenarioID" : "transfer-export-failed-select-item",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-export-missing-original-locate-regular",
+    "image" : "shelf-transfer-export-missing-original-locate-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Export Missing Original Locate \/ Regular",
+    "scenarioID" : "transfer-export-missing-original-locate",
+    "width" : "492.0"
+  },
+  {
+    "height" : "498.0",
+    "heightMode" : "extended",
+    "id" : "transfer-export-missing-original-locate-extended",
+    "image" : "shelf-transfer-export-missing-original-locate-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Export Missing Original Locate \/ Extended",
+    "scenarioID" : "transfer-export-missing-original-locate",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-export-missing-managed-open-recovery-regular",
+    "image" : "shelf-transfer-export-missing-managed-open-recovery-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Export Missing Managed Open Recovery \/ Regular",
+    "scenarioID" : "transfer-export-missing-managed-open-recovery",
+    "width" : "492.0"
+  },
+  {
+    "height" : "511.0",
+    "heightMode" : "extended",
+    "id" : "transfer-export-missing-managed-open-recovery-extended",
+    "image" : "shelf-transfer-export-missing-managed-open-recovery-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Export Missing Managed Open Recovery \/ Extended",
+    "scenarioID" : "transfer-export-missing-managed-open-recovery",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "transfer-export-cancelled-regular",
+    "image" : "shelf-transfer-export-cancelled-regular.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Export Cancelled \/ Regular",
+    "scenarioID" : "transfer-export-cancelled",
+    "width" : "492.0"
+  },
+  {
+    "height" : "497.0",
+    "heightMode" : "extended",
+    "id" : "transfer-export-cancelled-extended",
+    "image" : "shelf-transfer-export-cancelled-extended.png",
+    "module" : "shelf",
+    "scenario" : "Transfer \/ Export Cancelled \/ Extended",
+    "scenarioID" : "transfer-export-cancelled",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "default-modules-regular",
+    "image" : "quick-settings-default-modules-regular.png",
+    "module" : "quick-settings",
+    "scenario" : "Default modules \/ Regular",
+    "scenarioID" : "default-modules",
+    "width" : "492.0"
+  },
+  {
+    "height" : "456.0",
+    "heightMode" : "extended",
+    "id" : "default-modules-extended",
+    "image" : "quick-settings-default-modules-extended.png",
+    "module" : "quick-settings",
+    "scenario" : "Default modules \/ Extended",
+    "scenarioID" : "default-modules",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "all-modules-enabled-regular",
+    "image" : "quick-settings-all-modules-enabled-regular.png",
+    "module" : "quick-settings",
+    "scenario" : "All modules enabled \/ Regular",
+    "scenarioID" : "all-modules-enabled",
+    "width" : "492.0"
+  },
+  {
+    "height" : "506.0",
+    "heightMode" : "extended",
+    "id" : "all-modules-enabled-extended",
+    "image" : "quick-settings-all-modules-enabled-extended.png",
+    "module" : "quick-settings",
+    "scenario" : "All modules enabled \/ Extended",
+    "scenarioID" : "all-modules-enabled",
+    "width" : "492.0"
+  },
+  {
+    "height" : "330.0",
+    "heightMode" : "regular",
+    "id" : "optional-modules-disabled-regular",
+    "image" : "quick-settings-optional-modules-disabled-regular.png",
+    "module" : "quick-settings",
+    "scenario" : "Optional modules disabled \/ Regular",
+    "scenarioID" : "optional-modules-disabled",
+    "width" : "492.0"
+  },
+  {
+    "height" : "456.0",
+    "heightMode" : "extended",
+    "id" : "optional-modules-disabled-extended",
+    "image" : "quick-settings-optional-modules-disabled-extended.png",
+    "module" : "quick-settings",
+    "scenario" : "Optional modules disabled \/ Extended",
+    "scenarioID" : "optional-modules-disabled",
+    "width" : "492.0"
+  }
+]

@@ -1,5 +1,7 @@
 # Separate expanded panel checkpoint
 
+Historical prototype baseline. For the current architecture, checks, and refreshed captures, see [Unified Island panel](../../previews/unified-panel/README.md).
+
 This checkpoint on `codex/separate-expanded-panel` preserves the working prototype before the structural changes in [issue #3](https://github.com/Nininunz/OpenYoink/issues/3). Its base is merged [PR #2](https://github.com/Nininunz/OpenYoink/pull/2), commit `4b54eb5`.
 
 ## Current behavior

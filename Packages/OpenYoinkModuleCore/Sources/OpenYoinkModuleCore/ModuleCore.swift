@@ -100,8 +100,7 @@ public enum IslandModuleEvent: Equatable, Sendable {
 /// than a Set so unknown future identifiers survive a load/save round trip.
 public struct IslandModuleConfiguration: Codable, Equatable, Sendable {
     public static let currentVersion = 1
-    public static let shortcutSlotsPerSide = 4
-    public static let shortcutPositionCount = shortcutSlotsPerSide * 2
+    public static let shortcutPositionCount = 8
     public static let requiredShortcut = IslandModuleID(rawValue: "quickSettings")
     public static let maximumPinnedModules = shortcutPositionCount - 1
 
@@ -129,14 +128,11 @@ public struct IslandModuleConfiguration: Codable, Equatable, Sendable {
 
     /// Keep occupied positions stable and expose only enough empty positions
     /// for enabled modules. Quick Settings always contributes one position.
-    public func visibleShortcutIndices(hasPhysicalNotch: Bool) -> [Int] {
+    public func visibleShortcutIndices() -> [Int] {
         let positions = shortcutPositions
         let capacity = min(Self.shortcutPositionCount, Set(enabledModuleIDs + [Self.requiredShortcut]).count)
         var indices = positions.indices.filter { positions[$0] != nil }
-        let preferred = hasPhysicalNotch
-            ? (0..<Self.shortcutSlotsPerSide).flatMap { [Self.shortcutSlotsPerSide - 1 - $0, Self.shortcutSlotsPerSide + $0] }
-            : Array(positions.indices)
-        for index in preferred where indices.count < capacity && !indices.contains(index) {
+        for index in positions.indices where indices.count < capacity && !indices.contains(index) {
             indices.append(index)
         }
         return indices.sorted()

@@ -194,7 +194,7 @@ struct IslandExpandedView: View {
 
     private var shortcutIndices: [Int] {
         settings.effectiveIslandShortcuts
-            .visibleShortcutIndices(hasPhysicalNotch: false)
+            .visibleShortcutIndices()
     }
 
     private func moduleShortcutButton(
@@ -771,7 +771,7 @@ struct IslandModuleLibraryView: View {
 
     private var shortcutIndices: [Int] {
         return settings.effectiveIslandShortcuts
-            .visibleShortcutIndices(hasPhysicalNotch: false)
+            .visibleShortcutIndices()
     }
 }
 
