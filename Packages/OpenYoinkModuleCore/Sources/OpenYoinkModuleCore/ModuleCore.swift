@@ -127,6 +127,21 @@ public struct IslandModuleConfiguration: Codable, Equatable, Sendable {
         return positions
     }
 
+    /// Keep occupied positions stable and expose only enough empty positions
+    /// for enabled modules. Quick Settings always contributes one position.
+    public func visibleShortcutIndices(hasPhysicalNotch: Bool) -> [Int] {
+        let positions = shortcutPositions
+        let capacity = min(Self.shortcutPositionCount, Set(enabledModuleIDs + [Self.requiredShortcut]).count)
+        var indices = positions.indices.filter { positions[$0] != nil }
+        let preferred = hasPhysicalNotch
+            ? (0..<Self.shortcutSlotsPerSide).flatMap { [Self.shortcutSlotsPerSide - 1 - $0, Self.shortcutSlotsPerSide + $0] }
+            : Array(positions.indices)
+        for index in preferred where indices.count < capacity && !indices.contains(index) {
+            indices.append(index)
+        }
+        return indices.sorted()
+    }
+
     public mutating func assignShortcut(_ id: IslandModuleID?, at index: Int) {
         guard (0..<Self.shortcutPositionCount).contains(index),
               id == nil || id == Self.requiredShortcut || isEnabled(id!) else { return }

@@ -566,8 +566,8 @@ struct IslandRootView: View {
 
     private var physicalNotchModuleStrip: some View {
         let slots = pinnedModuleSlots
-        let leadingSlots = Array(slots.prefix(IslandModuleConfiguration.shortcutSlotsPerSide))
-        let trailingSlots = Array(slots.dropFirst(IslandModuleConfiguration.shortcutSlotsPerSide))
+        let leadingIndices = shortcutIndices.filter { $0 < IslandModuleConfiguration.shortcutSlotsPerSide }
+        let trailingIndices = shortcutIndices.filter { $0 >= IslandModuleConfiguration.shortcutSlotsPerSide }
         let notchWidth = coordinator.currentLayout?.cameraHousingWidth ?? 0
         let notchHeight = coordinator.currentLayout?.topInset ?? 32
         let stripHeight = notchHeight
@@ -576,8 +576,8 @@ struct IslandRootView: View {
         return ZStack(alignment: .top) {
             HStack(spacing: 0) {
                 HStack(spacing: 2) {
-                    ForEach(leadingSlots.indices, id: \.self) { index in
-                        if let descriptor = leadingSlots[index] {
+                    ForEach(leadingIndices, id: \.self) { index in
+                        if let descriptor = slots[index] {
                             physicalNotchModuleButton(descriptor)
                         } else {
                             emptyModuleSlot(size: 24, position: index)
@@ -591,11 +591,11 @@ struct IslandRootView: View {
                     .allowsHitTesting(false)
 
                 HStack(spacing: 2) {
-                    ForEach(trailingSlots.indices, id: \.self) { index in
-                        if let descriptor = trailingSlots[index] {
+                    ForEach(trailingIndices, id: \.self) { index in
+                        if let descriptor = slots[index] {
                             physicalNotchModuleButton(descriptor)
                         } else {
-                            emptyModuleSlot(size: 24, position: index + IslandModuleConfiguration.shortcutSlotsPerSide)
+                            emptyModuleSlot(size: 24, position: index)
                         }
                     }
                 }
@@ -709,7 +709,7 @@ struct IslandRootView: View {
 
     private var moduleNavigation: some View {
         HStack(spacing: 3) {
-            ForEach(pinnedModuleSlots.indices, id: \.self) { index in
+            ForEach(shortcutIndices, id: \.self) { index in
                 if let descriptor = pinnedModuleSlots[index] {
                     floatingModuleButton(descriptor)
                 } else {
@@ -727,7 +727,7 @@ struct IslandRootView: View {
         }
     }
 
-    /// The seven saved positions are the only normal compact navigation slots.
+    /// Saved positions provide expanded navigation shortcuts.
     /// Enabled but unpinned modules remain available from the module library.
     private var visibleModuleDescriptors: [IslandModuleDescriptor] {
         settings.effectiveIslandShortcuts(hasPhysicalNotch: hasPhysicalNotch).pinnedModuleIDs.compactMap {
@@ -739,6 +739,11 @@ struct IslandRootView: View {
         settings.effectiveIslandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.hasPhysicalNotch == true).shortcutPositions.map { id in
             id.flatMap { registry.descriptor(for: $0) }
         }
+    }
+
+    private var shortcutIndices: [Int] {
+        settings.effectiveIslandShortcuts(hasPhysicalNotch: hasPhysicalNotch)
+            .visibleShortcutIndices(hasPhysicalNotch: hasPhysicalNotch)
     }
 
     private func floatingModuleButton(
@@ -1127,7 +1132,7 @@ struct IslandModuleLibraryView: View {
 
     private var expandedEditor: some View {
         VStack(alignment: .leading, spacing: 7) {
-            ForEach(0..<IslandModuleConfiguration.shortcutPositionCount, id: \.self) { index in
+            ForEach(shortcutIndices, id: \.self) { index in
                 positionRow(index)
             }
             HStack {
@@ -1331,7 +1336,7 @@ struct IslandModuleLibraryView: View {
     private func positionRow(_ index: Int) -> some View {
         HStack(spacing: 12) {
             if coordinator.currentLayout?.hasPhysicalNotch == true {
-                Text("\(index + 1)")
+                Text("\((shortcutIndices.firstIndex(of: index) ?? 0) + 1)")
                     .font(.caption.monospacedDigit().weight(.semibold))
                     .foregroundStyle(.secondary)
                     .frame(width: 20)
@@ -1370,12 +1375,20 @@ struct IslandModuleLibraryView: View {
 
     private func positionLabel(_ index: Int) -> String {
         guard coordinator.currentLayout?.hasPhysicalNotch == true else {
-            return String(localized: "Position \(index + 1)")
+            return String(localized: "Position \((shortcutIndices.firstIndex(of: index) ?? 0) + 1)")
         }
         let perSide = IslandModuleConfiguration.shortcutSlotsPerSide
+        let sideIndices = shortcutIndices.filter { ($0 < perSide) == (index < perSide) }
+        let number = (sideIndices.firstIndex(of: index) ?? 0) + 1
         return index < perSide
-            ? String(localized: "Left \(index + 1)")
-            : String(localized: "Right \(index - perSide + 1)")
+            ? String(localized: "Left \(number)")
+            : String(localized: "Right \(number)")
+    }
+
+    private var shortcutIndices: [Int] {
+        let notched = coordinator.currentLayout?.hasPhysicalNotch == true
+        return settings.effectiveIslandShortcuts(hasPhysicalNotch: notched)
+            .visibleShortcutIndices(hasPhysicalNotch: notched)
     }
 }
 

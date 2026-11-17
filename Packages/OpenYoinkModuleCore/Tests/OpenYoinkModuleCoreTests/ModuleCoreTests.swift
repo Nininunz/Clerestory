@@ -4,6 +4,38 @@ import Testing
 
 @Suite("Island module configuration")
 struct ModuleCoreTests {
+    @Test("Visible shortcut slots follow enabled modules and include Quick Settings", arguments: 0...12)
+    func visibleShortcutCapacity(enabledCount: Int) {
+        let ids = (0..<enabledCount).map { IslandModuleID(rawValue: "module.\($0)") }
+        let configuration = IslandModuleConfiguration(enabledModuleIDs: ids, pinnedModuleIDs: [])
+        for notched in [false, true] {
+            let indices = configuration.visibleShortcutIndices(hasPhysicalNotch: notched)
+            #expect(indices.count == min(enabledCount + 1, 8))
+            #expect(Set(indices).count == indices.count)
+            #expect(indices.contains(configuration.shortcutPositions.firstIndex(of: IslandModuleConfiguration.requiredShortcut)!))
+        }
+    }
+
+    @Test("Slot shrinking preserves occupied positions and fills from the notch or left edge")
+    func visibleShortcutPlacement() {
+        let shelf: IslandModuleID = "shelf"
+        let timer: IslandModuleID = "timer"
+        let required = IslandModuleConfiguration.requiredShortcut
+        var configuration = IslandModuleConfiguration(enabledModuleIDs: [shelf], pinnedModuleIDs: [])
+        configuration.assignShortcut(required, at: 4)
+        configuration.assignShortcut(shelf, at: 3)
+        #expect(configuration.visibleShortcutIndices(hasPhysicalNotch: true) == [3, 4])
+        configuration.setEnabled(true, for: timer)
+        #expect(configuration.visibleShortcutIndices(hasPhysicalNotch: true) == [2, 3, 4])
+        #expect(configuration.visibleShortcutIndices(hasPhysicalNotch: false) == [0, 3, 4])
+        configuration.assignShortcut(timer, at: 7)
+        #expect(configuration.visibleShortcutIndices(hasPhysicalNotch: true) == [3, 4, 7])
+        configuration.setEnabled(false, for: shelf)
+        #expect(configuration.visibleShortcutIndices(hasPhysicalNotch: true) == [4, 7])
+        configuration.setEnabled(false, for: timer)
+        #expect(configuration.visibleShortcutIndices(hasPhysicalNotch: true) == [4])
+    }
+
     @Test("Configuration removes duplicates and caps pinned modules")
     func normalization() {
         let ids = (0..<8).map { IslandModuleID(rawValue: "module.\($0)") }

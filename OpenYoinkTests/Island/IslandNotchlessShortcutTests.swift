@@ -3,6 +3,32 @@ import XCTest
 
 @MainActor
 final class IslandNotchlessShortcutTests: XCTestCase {
+    func testVisibleSlotsFollowGateAndEnablementWithoutChangingSavedPositions() throws {
+        let name = "ShortcutCapacity.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let settings = SettingsStore(defaults: defaults)
+        for notched in [false, true] {
+            let configuration = settings.effectiveIslandShortcuts(hasPhysicalNotch: notched)
+            XCTAssertEqual(configuration.visibleShortcutIndices(hasPhysicalNotch: notched), notched ? [3, 4] : [0, 1])
+        }
+        settings.experimentalModulesEnabled = true
+        settings.setIslandModuleEnabled(true, id: .timer)
+        settings.assignIslandShortcut(.timer, at: 7, hasPhysicalNotch: false)
+        let saved = settings.islandShortcuts(hasPhysicalNotch: false)
+        settings.experimentalModulesEnabled = false
+        XCTAssertEqual(settings.effectiveIslandShortcuts(hasPhysicalNotch: false)
+            .visibleShortcutIndices(hasPhysicalNotch: false), [0, 1])
+        settings.setIslandModuleEnabled(false, id: .shelf)
+        XCTAssertEqual(settings.effectiveIslandShortcuts(hasPhysicalNotch: false)
+            .visibleShortcutIndices(hasPhysicalNotch: false), [1])
+        settings.setIslandModuleEnabled(true, id: .shelf)
+        settings.experimentalModulesEnabled = true
+        let restored = SettingsStore(defaults: defaults).effectiveIslandShortcuts(hasPhysicalNotch: false)
+        XCTAssertEqual(restored.shortcutPositions, saved.shortcutPositions)
+        XCTAssertTrue(restored.visibleShortcutIndices(hasPhysicalNotch: false).contains(7))
+    }
+
     func testNotchlessDefaultsStartAtLeftAndEditsPersistIndependently() throws {
         let name = "NotchlessShortcuts.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
