@@ -1,13 +1,12 @@
 import Foundation
 
-/// Shared three-tier sensitivity for the shake and edge triggers
-/// (plan §6: 「全局摇动误触」 calls for tunable sensitivity).
+/// Three-tier sensitivity for drag edge triggers.
 ///
 /// Persisted by `SettingsStore` as the raw value string under the existing
 /// `OpenYoink.*Sensitivity` keys — no separate persistence lives here.
 /// `CaseIterable` so the S8 settings page can drive a picker directly.
 enum TriggerSensitivity: String, CaseIterable, Sendable, Codable {
-    /// Hardest to trigger (longest dwell / most reversals, widest margins).
+    /// Hardest to trigger (longest dwell and narrowest band).
     case low
     case medium
     /// Easiest to trigger.
@@ -15,24 +14,6 @@ enum TriggerSensitivity: String, CaseIterable, Sendable, Codable {
 }
 
 extension TriggerSensitivity {
-    /// Shake heuristic parameters per tier (see `ShakeDetector`):
-    ///
-    /// | tier   | window | reversals | min segment |
-    /// |--------|--------|-----------|-------------|
-    /// | low    | 1.0 s  | 6         | 25 pt       |
-    /// | medium | 1.2 s  | 5         | 18 pt       |
-    /// | high   | 1.5 s  | 4         | 12 pt       |
-    var shakeParameters: ShakeDetector.Parameters {
-        switch self {
-        case .low:
-            return ShakeDetector.Parameters(window: 1.0, requiredReversals: 6, minSegmentDistance: 25)
-        case .medium:
-            return ShakeDetector.Parameters(window: 1.2, requiredReversals: 5, minSegmentDistance: 18)
-        case .high:
-            return ShakeDetector.Parameters(window: 1.5, requiredReversals: 4, minSegmentDistance: 12)
-        }
-    }
-
     /// Dwell time before the drag edge trigger fires (UX2 — fed by
     /// `leftMouseDragged` samples while the left button is held, so the dwell
     /// is much shorter than the pre-UX hover version): low 0.4 s, medium

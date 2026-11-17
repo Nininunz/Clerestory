@@ -190,14 +190,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.saveClipboardToShelf()
         }
     )
-    lazy var compactCycleHotKeyMonitor = HotKeyMonitor(
-        shortcut: settingsStore.compactCycleShortcut, hotKeyIdentifier: 3,
-        onPress: { [weak self] in self?.settingsStore.cycleCompactModule() },
+    lazy var notchCycleHotKeyMonitor = HotKeyMonitor(
+        shortcut: settingsStore.notchCycleShortcut, hotKeyIdentifier: 3,
+        onPress: { [weak self] in self?.settingsStore.cycleNotchModule() },
         onDoublePress: {}
     )
-    lazy var compactReverseCycleHotKeyMonitor = HotKeyMonitor(
-        shortcut: settingsStore.compactReverseCycleShortcut, hotKeyIdentifier: 4,
-        onPress: { [weak self] in self?.settingsStore.cycleCompactModule(backwards: true) },
+    lazy var notchReverseCycleHotKeyMonitor = HotKeyMonitor(
+        shortcut: settingsStore.notchReverseCycleShortcut, hotKeyIdentifier: 4,
+        onPress: { [weak self] in self?.settingsStore.cycleNotchModule(backwards: true) },
         onDoublePress: {}
     )
     lazy var clipboardHotKeyMonitor = HotKeyMonitor(
@@ -205,13 +205,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         onPress: { [weak self] in self?.clipboardHistoryWindowController.show() },
         onDoublePress: {}
     )
-    /// S7: 鼠标摇动触发（识别核心 ShakeDetector 为纯类型，见 Triggers/）。
-    private lazy var mouseShakeMonitor = MouseShakeMonitor(shouldSuppress: { [weak self] in
-        guard let self else { return false }
-        return IgnoreListService.frontmostAppIsIgnored(in: self.settingsStore.ignoredAppBundleIDs)
-    }, onTrigger: { [weak self] in
-        self?.toggleShelf()
-    })
     /// UX2: 屏幕边缘触发（拖拽版）。仅「唤出」不「隐藏」：贴边的意图是取用
     /// shelf（通常紧接着要向该侧投放），再次贴边反而隐藏会产生往复开关的
     /// 挫败感；隐藏仍由快捷键/菜单与 UX1 拖空无落入自动收回承担。
@@ -281,7 +274,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillFinishLaunching(_ notification: Notification) {
         if isUITesting {
             settingsStore.islandEnabled = true
-            settingsStore.showCompactIsland = !ProcessInfo.processInfo.arguments.contains("--ui-testing-hide-compact")
+            settingsStore.showNotch = !ProcessInfo.processInfo.arguments.contains("--ui-testing-hide-compact")
             settingsStore.islandHoverRevealEnabled = ProcessInfo.processInfo.arguments.contains("--ui-testing-hover")
         }
         if !isUITesting {
@@ -430,9 +423,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         bookmarkService.stopAccessingAll()
         hotKeyMonitor.setEnabled(false)
         clipboardHotKeyMonitor.setEnabled(false)
-        compactCycleHotKeyMonitor.setEnabled(false)
-        compactReverseCycleHotKeyMonitor.setEnabled(false)
-        mouseShakeMonitor.stop()
+        notchCycleHotKeyMonitor.setEnabled(false)
+        notchReverseCycleHotKeyMonitor.setEnabled(false)
         edgeTriggerMonitor.stop()
         dragStartMonitor.stop()
     }
@@ -794,9 +786,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             clipboardHistoryWindowController.hide()
         }
         // Release a conflicting cycle registration before registering the other action.
-        if settingsStore.compactCycleShortcutConflicts || !settingsStore.islandEnabled {
-            compactCycleHotKeyMonitor.setEnabled(false)
-            compactReverseCycleHotKeyMonitor.setEnabled(false)
+        if settingsStore.notchCycleShortcutConflicts || !settingsStore.islandEnabled {
+            notchCycleHotKeyMonitor.setEnabled(false)
+            notchReverseCycleHotKeyMonitor.setEnabled(false)
         }
         hotKeyMonitor.updateShortcut(settingsStore.hotKeyShortcut)
         hotKeyMonitor.setDoublePressEnabled(settingsStore.hotKeyDoublePressSavesClipboard)
@@ -810,24 +802,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ? String(localized: "Choose a history shortcut different from the shelf shortcut.")
             : clipboardHotKeyMonitor.registrationError
 
-        let cycleShortcut = settingsStore.compactCycleShortcut
-        let cycleConflict = settingsStore.compactCycleShortcutConflicts
+        let cycleShortcut = settingsStore.notchCycleShortcut
+        let cycleConflict = settingsStore.notchCycleShortcutConflicts
         // Release both first so swapping the Shift modifier cannot collide with the old pair.
-        compactCycleHotKeyMonitor.setEnabled(false)
-        compactReverseCycleHotKeyMonitor.setEnabled(false)
-        compactCycleHotKeyMonitor.updateShortcut(cycleShortcut)
-        compactReverseCycleHotKeyMonitor.updateShortcut(settingsStore.compactReverseCycleShortcut)
-        compactCycleHotKeyMonitor.setEnabled(settingsStore.islandEnabled && cycleShortcut != nil && !cycleConflict)
-        compactReverseCycleHotKeyMonitor.setEnabled(settingsStore.islandEnabled && cycleShortcut != nil && !cycleConflict)
-        settingsStore.compactCycleShortcutError = cycleConflict
-            ? String(localized: "Choose a compact shortcut whose forward and reverse combinations differ from the shelf and clipboard shortcuts.")
-            : compactCycleHotKeyMonitor.registrationError ?? compactReverseCycleHotKeyMonitor.registrationError
-
-        if settingsStore.shakeTriggerEnabled {
-            mouseShakeMonitor.start(parameters: settingsStore.shakeSensitivity.shakeParameters)
-        } else {
-            mouseShakeMonitor.stop()
-        }
+        notchCycleHotKeyMonitor.setEnabled(false)
+        notchReverseCycleHotKeyMonitor.setEnabled(false)
+        notchCycleHotKeyMonitor.updateShortcut(cycleShortcut)
+        notchReverseCycleHotKeyMonitor.updateShortcut(settingsStore.notchReverseCycleShortcut)
+        notchCycleHotKeyMonitor.setEnabled(settingsStore.islandEnabled && cycleShortcut != nil && !cycleConflict)
+        notchReverseCycleHotKeyMonitor.setEnabled(settingsStore.islandEnabled && cycleShortcut != nil && !cycleConflict)
+        settingsStore.notchCycleShortcutError = cycleConflict
+            ? String(localized: "Choose a notch shortcut whose forward and reverse combinations differ from the shelf and clipboard shortcuts.")
+            : notchCycleHotKeyMonitor.registrationError ?? notchReverseCycleHotKeyMonitor.registrationError
 
         let classicActive = SideShelfAvailability.isEnabled && settingsStore.classicShelfEnabled
         let edgeActive = classicActive

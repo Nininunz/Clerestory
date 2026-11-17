@@ -287,6 +287,20 @@ final class SettingsStoreTests: XCTestCase {
                        .automatic)
     }
 
+    func testRetiredPanelToggleCannotDisablePanelOnRelaunch() throws {
+        let (defaults, name) = try makeSuite()
+        defer { defaults.removePersistentDomain(forName: name) }
+        defaults.set(1, forKey: "OpenYoink.shelfSurfaceSettingsVersion")
+        defaults.set(false, forKey: "OpenYoink.islandEnabled")
+        defaults.set(false, forKey: "OpenYoink.classicShelfEnabled")
+        defaults.set(false, forKey: "OpenYoink.showCompactIsland")
+
+        let store = SettingsStore(defaults: defaults)
+        XCTAssertTrue(store.islandEnabled)
+        XCTAssertFalse(store.showNotch)
+        XCTAssertTrue(SettingsStore(defaults: defaults).islandEnabled)
+    }
+
     func testSideShelfAndIslandPersistIndependently() throws {
         let (defaults, name) = try makeSuite()
         defer { defaults.removePersistentDomain(forName: name) }

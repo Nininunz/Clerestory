@@ -11,7 +11,7 @@ enum SideShelfAvailability {
 ///
 /// All keys are prefixed with `OpenYoink.` to avoid collisions. Defaults are
 /// registered on init, so reads always return meaningful values. Trigger
-/// settings are consumed by `HotKeyMonitor` / `MouseShakeMonitor` /
+/// settings are consumed by `HotKeyMonitor` /
 /// `EdgeTriggerMonitor` (S7); the settings UI lives in `SettingsView` (S8).
 @MainActor
 @Observable
@@ -27,7 +27,7 @@ final class SettingsStore {
     }
 
     /// Which surface presents the same shelf data. Classic retains the
-    /// existing left/right/custom panel; Island anchors a compact surface to
+    /// existing left/right/custom panel; Island anchors a notch surface to
     /// the camera housing (or a floating top pill on displays without one).
     enum ShelfPresentationMode: String, CaseIterable, Sendable {
         case classic, island
@@ -118,8 +118,8 @@ final class SettingsStore {
         var option: Bool
         var control: Bool
 
-        /// Control–Option–Space cycles the compact Island independently.
-        static let compactCycle = HotKeyShortcut(keyCode: 49, command: false, shift: false, option: true, control: true)
+        /// Control–Option–Space cycles the notch display independently.
+        static let notchCycle = HotKeyShortcut(keyCode: 49, command: false, shift: false, option: true, control: true)
 
         /// ⌘⇧Space
         static let `default` = HotKeyShortcut(
@@ -166,71 +166,71 @@ final class SettingsStore {
         }
     }
 
-    var compactModuleOrder: [IslandModuleID] = IslandCompactDisplay.cycleOrder {
+    var notchModuleOrder: [IslandModuleID] = IslandNotchDisplay.cycleOrder {
         didSet {
-            let normalized = compactModuleOrder.reduce(into: [IslandModuleID]()) { result, id in
-                if IslandCompactDisplay.cycleOrder.contains(id), !result.contains(id) { result.append(id) }
+            let normalized = notchModuleOrder.reduce(into: [IslandModuleID]()) { result, id in
+                if IslandNotchDisplay.cycleOrder.contains(id), !result.contains(id) { result.append(id) }
             }
-            if normalized != compactModuleOrder { compactModuleOrder = normalized }
-            defaults.set(normalized.map(\.rawValue), forKey: Keys.compactModuleOrder)
+            if normalized != notchModuleOrder { notchModuleOrder = normalized }
+            defaults.set(normalized.map(\.rawValue), forKey: Keys.notchModuleOrder)
         }
     }
 
-    var effectiveCompactModuleOrder: [IslandModuleID] {
-        compactModuleOrder.filter { isIslandModuleAvailable($0) && isIslandModuleEnabled($0) }
+    var effectiveNotchModuleOrder: [IslandModuleID] {
+        notchModuleOrder.filter { isIslandModuleAvailable($0) && isIslandModuleEnabled($0) }
     }
 
-    var compactDisplay: IslandCompactDisplay {
-        IslandCompactDisplay.selected(compactModuleID, enabled: effectiveCompactModuleOrder,
-                                      order: effectiveCompactModuleOrder)
+    var notchDisplay: IslandNotchDisplay {
+        IslandNotchDisplay.selected(notchModuleID, enabled: effectiveNotchModuleOrder,
+                                      order: effectiveNotchModuleOrder)
     }
 
-    func setCompactModuleIncluded(_ included: Bool, id: IslandModuleID) {
+    func setNotchModuleIncluded(_ included: Bool, id: IslandModuleID) {
         if included {
-            if !compactModuleOrder.contains(id) { compactModuleOrder.append(id) }
+            if !notchModuleOrder.contains(id) { notchModuleOrder.append(id) }
         } else {
-            compactModuleOrder.removeAll { $0 == id }
+            notchModuleOrder.removeAll { $0 == id }
         }
     }
 
-    func moveCompactModule(_ id: IslandModuleID, to target: IslandModuleID) {
-        guard let source = compactModuleOrder.firstIndex(of: id),
-              let destination = compactModuleOrder.firstIndex(of: target), source != destination else { return }
-        compactModuleOrder.remove(at: source)
-        compactModuleOrder.insert(id, at: destination)
+    func moveNotchModule(_ id: IslandModuleID, to target: IslandModuleID) {
+        guard let source = notchModuleOrder.firstIndex(of: id),
+              let destination = notchModuleOrder.firstIndex(of: target), source != destination else { return }
+        notchModuleOrder.remove(at: source)
+        notchModuleOrder.insert(id, at: destination)
     }
 
-    var compactModuleID: IslandModuleID = .shelf {
-        didSet { defaults.set(compactModuleID.rawValue, forKey: Keys.compactModuleID) }
+    var notchModuleID: IslandModuleID = .shelf {
+        didSet { defaults.set(notchModuleID.rawValue, forKey: Keys.notchModuleID) }
     }
-    var compactCycleShortcut: HotKeyShortcut? = .compactCycle {
+    var notchCycleShortcut: HotKeyShortcut? = .notchCycle {
         didSet {
-            if let data = try? JSONEncoder().encode(compactCycleShortcut) {
-                defaults.set(data, forKey: Keys.compactCycleShortcut)
+            if let data = try? JSONEncoder().encode(notchCycleShortcut) {
+                defaults.set(data, forKey: Keys.notchCycleShortcut)
             }
         }
     }
-    var compactCycleShortcutError: String?
-    private(set) var compactCycleBackwards = false
+    var notchCycleShortcutError: String?
+    private(set) var notchCycleBackwards = false
 
-    var compactReverseCycleShortcut: HotKeyShortcut? {
-        guard var shortcut = compactCycleShortcut else { return nil }
+    var notchReverseCycleShortcut: HotKeyShortcut? {
+        guard var shortcut = notchCycleShortcut else { return nil }
         shortcut.shift.toggle()
         return shortcut
     }
 
-    var compactCycleShortcutConflicts: Bool {
-        guard let shortcut = compactCycleShortcut else { return false }
-        return [shortcut, compactReverseCycleShortcut].compactMap { $0 }.contains {
+    var notchCycleShortcutConflicts: Bool {
+        guard let shortcut = notchCycleShortcut else { return false }
+        return [shortcut, notchReverseCycleShortcut].compactMap { $0 }.contains {
             (hotKeyEnabled && $0 == hotKeyShortcut) || (experimentalModulesEnabled && $0 == clipboardHistoryShortcut)
         }
     }
 
-    func cycleCompactModule(backwards: Bool = false) {
-        if let next = IslandCompactDisplay.next(after: compactModuleID,
-                enabled: effectiveCompactModuleOrder, backwards: backwards, order: effectiveCompactModuleOrder) {
-            compactCycleBackwards = backwards
-            compactModuleID = next
+    func cycleNotchModule(backwards: Bool = false) {
+        if let next = IslandNotchDisplay.next(after: notchModuleID,
+                enabled: effectiveNotchModuleOrder, backwards: backwards, order: effectiveNotchModuleOrder) {
+            notchCycleBackwards = backwards
+            notchModuleID = next
         }
     }
 
@@ -246,8 +246,8 @@ final class SettingsStore {
         didSet { defaults.set(classicShelfEnabled, forKey: Keys.classicShelfEnabled) }
     }
 
-    var showCompactIsland: Bool {
-        didSet { defaults.set(showCompactIsland, forKey: Keys.showCompactIsland) }
+    var showNotch: Bool {
+        didSet { defaults.set(showNotch, forKey: Keys.showNotch) }
     }
 
     var islandEnabled: Bool {
@@ -258,6 +258,7 @@ final class SettingsStore {
         didSet { defaults.set(menuBarIconEnabled, forKey: Keys.menuBarIconEnabled) }
     }
 
+    /// Legacy preference retained for compatibility; panel placement now follows the trigger display.
     var islandDisplayTarget: IslandDisplayTarget {
         didSet {
             defaults.set(islandDisplayTarget.persistedValue,
@@ -363,7 +364,7 @@ final class SettingsStore {
         didSet { defaults.set(islandClickRevealEnabled, forKey: Keys.islandClickRevealEnabled) }
     }
 
-    /// Time the pointer must stay over the compact Island before previewing it.
+    /// Time the pointer must stay over the notch display before previewing it.
     var islandHoverDelaySeconds: Double {
         didSet { defaults.set(islandHoverDelaySeconds, forKey: Keys.islandHoverDelaySeconds) }
     }
@@ -404,9 +405,9 @@ final class SettingsStore {
     }
 
     /// AI usage module (data from TokenTracker): the number shown in the
-    /// compact Island while the module is enabled.
-    var aiUsageCompactMetric: AIUsageCompactMetric {
-        didSet { defaults.set(aiUsageCompactMetric.rawValue, forKey: Keys.aiUsageCompactMetric) }
+    /// notch display while the module is enabled.
+    var aiUsageNotchMetric: AIUsageNotchMetric {
+        didSet { defaults.set(aiUsageNotchMetric.rawValue, forKey: Keys.aiUsageNotchMetric) }
     }
 
     /// Island alert when a plan limit crosses 80% / 95%.
@@ -647,12 +648,6 @@ final class SettingsStore {
         didSet { defaults.set(hotKeyEnabled, forKey: Keys.hotKeyEnabled) }
     }
 
-    /// Mouse-shake gesture shows the shelf. Default: false (off until the
-    /// heuristic proves reliable, see plan §6).
-    var shakeTriggerEnabled: Bool {
-        didSet { defaults.set(shakeTriggerEnabled, forKey: Keys.shakeTriggerEnabled) }
-    }
-
     /// Resting the cursor on a screen edge shows the shelf. Default: false.
     ///
     /// UX2: legacy pre-UX-batch semantic (hover dwell). The UX batch replaced
@@ -677,13 +672,6 @@ final class SettingsStore {
     /// single presses. Default: true.
     var hotKeyDoublePressSavesClipboard: Bool {
         didSet { defaults.set(hotKeyDoublePressSavesClipboard, forKey: Keys.hotKeyDoublePressSavesClipboard) }
-    }
-
-    /// Shake sensitivity (three tiers; higher = triggers more easily).
-    /// Default: medium. Mapped to heuristic parameters by
-    /// `TriggerSensitivity.shakeParameters`.
-    var shakeSensitivity: TriggerSensitivity {
-        didSet { defaults.set(shakeSensitivity.rawValue, forKey: Keys.shakeSensitivity) }
     }
 
     /// Edge-trigger sensitivity (three tiers; higher = shorter dwell time and
@@ -711,7 +699,7 @@ final class SettingsStore {
 
     // MARK: - Ignore list
 
-    /// Bundle identifiers of apps in which shake/edge triggers stay silent.
+    /// Bundle identifiers of apps in which drag triggers stay silent.
     var ignoredAppBundleIDs: [String] {
         didSet { defaults.set(ignoredAppBundleIDs, forKey: Keys.ignoredAppBundleIDs) }
     }
@@ -752,14 +740,15 @@ final class SettingsStore {
         static let clipboardHistoryPaused = prefix + "clipboardHistoryPaused"
         static let clipboardHistoryRetentionDays = prefix + "clipboardHistoryRetentionDays"
         static let clipboardHistoryEntryLimit = prefix + "clipboardHistoryEntryLimit"
-        static let compactModuleOrder = prefix + "compactModuleOrder"
-        static let compactModuleID = prefix + "compactModuleID"
-        static let compactCycleShortcut = prefix + "compactCycleShortcut"
+        // Keep legacy storage keys so the Notch rename preserves saved preferences.
+        static let notchModuleOrder = prefix + "compactModuleOrder"
+        static let notchModuleID = prefix + "compactModuleID"
+        static let notchCycleShortcut = prefix + "compactCycleShortcut"
         static let clipboardHistoryShortcut = prefix + "clipboardHistoryShortcut"
         static let shelfPresentationMode = prefix + "shelfPresentationMode"
         static let shelfSurfaceSettingsVersion = prefix + "shelfSurfaceSettingsVersion"
         static let classicShelfEnabled = prefix + "classicShelfEnabled"
-        static let showCompactIsland = prefix + "showCompactIsland"
+        static let showNotch = prefix + "showCompactIsland"
         static let expandedShortcutsVersion = prefix + "expandedShortcutsVersion"
         static let islandEnabled = prefix + "islandEnabled"
         static let menuBarIconEnabled = prefix + "menuBarIconEnabled"
@@ -775,7 +764,7 @@ final class SettingsStore {
         static let islandBatteryEnabled = prefix + "islandBatteryEnabled"
         static let islandFullChargeAlertEnabled = prefix + "islandFullChargeAlertEnabled"
         static let islandMediaEnabled = prefix + "islandMediaEnabled"
-        static let aiUsageCompactMetric = prefix + "aiUsageCompactMetric"
+        static let aiUsageNotchMetric = prefix + "aiUsageCompactMetric"
         static let islandFloatingIdleStyle = prefix + "islandFloatingIdleStyle"
         static let aiUsageLimitAlertsEnabled = prefix + "aiUsageLimitAlertsEnabled"
         static let aiUsageServerPort = prefix + "aiUsageServerPort"
@@ -800,10 +789,8 @@ final class SettingsStore {
         static let customShelfFrame = prefix + "customShelfFrame"
         static let hotKeyEnabled = prefix + "hotKeyEnabled"
         static let hotKeyDoublePressSavesClipboard = prefix + "hotKeyDoublePressSavesClipboard"
-        static let shakeTriggerEnabled = prefix + "shakeTriggerEnabled"
         static let edgeTriggerEnabled = prefix + "edgeTriggerEnabled"
         static let dragAutoAppearMode = prefix + "dragAutoAppearMode"
-        static let shakeSensitivity = prefix + "shakeSensitivity"
         static let edgeTriggerSensitivity = prefix + "edgeTriggerSensitivity"
         static let hotKeyShortcut = prefix + "hotKeyShortcut"
         static let ignoredAppBundleIDs = prefix + "ignoredAppBundleIDs"
@@ -876,7 +863,7 @@ final class SettingsStore {
             Keys.islandBatteryEnabled: true,
             Keys.islandFullChargeAlertEnabled: false,
             Keys.islandMediaEnabled: false,
-            Keys.aiUsageCompactMetric: AIUsageCompactMetric.todayCost.rawValue,
+            Keys.aiUsageNotchMetric: AIUsageNotchMetric.todayCost.rawValue,
             Keys.islandFloatingIdleStyle: IslandFloatingIdleStyle.dot.rawValue,
             Keys.aiUsageLimitAlertsEnabled: true,
             Keys.aiUsageServerPort: TokenTrackerClient.defaultPort,
@@ -893,14 +880,12 @@ final class SettingsStore {
             Keys.autoUpdateCheckEnabled: true,
             Keys.hotKeyEnabled: true,
             Keys.hotKeyDoublePressSavesClipboard: true,
-            Keys.shakeTriggerEnabled: false,
             Keys.edgeTriggerEnabled: false,
-            Keys.shakeSensitivity: TriggerSensitivity.medium.rawValue,
             Keys.edgeTriggerSensitivity: TriggerSensitivity.medium.rawValue,
             Keys.ignoredAppBundleIDs: [String](),
         ])
 
-        showCompactIsland = defaults.object(forKey: Keys.showCompactIsland) as? Bool ?? true
+        showNotch = defaults.object(forKey: Keys.showNotch) as? Bool ?? true
         experimentalModulesEnabled = defaults.bool(forKey: Keys.experimentalModulesEnabled)
         clipboardHistoryEnabled = defaults.bool(forKey: Keys.clipboardHistoryEnabled)
         clipboardHistoryPaused = defaults.bool(forKey: Keys.clipboardHistoryPaused)
@@ -913,14 +898,14 @@ final class SettingsStore {
         } else {
             clipboardHistoryShortcut = HotKeyShortcut(keyCode: 9, command: true, shift: true, option: false, control: false)
         }
-        if let savedOrder = defaults.stringArray(forKey: Keys.compactModuleOrder) {
-            compactModuleOrder = savedOrder.map(IslandModuleID.init(rawValue:)).reduce(into: []) { result, id in
-                if IslandCompactDisplay.cycleOrder.contains(id), !result.contains(id) { result.append(id) }
+        if let savedOrder = defaults.stringArray(forKey: Keys.notchModuleOrder) {
+            notchModuleOrder = savedOrder.map(IslandModuleID.init(rawValue:)).reduce(into: []) { result, id in
+                if IslandNotchDisplay.cycleOrder.contains(id), !result.contains(id) { result.append(id) }
             }
         }
-        compactModuleID = defaults.string(forKey: Keys.compactModuleID).map(IslandModuleID.init(rawValue:)) ?? .shelf
-        if let data = defaults.data(forKey: Keys.compactCycleShortcut) {
-            compactCycleShortcut = (try? JSONDecoder().decode(HotKeyShortcut?.self, from: data)) ?? nil
+        notchModuleID = defaults.string(forKey: Keys.notchModuleID).map(IslandModuleID.init(rawValue:)) ?? .shelf
+        if let data = defaults.data(forKey: Keys.notchCycleShortcut) {
+            notchCycleShortcut = (try? JSONDecoder().decode(HotKeyShortcut?.self, from: data)) ?? nil
         }
         shelfPosition = ShelfPosition(rawValue: defaults.string(forKey: Keys.shelfPosition) ?? "")
             ?? .right
@@ -972,7 +957,9 @@ final class SettingsStore {
         // while ensuring classic-only users still have a visible surface.
         let activateIsland = !SideShelfAvailability.isEnabled && hadPersistedOnboardingVersion
             && resolvedClassicShelfEnabled && !resolvedIslandEnabled
-        islandEnabled = resolvedIslandEnabled || activateIsland
+        // The panel is the primary surface while Side Shelf is unavailable.
+        // Ignore the retired master toggle so an old off preference cannot strand users.
+        islandEnabled = !SideShelfAvailability.isEnabled || resolvedIslandEnabled
         menuBarIconEnabled = defaults.bool(forKey: Keys.menuBarIconEnabled)
         islandDisplayTarget = IslandDisplayTarget(
             persistedValue: defaults.string(forKey: Keys.islandDisplayTarget)
@@ -1014,8 +1001,8 @@ final class SettingsStore {
         islandBatteryEnabled = resolvedIslandBatteryEnabled
         islandFullChargeAlertEnabled = resolvedIslandFullChargeAlertEnabled
         islandMediaEnabled = resolvedIslandMediaEnabled
-        aiUsageCompactMetric = defaults.string(forKey: Keys.aiUsageCompactMetric)
-            .flatMap(AIUsageCompactMetric.init(rawValue:)) ?? .todayCost
+        aiUsageNotchMetric = defaults.string(forKey: Keys.aiUsageNotchMetric)
+            .flatMap(AIUsageNotchMetric.init(rawValue:)) ?? .todayCost
         aiUsageLimitAlertsEnabled = defaults.bool(forKey: Keys.aiUsageLimitAlertsEnabled)
         let storedPort = defaults.integer(forKey: Keys.aiUsageServerPort)
         aiUsageServerPort = (1...65535).contains(storedPort) ? storedPort : TokenTrackerClient.defaultPort
@@ -1086,7 +1073,6 @@ final class SettingsStore {
         }
         hotKeyEnabled = defaults.bool(forKey: Keys.hotKeyEnabled)
         hotKeyDoublePressSavesClipboard = defaults.bool(forKey: Keys.hotKeyDoublePressSavesClipboard)
-        shakeTriggerEnabled = defaults.bool(forKey: Keys.shakeTriggerEnabled)
         edgeTriggerEnabled = defaults.bool(forKey: Keys.edgeTriggerEnabled)
         if let persistedDragMode {
             dragAutoAppearMode = DragAutoAppearMode(rawValue: persistedDragMode) ?? .edgeOnly
@@ -1097,9 +1083,6 @@ final class SettingsStore {
         } else {
             dragAutoAppearMode = .edgeOnly
         }
-        shakeSensitivity = TriggerSensitivity(
-            rawValue: defaults.string(forKey: Keys.shakeSensitivity) ?? ""
-        ) ?? .medium
         edgeTriggerSensitivity = TriggerSensitivity(
             rawValue: defaults.string(forKey: Keys.edgeTriggerSensitivity) ?? ""
         ) ?? .medium

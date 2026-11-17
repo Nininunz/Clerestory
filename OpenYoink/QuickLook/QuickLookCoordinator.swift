@@ -230,6 +230,7 @@ final class QuickLookCoordinator: NSObject, @MainActor QLPreviewPanelDataSource,
     /// QL 面板（用户侧）关闭后回调 —— ShelfWindowController 借此让 ShelfPanel
     /// 重新成为 key（nonactivating：只接键盘焦点，不激活应用），空格可再次唤出预览。
     var onPanelClosed: (() -> Void)?
+    var onPreviewVisibilityChanged: ((Bool) -> Void)?
     /// Resolve the currently visible source window, including the elevated Island.
     var onNavigationKey: ((NSEvent) -> Bool)?
     var sourceWindowLevel: (() -> NSWindow.Level)?
@@ -295,6 +296,7 @@ final class QuickLookCoordinator: NSObject, @MainActor QLPreviewPanelDataSource,
             panel.orderOut(nil)
         }
         endSession()
+        onPreviewVisibilityChanged?(false)
         onPanelClosed?()
     }
 
@@ -306,6 +308,7 @@ final class QuickLookCoordinator: NSObject, @MainActor QLPreviewPanelDataSource,
             panel.orderOut(nil)
         }
         endSession()
+        onPreviewVisibilityChanged?(false)
     }
 
     // MARK: - Session internals
@@ -331,7 +334,7 @@ final class QuickLookCoordinator: NSObject, @MainActor QLPreviewPanelDataSource,
             panel.makeKeyAndOrderFront(nil)
         }
         panel.level = previewLevel
-
+        onPreviewVisibilityChanged?(panel.isVisible)
     }
 
     /// 逐项解析预览 URL，建立会话；先释放上一会话的资源。单个项目解析失败
@@ -426,6 +429,7 @@ final class QuickLookCoordinator: NSObject, @MainActor QLPreviewPanelDataSource,
     /// shelf 隐藏/应用退出（stopAccessingAll + 孤儿清理）时释放，语义安全。
     @objc private func panelWillClose(_ notification: Notification) {
         endSession()
+        onPreviewVisibilityChanged?(false)
         onPanelClosed?()
     }
 }

@@ -68,7 +68,7 @@ struct AIUsageSnapshot: Equatable, Sendable {
     var fetchedAt: Date
 }
 
-enum AIUsageCompactMetric: String, CaseIterable, Identifiable, Sendable {
+enum AIUsageNotchMetric: String, CaseIterable, Identifiable, Sendable {
     case off
     case todayCost
     case todayTokens
@@ -340,7 +340,7 @@ enum AIUsageFormat {
         return formatter.string(from: NSNumber(value: value)) ?? String(format: "$%.2f", value)
     }
 
-    /// Compact Island wing: cents below $10, whole dollars below $1K, then K notation.
+    /// Notch wing: cents below $10, whole dollars below $1K, then K notation.
     static func compactCost(_ value: Double?) -> String {
         guard let value else { return "--" }
         if value.rounded() >= 1000 {
@@ -511,10 +511,10 @@ struct TokenTrackerClient: AIUsageProviding {
 // MARK: - Policies
 
 enum AIUsageRefreshPolicy {
-    static func interval(isSelectedAndExpanded: Bool, showsCompactValue: Bool,
+    static func interval(isSelectedAndExpanded: Bool, showsNotchValue: Bool,
                          isConstrained: Bool) -> Duration {
         let base: Duration = isSelectedAndExpanded ? .seconds(30)
-            : showsCompactValue ? .seconds(60) : .seconds(300)
+            : showsNotchValue ? .seconds(60) : .seconds(300)
         return isConstrained ? base * 2 : base
     }
 }
@@ -586,7 +586,7 @@ final class AIUsageModuleStore: IslandModuleRuntime {
 
     @ObservationIgnored private let makeProvider: @MainActor () -> any AIUsageProviding
     @ObservationIgnored private let isSelectedAndExpanded: @MainActor () -> Bool
-    @ObservationIgnored private let compactMetric: @MainActor () -> AIUsageCompactMetric
+    @ObservationIgnored private let notchMetric: @MainActor () -> AIUsageNotchMetric
     @ObservationIgnored private let alertsEnabled: @MainActor () -> Bool
     @ObservationIgnored private let now: @MainActor () -> Date
     @ObservationIgnored private let continuation: AsyncStream<IslandModuleEvent>.Continuation
@@ -598,13 +598,13 @@ final class AIUsageModuleStore: IslandModuleRuntime {
     init(
         makeProvider: @escaping @MainActor () -> any AIUsageProviding = { TokenTrackerClient() },
         isSelectedAndExpanded: @escaping @MainActor () -> Bool,
-        compactMetric: @escaping @MainActor () -> AIUsageCompactMetric,
+        notchMetric: @escaping @MainActor () -> AIUsageNotchMetric,
         alertsEnabled: @escaping @MainActor () -> Bool,
         now: @escaping @MainActor () -> Date = Date.init
     ) {
         self.makeProvider = makeProvider
         self.isSelectedAndExpanded = isSelectedAndExpanded
-        self.compactMetric = compactMetric
+        self.notchMetric = notchMetric
         self.alertsEnabled = alertsEnabled
         self.now = now
         var captured: AsyncStream<IslandModuleEvent>.Continuation?
@@ -677,10 +677,10 @@ final class AIUsageModuleStore: IslandModuleRuntime {
         }
     }
 
-    /// Value for the compact Island wing; nil hides it.
-    var compactValue: String? {
+    /// Value for the notch Island wing; nil hides it.
+    var notchValue: String? {
         guard isRunning, status == .ready, let snapshot else { return nil }
-        switch compactMetric() {
+        switch notchMetric() {
         case .off: return nil
         case .todayCost: return AIUsageFormat.compactCost(snapshot.summary.today.costUSD)
         case .todayTokens: return AIUsageFormat.tokens(snapshot.summary.today.tokens)
@@ -690,8 +690,8 @@ final class AIUsageModuleStore: IslandModuleRuntime {
     }
 
     /// One line for the no-notch capsule.
-    var compactSummary: String? {
-        guard compactValue != nil, let today = snapshot?.summary.today else { return nil }
+    var notchSummary: String? {
+        guard notchValue != nil, let today = snapshot?.summary.today else { return nil }
         return String(localized: "AI today \(AIUsageFormat.cost(today.costUSD)) · \(AIUsageFormat.tokens(today.tokens))")
     }
 
@@ -733,7 +733,7 @@ final class AIUsageModuleStore: IslandModuleRuntime {
                 await self.refresh()
                 let interval = AIUsageRefreshPolicy.interval(
                     isSelectedAndExpanded: self.isSelectedAndExpanded(),
-                    showsCompactValue: self.compactMetric() != .off,
+                    showsNotchValue: self.notchMetric() != .off,
                     isConstrained: ResourceUsageState.shared.isConstrained
                 )
                 try? await Task.sleep(for: interval)
@@ -772,7 +772,7 @@ final class AIUsageModuleStore: IslandModuleRuntime {
 // Isolated, non-running fixtures for the module preview catalog. Never used by app startup.
 extension AIUsageModuleStore {
     static func preview(status: Status, snapshot: AIUsageSnapshot? = nil, installed: Bool = true) -> AIUsageModuleStore {
-        let store = AIUsageModuleStore(isSelectedAndExpanded: { false }, compactMetric: { .off }, alertsEnabled: { false })
+        let store = AIUsageModuleStore(isSelectedAndExpanded: { false }, notchMetric: { .off }, alertsEnabled: { false })
         store.status = status
         store.snapshot = snapshot
         store.previewInstalled = installed

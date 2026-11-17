@@ -2,6 +2,24 @@ import XCTest
 @testable import OpenYoink
 
 final class IslandScreenSelectionPolicyTests: XCTestCase {
+    func testNotchRequiresBuiltInNotchedScreenEvenWhenExternalIsMain() {
+        var builtIn = main
+        builtIn.isBuiltIn = true
+        builtIn.hasPhysicalNotch = true
+        let externalMain = IslandScreenSelectionCandidate(id: external.id, frame: external.frame,
+            isMain: true, hasPhysicalNotch: true)
+        XCTAssertEqual(IslandScreenSelectionPolicy.notchID(screens: [externalMain, builtIn]), "main")
+        XCTAssertNil(IslandScreenSelectionPolicy.notchID(screens: [externalMain]))
+        builtIn.hasPhysicalNotch = false
+        XCTAssertNil(IslandScreenSelectionPolicy.notchID(screens: [externalMain, builtIn]))
+    }
+
+    func testAutomaticTargetAcceptsExactTopEdgeOfExternalDisplay() {
+        XCTAssertEqual(IslandScreenSelectionPolicy.selectedID(for: .automatic,
+            pointerPoint: CGPoint(x: external.frame.midX, y: external.frame.maxY),
+            screens: [main, external]), "external")
+    }
+
     private let main = IslandScreenSelectionCandidate(
         id: "main",
         frame: CGRect(x: 0, y: 0, width: 1512, height: 982),

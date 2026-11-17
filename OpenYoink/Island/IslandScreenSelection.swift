@@ -6,6 +6,7 @@ struct IslandScreenSelectionCandidate: Equatable {
     let frame: CGRect
     let isMain: Bool
     var hasPhysicalNotch: Bool = true
+    var isBuiltIn: Bool = false
 }
 
 enum IslandDebugMode {
@@ -27,6 +28,10 @@ enum IslandDebugMode {
 }
 
 enum IslandScreenSelectionPolicy {
+    static func notchID(screens: [IslandScreenSelectionCandidate]) -> String? {
+        screens.first { $0.isBuiltIn && $0.hasPhysicalNotch }?.id
+    }
+
     static func selectedID(
         for target: SettingsStore.IslandDisplayTarget,
         pointerPoint: CGPoint,
@@ -38,7 +43,7 @@ enum IslandScreenSelectionPolicy {
         case .main:
             return screens.first(where: \.isMain)?.id ?? screens[0].id
         case .automatic:
-            return screens.first(where: { $0.frame.contains(pointerPoint) })?.id
+            return screens.first(where: { $0.frame.contains(pointerPoint) || (pointerPoint.y == $0.frame.maxY && pointerPoint.x >= $0.frame.minX && pointerPoint.x < $0.frame.maxX) })?.id
                 ?? screens.first(where: \.isMain)?.id
                 ?? screens[0].id
         case let .display(id):
@@ -87,6 +92,18 @@ enum IslandScreenCatalog {
             screens: candidates
         ) else { return nil }
         return screens.first { identifier(for: $0) == selectedID }
+    }
+
+    static func builtInNotchScreen() -> NSScreen? {
+        let screens = NSScreen.screens
+        let candidates = screens.map { screen in
+            let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
+            return IslandScreenSelectionCandidate(id: identifier(for: screen), frame: screen.frame,
+                isMain: false, hasPhysicalNotch: hasPhysicalNotch(screen),
+                isBuiltIn: number.map { CGDisplayIsBuiltin(CGDirectDisplayID($0.uint32Value)) != 0 } ?? false)
+        }
+        let id = IslandScreenSelectionPolicy.notchID(screens: candidates)
+        return screens.first { identifier(for: $0) == id }
     }
 
     private static func hasPhysicalNotch(_ screen: NSScreen) -> Bool {

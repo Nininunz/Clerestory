@@ -4,7 +4,7 @@ import XCTest
 @testable import OpenYoink
 
 @MainActor
-final class IslandCompactWingRowTests: XCTestCase {
+final class IslandNotchWingRowTests: XCTestCase {
     private let housingWidths: [CGFloat] = [184, 220, 222, 260]
     private let scale: CGFloat = 2
 
@@ -31,11 +31,11 @@ final class IslandCompactWingRowTests: XCTestCase {
                     let attachment = XCTAttachment(image: NSImage(cgImage: try XCTUnwrap(image.cgImage),
                                                                   size: NSSize(width: image.pixelsWide / 2,
                                                                                height: image.pixelsHigh / 2)))
-                    attachment.name = "compact-\(symbol)-\(value.text)"
+                    attachment.name = "notch-\(symbol)-\(value.text)"
                     attachment.lifetime = .keepAlways
                     add(attachment)
                 }
-                let wingPixels = Int(IslandGeometryResolver.compactWingWidth * scale)
+                let wingPixels = Int(IslandGeometryResolver.notchWingWidth * scale)
                 let left = try inkBounds(in: image, xRange: 0..<wingPixels)
                 let right = try inkBounds(in: image,
                                           xRange: (image.pixelsWide - wingPixels)..<image.pixelsWide)
@@ -66,16 +66,16 @@ final class IslandCompactWingRowTests: XCTestCase {
     func testRightWingCenteredContent() throws {
         for housingWidth in housingWidths {
             for kind in ["sparkles", "equalizer", "spinner", "shelf12", "shelf1000", "battery85", "battery100"] {
-            let width = housingWidth + IslandGeometryResolver.compactWingWidth * 2
-            let row = IslandCompactWingRow(cameraHousingWidth: housingWidth, display: .shelf, height: 38) {
-                IslandCompactWingIcon(systemName: "arrow.down")
+            let width = housingWidth + IslandGeometryResolver.notchWingWidth * 2
+            let row = IslandNotchWingRow(cameraHousingWidth: housingWidth, display: .shelf, height: 38) {
+                IslandNotchWingIcon(systemName: "arrow.down")
                     .foregroundStyle(.white)
             } trailing: {
                 if kind == "equalizer" {
-                    IslandCompactWingIcon(systemName: "play.fill")
+                    IslandNotchWingIcon(systemName: "play.fill")
                         .foregroundStyle(.white)
                 } else if kind == "spinner" {
-                    IslandCompactTransferSpinner()
+                    IslandNotchTransferSpinner()
                 } else if kind == "shelf12" || kind == "shelf1000" {
                     Text(kind == "shelf12" ? "12" : "1000")
                         .font(.caption.monospacedDigit().weight(.semibold))
@@ -83,10 +83,10 @@ final class IslandCompactWingRowTests: XCTestCase {
                         .minimumScaleFactor(0.7)
                         .foregroundStyle(.white)
                 } else if kind == "battery85" || kind == "battery100" {
-                    IslandCompactBatteryValueText(percentage: kind == "battery85" ? 85 : 100)
+                    IslandNotchBatteryValueText(percentage: kind == "battery85" ? 85 : 100)
                         .foregroundStyle(.white)
                 } else {
-                    IslandCompactWingIcon(systemName: "sparkles")
+                    IslandNotchWingIcon(systemName: "sparkles")
                         .foregroundStyle(.white)
                 }
             }
@@ -99,11 +99,11 @@ final class IslandCompactWingRowTests: XCTestCase {
                 let attachment = XCTAttachment(image: NSImage(cgImage: try XCTUnwrap(image.cgImage),
                                                               size: NSSize(width: image.pixelsWide / 2,
                                                                            height: image.pixelsHigh / 2)))
-                attachment.name = "compact-\(kind)-both-wings"
+                attachment.name = "notch-\(kind)-both-wings"
                 attachment.lifetime = .keepAlways
                 add(attachment)
             }
-            let wingPixels = Int(IslandGeometryResolver.compactWingWidth * scale)
+            let wingPixels = Int(IslandGeometryResolver.notchWingWidth * scale)
             let right = try inkBounds(in: image,
                                       xRange: (image.pixelsWide - wingPixels)..<image.pixelsWide,
                                       minimumBrightness: 0.1)
@@ -124,8 +124,8 @@ final class IslandCompactWingRowTests: XCTestCase {
 
     func testArtworkFootprintMatchesLeftIconSlot() throws {
         for housingWidth in housingWidths {
-            let width = housingWidth + IslandGeometryResolver.compactWingWidth * 2
-            let row = IslandCompactWingRow(cameraHousingWidth: housingWidth, display: .shelf, height: 38) {
+            let width = housingWidth + IslandGeometryResolver.notchWingWidth * 2
+            let row = IslandNotchWingRow(cameraHousingWidth: housingWidth, display: .shelf, height: 38) {
                 RoundedRectangle(cornerRadius: 4)
                     .fill(.white)
                     .frame(width: 23, height: 23)
@@ -138,7 +138,7 @@ final class IslandCompactWingRowTests: XCTestCase {
             let renderer = ImageRenderer(content: row)
             renderer.scale = scale
             let image = NSBitmapImageRep(cgImage: try XCTUnwrap(renderer.cgImage))
-            let wingPixels = Int(IslandGeometryResolver.compactWingWidth * scale)
+            let wingPixels = Int(IslandGeometryResolver.notchWingWidth * scale)
             let left = try inkBounds(in: image, xRange: 0..<wingPixels)
             XCTAssertLessThanOrEqual(abs((left.minX + left.maxX) / 2 - Int(25 * scale)),
                                      Int(scale), "Housing width: \(housingWidth)")
@@ -150,7 +150,7 @@ final class IslandCompactWingRowTests: XCTestCase {
 
     func testSlidingContentCannotEscapeVisibleIslandOutline() throws {
         for housingWidth in housingWidths {
-            let width = housingWidth + IslandGeometryResolver.compactWingWidth * 2
+            let width = housingWidth + IslandGeometryResolver.notchWingWidth * 2
             let maskRenderer = ImageRenderer(content:
                 IslandSurfaceShape(attachedToScreenTop: true, cornerRadius: 11)
                     .fill(.white)
@@ -160,7 +160,7 @@ final class IslandCompactWingRowTests: XCTestCase {
             let mask = NSBitmapImageRep(cgImage: try XCTUnwrap(maskRenderer.cgImage))
             // Oversized, offset content exercises clipping throughout the slide's travel.
             for offset: CGFloat in [-40, -20, 0, 20, 40] {
-                let row = IslandCompactWingRow(cameraHousingWidth: housingWidth,
+                let row = IslandNotchWingRow(cameraHousingWidth: housingWidth,
                                               display: .shelf, height: 38) {
                     Color.white.frame(width: 80, height: 60).offset(x: offset)
                 } trailing: {
@@ -182,7 +182,7 @@ final class IslandCompactWingRowTests: XCTestCase {
                                           "Escaped outline at \(point), offset \(offset)")
                     }
                 }
-                let wingPixels = Int(IslandGeometryResolver.compactWingWidth * scale)
+                let wingPixels = Int(IslandGeometryResolver.notchWingWidth * scale)
                 XCTAssertFalse(hasInk(in: image,
                     xRange: wingPixels..<(image.pixelsWide - wingPixels)))
             }
@@ -191,13 +191,13 @@ final class IslandCompactWingRowTests: XCTestCase {
 
     private func render(housingWidth: CGFloat, symbol: String, value: String,
                         minimumScale: CGFloat) throws -> NSBitmapImageRep {
-        let width = housingWidth + IslandGeometryResolver.compactWingWidth * 2
-        let row = IslandCompactWingRow(cameraHousingWidth: housingWidth, display: .shelf, height: 38) {
-            IslandCompactWingIcon(systemName: symbol)
+        let width = housingWidth + IslandGeometryResolver.notchWingWidth * 2
+        let row = IslandNotchWingRow(cameraHousingWidth: housingWidth, display: .shelf, height: 38) {
+            IslandNotchWingIcon(systemName: symbol)
                 .foregroundStyle(.white)
         } trailing: {
             if minimumScale == 0.7 {
-                IslandCompactAIValueText(value: value)
+                IslandNotchAIValueText(value: value)
                     .foregroundStyle(.white)
             } else {
                 Text(value)
@@ -248,7 +248,7 @@ final class IslandCompactWingRowTests: XCTestCase {
             }
         }
         guard minX <= maxX else {
-            throw NSError(domain: "IslandCompactWingRowTests", code: 1,
+            throw NSError(domain: "IslandNotchWingRowTests", code: 1,
                           userInfo: [NSLocalizedDescriptionKey: "No rendered ink in the requested wing"])
         }
         return (minX, maxX, minY, maxY)

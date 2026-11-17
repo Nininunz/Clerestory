@@ -3,7 +3,7 @@ import XCTest
 @testable import OpenYoink
 
 final class IslandGeometryResolverTests: XCTestCase {
-    func testDetachedPanelKeepsHoverAcrossGapWithoutGrowingCompactHitbox() {
+    func testDetachedPanelKeepsHoverAcrossGapWithoutGrowingNotchHitbox() {
         let screen = IslandGeometryResolver.ScreenGeometry(
             frame: CGRect(x: -1512, y: 100, width: 1512, height: 982),
             visibleFrame: CGRect(x: -1512, y: 100, width: 1512, height: 944),
@@ -12,17 +12,17 @@ final class IslandGeometryResolverTests: XCTestCase {
             auxiliaryTopRightArea: CGRect(x: -645, y: 1044, width: 645, height: 38))
         let layout = IslandGeometryResolver.resolve(screen: screen)
         let keepAlive = layout.hoverKeepAliveFrame(panelFrame: layout.expandedFrame)
-        let gap = CGPoint(x: layout.compactFrame.midX, y: layout.compactFrame.minY - 4)
+        let gap = CGPoint(x: layout.notchFrame.midX, y: layout.notchFrame.minY - 4)
         XCTAssertTrue(keepAlive.contains(gap))
-        XCTAssertTrue(keepAlive.contains(CGPoint(x: layout.compactFrame.minX + 10, y: screen.frame.maxY)))
+        XCTAssertTrue(keepAlive.contains(CGPoint(x: layout.notchFrame.minX + 10, y: screen.frame.maxY)))
         XCTAssertTrue(keepAlive.contains(CGPoint(x: layout.expandedFrame.midX, y: layout.expandedFrame.midY)))
-        XCTAssertFalse(layout.compactPointerFrame.contains(gap))
+        XCTAssertFalse(layout.notchPointerFrame.contains(gap))
         XCTAssertFalse(keepAlive.contains(CGPoint(x: keepAlive.maxX + 1, y: gap.y)))
         XCTAssertFalse(keepAlive.contains(CGPoint(x: gap.x, y: keepAlive.minY - 1)))
     }
 
     @MainActor
-    func testCompactCompanionCannotStealKeyboardFocus() {
+    func testNotchCompanionCannotStealKeyboardFocus() {
         let panel = ShelfPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel],
                                backing: .buffered, defer: false)
         panel.isReleasedWhenClosed = false
@@ -44,7 +44,7 @@ final class IslandGeometryResolverTests: XCTestCase {
             let extended = IslandGeometryResolver.resolve(screen: screen, preferredExpandedHeight: 550)
             XCTAssertEqual(extended.expandedFrame.maxY, regular.expandedFrame.maxY)
             XCTAssertEqual(extended.expandedFrame.width, regular.expandedFrame.width)
-            XCTAssertEqual(extended.compactFrame, regular.compactFrame)
+            XCTAssertEqual(extended.notchFrame, regular.notchFrame)
             XCTAssertGreaterThan(extended.expandedFrame.height, regular.expandedFrame.height)
             XCTAssertLessThanOrEqual(extended.expandedFrame.height, (height - 38) * 0.6 + 1)
         }
@@ -62,22 +62,22 @@ final class IslandGeometryResolverTests: XCTestCase {
         XCTAssertTrue(layout.hasPhysicalNotch)
         XCTAssertEqual(layout.cameraHousingFrame,
                        CGRect(x: 645, y: 944, width: 222, height: 38))
-        XCTAssertEqual(layout.compactFrame.width,
-                       222 + IslandGeometryResolver.compactWingWidth * 2)
-        XCTAssertEqual(layout.compactFrame.height,
+        XCTAssertEqual(layout.notchFrame.width,
+                       222 + IslandGeometryResolver.notchWingWidth * 2)
+        XCTAssertEqual(layout.notchFrame.height,
                        38 + IslandGeometryResolver.physicalNotchClickExtension)
-        XCTAssertEqual(layout.compactFrame.height, layout.cameraHousingFrame.height,
+        XCTAssertEqual(layout.notchFrame.height, layout.cameraHousingFrame.height,
                        "The compact hit area must end with the visible notch surface")
-        XCTAssertEqual(layout.compactFrame.midX, screen.frame.midX)
-        XCTAssertEqual(layout.compactFrame.maxY, screen.frame.maxY)
-        XCTAssertTrue(layout.compactPointerFrame.contains(
-            CGPoint(x: layout.compactFrame.minX + 20, y: screen.frame.maxY)))
-        XCTAssertFalse(layout.compactPointerFrame.contains(
-            CGPoint(x: layout.compactFrame.minX + 20, y: layout.compactFrame.minY - 1)))
-        XCTAssertEqual(layout.compactFrame.minY - layout.expandedFrame.maxY,
+        XCTAssertEqual(layout.notchFrame.midX, screen.frame.midX)
+        XCTAssertEqual(layout.notchFrame.maxY, screen.frame.maxY)
+        XCTAssertTrue(layout.notchPointerFrame.contains(
+            CGPoint(x: layout.notchFrame.minX + 20, y: screen.frame.maxY)))
+        XCTAssertFalse(layout.notchPointerFrame.contains(
+            CGPoint(x: layout.notchFrame.minX + 20, y: layout.notchFrame.minY - 1)))
+        XCTAssertEqual(layout.notchFrame.minY - layout.expandedFrame.maxY,
                        IslandGeometryResolver.expandedPanelGap)
-        XCTAssertTrue(layout.compactIsVisible)
-        XCTAssertFalse(layout.compactFrame.intersects(layout.expandedFrame))
+        XCTAssertTrue(layout.notchIsVisible)
+        XCTAssertFalse(layout.notchFrame.intersects(layout.expandedFrame))
     }
 
     func testPhysicalNotchWingsFollowReportedGapAcrossDisplaySizes() {
@@ -98,19 +98,19 @@ final class IslandGeometryResolverTests: XCTestCase {
                     )
                     let layout = IslandGeometryResolver.resolve(screen: screen)
                     let leftWingEdge = layout.cameraHousingFrame.minX
-                        - IslandGeometryResolver.compactWingWidth
+                        - IslandGeometryResolver.notchWingWidth
                     let rightWingEdge = layout.cameraHousingFrame.maxX
-                        + IslandGeometryResolver.compactWingWidth
+                        + IslandGeometryResolver.notchWingWidth
                     XCTAssertTrue(layout.hasPhysicalNotch)
-                    XCTAssertFalse(layout.expandedFrame.intersects(layout.compactFrame))
-                    XCTAssertEqual(layout.expandedFrame.midX, layout.compactFrame.midX, accuracy: 0.5)
-                    XCTAssertEqual(layout.compactFrame.minY - layout.expandedFrame.maxY,
+                    XCTAssertFalse(layout.expandedFrame.intersects(layout.notchFrame))
+                    XCTAssertEqual(layout.expandedFrame.midX, layout.notchFrame.midX, accuracy: 0.5)
+                    XCTAssertEqual(layout.notchFrame.minY - layout.expandedFrame.maxY,
                                    IslandGeometryResolver.expandedPanelGap, accuracy: 1)
                     XCTAssertEqual(layout.cameraHousingFrame.width, housingWidth)
-                    XCTAssertLessThanOrEqual(layout.compactFrame.minX, leftWingEdge)
-                    XCTAssertGreaterThan(layout.compactFrame.minX, leftWingEdge - 1)
-                    XCTAssertGreaterThanOrEqual(layout.compactFrame.maxX, rightWingEdge)
-                    XCTAssertLessThan(layout.compactFrame.maxX, rightWingEdge + 1)
+                    XCTAssertLessThanOrEqual(layout.notchFrame.minX, leftWingEdge)
+                    XCTAssertGreaterThan(layout.notchFrame.minX, leftWingEdge - 1)
+                    XCTAssertGreaterThanOrEqual(layout.notchFrame.maxX, rightWingEdge)
+                    XCTAssertLessThan(layout.notchFrame.maxX, rightWingEdge + 1)
                 }
             }
         }
@@ -125,10 +125,10 @@ final class IslandGeometryResolverTests: XCTestCase {
         )
         let layout = IslandGeometryResolver.resolve(screen: screen)
         XCTAssertFalse(layout.hasPhysicalNotch)
-        XCTAssertEqual(layout.compactFrame.size,
+        XCTAssertEqual(layout.notchFrame.size,
                        IslandGeometryResolver.floatingCompactSize)
-        XCTAssertEqual(layout.compactFrame.maxY, screen.visibleFrame.maxY - 8)
-        XCTAssertEqual(layout.expandedFrame.maxY, layout.compactFrame.maxY)
+        XCTAssertEqual(layout.notchFrame.maxY, screen.visibleFrame.maxY - 8)
+        XCTAssertEqual(layout.expandedFrame.maxY, layout.notchFrame.maxY)
     }
 
     func testFloatingIdleDotSitsOnThePillsTopCentreAndRevealsFromScreenEdge() {
@@ -141,19 +141,19 @@ final class IslandGeometryResolverTests: XCTestCase {
         let layout = IslandGeometryResolver.resolve(screen: screen)
         let dot = layout.floatingDotFrame
         XCTAssertEqual(dot.size, IslandGeometryResolver.floatingDotHitSize)
-        XCTAssertEqual(dot.midX, layout.compactFrame.midX)
-        XCTAssertEqual(dot.maxY, layout.compactFrame.maxY)
+        XCTAssertEqual(dot.midX, layout.notchFrame.midX)
+        XCTAssertEqual(dot.maxY, layout.notchFrame.maxY)
         // Most of the pill's area is free for the app underneath.
         XCTAssertLessThan(dot.width * dot.height,
-                          layout.compactFrame.width * layout.compactFrame.height / 8)
+                          layout.notchFrame.width * layout.notchFrame.height / 8)
         // The top pixel row above the pill reveals it; the middle of the
         // pill's former area does not.
         XCTAssertTrue(layout.floatingEdgeRevealFrame.contains(CGPoint(x: 640, y: 799)))
         // The pointer pinned to the top edge reports y == screen maxY.
         XCTAssertTrue(layout.floatingEdgeRevealFrame.contains(CGPoint(x: 640, y: 800)))
-        XCTAssertFalse(layout.floatingEdgeRevealFrame.contains(CGPoint(x: 640, y: layout.compactFrame.midY)))
+        XCTAssertFalse(layout.floatingEdgeRevealFrame.contains(CGPoint(x: 640, y: layout.notchFrame.midY)))
         XCTAssertFalse(layout.floatingEdgeRevealFrame.contains(CGPoint(x: 100, y: 799)))
-        XCTAssertTrue(layout.floatingKeepRevealedFrame.contains(layout.compactFrame.center))
+        XCTAssertTrue(layout.floatingKeepRevealedFrame.contains(layout.notchFrame.center))
         XCTAssertTrue(layout.floatingKeepRevealedFrame.contains(CGPoint(x: 640, y: 799)))
     }
 
@@ -183,16 +183,16 @@ final class IslandGeometryResolverTests: XCTestCase {
             )
             let layout = IslandGeometryResolver.resolve(screen: screen)
             XCTAssertEqual(layout.cameraHousingFrame.minX, screenX + 663.5)
-            XCTAssertEqual(layout.compactFrame, layout.compactFrame.integral)
+            XCTAssertEqual(layout.notchFrame, layout.notchFrame.integral)
             XCTAssertEqual(layout.expandedFrame, layout.expandedFrame.integral)
-            XCTAssertEqual(layout.compactFrame.midX, layout.expandedFrame.midX)
-            XCTAssertEqual(layout.compactFrame.maxY, screen.frame.maxY)
+            XCTAssertEqual(layout.notchFrame.midX, layout.expandedFrame.midX)
+            XCTAssertEqual(layout.notchFrame.maxY, screen.frame.maxY)
             var transition = ShelfFrameTransitionState()
-            XCTAssertFalse(transition.request(layout.compactFrame,
-                                               currentFrame: layout.compactFrame.integral))
+            XCTAssertFalse(transition.request(layout.notchFrame,
+                                               currentFrame: layout.notchFrame.integral))
             transition.reset()
-            XCTAssertFalse(transition.request(layout.compactFrame,
-                                               currentFrame: layout.compactFrame.integral))
+            XCTAssertFalse(transition.request(layout.notchFrame,
+                                               currentFrame: layout.notchFrame.integral))
         }
     }
 
@@ -211,11 +211,11 @@ final class IslandGeometryResolverTests: XCTestCase {
         XCTAssertTrue(layout.hasPhysicalNotch)
         XCTAssertEqual(layout.cameraHousingFrame,
                        CGRect(x: -849, y: 950, width: 185, height: 32))
-        XCTAssertEqual(layout.compactFrame.midX, layout.cameraHousingFrame.midX)
+        XCTAssertEqual(layout.notchFrame.midX, layout.cameraHousingFrame.midX)
         XCTAssertEqual(layout.expandedFrame.midX, layout.cameraHousingFrame.midX)
-        XCTAssertEqual(layout.compactFrame.height,
+        XCTAssertEqual(layout.notchFrame.height,
                        32 + IslandGeometryResolver.physicalNotchClickExtension)
-        XCTAssertEqual(layout.compactFrame.maxY, screen.frame.maxY)
+        XCTAssertEqual(layout.notchFrame.maxY, screen.frame.maxY)
     }
 
     func testNegativeCoordinateExternalScreenStaysOnThatScreen() {
@@ -226,7 +226,7 @@ final class IslandGeometryResolverTests: XCTestCase {
             auxiliaryTopRightArea: .zero
         )
         let layout = IslandGeometryResolver.resolve(screen: screen)
-        XCTAssertEqual(layout.compactFrame.midX, screen.visibleFrame.midX)
+        XCTAssertEqual(layout.notchFrame.midX, screen.visibleFrame.midX)
         XCTAssertTrue(screen.frame.contains(layout.activationFrame.center))
         XCTAssertLessThanOrEqual(layout.expandedFrame.height,
                                  screen.visibleFrame.height * 0.6)
@@ -250,10 +250,10 @@ final class IslandGeometryResolverTests: XCTestCase {
         let point = CGPoint(x: removed.frame.midX, y: removed.frame.midY)
         XCTAssertEqual(try XCTUnwrap(IslandGeometryResolver.resolve(
             at: point, screens: [main, removed]
-        )).compactFrame.midX, removed.visibleFrame.midX)
+        )).notchFrame.midX, removed.visibleFrame.midX)
         XCTAssertEqual(try XCTUnwrap(IslandGeometryResolver.resolve(
             at: point, screens: [main]
-        )).compactFrame.midX, main.visibleFrame.midX)
+        )).notchFrame.midX, main.visibleFrame.midX)
     }
 
     func testResolutionChangeRecomputesFrames() throws {
@@ -264,63 +264,63 @@ final class IslandGeometryResolverTests: XCTestCase {
                                                                   screens: [before]))
         let second = try XCTUnwrap(IslandGeometryResolver.resolve(at: point,
                                                                    screens: [after]))
-        XCTAssertNotEqual(first.compactFrame, second.compactFrame)
+        XCTAssertNotEqual(first.notchFrame, second.notchFrame)
         XCTAssertLessThanOrEqual(second.expandedFrame.height,
                                  after.visibleFrame.height * 0.6)
     }
 
-    func testFileDragOnCompactIslandDoesNotNeedTopApproachSetting() {
-        let compact = CGRect(x: 100, y: 900, width: 300, height: 38)
+    func testFileDragOnNotchIslandDoesNotNeedTopApproachSetting() {
+        let notch = CGRect(x: 100, y: 900, width: 300, height: 38)
         let topZone = CGRect(x: 50, y: 850, width: 400, height: 88)
         XCTAssertTrue(IslandGeometryResolver.acceptsFileDrag(
-            at: CGPoint(x: 120, y: 920), compactPointerFrame: compact,
+            at: CGPoint(x: 120, y: 920), notchPointerFrame: notch,
             activationFrame: topZone, topApproachEnabled: false))
         XCTAssertFalse(IslandGeometryResolver.acceptsFileDrag(
-            at: CGPoint(x: 80, y: 900), compactPointerFrame: compact,
+            at: CGPoint(x: 80, y: 900), notchPointerFrame: notch,
             activationFrame: topZone, topApproachEnabled: false))
         XCTAssertTrue(IslandGeometryResolver.acceptsFileDrag(
-            at: CGPoint(x: 80, y: 900), compactPointerFrame: compact,
+            at: CGPoint(x: 80, y: 900), notchPointerFrame: notch,
             activationFrame: topZone, topApproachEnabled: true))
     }
 
     func testFileDragActivatesOnlyInsideTopZone() {
         let screen = geometry(x: 0, width: 1512, height: 982)
         let layout = IslandGeometryResolver.resolve(screen: screen)
-        XCTAssertEqual(layout.activationFrame.width, layout.compactFrame.width + 64)
-        XCTAssertEqual(layout.activationFrame.minY, layout.compactFrame.minY - 64)
+        XCTAssertEqual(layout.activationFrame.width, layout.notchFrame.width + 64)
+        XCTAssertEqual(layout.activationFrame.minY, layout.notchFrame.minY - 64)
         XCTAssertEqual(layout.activationFrame.maxY, screen.frame.maxY + 1)
-        XCTAssertTrue(layout.activationFrame.contains(layout.compactFrame))
+        XCTAssertTrue(layout.activationFrame.contains(layout.notchFrame))
         XCTAssertFalse(layout.activationFrame.contains(layout.expandedFrame))
         let extended = IslandGeometryResolver.resolve(screen: screen, preferredExpandedHeight: 600)
         XCTAssertEqual(extended.activationFrame, layout.activationFrame)
         // Probe the full approach area, including its lower corners well
-        // outside the compact notch, rather than testing only the top edge.
+        // outside the notch notch, rather than testing only the top edge.
         for x in [layout.activationFrame.minX + 1, layout.activationFrame.midX, layout.activationFrame.maxX - 1] {
             for y in [layout.activationFrame.minY + 1, layout.activationFrame.midY, layout.activationFrame.maxY - 1] {
                 XCTAssertTrue(IslandGeometryResolver.acceptsFileDrag(
-                    at: CGPoint(x: x, y: y), compactPointerFrame: .null,
+                    at: CGPoint(x: x, y: y), notchPointerFrame: .null,
                     activationFrame: layout.activationFrame, topApproachEnabled: true))
             }
         }
         XCTAssertFalse(IslandGeometryResolver.acceptsFileDrag(
             at: CGPoint(x: layout.activationFrame.midX, y: layout.activationFrame.minY - 1),
-            compactPointerFrame: .null, activationFrame: layout.activationFrame, topApproachEnabled: true))
+            notchPointerFrame: .null, activationFrame: layout.activationFrame, topApproachEnabled: true))
 
         let approachPoint = CGPoint(x: layout.activationFrame.minX - 1,
                                     y: screen.frame.maxY - 120)
         XCTAssertFalse(IslandGeometryResolver.acceptsFileDrag(
-            at: approachPoint, compactPointerFrame: .null,
+            at: approachPoint, notchPointerFrame: .null,
             activationFrame: layout.activationFrame, topApproachEnabled: true))
         XCTAssertTrue(IslandGeometryResolver.acceptsFileDrag(
             at: CGPoint(x: layout.activationFrame.midX, y: screen.frame.maxY),
-            compactPointerFrame: .null, activationFrame: layout.activationFrame,
+            notchPointerFrame: .null, activationFrame: layout.activationFrame,
             topApproachEnabled: true))
         XCTAssertFalse(IslandGeometryResolver.acceptsFileDrag(
-            at: approachPoint, compactPointerFrame: .null,
+            at: approachPoint, notchPointerFrame: .null,
             activationFrame: layout.activationFrame, topApproachEnabled: false))
     }
 
-    func testCompactVisibilityNeverChangesExpandedPlacementOrDragZone() {
+    func testNotchVisibilityNeverChangesExpandedPlacementOrDragZone() {
         for hasNotch in [true, false] {
             let screen = IslandGeometryResolver.ScreenGeometry(
                 frame: CGRect(x: -1512, y: 100, width: 1512, height: 982),
@@ -328,10 +328,10 @@ final class IslandGeometryResolverTests: XCTestCase {
                 safeAreaTop: hasNotch ? 38 : 0,
                 auxiliaryTopLeftArea: hasNotch ? CGRect(x: 0, y: 0, width: 645, height: 38) : .zero,
                 auxiliaryTopRightArea: hasNotch ? CGRect(x: 0, y: 0, width: 645, height: 38) : .zero)
-            let shown = IslandGeometryResolver.resolve(screen: screen, showCompactIsland: true)
-            let hidden = IslandGeometryResolver.resolve(screen: screen, showCompactIsland: false)
-            XCTAssertEqual(shown.compactIsVisible, hasNotch)
-            XCTAssertFalse(hidden.compactIsVisible)
+            let shown = IslandGeometryResolver.resolve(screen: screen, showNotch: true)
+            let hidden = IslandGeometryResolver.resolve(screen: screen, showNotch: false)
+            XCTAssertEqual(shown.notchIsVisible, hasNotch)
+            XCTAssertFalse(hidden.notchIsVisible)
             XCTAssertEqual(shown.expandedFrame, hidden.expandedFrame)
             XCTAssertEqual(shown.activationFrame, hidden.activationFrame)
             XCTAssertEqual(hidden.expandedFrame.maxY, screen.visibleFrame.maxY - 8)
@@ -339,7 +339,7 @@ final class IslandGeometryResolverTests: XCTestCase {
             XCTAssertFalse(hidden.pointerTriggerFrame.contains(CGPoint(x: hidden.expandedFrame.midX, y: screen.frame.maxY - 5)))
             XCTAssertFalse(hidden.pointerTriggerFrame.contains(CGPoint(x: screen.frame.minX + 10, y: screen.frame.maxY)))
             XCTAssertEqual(hidden.closedNoticeAnchor.minY, hidden.expandedFrame.maxY + 8)
-            if hasNotch { XCTAssertEqual(shown.closedNoticeAnchor, shown.compactFrame) }
+            if hasNotch { XCTAssertEqual(shown.closedNoticeAnchor, shown.notchFrame) }
             let gap = CGPoint(x: hidden.expandedFrame.midX, y: hidden.expandedFrame.maxY + 4)
             XCTAssertTrue(hidden.hoverKeepAliveFrame(panelFrame: hidden.expandedFrame).contains(gap))
             XCTAssertFalse(hidden.pointerTriggerFrame.contains(gap))

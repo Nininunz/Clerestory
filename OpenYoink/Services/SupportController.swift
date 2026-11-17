@@ -18,7 +18,6 @@ final class SupportController {
         let dragAutoAppearMode: SettingsStore.DragAutoAppearMode
         let edgeTabEnabled: Bool
         let hotKeyEnabled: Bool
-        let shakeTriggerEnabled: Bool
         let autoHide: Bool
         let autoHideWhenEmpty: Bool
         let dragOutRemovalPolicy: SettingsStore.DragOutRemovalPolicy
@@ -60,7 +59,6 @@ final class SupportController {
         Architecture: \(snapshot.architecture)
         Language: \(snapshot.language.rawValue)
         Global shortcut: \(enabled(snapshot.hotKeyEnabled))
-        Mouse shake: \(enabled(snapshot.shakeTriggerEnabled))
         Drag-out policy: \(snapshot.dragOutRemovalPolicy.rawValue)
         Automatic update checks: \(enabled(snapshot.autoUpdateCheckEnabled))
         """
@@ -104,7 +102,6 @@ final class SupportController {
             dragAutoAppearMode: settings.dragAutoAppearMode,
             edgeTabEnabled: settings.edgeTabEnabled,
             hotKeyEnabled: settings.hotKeyEnabled,
-            shakeTriggerEnabled: settings.shakeTriggerEnabled,
             autoHide: settings.autoHide,
             autoHideWhenEmpty: settings.autoHideWhenEmpty,
             dragOutRemovalPolicy: settings.dragOutRemovalPolicy,

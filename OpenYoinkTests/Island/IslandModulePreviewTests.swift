@@ -129,15 +129,20 @@ final class IslandModulePreviewTests: XCTestCase {
     }
     private func quickSettings() async throws {
         var views: [(String, AnyView)] = []
-        for state in ["Default modules", "All modules enabled", "Optional modules disabled"] {
+        for state in ["Default modules", "All modules enabled", "Optional modules disabled", "Experimental modules hidden"] {
             let settings = settings()
-            settings.experimentalModulesEnabled = true
+            settings.experimentalModulesEnabled = state != "Experimental modules hidden"
             let registry = IslandModuleRegistry()
             for descriptor in registry.descriptors where !descriptor.isCore && state != "Default modules" {
                 settings.setIslandModuleEnabled(state == "All modules enabled", id: descriptor.id)
             }
-            registry.apply(settings: settings)
-            views.append(entry(state, IslandModuleLibraryView(onOpenSettings: {}).environment(settings).environment(registry).environment(IslandActivityCoordinator())))
+            for notch in [false, true] {
+                let coordinator = IslandActivityCoordinator()
+                coordinator.currentLayout = IslandGeometryResolver.resolve(screen: ModulePreviewHost.screen)
+                coordinator.quickSettingsShowsNotch = notch
+                views.append(entry(notch ? "\(state) / Notch" : state,
+                    IslandModuleLibraryView(onOpenSettings: {}).environment(settings).environment(coordinator)))
+            }
         }
         try await export("quick-settings", "Quick Settings", views)
     }

@@ -213,7 +213,7 @@ final class IslandTimerStore: IslandModule {
     }
 
     /// Omit seconds only when the minutes-and-seconds form needs three minute digits.
-    var compactRemaining: String {
+    var notchRemaining: String {
         let total = Int(remaining().rounded(.up))
         let minutes = total / 60
         guard minutes >= 100 else { return formattedRemaining }

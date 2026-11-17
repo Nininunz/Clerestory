@@ -2,10 +2,15 @@ import AppKit
 import SwiftUI
 import OSLog
 
-/// Coordinates one expanded surface and its optional compact companion.
+/// Coordinates one expanded surface and its optional notch companion.
 /// Shelf owns imports and keyboard actions; this object owns presentation only.
 @MainActor
 final class IslandPresentationController: NSObject {
+    private let notchScreenGeometry: () -> IslandGeometryResolver.ScreenGeometry?
+    private let usesSystemScreens: Bool
+    private var panelDisplayID: String?
+    private var panelScreenAnchor: CGPoint?
+    private var triggerPoint: CGPoint?
     private let screenGeometry: (CGPoint) -> IslandGeometryResolver.ScreenGeometry?
     private let settings: SettingsStore
     private let islandActivityCoordinator: IslandActivityCoordinator
@@ -15,7 +20,7 @@ final class IslandPresentationController: NSObject {
     private let collapse: (Bool) -> Void
     private let islandLogger = Logger(subsystem: "com.weijue.OpenYoink", category: "IslandPresentation")
     let expanded: IslandExpandedWindowController
-    let compact: IslandCompactWindowController
+    let notch: IslandNotchWindowController
     private var islandPanel: ShelfPanel { expanded.panel }
     private var islandNoticePanel: ShelfNoticePanelController? { notices() }
 
@@ -24,10 +29,16 @@ final class IslandPresentationController: NSObject {
          notices: @escaping () -> ShelfNoticePanelController?,
          collapse: @escaping (Bool) -> Void,
          makePanel: @escaping (IslandWindowRole) -> ShelfPanel,
-         screenGeometry: ((CGPoint) -> IslandGeometryResolver.ScreenGeometry?)? = nil) {
+         screenGeometry: ((CGPoint) -> IslandGeometryResolver.ScreenGeometry?)? = nil,
+         notchScreenGeometry: (() -> IslandGeometryResolver.ScreenGeometry?)? = nil) {
+        self.usesSystemScreens = screenGeometry == nil
         self.screenGeometry = screenGeometry ?? { point in
-            IslandScreenCatalog.selectedScreen(for: settings.islandDisplayTarget, pointerPoint: point)
+            IslandScreenCatalog.selectedScreen(for: .automatic, pointerPoint: point)
                 .map(IslandScreenCatalog.geometry(for:))
+        }
+        self.notchScreenGeometry = notchScreenGeometry ?? {
+            if let screenGeometry { return screenGeometry(NSEvent.mouseLocation) }
+            return IslandScreenCatalog.builtInNotchScreen().map(IslandScreenCatalog.geometry(for:))
         }
         self.settings = settings
         islandActivityCoordinator = coordinator
@@ -36,7 +47,7 @@ final class IslandPresentationController: NSObject {
         self.notices = notices
         self.collapse = collapse
         expanded = IslandExpandedWindowController(makePanel: { makePanel(.expanded) })
-        compact = IslandCompactWindowController(makePanel: { makePanel(.compact) })
+        notch = IslandNotchWindowController(makePanel: { makePanel(.notch) })
         super.init()
     }
 
@@ -53,7 +64,7 @@ final class IslandPresentationController: NSObject {
         }
         islandActivityCoordinator.onSurfaceAnimationCompleted = { [weak self] in
             guard let self else { return }
-            if self.islandActivityCoordinator.surfaceState == .compact,
+            if self.islandActivityCoordinator.surfaceState == .collapsed,
                let module = self.moduleToRestoreAfterHoverCollapse {
                 self.moduleToRestoreAfterHoverCollapse = nil
                 self.islandActivityCoordinator.selectedModule = module
@@ -67,7 +78,7 @@ final class IslandPresentationController: NSObject {
         expanded.configure()
         startIslandEventMonitoring()
         if islandActivityCoordinator.surfaceState == .hidden {
-            islandActivityCoordinator.setSurfaceState(.compact)
+            islandActivityCoordinator.setSurfaceState(.collapsed)
         }
         if !islandModuleRegistry.isEnabled(islandActivityCoordinator.selectedModule) {
             islandActivityCoordinator.selectedModule = islandModuleRegistry.enabledDescriptors.first?.id ?? .quickSettings
@@ -80,7 +91,7 @@ final class IslandPresentationController: NSObject {
         hideImmediately()
         stopIslandEventMonitoring()
         islandActivityCoordinator.hide()
-        compact.hide()
+        notch.hide()
     }
 
     func hideImmediately() {
@@ -88,10 +99,23 @@ final class IslandPresentationController: NSObject {
         islandLayoutTask = nil
         islandFrameTransition.reset()
         expanded.hide()
+        panelScreenAnchor = nil
+        panelDisplayID = nil
+        triggerPoint = nil
     }
 
-    private func updateCompactPanel(for layout: IslandGeometryResolver.Layout) {
-        compact.update(layout: layout, enabled: settings.islandEnabled, level: islandPanel.level)
+    private func updateNotchPanel() {
+        let layout = notchScreenGeometry().map {
+            IslandGeometryResolver.resolve(screen: $0, showNotch: settings.showNotch)
+        }
+        islandActivityCoordinator.notchLayout = layout
+        guard let layout else { notch.hide(); return }
+        notch.update(layout: layout, enabled: settings.islandEnabled, level: islandPanel.level)
+    }
+
+    func prepareTrigger(at point: CGPoint) {
+        guard !islandActivityCoordinator.surfaceState.isExpanded else { return }
+        triggerPoint = point
     }
 
     private func collapseIsland(animated: Bool) { collapse(animated) }
@@ -107,6 +131,7 @@ final class IslandPresentationController: NSObject {
     private var islandGlobalMonitor: Any?
     private var islandLocalMonitor: Any?
     private var islandTrackingMenus = Set<ObjectIdentifier>()
+    private var quickLookVisible = false
     private var islandHoverTask: Task<Void, Never>?
     private var islandHoverExitTask: Task<Void, Never>?
     private var islandHoverPreview = IslandHoverPreviewStateMachine()
@@ -118,12 +143,12 @@ final class IslandPresentationController: NSObject {
         let layout = islandLayout()
         islandActivityCoordinator.currentLayout = layout
         islandPanel.hasShadow = false
-        updateCompactPanel(for: layout)
+        updateNotchPanel()
         expanded.updatePointer(at: NSEvent.mouseLocation)
         return IslandSurfaceShadow.windowFrame(for: layout.expandedFrame)
     }
 
-    private func interactiveCompactFrame(for layout: IslandGeometryResolver.Layout) -> NSRect {
+    private func interactiveNotchFrame(for layout: IslandGeometryResolver.Layout) -> NSRect {
         layout.pointerTriggerFrame
     }
 
@@ -146,17 +171,25 @@ final class IslandPresentationController: NSObject {
         guard settings.islandEnabled, hasAvailableIslandDisplay,
               !oldState.isExpanded,
               newState.isExpanded else { return }
-        // A selected-module change can already have queued a compact layout
+        // A selected-module change can already have queued a notch layout
         // pass. Cancel it so no stale frame is applied between preparation and
         // the actual surface-state mutation.
         islandLayoutTask?.cancel()
         islandLayoutTask = nil
 
-        let layout = islandLayout()
+        let point = triggerPoint ?? NSEvent.mouseLocation
+        triggerPoint = nil
+        if usesSystemScreens {
+            panelDisplayID = IslandScreenCatalog.selectedScreen(for: .automatic, pointerPoint: point)
+                .map(IslandScreenCatalog.identifier(for:))
+        }
+        let screen = screenGeometry(point)
+        panelScreenAnchor = screen.map { CGPoint(x: $0.frame.midX, y: $0.frame.midY) }
+        let layout = islandLayout(at: point)
         islandActivityCoordinator.currentLayout = layout
         islandPanel.hasShadow = false
-        updateCompactPanel(for: layout)
-        // Size the expanded window before SwiftUI reveals its content. Compact
+        updateNotchPanel()
+        // Size the expanded window before SwiftUI reveals its content. Notch
         // remains in its own optional, non-key window.
         // Simultaneously animating the AppKit frame and SwiftUI layout caused
         // lateral jumps, so only SwiftUI animates the opening here.
@@ -171,12 +204,21 @@ final class IslandPresentationController: NSObject {
 
     func islandLayout(at point: CGPoint = NSEvent.mouseLocation)
         -> IslandGeometryResolver.Layout {
-        if let screen = screenGeometry(point) {
+        let selectedGeometry: IslandGeometryResolver.ScreenGeometry?
+        if usesSystemScreens, let id = panelDisplayID {
+            let screen = NSScreen.screens.first { IslandScreenCatalog.identifier(for: $0) == id }
+                ?? IslandScreenCatalog.selectedScreen(for: .automatic, pointerPoint: point)
+            panelDisplayID = screen.map(IslandScreenCatalog.identifier(for:))
+            selectedGeometry = screen.map(IslandScreenCatalog.geometry(for:))
+        } else {
+            selectedGeometry = screenGeometry(panelScreenAnchor ?? point)
+        }
+        if let screen = selectedGeometry {
             return IslandGeometryResolver.resolve(
                 screen: screen,
                 preferredExpandedHeight: islandActivityCoordinator.preferredExpandedHeight(
                     for: islandModuleContainer.registration(for: islandActivityCoordinator.selectedModule)?.descriptor),
-                showCompactIsland: settings.showCompactIsland
+                showNotch: settings.showNotch
             )
         }
         return IslandGeometryResolver.resolve(screen: .init(
@@ -187,7 +229,7 @@ final class IslandPresentationController: NSObject {
             auxiliaryTopRightArea: .zero
         ), preferredExpandedHeight: islandActivityCoordinator.preferredExpandedHeight(
                     for: islandModuleContainer.registration(for: islandActivityCoordinator.selectedModule)?.descriptor),
-            showCompactIsland: settings.showCompactIsland)
+            showNotch: settings.showNotch)
     }
 
     func scheduleIslandLayoutUpdate() {
@@ -206,6 +248,8 @@ final class IslandPresentationController: NSObject {
             islandLayoutTask = nil
             islandFrameTransition.reset()
             islandPanel.orderOut(nil)
+            panelScreenAnchor = nil
+            panelDisplayID = nil
             return
         }
         // Activity samples, defaults notifications and desktop/Space changes
@@ -360,9 +404,21 @@ final class IslandPresentationController: NSObject {
     @objc private func islandMenuEnded(_ notification: Notification) {
         guard let menu = notification.object as? NSMenu,
               islandTrackingMenus.remove(ObjectIdentifier(menu)) != nil,
-              islandTrackingMenus.isEmpty else { return }
+              islandTrackingMenus.isEmpty, !quickLookVisible else { return }
         let inside = hoverKeepAliveFrame(for: islandLayout()).contains(NSEvent.mouseLocation)
         performIslandHoverActions(islandHoverPreview.handle(.menuClosed(pointerInside: inside)))
+    }
+
+    func setQuickLookVisible(_ visible: Bool) {
+        guard quickLookVisible != visible else { return }
+        quickLookVisible = visible
+        guard islandActivityCoordinator.surfaceState.isExpanded else { return }
+        if visible {
+            performIslandHoverActions(islandHoverPreview.handle(.menuOpened))
+        } else if islandTrackingMenus.isEmpty {
+            let inside = hoverKeepAliveFrame(for: islandLayout()).contains(NSEvent.mouseLocation)
+            performIslandHoverActions(islandHoverPreview.handle(.menuClosed(pointerInside: inside)))
+        }
     }
 
     func stopIslandEventMonitoring() {
@@ -394,15 +450,16 @@ final class IslandPresentationController: NSObject {
     func handleIslandEvent(_ event: NSEvent, at point: CGPoint) {
         expanded.updatePointer(at: point)
         islandNoticePanel?.updatePointer(at: point)
-        guard settings.islandEnabled, islandTrackingMenus.isEmpty else { return }
+        guard settings.islandEnabled, islandTrackingMenus.isEmpty, !quickLookVisible else { return }
         switch event.type {
         case .leftMouseDown:
             if islandNoticePanel?.contains(point) == true { return }
             if !islandActivityCoordinator.surfaceState.isExpanded {
                 let layout = islandLayout(at: point)
                 guard settings.islandClickRevealEnabled,
-                      interactiveCompactFrame(for: layout).contains(point) else { return }
+                      interactiveNotchFrame(for: layout).contains(point) else { return }
                 performIslandHoverActions(islandHoverPreview.handle(.committed))
+                prepareTrigger(at: point)
                 islandActivityCoordinator.currentLayout = layout
                 islandActivityCoordinator.show(module: effectiveIslandOpenModule)
                 return
@@ -425,10 +482,11 @@ final class IslandPresentationController: NSObject {
             if islandActivityCoordinator.currentLayout != layout {
                 scheduleIslandLayoutUpdate()
             }
-            let interactiveFrame = interactiveCompactFrame(for: layout)
+            let interactiveFrame = interactiveNotchFrame(for: layout)
             islandActivityCoordinator.setPointerHovering(
                 !islandActivityCoordinator.surfaceState.isExpanded
-                    && interactiveFrame.contains(point)
+                    && islandActivityCoordinator.notchLayout?.notchIsVisible == true
+                    && islandActivityCoordinator.notchLayout?.notchPointerFrame.contains(point) == true
             )
             if islandHoverPreview.phase == .preview || islandHoverPreview.phase == .leaving {
                 let inside = hoverKeepAliveFrame(for: layout).contains(point)
@@ -541,7 +599,7 @@ final class IslandPresentationController: NSObject {
         if let recent = islandActivityCoordinator.reentryModule(isEnabled: islandModuleRegistry.isEnabled) {
             return recent
         }
-        let display = settings.compactDisplay
+        let display = settings.notchDisplay
         if let moduleID = display.moduleID, islandModuleRegistry.isEnabled(moduleID) {
             return moduleID
         }

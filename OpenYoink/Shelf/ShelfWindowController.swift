@@ -174,10 +174,10 @@ final class ShelfWindowController: NSObject {
                 dragOutController: self.islandDragOutController, islandRole: role)
         })
     private var islandPanel: ShelfPanel { islandPresentation.expanded.panel }
-    private var islandCompactPanel: ShelfPanel { islandPresentation.compact.panel }
+    private var islandNotchPanel: ShelfPanel { islandPresentation.notch.panel }
 
     private var dragZoneHandoffTask: Task<Void, Never>?
-    private lazy var islandDragZonePanel = makeIslandDragZonePanel()
+    private var islandDragZonePanels: [String: ShelfPanel] = [:]
 
     private func makeIslandDragZonePanel() -> ShelfPanel {
         let panel = ShelfPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel],
@@ -203,7 +203,7 @@ final class ShelfWindowController: NSObject {
                 self.dragZoneHandoffTask = Task { @MainActor [weak self] in
                     try? await Task.sleep(for: .seconds(IslandMotion.expandWindowDuration))
                     guard !Task.isCancelled else { return }
-                    self?.islandDragZonePanel.orderOut(nil)
+                    self?.islandDragZonePanels.values.forEach { $0.orderOut(nil) }
                 }
             }, isApproachZone: true, contentViewController: content)
         return panel
@@ -215,20 +215,33 @@ final class ShelfWindowController: NSObject {
               !islandActivityCoordinator.surfaceState.isExpanded else {
             dragZoneHandoffTask?.cancel()
             dragZoneHandoffTask = nil
-            islandDragZonePanel.orderOut(nil)
+            islandDragZonePanels.values.forEach { $0.orderOut(nil) }
             return
         }
-        let layout = islandPresentation.islandLayout(at: NSEvent.mouseLocation)
-        islandDragZonePanel.setFrame(layout.activationFrame, display: true)
-        islandDragZonePanel.orderFront(nil)
+        let screens = NSScreen.screens
+        let connected = Set(screens.map(IslandScreenCatalog.identifier(for:)))
+        for id in Array(islandDragZonePanels.keys) where !connected.contains(id) {
+            islandDragZonePanels.removeValue(forKey: id)?.orderOut(nil)
+        }
+        // A drag can cross displays without restarting its native session.
+        // Keep a destination on each screen rather than moving one under the pointer.
+        for screen in screens {
+            let id = IslandScreenCatalog.identifier(for: screen)
+            let panel = islandDragZonePanels[id] ?? makeIslandDragZonePanel()
+            islandDragZonePanels[id] = panel
+            let layout = IslandGeometryResolver.resolve(screen: IslandScreenCatalog.geometry(for: screen),
+                                                        showNotch: settings.showNotch)
+            panel.setFrame(layout.activationFrame, display: true)
+            panel.orderFront(nil)
+        }
     }
 
     @ViewBuilder
     private func presentationRoot(_ style: ShelfPresentationStyle, role: IslandWindowRole) -> some View {
         if style == .classic {
             ShelfView()
-        } else if role == .compact {
-            IslandCompactView()
+        } else if role == .notch {
+            IslandNotchView()
         } else {
             IslandExpandedView(
                 onPerformRecovery: { [weak self] in self?.itemRecoveryController.perform($0) },
@@ -252,8 +265,8 @@ final class ShelfWindowController: NSObject {
         )
         panel.acceptsKeyboardFocus = islandRole == .expanded
         if presentationStyle == .island {
-            panel.title = islandRole == .compact ? "OpenYoink Compact" : "OpenYoink Island"
-            panel.setAccessibilityIdentifier(islandRole == .compact
+            panel.title = islandRole == .notch ? "OpenYoink Notch" : "OpenYoink Island"
+            panel.setAccessibilityIdentifier(islandRole == .notch
                                             ? "island.window.compact" : "island.window.expanded")
         }
         // SwiftUI presentation preferences alone don't set AppKit controls'
@@ -320,8 +333,8 @@ final class ShelfWindowController: NSObject {
             // The controller owns both window frames. A disappearing module's
             // SwiftUI minimum size must not resize or move the hidden panel.
             hostingController.sizingOptions = []
-            hostingController.view.setAccessibilityLabel(islandRole == .compact
-                ? String(localized: "Compact Island") : String(localized: "Expanded Island"))
+            hostingController.view.setAccessibilityLabel(islandRole == .notch
+                ? String(localized: "Notch") : String(localized: "Expanded Island"))
         }
         let dropOverride: DragContainerDropOverride? = presentationStyle == .island && islandRole == .expanded
             ? DragContainerDropOverride(
@@ -451,7 +464,7 @@ final class ShelfWindowController: NSObject {
                 islandActivityCoordinator.surfaceState.isExpanded
                     && islandActivityCoordinator.selectedModule == .aiUsage
             },
-            compactMetric: { settings.aiUsageCompactMetric },
+            notchMetric: { settings.aiUsageNotchMetric },
             alertsEnabled: { settings.aiUsageLimitAlertsEnabled }
         )
         let favoriteFoldersStore = FavoriteFoldersStore(
@@ -663,6 +676,9 @@ final class ShelfWindowController: NSObject {
             guard let self else { return .normal }
             return self.islandPanel.isVisible ? self.islandPanel.level : self.classicPanel.level
         }
+        quickLookCoordinator.onPreviewVisibilityChanged = { [weak self] visible in
+            self?.islandPresentation.setQuickLookVisible(visible)
+        }
         quickLookCoordinator.onPanelClosed = { [weak self] in
             guard let self,
                   self.appState.isShelfVisible
@@ -705,7 +721,7 @@ final class ShelfWindowController: NSObject {
     // MARK: - Public API
 
     func shutdown() {
-        islandCompactPanel.orderOut(nil)
+        islandNotchPanel.orderOut(nil)
         islandNoticePanel?.stop()
         setIslandDragZoneActive(false)
         favoriteFolderDropCoordinator.cancelCopy()
@@ -1586,7 +1602,7 @@ final class ShelfWindowController: NSObject {
 
     private func revalidateFrameAfterSpaceChange() {
         if settings.islandEnabled,
-           IslandScreenCatalog.selectedScreen(for: settings.islandDisplayTarget,
+           IslandScreenCatalog.selectedScreen(for: .automatic,
                                               pointerPoint: NSEvent.mouseLocation) != nil {
             // A desktop/Space transition must not re-order an already visible
             // Island or truncate a pending collapse with an immediate resize.
@@ -1739,7 +1755,7 @@ final class ShelfWindowController: NSObject {
     // MARK: - Island presentation
 
     private var hasAvailableIslandDisplay: Bool {
-        IslandScreenCatalog.selectedScreen(for: settings.islandDisplayTarget,
+        IslandScreenCatalog.selectedScreen(for: .automatic,
                                            pointerPoint: NSEvent.mouseLocation) != nil
     }
 
@@ -1784,13 +1800,14 @@ final class ShelfWindowController: NSObject {
         let layout = islandPresentation.islandLayout(at: point)
         guard IslandGeometryResolver.acceptsFileDrag(
             at: point,
-            compactPointerFrame: layout.compactIsVisible ? layout.compactPointerFrame : .null,
+            notchPointerFrame: layout.notchIsVisible ? layout.notchPointerFrame : .null,
             activationFrame: layout.activationFrame,
             topApproachEnabled: settings.islandDragApproachEnabled
         ) else { return false }
         islandActivityCoordinator.currentLayout = layout
         if !islandActivityCoordinator.surfaceState.isExpanded {
             islandPresentation.resetIslandHoverPreview(restoreSelection: false)
+            islandPresentation.prepareTrigger(at: point)
             islandActivityCoordinator.beginDrag()
             return true
         }

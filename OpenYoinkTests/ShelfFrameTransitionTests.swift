@@ -4,24 +4,24 @@ import XCTest
 final class ShelfFrameTransitionTests: XCTestCase {
     func testIslandCollapseDestinationSurvivesActivityDefaultsAndSpaceRefreshes() {
         let expanded = CGRect(x: 420, y: 420, width: 600, height: 480)
-        let compact = CGRect(x: 570, y: 868, width: 300, height: 32)
+        let notch = CGRect(x: 570, y: 868, width: 300, height: 32)
         var transition = ShelfFrameTransitionState()
         _ = transition.request(expanded, currentFrame: expanded)
-        XCTAssertTrue(transition.request(compact, currentFrame: expanded))
+        XCTAssertTrue(transition.request(notch, currentFrame: expanded))
         // The host window stays expanded while SwiftUI folds its content.
         for _ in 0..<20 {
-            XCTAssertFalse(transition.request(compact, currentFrame: expanded),
+            XCTAssertFalse(transition.request(notch, currentFrame: expanded),
                            "Refreshes during a fold must not cancel or restart the pending resize")
         }
-        XCTAssertEqual(transition.targetFrame, compact)
-        XCTAssertFalse(transition.request(compact, currentFrame: compact))
+        XCTAssertEqual(transition.targetFrame, notch)
+        XCTAssertFalse(transition.request(notch, currentFrame: notch))
     }
 
-    func testReopeningIslandInvalidatesItsPendingCompactDestination() {
+    func testReopeningIslandInvalidatesItsPendingNotchDestination() {
         let expanded = CGRect(x: 420, y: 420, width: 600, height: 480)
-        let compact = CGRect(x: 570, y: 868, width: 300, height: 32)
+        let notch = CGRect(x: 570, y: 868, width: 300, height: 32)
         var transition = ShelfFrameTransitionState()
-        XCTAssertTrue(transition.request(compact, currentFrame: expanded))
+        XCTAssertTrue(transition.request(notch, currentFrame: expanded))
         XCTAssertTrue(transition.request(expanded, currentFrame: expanded))
         XCTAssertEqual(transition.targetFrame, expanded)
         XCTAssertFalse(transition.request(expanded, currentFrame: expanded))

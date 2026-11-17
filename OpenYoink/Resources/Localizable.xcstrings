@@ -1,6 +1,268 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "The optional notch display stays on the built-in screen. Configure it in Notch." : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "The optional notch display stays on the built-in screen. Configure it in Notch."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "可选的刘海显示固定在内置屏幕上。可在“刘海”中配置。"}}}},
+    "The panel opens on the display where you trigger it and stays there until dismissed." : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "The panel opens on the display where you trigger it and stays there until dismissed."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "面板在触发它的显示器上打开，并停留至关闭。"}}}},
+    "Displays" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Displays"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "显示器"}}}},
+    "Notch" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Notch"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "刘海"}}}},
+    "Show in notch" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Show in notch"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "在刘海处显示"}}}},
+    "Configure Notch…" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Configure Notch…"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "配置刘海…"}}}},
+    "Configure the optional notch display in Notch." : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Configure the optional notch display in Notch."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "在“刘海”中配置可选的刘海显示。"}}}},
+    "Uses the same panel while hiding the notch display. Your opening controls in Panel still apply. Turn this off to use the real display geometry." : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Uses the same panel while hiding the notch display. Your opening controls in Panel still apply. Turn this off to use the real display geometry."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "使用相同面板并隐藏刘海显示。“面板”中的打开方式仍然有效。关闭此项以使用真实的显示器布局。"}}}},
+    "Use the notch display when visible, or the top-center screen edge when it is hidden." : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Use the notch display when visible, or the top-center screen edge when it is hidden."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "刘海显示可见时使用它；隐藏时使用屏幕顶部中央边缘。"}}}},
+    "Dropping files or text on the notch display always opens Shelf. The wider approach area is optional." : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Dropping files or text on the notch display always opens Shelf. The wider approach area is optional."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "将文件或文本放到刘海显示上始终会打开暂存架。更大的靠近触发区域可按需启用。"}}}},
+    "Shortcut placement and notch inclusion are separate from enabling a module. Arrange positions in Panel or Quick Settings." : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Shortcut placement and notch inclusion are separate from enabling a module. Arrange positions in Panel or Quick Settings."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "快捷入口位置和刘海模块选项独立于模块启用状态。在“面板”或快速设置中排列位置。"}}}},
+    "Choose a notch shortcut whose forward and reverse combinations differ from the shelf and clipboard shortcuts." : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Choose a notch shortcut whose forward and reverse combinations differ from the shelf and clipboard shortcuts."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "请选择正向和反向组合均不同于暂存架及剪贴板快捷键的刘海快捷键。"}}}},
+    "Choose notch modules and their cycling order" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Choose notch modules and their cycling order"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "选择刘海模块及其切换顺序"}}}},
+    "Notch modules" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Notch modules"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "刘海模块"}}}},
+    "Panel shortcuts" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Panel shortcuts"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "面板快捷入口"}}}},
+    "Cycle notch modules" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Cycle notch modules"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "切换刘海模块"}}}},
+    "OpenYoink Notch" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "OpenYoink Notch"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "OpenYoink 刘海"}}}},
+
+    "Panel" : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Panel"}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "面板"}}
+      }
+    },
+
+    "Shortcut Positions" : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Shortcut Positions"}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "快捷入口位置"}}
+      }
+    },
+    "Opening and Closing" : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Opening and Closing"}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "打开与关闭"}}
+      }
+    },
+    "Open panel on hover" : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Open panel on hover"}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "悬停时打开面板"}}
+      }
+    },
+    "Open panel on click" : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Open panel on click"}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "点击时打开面板"}}
+      }
+    },
+    "Open delay" : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Open delay"}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "打开延迟"}}
+      }
+    },
+    "Close delay" : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Close delay"}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "关闭延迟"}}
+      }
+    },
+    "Shelf Shortcut" : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Shelf Shortcut"}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "暂存架快捷键"}}
+      }
+    },
+    "Enable shelf shortcut" : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Enable shelf shortcut"}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "启用暂存架快捷键"}}
+      }
+    },
+
+    "Cycling Shortcut" : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Cycling Shortcut"}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "循环切换快捷键"}}
+      }
+    },
+
+    "Modules and Order" : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Modules and Order"}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "模块与顺序"}}
+      }
+    },
+    "Arrange Panel Shortcuts…" : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Arrange Panel Shortcuts…"}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "排列面板快捷入口…"}}
+      }
+    },
+
+    "Show in panel shortcuts" : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Show in panel shortcuts"}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "显示在面板快捷入口中"}}
+      }
+    },
+    "Display Simulation" : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Display Simulation"}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "显示器模拟"}}
+      }
+    },
+    "The icon stays visible whenever the panel cannot be opened directly, so Settings remains accessible." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "The icon stays visible whenever the panel cannot be opened directly, so Settings remains accessible."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "无法直接打开面板时，菜单栏图标会保持显示，以便访问设置。"}}
+      }
+    },
+    "Update checks contact the configured update feed and release server." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Update checks contact the configured update feed and release server."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "检查更新时会连接配置的更新源和发布服务器。"}}
+      }
+    },
+    "Choose which enabled modules appear in the panel's navigation. These positions are shared with Quick Settings." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Choose which enabled modules appear in the panel's navigation. These positions are shared with Quick Settings."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "选择在面板导航中显示的已启用模块。这些位置与快速设置共用。"}}
+      }
+    },
+
+    "The panel closes after you move away. Pin it to keep it open." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "The panel closes after you move away. Pin it to keep it open."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "移开指针后面板会关闭。固定面板可让它保持打开。"}}
+      }
+    },
+    "Open panel when dragging files or text near the top" : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Open panel when dragging files or text near the top"}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "将文件或文本拖到顶部附近时打开面板"}}
+      }
+    },
+    "File and text drags work independently of Open panel on hover." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "File and text drags work independently of Open panel on hover."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "拖动文件和文本的触发功能不受悬停打开面板设置影响。"}}
+      }
+    },
+
+    "The same panel is used on every display. Choose where it opens below." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "The same panel is used on every display. Choose where it opens below."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "所有显示器使用相同的面板。在下方选择打开位置。"}}
+      }
+    },
+    "Connect a display to show the panel." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Connect a display to show the panel."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "连接显示器以显示面板。"}}
+      }
+    },
+
+    "The panel stays on the display chosen as main in System Settings." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "The panel stays on the display chosen as main in System Settings."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "面板保持在系统设置指定的主显示器上。"}}
+      }
+    },
+    "The panel uses a connected display until the main display is available." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "The panel uses a connected display until the main display is available."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "主显示器不可用时，面板使用其他已连接的显示器。"}}
+      }
+    },
+    "The panel follows the pointer across displays." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "The panel follows the pointer across displays."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "面板随指针在显示器之间移动。"}}
+      }
+    },
+    "This display is unavailable. The panel temporarily uses a connected display." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "This display is unavailable. The panel temporarily uses a connected display."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "此显示器不可用。面板暂时使用其他已连接的显示器。"}}
+      }
+    },
+    "The panel stays on this display until you choose another." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "The panel stays on this display until you choose another."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "在选择其他显示器之前，面板会保持在此显示器上。"}}
+      }
+    },
+    "Appears only on notched displays. Your preference is saved for when a notched display is in use." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Appears only on notched displays. Your preference is saved for when a notched display is in use."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "仅在带有刘海的显示器上显示。此偏好会保留，以便使用刘海屏时生效。"}}
+      }
+    },
+
+    "Hold Shift with the shortcut to cycle backward (release Shift if it is already part of your shortcut). Your choice is remembered independently of the panel module. Clear the shortcut to disable both directions." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Hold Shift with the shortcut to cycle backward (release Shift if it is already part of your shortcut). Your choice is remembered independently of the panel module. Clear the shortcut to disable both directions."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "按快捷键时按住 Shift 可反向切换（若快捷键已包含 Shift，则松开它）。所选模块独立于面板模块保存。清除快捷键可禁用双向切换。"}}
+      }
+    },
+    "Inclusion here controls cycling, not whether a module is enabled. Enable modules in Modules. These choices are shared with Quick Settings." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Inclusion here controls cycling, not whether a module is enabled. Enable modules in Modules. These choices are shared with Quick Settings."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "此处决定模块是否参与循环切换。请在“模块”中启用模块。这些选择与快速设置共用。"}}
+      }
+    },
+    "Quick Settings is always available and must occupy one panel shortcut position." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Quick Settings is always available and must occupy one panel shortcut position."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "快速设置始终可用，并且必须占用一个面板快捷入口位置。"}}
+      }
+    },
+    "Enable Experimental Modules to use the clipboard and toolbox presets. Hidden module preferences are preserved." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Enable Experimental Modules to use the clipboard and toolbox presets. Hidden module preferences are preserved."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "启用实验性模块以使用剪贴板和工具箱预设。隐藏模块的偏好会保留。"}}
+      }
+    },
+    "Presets change modules and opening behavior. Your files, history and recording choice are kept." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Presets change modules and opening behavior. Your files, history and recording choice are kept."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "预设会更改模块及打开方式。文件、历史记录和记录选项会保留。"}}
+      }
+    },
+
+
+    "Drag triggers are suppressed while these apps are frontmost. Clipboard recording also skips them. Keyboard shortcuts still work." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Drag triggers are suppressed while these apps are frontmost. Clipboard recording also skips them. Keyboard shortcuts still work."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "这些应用在前台时，拖动触发会暂停，剪贴板记录也会跳过它们。键盘快捷键仍然有效。"}}
+      }
+    },
+    "Use Shelf and Transfers for files." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Use Shelf and Transfers for files."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "使用暂存架和传输模块处理文件。"}}
+      }
+    },
+    "Use Shelf for files. Hidden module preferences are preserved." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Use Shelf for files. Hidden module preferences are preserved."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "使用暂存架处理文件。隐藏模块的偏好会保留。"}}
+      }
+    },
+    "Use Shelf, Transfers and Clipboard History. Recording stays under your control." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Use Shelf, Transfers and Clipboard History. Recording stays under your control."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "使用暂存架、传输和剪贴板历史。是否记录仍由你控制。"}}
+      }
+    },
+    "Enable all available modules. Clipboard recording stays under your control." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Enable all available modules. Clipboard recording stays under your control."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "启用所有可用模块。是否记录剪贴板仍由你控制。"}}
+      }
+    },
+    "Enable the panel and drag-to-open, and turn off hover opening." : {
+      "localizations" : {
+        "en" : {"stringUnit": {"state": "translated", "value": "Enable the panel and drag-to-open, and turn off hover opening."}},
+        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "启用面板和拖动打开，并关闭悬停打开。"}}
+      }
+    },
     "Without a notch, when idle" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Without a notch, when idle" } },
@@ -253,12 +515,7 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "重试" } }
       }
     },
-    "Show in compact Island" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Show in compact Island" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "收起时显示" } }
-      }
-    },
+
     "Nothing" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Nothing" } },
@@ -3044,13 +3301,6 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "中" } }
       }
     },
-    "Mouse Shake" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Mouse Shake" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "鼠标摇动" } }
-      }
-    },
     "Moved into the shelf — will be delivered on drag out" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3196,20 +3446,6 @@
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Settings…" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "设置…" } }
-      }
-    },
-    "Shake and drag triggers stay silent while one of these apps is frontmost. The global hot key is never filtered." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shake and drag triggers stay silent while one of these apps is frontmost. The global hot key is never filtered." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当这些应用位于前台时，摇动与拖拽触发保持静默。全局快捷键不受影响。" } }
-      }
-    },
-    "Shake the mouse to show the shelf" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shake the mouse to show the shelf" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "摇动鼠标以显示暂存架" } }
       }
     },
     "Shelf" : {
