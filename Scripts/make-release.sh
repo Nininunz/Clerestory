@@ -31,6 +31,11 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
+# Optional machine-local signing configuration; credentials stay in Keychain.
+if [ -f "$REPO_ROOT/Scripts/release-signing.local" ]; then
+    source "$REPO_ROOT/Scripts/release-signing.local"
+fi
+
 if [ $# -lt 1 ] || [ $# -gt 3 ]; then
     echo "用法：$0 <VERSION> [BUILD] [--adhoc]" >&2
     exit 1
@@ -59,6 +64,12 @@ ARCHIVE_PATH="export/OpenYoink.xcarchive"
 APP_PATH="export/OpenYoink.app"
 DMG_PATH="export/OpenYoink-$VERSION.dmg"
 APPCAST="docs/appcast.xml"
+# Candidate builds keep unpublished update metadata out of the deployable feed.
+if [ "${OPENYOINK_RELEASE_CANDIDATE:-0}" = "1" ]; then
+    mkdir -p export
+    cp "$APPCAST" export/appcast-candidate.xml
+    APPCAST="export/appcast-candidate.xml"
+fi
 RELEASE_URL="https://github.com/Nininunz/OpenYoink/releases/download/v$VERSION/OpenYoink-$VERSION.dmg"
 
 if ! command -v node >/dev/null 2>&1; then
@@ -182,8 +193,8 @@ echo "==> 导出 $APP_PATH"
 rm -rf "$APP_PATH"
 ditto "$ARCHIVE_PATH/Products/Applications/OpenYoink.app" "$APP_PATH"
 
-# Developer ID 模式保留 Xcode 为各嵌套组件生成的独立签名。ad hoc 模式下
-# 则统一把主程序与 Sparkle 嵌套组件改为临时签名，避免无 Team ID 的主程序
+# Sign every nested component explicitly for the selected release mode.
+# ad hoc 模式统一把主程序与 Sparkle 嵌套组件改为临时签名，避免无 Team ID 的主程序
 # 连接到仍带第三方 Team ID 的 XPC 服务时被拒绝。ad hoc 签名之间没有可供
 # library validation 比对的 Team ID，因此该模式必须去掉 Hardened Runtime；
 # 否则 dyld 会在启动时拒载 Sparkle.framework。各组件自己的 identifier 与
@@ -193,7 +204,11 @@ if [ "$RELEASE_MODE" = "adhoc" ]; then
     # entitlements 传播给 Installer/Updater，导致安装器无法取得授权（1.0.1
     # 的实机失败原因）。严格按叶子 → framework → 主 app 的顺序重签。
     SPARKLE_ROOT="$APP_PATH/Contents/Frameworks/Sparkle.framework/Versions/B"
+    MEDIA_ROOT="$APP_PATH/Contents/Resources/MediaRemoteAdapterResources.bundle"
     for component in \
+        "$MEDIA_ROOT/Contents/Resources/MediaRemoteAdapterTestClient" \
+        "$MEDIA_ROOT/Contents/Resources/MediaRemoteAdapter.framework" \
+        "$MEDIA_ROOT" \
         "$SPARKLE_ROOT/XPCServices/Installer.xpc" \
         "$SPARKLE_ROOT/XPCServices/Downloader.xpc" \
         "$SPARKLE_ROOT/Autoupdate" \
@@ -203,6 +218,26 @@ if [ "$RELEASE_MODE" = "adhoc" ]; then
         codesign --force --sign - \
             --preserve-metadata=identifier,entitlements \
             "$component"
+    done
+else
+    # Xcode signs the embedded framework but may leave prebuilt nested helpers
+    # ad-hoc signed. Sign from the inside out, retaining each helper's own
+    # identifier and entitlements; never propagate the main app's sandbox.
+    SPARKLE_ROOT="$APP_PATH/Contents/Frameworks/Sparkle.framework/Versions/B"
+    MEDIA_ROOT="$APP_PATH/Contents/Resources/MediaRemoteAdapterResources.bundle"
+    for component in \
+        "$MEDIA_ROOT/Contents/Resources/MediaRemoteAdapterTestClient" \
+        "$MEDIA_ROOT/Contents/Resources/MediaRemoteAdapter.framework" \
+        "$MEDIA_ROOT" \
+        "$SPARKLE_ROOT/XPCServices/Installer.xpc" \
+        "$SPARKLE_ROOT/XPCServices/Downloader.xpc" \
+        "$SPARKLE_ROOT/Autoupdate" \
+        "$SPARKLE_ROOT/Updater.app" \
+        "$APP_PATH/Contents/Frameworks/Sparkle.framework" \
+        "$APP_PATH"; do
+        codesign --force --sign "$DEVELOPER_ID_APPLICATION" \
+            --options runtime --timestamp \
+            --preserve-metadata=identifier,entitlements "$component"
     done
 fi
 SHORT_VERSION="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$APP_PATH/Contents/Info.plist")"
@@ -308,7 +343,11 @@ PYEOF
 
 # ---- 7. README 徽章本地快照（不依赖公共徽章服务，不创建定时任务）----
 echo "==> 更新 README 徽章"
-node "$REPO_ROOT/Scripts/update-readme-badges.mjs" --version "$SHORT_VERSION"
+if [ "${OPENYOINK_RELEASE_CANDIDATE:-0}" != "1" ]; then
+    node "$REPO_ROOT/Scripts/update-readme-badges.mjs" --version "$SHORT_VERSION"
+else
+    echo "Candidate build: skipping public release badges."
+fi
 
 # ---- 8. 输出 Homebrew cask 元数据（不提前修改远端）----
 # GitHub Release 此时尚未上传；自动推送 cask 会先发布一个失效 URL。
@@ -322,7 +361,11 @@ echo ""
 echo "==> 完成"
 echo "    DMG:     $DMG_PATH"
 echo "    appcast: $APPCAST"
-echo "    badges:  docs/badges/（请与发布元数据一起提交）"
 echo "    mode:    $RELEASE_MODE"
-echo "下一步（本脚本不执行）：git 提交 docs/appcast.xml 和 docs/badges/，并创建 GitHub Release："
-echo "    gh release create v$VERSION $DMG_PATH --title \"OpenYoink $VERSION\""
+if [ "${OPENYOINK_RELEASE_CANDIDATE:-0}" = "1" ]; then
+    echo "Local candidate only. Public feed and badges are unchanged; nothing was published."
+else
+    echo "    badges:  docs/badges/"
+    echo "Review and commit the feed and badges only when the matching release is ready."
+    echo "No GitHub release has been created by this script."
+fi

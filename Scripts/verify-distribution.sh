@@ -24,7 +24,11 @@ if [ "$RELEASE_MODE" != "adhoc" ] && [ "$RELEASE_MODE" != "developer-id" ]; then
 fi
 
 SPARKLE_ROOT="$APP_PATH/Contents/Frameworks/Sparkle.framework/Versions/B"
+MEDIA_ROOT="$APP_PATH/Contents/Resources/MediaRemoteAdapterResources.bundle"
 COMPONENTS=(
+    "$MEDIA_ROOT/Contents/Resources/MediaRemoteAdapterTestClient"
+    "$MEDIA_ROOT/Contents/Resources/MediaRemoteAdapter.framework"
+    "$MEDIA_ROOT"
     "$SPARKLE_ROOT/XPCServices/Installer.xpc"
     "$SPARKLE_ROOT/XPCServices/Downloader.xpc"
     "$SPARKLE_ROOT/Autoupdate"

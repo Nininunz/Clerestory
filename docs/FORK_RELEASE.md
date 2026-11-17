@@ -20,6 +20,18 @@ The feed starts empty. Upstream releases use another signing key and must not
 be advertised as fork updates. The first fork build defaults to 52, above the
 inherited development build 51. Choose the public version before publishing.
 
+For a local signed/notarized candidate without changing the public feed or badges:
+
+```sh
+OPENYOINK_RELEASE_CANDIDATE=1 Scripts/make-release.sh 1.8.11 52
+```
+
+Candidate metadata is written to `export/appcast-candidate.xml`; the DMG remains
+under `export/`. This still submits the artifact to Apple for notarization, but
+does not upload it to GitHub or deploy an update feed. Set `SPARKLE_BIN` if the
+Sparkle tools are in a custom DerivedData location. Choose a new build number
+when creating a subsequent candidate intended to update an installed one.
+
 ## Existing development data
 
 Changing the bundle ID creates a separate sandbox. It does not migrate or
@@ -40,8 +52,13 @@ Automatic migration is not implemented by this identity change.
 1. GitHub Pages is configured with the GitHub Actions source for this fork. The existing
    Pages workflow builds the website and copies `docs/appcast.xml` to its root.
    Deploy after these changes merge; configuring Pages alone does not deploy the feed.
-2. Set up your own Developer ID Application certificate, Apple team ID and
-   notarization profile. These are separate from the Sparkle update key.
+2. Release signing is configured locally using the Developer ID Application
+   certificate for team `8KB55P2YKQ` and Keychain profile `OpenYoink-notary`.
+   These are separate from the Sparkle update key. Other machines must provision
+   their own access and copy `Scripts/release-signing.example` to the ignored
+   `Scripts/release-signing.local`, adjusting the identifiers as needed.
+   Both release and notarization scripts load that file; explicit environment
+   variables override its defaults. Never store passwords or private keys there.
 3. Resolve and test the development-data migration above if retaining that data.
 4. Build using `Scripts/make-release.sh` with `DEVELOPER_ID_APPLICATION`,
    `DEVELOPMENT_TEAM_ID`, and `NOTARY_PROFILE`. Do not publish ad-hoc artifacts.
@@ -50,5 +67,10 @@ Automatic migration is not implemented by this identity change.
 6. Test a real update between two signed fork builds, including relaunch and
    persistence. Source checks do not establish that end-to-end updates work.
 
-No release, feed deployment, or Apple signing identity is created by this change.
-The Pages hosting configuration is enabled.
+The Developer ID certificate is installed in the maintainer's login Keychain
+(expires December 17, 2027), and the notarization profile has been validated
+with Apple. Pages hosting is configured. No public release or feed deployment
+has been performed. Local candidate `1.8.11 (52)` passed Apple notarization,
+DMG ticket stapling, Gatekeeper checks for both the DMG and mounted app, and
+Sparkle signature verification. The candidate is universal (arm64 and x86_64).
+An actual installed-app update and daily-use data migration still need testing.
