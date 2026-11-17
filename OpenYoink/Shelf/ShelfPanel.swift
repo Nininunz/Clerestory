@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 
 /// Shelf 面板窗口。窗口行为集中于此（见实施计划 §2.3）：
 /// non-activating、borderless、浮动于其他窗口之上、跨 Space、全屏辅助，
@@ -9,6 +10,17 @@ final class ShelfPanel: NSPanel {
     /// 约束到 `visibleFrame`（菜单栏下方），即使调用方传入的是刘海所在 frame。
     /// 经典模式继续保留 AppKit 的常规屏幕约束。
     var allowsTopEdgeOverlap = false
+    var acceptsKeyboardFocus = true
+    /// Drawing room for a SwiftUI shadow is not part of the interactive surface.
+    var interactionInset: CGFloat = 0
+    var interactionCornerRadius: CGFloat = 0
+
+    var interactionFrame: CGRect { frame.insetBy(dx: interactionInset, dy: interactionInset) }
+
+    func containsInteractionPoint(_ point: CGPoint) -> Bool {
+        IslandSurfaceShape(attachedToScreenTop: false, cornerRadius: interactionCornerRadius)
+            .path(in: interactionFrame).contains(point)
+    }
 
     /// S6: 键盘事件回调（空格 Quick Look / Delete 移除 / Esc 取消选择或关 QL）。
     /// 由 ShelfWindowController 注入；返回 true 表示事件已消费。
@@ -44,7 +56,7 @@ final class ShelfPanel: NSPanel {
     /// 导致 S6 的「卡片单击后 panel.makeKey()」静默失败（运行日志有
     /// `makeKeyWindow ... returned NO` 警告），空格 Quick Look / Delete / Esc
     /// 全部失效。面板需要接键盘事件但不抢 main 状态，故只放开 key。
-    override var canBecomeKey: Bool { true }
+    override var canBecomeKey: Bool { acceptsKeyboardFocus }
 
     override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
         allowsTopEdgeOverlap ? frameRect : super.constrainFrameRect(frameRect, to: screen)

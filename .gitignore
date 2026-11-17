@@ -37,3 +37,6 @@ ExportOptions.plist
 # Plan / tooling
 .workbuddy/
 outputs/
+
+# Personal editor appearance
+.vscode/settings.json

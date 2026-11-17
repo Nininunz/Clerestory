@@ -27,10 +27,12 @@ struct ModulePreviewHost: View {
         auxiliaryTopLeftArea: CGRect(x: 0, y: 950, width: 666, height: 32),
         auxiliaryTopRightArea: CGRect(x: 846, y: 950, width: 666, height: 32))
 
-    var surfaceSize: CGSize {
+    private var layout: IslandGeometryResolver.Layout {
         IslandGeometryResolver.resolve(screen: Self.screen,
-            preferredExpandedHeight: coordinator.preferredExpandedHeight(for: descriptor)).expandedFrame.size
+            preferredExpandedHeight: coordinator.preferredExpandedHeight(for: descriptor))
     }
+
+    var surfaceSize: CGSize { layout.expandedFrame.size }
 
     private var notice: ShelfNoticeContent? {
         var presentation = ShelfNoticePresentation()
@@ -63,8 +65,8 @@ struct ModulePreviewHost: View {
     }
 
     private var surface: some View {
-        IslandExpandedSurface(hasPhysicalNotch: true) {
-            Color.clear.frame(height: 32 + IslandGeometryResolver.physicalNotchClickExtension)
+        IslandExpandedSurface() {
+            Color.clear.frame(height: 50)
         } content: {
             GeometryReader { geometry in
                 IslandModuleHost(descriptor: descriptor, coordinator: coordinator) { content }
@@ -74,8 +76,8 @@ struct ModulePreviewHost: View {
         .overlay {
             if let dropTarget {
                 IslandDropOutline(progress: 1,
-                    collapsedSize: IslandGeometryResolver.resolve(screen: Self.screen).compactFrame.size,
-                    attachedToScreenTop: true, state: dropTarget)
+                    collapsedSize: layout.compactFrame.size,
+                    attachedToScreenTop: false, state: dropTarget)
             }
         }
         .environment(\.islandSurfaceHeight, surfaceSize.height)

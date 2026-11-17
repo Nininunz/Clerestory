@@ -396,19 +396,12 @@ private struct TriggerSettingsTab: View {
             }
             }
             Section("Island Reveal") {
-                if FloatingIslandAvailability.isEnabled {
-                    Text("Hover at the top center of the screen to open Island.")
-                        .font(.caption).foregroundStyle(.secondary)
-                } else {
-                    Toggle("Preview Island on hover", isOn: $settings.islandHoverRevealEnabled)
-                        .disabled(!settings.islandEnabled)
-                }
-                Toggle("Click compact Island to expand", isOn: $settings.islandClickRevealEnabled)
-                    .disabled(!settings.islandEnabled || FloatingIslandAvailability.isEnabled)
-                if FloatingIslandAvailability.isEnabled {
-                    Text("Not used in notchless mode, which has no compact Island.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
+                Toggle("Preview Island on hover", isOn: $settings.islandHoverRevealEnabled)
+                    .disabled(!settings.islandEnabled)
+                Toggle("Click to expand Island", isOn: $settings.islandClickRevealEnabled)
+                    .disabled(!settings.islandEnabled)
+                Text("Use compact Island when visible, or the top-center edge of the screen when it is hidden.")
+                    .font(.caption).foregroundStyle(.secondary)
                 LabeledContent("Hover delay") {
                     Slider(value: $settings.islandHoverDelaySeconds, in: 0...0.5, step: 0.05)
                         .frame(width: 180)
@@ -418,7 +411,7 @@ private struct TriggerSettingsTab: View {
                         .frame(width: 54, alignment: .trailing)
                 }
                 .disabled(!settings.islandEnabled
-                          || (!settings.islandHoverRevealEnabled && !FloatingIslandAvailability.isEnabled))
+                          || !settings.islandHoverRevealEnabled)
                 LabeledContent("Leave delay") {
                     Slider(value: $settings.islandHoverLeaveDelaySeconds, in: 0...1, step: 0.05)
                         .frame(width: 180)
@@ -428,7 +421,7 @@ private struct TriggerSettingsTab: View {
                         .frame(width: 54, alignment: .trailing)
                 }
                 .disabled(!settings.islandEnabled
-                          || (!settings.islandHoverRevealEnabled && !FloatingIslandAvailability.isEnabled))
+                          || !settings.islandHoverRevealEnabled)
                 Text("The preview closes after you move away. Pin Island to keep it open.")
                     .font(.caption).foregroundStyle(.secondary)
                 Toggle("Expand Island when dragging files or text near the top", isOn: $settings.islandDragApproachEnabled)
@@ -436,13 +429,8 @@ private struct TriggerSettingsTab: View {
                     .accessibilityIdentifier("settings.islandDragApproach")
                 Text("This file-drag trigger works independently of Preview Island on hover.")
                     .font(.caption).foregroundStyle(.secondary)
-                if FloatingIslandAvailability.isEnabled {
-                    Text("File and text drags can also open Island from the top approach area.")
-                        .font(.caption).foregroundStyle(.secondary)
-                } else {
-                    Text("Dropping files on the compact Island always expands it. The wider top approach area is optional.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
+                Text("Dropping files on compact Island always expands it. The wider top approach area is optional.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Section("Compact Island") {
                 LabeledContent("Cycle Modules") {

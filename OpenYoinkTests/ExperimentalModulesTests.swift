@@ -11,7 +11,7 @@ final class ExperimentalModulesTests: XCTestCase {
         let registry = IslandModuleRegistry()
         let experimental = registry.descriptors.map(\.id).filter { $0 != .shelf } + [IslandModuleID(rawValue: "future")]
         for id in experimental { settings.setIslandModuleEnabled(true, id: id) }
-        settings.assignIslandShortcut(.timer, at: 0)
+        settings.assignIslandShortcut(.timer, at: 2)
         settings.assignIslandShortcut(.battery, at: 7)
         settings.compactModuleOrder = [.timer, .battery, .shelf]
         settings.compactModuleID = .battery
@@ -28,8 +28,8 @@ final class ExperimentalModulesTests: XCTestCase {
             XCTAssertFalse(settings.effectiveIslandModuleConfiguration.isEnabled(id))
             XCTAssertFalse(settings.effectiveIslandModuleConfiguration.shortcutPositions.contains(id))
         }
-        XCTAssertEqual(settings.effectiveIslandModuleConfiguration.shortcutPositions[3], .shelf)
-        XCTAssertEqual(settings.effectiveIslandModuleConfiguration.shortcutPositions[4], .quickSettings)
+        XCTAssertEqual(settings.effectiveIslandModuleConfiguration.shortcutPositions[0], .shelf)
+        XCTAssertEqual(settings.effectiveIslandModuleConfiguration.shortcutPositions[1], .quickSettings)
         XCTAssertEqual(settings.islandModuleConfiguration, saved)
 
         settings.experimentalModulesEnabled = true

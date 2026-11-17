@@ -431,6 +431,11 @@ final class IslandActivityCoordinator {
         setSurfaceState(pinned ? .pinned : .expanded)
     }
 
+    /// The companion can change the displayed module without releasing a pin.
+    func showFromCompact(module: IslandModuleID) {
+        show(module: module, pinned: surfaceState == .pinned)
+    }
+
     func toggle() {
         if surfaceState.isExpanded {
             collapse()
