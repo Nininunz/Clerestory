@@ -2,11 +2,6 @@ import Foundation
 import Observation
 @_exported import OpenYoinkModuleCore
 
-/// Keep the drag feedback implementation available without displaying it.
-enum IslandDragFeedback {
-    static let isEnabled = false
-}
-
 /// One page per horizontal trackpad gesture; vertical gestures stay with content.
 struct IslandShortcutSwipe {
     static func target(current: IslandModuleID, step: Int, pinned: [IslandModuleID],
@@ -258,7 +253,7 @@ final class IslandModuleRegistry {
     private(set) var enabledIDs: Set<IslandModuleID> = [.shelf, .transfers]
 
     func apply(settings: SettingsStore) {
-        enabledIDs = Set(settings.islandModuleConfiguration.enabledModuleIDs)
+        enabledIDs = Set(settings.effectiveIslandModuleConfiguration.enabledModuleIDs)
     }
 
     var enabledDescriptors: [IslandModuleDescriptor] {
@@ -301,8 +296,6 @@ final class IslandActivityCoordinator {
     /// Visual-only hover state. It intentionally does not call
     /// `onStateDidChange`, because pointer movement must never resize the panel.
     var isPointerHovering = false
-    /// Visual cue while a file drag is active, before expansion.
-    var isFileDragNearby = false
     /// A deliberate collapse must win over hover reveal until the pointer has
     /// actually left the compact surface. Without this latch, the mouse-move
     /// monitor immediately schedules another expansion while the click is
@@ -585,7 +578,6 @@ final class IslandActivityCoordinator {
     }
 
     func beginDrag() {
-        isFileDragNearby = false
         if stateBeforeDrag == nil {
             stateBeforeDrag = surfaceState
             moduleBeforeDrag = selectedModule

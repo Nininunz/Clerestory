@@ -8,6 +8,7 @@ final class IslandCompactSelectionTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = SettingsStore(defaults: defaults)
+        settings.experimentalModulesEnabled = true
         for id in IslandCompactDisplay.cycleOrder { settings.setIslandModuleEnabled(true, id: id) }
         let expanded = settings.islandModuleConfiguration.shortcutPositions
         settings.compactModuleOrder = [.battery, .timer, .shelf]
@@ -58,6 +59,7 @@ final class IslandCompactSelectionTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = SettingsStore(defaults: defaults)
+        settings.experimentalModulesEnabled = true
         var reverse = SettingsStore.HotKeyShortcut.compactCycle
         reverse.shift = true
         XCTAssertEqual(settings.compactReverseCycleShortcut, reverse)
@@ -108,6 +110,7 @@ final class IslandCompactSelectionTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = SettingsStore(defaults: defaults)
+        settings.experimentalModulesEnabled = true
         XCTAssertEqual(settings.compactModuleID, .shelf)
         XCTAssertEqual(settings.compactCycleShortcut, .compactCycle)
         settings.compactModuleID = .battery
@@ -124,6 +127,7 @@ final class IslandCompactSelectionTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = SettingsStore(defaults: defaults)
+        settings.experimentalModulesEnabled = true
         for id in IslandCompactDisplay.cycleOrder { settings.setIslandModuleEnabled(true, id: id) }
         let coordinator = IslandActivityCoordinator()
         coordinator.show(module: .system)
@@ -142,6 +146,7 @@ final class IslandCompactSelectionTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = SettingsStore(defaults: defaults)
+        settings.experimentalModulesEnabled = true
         XCTAssertFalse(settings.compactCycleShortcutConflicts)
         settings.hotKeyEnabled = true
         settings.compactCycleShortcut = settings.hotKeyShortcut

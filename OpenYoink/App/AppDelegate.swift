@@ -311,7 +311,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // 全新安装与没有 onboardingVersion 键的旧版本升级。
         let hasLegacyInstallEvidence = legacyInstallEvidence()
         _ = menuBarController
-        if !isUITesting { clipboardHistoryStore.start() }
+        if !isUITesting && settingsStore.experimentalModulesEnabled { clipboardHistoryStore.start() }
         // EdgeTab: 拉环随启动就位（shelf 初始隐藏，拉环立即在边缘就位）。
         if SideShelfAvailability.isEnabled { _ = edgeTabController }
         // Sparkle: 启动 updater（应用「自动检查」设置后 start；幂等）。
@@ -469,7 +469,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// 唤出，不标记、不动它）。`.edgeOnly` 只做记帐，唤出交给边缘触发。
     private func handleDragStart() {
         dragAutoShowSession.dragBegan()
-        shelfPresentationCoordinator.dragStarted()
         guard settingsStore.effectivePreferredShelfSurface == .classic else { return }
         guard settingsStore.classicShelfEnabled else { return }
         guard settingsStore.dragAutoAppearMode == .immediate else { return }
@@ -500,7 +499,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let shouldHideClassic = dragAutoShowSession.dragEnded(
             keepShelfOpenAfterDrop: settingsStore.keepShelfOpenAfterDrop
         )
-        shelfPresentationCoordinator.dragProximityEnded()
         if islandDragWasActivated {
             shelfPresentationCoordinator.dragEnded(imported: imported)
             islandDragWasActivated = false
@@ -781,6 +779,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// 时都要保持注册；EdgeTab 起还供给拉环投放暗示的 `isDragInProgress`
     /// 状态，拉环可用（edgeTabEnabled 且非 custom）时同样保持注册。
     private func applyTriggerSettings() {
+        if !isUITesting && settingsStore.experimentalModulesEnabled {
+            clipboardHistoryStore.start()
+        } else {
+            clipboardHistoryStore.stop()
+            clipboardHistoryWindowController.hide()
+        }
         // Release a conflicting cycle registration before registering the other action.
         if settingsStore.compactCycleShortcutConflicts || !settingsStore.islandEnabled {
             compactCycleHotKeyMonitor.setEnabled(false)
@@ -790,7 +794,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotKeyMonitor.setDoublePressEnabled(settingsStore.hotKeyDoublePressSavesClipboard)
         hotKeyMonitor.setEnabled(settingsStore.hotKeyEnabled)
         clipboardHotKeyMonitor.updateShortcut(settingsStore.clipboardHistoryShortcut)
-        clipboardHotKeyMonitor.setEnabled(settingsStore.clipboardHistoryShortcut != nil
+        clipboardHotKeyMonitor.setEnabled(settingsStore.experimentalModulesEnabled && settingsStore.clipboardHistoryShortcut != nil
             && (!settingsStore.hotKeyEnabled || settingsStore.clipboardHistoryShortcut != settingsStore.hotKeyShortcut))
         clipboardHistoryStore.shortcutRegistrationError = settingsStore.hotKeyEnabled
             && settingsStore.clipboardHistoryShortcut != nil

@@ -234,6 +234,7 @@ final class IslandActivityCoordinatorTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let settings = SettingsStore(defaults: defaults)
+        settings.experimentalModulesEnabled = true
         settings.islandShelfEnabled = false
         settings.islandTimerEnabled = true
         settings.islandBatteryEnabled = true

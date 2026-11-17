@@ -53,12 +53,25 @@ struct ModulesSettingsTab: View {
     @Environment(SettingsNavigationModel.self) private var navigation
     @State private var pendingPreset: WorkflowPreset?
 
+    private var hasPhysicalNotch: Bool {
+        guard let screen = IslandScreenCatalog.selectedScreen(
+            for: settings.islandDisplayTarget, pointerPoint: NSEvent.mouseLocation) else { return false }
+        return IslandGeometryResolver.resolve(screen: IslandScreenCatalog.geometry(for: screen)).hasPhysicalNotch
+    }
+
     var body: some View {
         Group {
-            if let destination = navigation.moduleSettingsDestination {
+            if let destination = navigation.moduleSettingsDestination,
+               settings.isIslandModuleAvailable(destination.moduleID) {
                 moduleDetail(destination)
             } else {
                 moduleList
+            }
+        }
+        .onChange(of: settings.experimentalModulesEnabled) {
+            if let destination = navigation.moduleSettingsDestination,
+               !settings.isIslandModuleAvailable(destination.moduleID) {
+                navigation.moduleSettingsDestination = nil
             }
         }
         .alert("Apply Workflow Preset?", isPresented: Binding(
@@ -75,13 +88,21 @@ struct ModulesSettingsTab: View {
     }
 
     private var moduleList: some View {
-        SettingsForm {
+        @Bindable var settings = settings
+        let destinations = ModuleSettingsDestination.allCases.filter { settings.isIslandModuleAvailable($0.moduleID) }
+        return SettingsForm {
+            Section("Experimental") {
+                Toggle("Experimental Modules", isOn: $settings.experimentalModulesEnabled)
+                    .accessibilityIdentifier("settings.experimentalModules")
+                Text("Enable modules beyond Shelf and Quick Settings. Turning this off keeps their saved settings and shortcut positions.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section("Island Modules") {
                 if !settings.islandEnabled {
                     Text("The Island is off. You can still configure its modules here.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
-                ForEach(ModuleSettingsDestination.allCases) { destination in
+                ForEach(destinations) { destination in
                     HStack(spacing: 12) {
                         Button {
                             navigation.moduleSettingsDestination = destination
@@ -103,7 +124,7 @@ struct ModulesSettingsTab: View {
                             .toggleStyle(.switch)
                             .accessibilityIdentifier("settings.module.\(destination.rawValue).enabled")
                     }
-                    if destination != ModuleSettingsDestination.allCases.last { Divider() }
+                    if destination != destinations.last { Divider() }
                 }
                 Text("One shortcut position is always reserved for Quick Settings.")
                     .font(.caption).foregroundStyle(.secondary)
@@ -143,11 +164,11 @@ struct ModulesSettingsTab: View {
                 Section("Module") {
                     Toggle("Enable Module", isOn: enabledBinding(destination))
                     Toggle("Pin to Island shortcuts", isOn: Binding(
-                        get: { settings.isIslandModulePinned(destination.moduleID) },
-                        set: { settings.setIslandModulePinned($0, id: destination.moduleID) }
+                        get: { settings.islandShortcuts(hasPhysicalNotch: hasPhysicalNotch).isPinned(destination.moduleID) },
+                        set: { settings.setIslandModulePinned($0, id: destination.moduleID, hasPhysicalNotch: hasPhysicalNotch) }
                     ))
-                    .disabled(!settings.islandModuleConfiguration.canTogglePin(for: destination.moduleID))
-                    Text("\(settings.islandModuleConfiguration.pinnedModuleIDs.count) of \(IslandModuleConfiguration.maximumPinnedModules) shortcut positions used.")
+                    .disabled(!settings.islandShortcuts(hasPhysicalNotch: hasPhysicalNotch).canTogglePin(for: destination.moduleID))
+                    Text("\(settings.islandShortcuts(hasPhysicalNotch: hasPhysicalNotch).pinnedModuleIDs.count) of \(IslandModuleConfiguration.maximumPinnedModules) shortcut positions used.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 specificSettings(destination)

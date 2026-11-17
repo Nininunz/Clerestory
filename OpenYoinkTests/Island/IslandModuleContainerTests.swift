@@ -4,6 +4,29 @@ import XCTest
 
 @MainActor
 final class IslandModuleContainerTests: XCTestCase {
+    func testExperimentalGateStopsRuntimeAndCanRestartSavedModule() throws {
+        let name = "ExperimentalRuntime.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let settings = SettingsStore(defaults: defaults)
+        settings.setIslandModuleEnabled(true, id: .timer)
+        let runtime = RuntimeSpy(id: .timer)
+        let container = makeContainer(runtime: runtime, coordinator: IslandActivityCoordinator())
+        container.apply(configuration: settings.effectiveIslandModuleConfiguration, isActive: true)
+        XCTAssertEqual(runtime.startCount, 0)
+        settings.experimentalModulesEnabled = true
+        container.apply(configuration: settings.effectiveIslandModuleConfiguration, isActive: true)
+        XCTAssertEqual(runtime.startCount, 1)
+        settings.experimentalModulesEnabled = false
+        container.apply(configuration: settings.effectiveIslandModuleConfiguration, isActive: true)
+        XCTAssertEqual(runtime.stopCount, 1)
+        XCTAssertTrue(container.runningModuleIDs.isEmpty)
+        settings.experimentalModulesEnabled = true
+        container.apply(configuration: settings.effectiveIslandModuleConfiguration, isActive: true)
+        XCTAssertEqual(runtime.startCount, 2)
+        container.stopAll()
+    }
+
     func testQuickSettingsRemainsAvailableWithoutPinnedOrEnabledModules() {
         let runtime = RuntimeSpy(id: .quickSettings)
         let coordinator = IslandActivityCoordinator()

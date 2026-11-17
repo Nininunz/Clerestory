@@ -131,6 +131,7 @@ final class IslandModulePreviewTests: XCTestCase {
         var views: [(String, AnyView)] = []
         for state in ["Default modules", "All modules enabled", "Optional modules disabled"] {
             let settings = settings()
+            settings.experimentalModulesEnabled = true
             let registry = IslandModuleRegistry()
             for descriptor in registry.descriptors where !descriptor.isCore && state != "Default modules" {
                 settings.setIslandModuleEnabled(state == "All modules enabled", id: descriptor.id)

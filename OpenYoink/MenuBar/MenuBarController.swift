@@ -73,6 +73,8 @@ final class MenuBarController: NSObject {
     }
 
     func applyVisibility() {
+        statusItem.menu?.items.first { $0.action == #selector(showClipboardHistory(_:)) }?
+            .isHidden = !settings.experimentalModulesEnabled
         // Keep Settings reachable if there is no active Island surface.
         statusItem.isVisible = settings.menuBarIconEnabled
             || !settings.islandEnabled

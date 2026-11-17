@@ -13,6 +13,7 @@ final class ClipboardHistoryWindowController {
     }
 
     func show() {
+        guard settings.experimentalModulesEnabled else { return }
         if window == nil {
             let controller = NSHostingController(rootView: ClipboardHistoryView()
                 .padding(16).environment(history).environment(settings))
@@ -29,4 +30,6 @@ final class ClipboardHistoryWindowController {
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
     }
+
+    func hide() { window?.orderOut(nil) }
 }
