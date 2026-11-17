@@ -41,6 +41,36 @@ final class OpenYoinkSmokeUITests: XCTestCase {
         add(attachment)
     }
 
+    func testPanelAndNotchSettingsHaveSeparateDestinations() throws {
+        let app = launch(surface: "--ui-testing-open-settings")
+        XCTAssertTrue(element("settings.content.general", in: app).waitForExistence(timeout: 5))
+        XCTAssertEqual(element("settings.pane.compact", in: app).label, "Notch")
+        XCTAssertFalse(element("settings.showCompactIsland", in: app).exists)
+        element("settings.pane.panel", in: app).click()
+        XCTAssertTrue(element("settings.islandDisplay", in: app).waitForExistence(timeout: 3))
+        let panelCapture = XCTAttachment(screenshot: app.screenshot())
+        panelCapture.name = "Panel settings"
+        panelCapture.lifetime = .keepAlways
+        add(panelCapture)
+        element("settings.pane.compact", in: app).click()
+        let companion = element("settings.showCompactIsland", in: app)
+        XCTAssertTrue(companion.waitForExistence(timeout: 3))
+        XCTAssertEqual(companion.label, "Show in notch")
+        let notchCapture = XCTAttachment(screenshot: app.screenshot())
+        notchCapture.name = "Notch settings"
+        notchCapture.lifetime = .keepAlways
+        add(notchCapture)
+        let previous = try XCTUnwrap(companion.value as? NSNumber).boolValue
+        companion.click()
+        let changed = try XCTUnwrap(companion.value as? NSNumber).boolValue
+        XCTAssertNotEqual(changed, previous)
+        element("settings.pane.panel", in: app).click()
+        element("settings.pane.compact", in: app).click()
+        XCTAssertEqual(try XCTUnwrap(companion.value as? NSNumber).boolValue, changed)
+        XCTAssertFalse(element("settings.pane.triggers", in: app).exists)
+        XCTAssertFalse(element("settings.pane.ignoredApps", in: app).exists)
+    }
+
     func testSettingsPassesCoreAccessibilityAudit() throws {
         let app = launch(surface: "--ui-testing-open-settings")
         XCTAssertTrue(element("settings.content.general", in: app).waitForExistence(timeout: 5))
@@ -105,7 +135,8 @@ final class OpenYoinkSmokeUITests: XCTestCase {
     func testSettingsPopupPickerOpens() throws {
         let app = launch(surface: "--ui-testing-open-settings")
 
-        for identifier in ["settings.islandDisplay", "settings.language"] {
+        for (pane, identifier) in [("general", "settings.language"), ("panel", "settings.islandDisplay")] {
+            element("settings.pane.\(pane)", in: app).click()
             let picker = element(identifier, in: app)
             XCTAssertTrue(picker.waitForExistence(timeout: 5))
             XCTAssertTrue(picker.isHittable)
@@ -147,13 +178,13 @@ final class OpenYoinkSmokeUITests: XCTestCase {
         XCTAssertTrue(panel.waitForNonExistence(timeout: 3))
     }
 
-    func testCompactActivationPreservesPinnedExpandedPanel() throws {
+    func testNotchActivationPreservesPinnedExpandedPanel() throws {
         try requireNotchedDisplay()
         let app = launch(surface: "--ui-testing-show-shelf")
         let panel = expandedPanel(in: app)
         XCTAssertTrue(panel.waitForExistence(timeout: 5))
-        let compact = element("island.window.compact", in: app)
-        XCTAssertTrue(compact.waitForExistence(timeout: 3))
+        let notch = element("island.window.compact", in: app)
+        XCTAssertTrue(notch.waitForExistence(timeout: 3))
         let pin = element("island.pin", in: panel)
         pin.hover()
         XCTAssertTrue(pin.isHittable)
@@ -162,22 +193,22 @@ final class OpenYoinkSmokeUITests: XCTestCase {
         element("island.module.quickSettings", in: panel).click()
         XCTAssertTrue(element("island.shortcut.position.0", in: panel).waitForExistence(timeout: 3))
         // Click a visible wing, outside the physical camera cutout.
-        compact.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+        notch.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
             .withOffset(CGVector(dx: 20, dy: 0)).click()
         XCTAssertTrue(element("shelf.emptyState", in: panel).waitForExistence(timeout: 3))
         assertValue("pinned", of: pin)
     }
 
-    func testExpandedPanelWithoutCompact() throws {
-        try assertExpandedWithoutCompact(hideCompact: true)
+    func testExpandedPanelWithoutNotch() throws {
+        try assertExpandedWithoutNotch(hideNotch: true)
     }
 
-    func testCompactHoverOpensLeavesAndReopens() throws {
+    func testNotchHoverOpensLeavesAndReopens() throws {
         try requireNotchedDisplay()
         let app = launch(surface: "--ui-testing-hover")
-        let compact = element("island.window.compact", in: app)
-        XCTAssertTrue(compact.waitForExistence(timeout: 3))
-        let wing = compact.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+        let notch = element("island.window.compact", in: app)
+        XCTAssertTrue(notch.waitForExistence(timeout: 3))
+        let wing = notch.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
             .withOffset(CGVector(dx: 20, dy: 0))
         let outside = wing.withOffset(CGVector(dx: 0, dy: 600))
         let panel = expandedPanel(in: app)
@@ -209,7 +240,18 @@ final class OpenYoinkSmokeUITests: XCTestCase {
     }
 
     func testExpandedPanelOnSimulatedNotchlessDisplay() throws {
-        try assertExpandedWithoutCompact(simulateNoNotch: true)
+        try assertExpandedWithoutNotch(simulateNoNotch: true)
+    }
+
+    func testQuickSettingsOnNotchlessDisplayShowsOnlyPanelEditor() {
+        let app = launch(surface: "--ui-testing-show-shelf", simulateNoNotch: true)
+        let panel = expandedPanel(in: app)
+        XCTAssertTrue(panel.waitForExistence(timeout: 5))
+        element("island.pin", in: panel).click()
+        element("island.module.quickSettings", in: panel).click()
+        XCTAssertTrue(element("island.shortcut.position.0", in: panel).waitForExistence(timeout: 3))
+        XCTAssertFalse(panel.buttons["Notch modules"].exists)
+        XCTAssertFalse(panel.buttons["Panel shortcuts"].exists)
     }
 
     func testQuickLookKeyboardNavigationAndFocusReturn() throws {
@@ -248,15 +290,15 @@ final class OpenYoinkSmokeUITests: XCTestCase {
         let helper = launchDragSource()
         let source = element("uitest.drag.file", in: helper)
         XCTAssertTrue(source.waitForExistence(timeout: 5))
-        let compact = element("island.window.compact", in: app)
-        XCTAssertTrue(compact.waitForExistence(timeout: 3))
+        let notch = element("island.window.compact", in: app)
+        XCTAssertTrue(notch.waitForExistence(timeout: 3))
         let panel = expandedPanel(in: app)
         XCTAssertFalse(panel.exists)
-        let target = compact.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 1))
+        let target = notch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 1))
             .withOffset(CGVector(dx: 0, dy: 35))
         drag(source, to: target)
         // Import feedback can close an unpinned panel; reopen to inspect storage.
-        compact.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+        notch.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
             .withOffset(CGVector(dx: 20, dy: 0)).click()
         XCTAssertTrue(panel.waitForExistence(timeout: 5))
         let cards = shelfCards(in: panel)
@@ -271,7 +313,7 @@ final class OpenYoinkSmokeUITests: XCTestCase {
         ).firstMatch
         XCTAssertTrue(duplicate.waitForExistence(timeout: 5))
         XCTAssertTrue(panel.waitForNonExistence(timeout: 3))
-        compact.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+        notch.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
             .withOffset(CGVector(dx: 20, dy: 0)).click()
         XCTAssertTrue(cards.firstMatch.waitForExistence(timeout: 5))
         XCTAssertEqual(cards.count, 1, "Duplicate drops must not add a second card")
@@ -283,13 +325,13 @@ final class OpenYoinkSmokeUITests: XCTestCase {
         let helper = launchDragSource()
         let source = element("uitest.drag.text", in: helper)
         XCTAssertTrue(source.waitForExistence(timeout: 5))
-        let compact = element("island.window.compact", in: app)
-        XCTAssertTrue(compact.waitForExistence(timeout: 3))
+        let notch = element("island.window.compact", in: app)
+        XCTAssertTrue(notch.waitForExistence(timeout: 3))
         let panel = expandedPanel(in: app)
         XCTAssertFalse(panel.exists)
-        drag(source, to: compact.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 1))
+        drag(source, to: notch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 1))
             .withOffset(CGVector(dx: 0, dy: 35)))
-        compact.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+        notch.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
             .withOffset(CGVector(dx: 20, dy: 0)).click()
         let cards = shelfCards(in: panel)
         XCTAssertTrue(cards.firstMatch.waitForExistence(timeout: 5))
@@ -304,12 +346,12 @@ final class OpenYoinkSmokeUITests: XCTestCase {
         let helper = launchDragSource()
         let source = element("uitest.drag.file", in: helper)
         XCTAssertTrue(source.waitForExistence(timeout: 5))
-        let compact = element("island.window.compact", in: app)
-        XCTAssertTrue(compact.waitForExistence(timeout: 3))
-        let target = compact.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 1))
+        let notch = element("island.window.compact", in: app)
+        XCTAssertTrue(notch.waitForExistence(timeout: 3))
+        let target = notch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 1))
             .withOffset(CGVector(dx: 0, dy: 35))
         drag(source, to: target)
-        compact.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+        notch.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
             .withOffset(CGVector(dx: 20, dy: 0)).click()
         let panel = expandedPanel(in: app)
         XCTAssertTrue(panel.waitForExistence(timeout: 5))
@@ -345,9 +387,9 @@ final class OpenYoinkSmokeUITests: XCTestCase {
         try requireNotchedDisplay()
         let app = launch(surface: "--ui-testing-hover",
                          fixtures: ["-OpenYoink.islandHoverLeaveDelaySeconds", "1"])
-        let compact = element("island.window.compact", in: app)
-        XCTAssertTrue(compact.waitForExistence(timeout: 3))
-        let wing = compact.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+        let notch = element("island.window.compact", in: app)
+        XCTAssertTrue(notch.waitForExistence(timeout: 3))
+        let wing = notch.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
             .withOffset(CGVector(dx: 20, dy: 0))
         let outside = wing.withOffset(CGVector(dx: 0, dy: 600))
         wing.hover()
@@ -387,8 +429,8 @@ final class OpenYoinkSmokeUITests: XCTestCase {
         XCTAssertEqual(source.value as? String, "ended:1", "Native source must complete a copy drop")
     }
 
-    private func assertExpandedWithoutCompact(hideCompact: Bool = false, simulateNoNotch: Bool = false) throws {
-        let app = launch(surface: "--ui-testing-show-shelf", hideCompact: hideCompact, simulateNoNotch: simulateNoNotch)
+    private func assertExpandedWithoutNotch(hideNotch: Bool = false, simulateNoNotch: Bool = false) throws {
+        let app = launch(surface: "--ui-testing-show-shelf", hideNotch: hideNotch, simulateNoNotch: simulateNoNotch)
         let panel = expandedPanel(in: app)
         XCTAssertTrue(panel.waitForExistence(timeout: 5))
         XCTAssertTrue(element("shelf.emptyState", in: panel).waitForExistence(timeout: 3))
@@ -422,7 +464,7 @@ final class OpenYoinkSmokeUITests: XCTestCase {
         shelf.click()
     }
 
-    private func launch(surface: String, hideCompact: Bool = false, simulateNoNotch: Bool = false,
+    private func launch(surface: String, hideNotch: Bool = false, simulateNoNotch: Bool = false,
                         fixtures: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchEnvironment["OPENYOINK_UI_TESTING"] = "1"
@@ -432,7 +474,7 @@ final class OpenYoinkSmokeUITests: XCTestCase {
             "-AppleLanguages", "(en)",
             "-OpenYoinkSimulateNoNotch", simulateNoNotch ? "YES" : "NO",
             surface,
-        ] + (hideCompact ? ["--ui-testing-hide-compact"] : []) + fixtures
+        ] + (hideNotch ? ["--ui-testing-hide-compact"] : []) + fixtures
         addTeardownBlock { @MainActor in app.terminate() }
         app.launch()
         return app

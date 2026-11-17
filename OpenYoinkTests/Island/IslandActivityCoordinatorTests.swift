@@ -3,13 +3,13 @@ import XCTest
 
 @MainActor
 final class IslandActivityCoordinatorTests: XCTestCase {
-    func testCompactActivationPreservesPinWhileSwitchingModules() {
+    func testNotchActivationPreservesPinWhileSwitchingModules() {
         let coordinator = IslandActivityCoordinator()
         coordinator.show(module: .quickSettings, pinned: true)
         coordinator.completeSurfaceTransition(coordinator.surfaceTransitionID)
         let transition = coordinator.surfaceTransitionID
 
-        coordinator.showFromCompact(module: .shelf)
+        coordinator.showFromNotch(module: .shelf)
 
         XCTAssertEqual(coordinator.selectedModule, .shelf)
         XCTAssertEqual(coordinator.surfaceState, .pinned)
@@ -17,10 +17,10 @@ final class IslandActivityCoordinatorTests: XCTestCase {
         XCTAssertFalse(coordinator.isSurfaceTransitionPending)
 
         coordinator.setPinned(false)
-        coordinator.showFromCompact(module: .quickSettings)
+        coordinator.showFromNotch(module: .quickSettings)
         XCTAssertEqual(coordinator.surfaceState, .expanded)
         coordinator.collapse()
-        coordinator.showFromCompact(module: .shelf)
+        coordinator.showFromNotch(module: .shelf)
         XCTAssertEqual(coordinator.selectedModule, .shelf)
         XCTAssertEqual(coordinator.surfaceState, .expanded, "Reopening must not restore a released pin")
     }
@@ -50,13 +50,13 @@ final class IslandActivityCoordinatorTests: XCTestCase {
     func testReentryGraceRestoresLastModuleUntilDeadlineAndSkipsDisabledModules() {
         let coordinator = IslandActivityCoordinator()
         coordinator.selectedModule = .quickSettings
-        coordinator.quickSettingsShowsCompact = true
+        coordinator.quickSettingsShowsNotch = true
         coordinator.rememberDeparture(at: 100)
         coordinator.selectedModule = .shelf
         XCTAssertEqual(coordinator.reentryModule(at: 102.99, isEnabled: { _ in true }), .quickSettings)
         XCTAssertNil(coordinator.reentryModule(at: 103, isEnabled: { _ in true }))
         XCTAssertNil(coordinator.reentryModule(at: 101, isEnabled: { _ in false }))
-        XCTAssertTrue(coordinator.quickSettingsShowsCompact)
+        XCTAssertTrue(coordinator.quickSettingsShowsNotch)
         coordinator.selectedModule = .timer
         coordinator.rememberDeparture(at: 110)
         XCTAssertEqual(coordinator.reentryModule(at: 111, isEnabled: { _ in true }), .timer)
@@ -294,7 +294,7 @@ final class IslandActivityCoordinatorTests: XCTestCase {
         coordinator.publish(activity(id: "ai", module: .aiUsage, priority: .systemWarning), at: after)
         XCTAssertEqual(coordinator.primaryActivity(at: after)?.id, "media")
 
-        // Without media, the alert keeps the compact Island.
+        // Without media, the alert keeps the notch Island.
         coordinator.removeActivity(id: "media")
         XCTAssertEqual(coordinator.primaryActivity(at: after)?.id, "ai")
     }
@@ -317,21 +317,21 @@ final class IslandActivityCoordinatorTests: XCTestCase {
         XCTAssertEqual(coordinator.primaryActivity()?.id, "timer")
     }
 
-    func testCompactActivityDoesNotDependOnExpandedSelection() {
+    func testNotchActivityDoesNotDependOnExpandedSelection() {
         let coordinator = IslandActivityCoordinator()
         coordinator.publish(activity(id: "timer", module: .timer,
                                      priority: .selectedModule))
-        XCTAssertEqual(coordinator.compactPrimaryActivity()?.id, "timer")
+        XCTAssertEqual(coordinator.notchPrimaryActivity()?.id, "timer")
         coordinator.selectedModule = .media
-        XCTAssertEqual(coordinator.compactPrimaryActivity()?.id, "timer")
+        XCTAssertEqual(coordinator.notchPrimaryActivity()?.id, "timer")
         XCTAssertNil(coordinator.primaryActivity())
     }
 
-    func testCompactWingsFollowManualSelection() {
+    func testNotchWingsFollowManualSelection() {
         let enabled: [IslandModuleID] = [.shelf, .timer, .battery]
-        XCTAssertEqual(IslandCompactDisplay.selected(.battery, enabled: enabled), .battery)
-        XCTAssertEqual(IslandCompactDisplay.selected(.timer, enabled: enabled), .timer)
-        XCTAssertEqual(IslandCompactDisplay.selected(.shelf, enabled: enabled), .shelf)
+        XCTAssertEqual(IslandNotchDisplay.selected(.battery, enabled: enabled), .battery)
+        XCTAssertEqual(IslandNotchDisplay.selected(.timer, enabled: enabled), .timer)
+        XCTAssertEqual(IslandNotchDisplay.selected(.shelf, enabled: enabled), .shelf)
     }
 
     func testExpiredActivityIsIgnoredAndPruned() {
@@ -382,7 +382,7 @@ final class IslandActivityCoordinatorTests: XCTestCase {
         coordinator.collapse()
         coordinator.setPointerHovering(true)
 
-        XCTAssertEqual(coordinator.surfaceState, .compact)
+        XCTAssertEqual(coordinator.surfaceState, .collapsed)
         XCTAssertFalse(coordinator.canRevealOnHover)
 
         coordinator.setPointerHovering(false)
@@ -395,7 +395,7 @@ final class IslandActivityCoordinatorTests: XCTestCase {
 
         coordinator.collapse(suppressHoverUntilPointerExit: false)
 
-        XCTAssertEqual(coordinator.surfaceState, .compact)
+        XCTAssertEqual(coordinator.surfaceState, .collapsed)
         XCTAssertTrue(coordinator.canRevealOnHover)
     }
 
@@ -487,9 +487,9 @@ final class IslandActivityCoordinatorTests: XCTestCase {
         coordinator.show(module: .media)
 
         XCTAssertEqual(callbackStates.count, 1)
-        XCTAssertEqual(callbackStates.first?.0, .compact)
+        XCTAssertEqual(callbackStates.first?.0, .collapsed)
         XCTAssertEqual(callbackStates.first?.1, .expanded)
-        XCTAssertEqual(callbackStates.first?.2, .compact)
+        XCTAssertEqual(callbackStates.first?.2, .collapsed)
         XCTAssertEqual(coordinator.surfaceState, .expanded)
     }
 
@@ -523,7 +523,7 @@ final class IslandActivityCoordinatorTests: XCTestCase {
         coordinator.completeSurfaceTransition(oldCollapseID)
         coordinator.completeSurfaceTransition(reopenID)
         XCTAssertTrue(coordinator.isSurfaceTransitionPending)
-        XCTAssertEqual(coordinator.surfaceState, .compact)
+        XCTAssertEqual(coordinator.surfaceState, .collapsed)
         coordinator.completeSurfaceTransition(currentID)
         XCTAssertFalse(coordinator.isSurfaceTransitionPending)
     }

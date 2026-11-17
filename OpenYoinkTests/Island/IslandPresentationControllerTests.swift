@@ -4,7 +4,7 @@ import XCTest
 
 @MainActor
 final class IslandPresentationControllerTests: XCTestCase {
-    func testCompactToggleAndDisplayChangesPreserveExpandedWindowSelectionAndPinning() async throws {
+    func testNotchToggleAndDisplayChangesPreserveExpandedWindowSelectionAndPinning() async throws {
         let name = "IslandPresentation.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
         defer { defaults.removePersistentDomain(forName: name) }
@@ -38,34 +38,34 @@ final class IslandPresentationControllerTests: XCTestCase {
         let frame = window.frame
         XCTAssertEqual(window.interactionFrame, coordinator.currentLayout?.expandedFrame)
         XCTAssertEqual(frame.width, window.interactionFrame.width + 2 * IslandSurfaceShadow.inset)
-        settings.compactModuleID = .shelf
-        XCTAssertTrue(presentation.compact.panel.isVisible)
-        XCTAssertFalse(presentation.compact.panel.canBecomeKey)
+        settings.notchModuleID = .shelf
+        XCTAssertTrue(presentation.notch.panel.isVisible)
+        XCTAssertFalse(presentation.notch.panel.canBecomeKey)
         XCTAssertTrue(window.canBecomeKey)
         XCTAssertTrue(window.isVisible)
         for visible in [false, true, false] {
-            settings.showCompactIsland = visible
+            settings.showNotch = visible
             presentation.activate()
-            XCTAssertEqual(presentation.compact.panel.isVisible, visible)
+            XCTAssertEqual(presentation.notch.panel.isVisible, visible)
             XCTAssertTrue(window === presentation.expanded.panel)
             XCTAssertTrue(window.isVisible)
             XCTAssertEqual(window.frame, frame)
             XCTAssertEqual(coordinator.surfaceState, .pinned)
             XCTAssertEqual(coordinator.selectedModule, .quickSettings)
-            XCTAssertEqual(settings.compactModuleID, .shelf)
+            XCTAssertEqual(settings.notchModuleID, .shelf)
         }
-        settings.showCompactIsland = true
+        settings.showNotch = true
         screen = geometry(notched: false)
         presentation.activate()
-        XCTAssertFalse(presentation.compact.panel.isVisible)
-        XCTAssertTrue(settings.showCompactIsland)
+        XCTAssertFalse(presentation.notch.panel.isVisible)
+        XCTAssertTrue(settings.showNotch)
         XCTAssertTrue(window.isVisible)
         XCTAssertEqual(coordinator.selectedModule, .quickSettings)
         screen = geometry(notched: true)
         presentation.activate()
-        XCTAssertTrue(presentation.compact.panel.isVisible)
+        XCTAssertTrue(presentation.notch.panel.isVisible)
         XCTAssertEqual(roles.filter { $0 == .expanded }.count, 1)
-        XCTAssertEqual(roles.filter { $0 == .compact }.count, 1)
+        XCTAssertEqual(roles.filter { $0 == .notch }.count, 1)
 
         coordinator.collapse()
         let closingTransition = coordinator.surfaceTransitionID
@@ -85,14 +85,14 @@ final class IslandPresentationControllerTests: XCTestCase {
 
     }
 
-    func testClickTriggerHonorsPreferenceWithOrWithoutCompactAndOnExternalDisplay() throws {
+    func testClickTriggerHonorsPreferenceWithOrWithoutNotchAndOnExternalDisplay() throws {
         for notched in [true, false] {
-            for compact in [true, false] {
+            for notch in [true, false] {
                 let name = "IslandTriggers.\(UUID().uuidString)"
                 let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
                 defer { defaults.removePersistentDomain(forName: name) }
                 let settings = SettingsStore(defaults: defaults)
-                settings.showCompactIsland = compact
+                settings.showNotch = notch
                 let coordinator = IslandActivityCoordinator()
                 let registry = IslandModuleRegistry()
                 registry.apply(settings: settings)

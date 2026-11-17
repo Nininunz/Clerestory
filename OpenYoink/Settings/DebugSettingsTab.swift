@@ -6,7 +6,7 @@ struct DebugSettingsTab: View {
 
     var body: some View {
         SettingsForm {
-            Section("Island Preview") {
+            Section("Display Simulation") {
                 Toggle("Simulate a display without a notch", isOn: Binding(
                     get: { simulateNoNotch },
                     set: { enabled in
@@ -16,7 +16,7 @@ struct DebugSettingsTab: View {
                 ))
                 .accessibilityIdentifier("settings.debug.simulateNoNotch")
 
-                Text("Hover at the top center to open the full Island. Turn this off to return to the physical notch.")
+                Text("Uses the same panel while hiding the notch display. Your opening controls in Panel still apply. Turn this off to use the real display geometry.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

@@ -119,11 +119,11 @@ final class AIUsageFormatTests: XCTestCase {
     }
 
     func testRefreshPolicy() {
-        XCTAssertEqual(AIUsageRefreshPolicy.interval(isSelectedAndExpanded: true, showsCompactValue: true,
+        XCTAssertEqual(AIUsageRefreshPolicy.interval(isSelectedAndExpanded: true, showsNotchValue: true,
                                                      isConstrained: false), .seconds(30))
-        XCTAssertEqual(AIUsageRefreshPolicy.interval(isSelectedAndExpanded: false, showsCompactValue: true,
+        XCTAssertEqual(AIUsageRefreshPolicy.interval(isSelectedAndExpanded: false, showsNotchValue: true,
                                                      isConstrained: false), .seconds(60))
-        XCTAssertEqual(AIUsageRefreshPolicy.interval(isSelectedAndExpanded: false, showsCompactValue: false,
+        XCTAssertEqual(AIUsageRefreshPolicy.interval(isSelectedAndExpanded: false, showsNotchValue: false,
                                                      isConstrained: true), .seconds(600))
     }
 }
@@ -177,40 +177,40 @@ final class AIUsageModuleStoreTests: XCTestCase {
         fetchedAt: Date(timeIntervalSince1970: 1_000)
     )
 
-    func testCompactValueFollowsMetric() async {
-        var metric = AIUsageCompactMetric.todayCost
+    func testNotchValueFollowsMetric() async {
+        var metric = AIUsageNotchMetric.todayCost
         let store = AIUsageModuleStore(
             makeProvider: { [snapshot] in StubAIUsageProvider(result: .success(snapshot)) },
             isSelectedAndExpanded: { false },
-            compactMetric: { metric },
+            notchMetric: { metric },
             alertsEnabled: { true }
         )
-        XCTAssertNil(store.compactValue)
+        XCTAssertNil(store.notchValue)
         store.start()
         await store.refresh()
         XCTAssertEqual(store.status, .ready)
-        XCTAssertEqual(store.compactValue, "$20")
+        XCTAssertEqual(store.notchValue, "$20")
         metric = .tightestLimit
-        XCTAssertEqual(store.compactValue, "41%")
+        XCTAssertEqual(store.notchValue, "41%")
         metric = .off
-        XCTAssertNil(store.compactValue)
-        XCTAssertNil(store.compactSummary)
+        XCTAssertNil(store.notchValue)
+        XCTAssertNil(store.notchSummary)
         store.stop()
         metric = .todayCost
-        XCTAssertNil(store.compactValue)
+        XCTAssertNil(store.notchValue)
     }
 
     func testConnectionFailureMeansTokenTrackerIsNotRunning() async {
         let store = AIUsageModuleStore(
             makeProvider: { StubAIUsageProvider(result: .failure(.notRunning)) },
             isSelectedAndExpanded: { false },
-            compactMetric: { .todayCost },
+            notchMetric: { .todayCost },
             alertsEnabled: { true }
         )
         store.start()
         await store.refresh()
         XCTAssertEqual(store.status, .notRunning)
-        XCTAssertNil(store.compactValue)
+        XCTAssertNil(store.notchValue)
         store.stop()
     }
 }

@@ -10,18 +10,31 @@ enum WorkflowPreset: String, CaseIterable, Identifiable {
         case .toolbox: String(localized: "Full Toolbox")
         }
     }
-    var detail: String {
-        switch self {
-        case .files: String(localized: "Use Island with Shelf and Transfers for files.")
-        case .clipboard: String(localized: "Use Island with Shelf, Transfers and Clipboard History. Recording stays under your control.")
-        case .toolbox: String(localized: "Enable all built-in Island modules. Clipboard recording stays under your control.")
-        }
+    static func availableCases(experimentalModulesEnabled: Bool) -> [Self] {
+        experimentalModulesEnabled ? allCases : [.files]
     }
+
+    func detail(experimentalModulesEnabled: Bool) -> String {
+        let modules: String
+        switch self {
+        case .files:
+            modules = experimentalModulesEnabled
+                ? String(localized: "Use Shelf and Transfers for files.")
+                : String(localized: "Use Shelf for files. Hidden module preferences are preserved.")
+        case .clipboard:
+            modules = String(localized: "Use Shelf, Transfers and Clipboard History. Recording stays under your control.")
+        case .toolbox:
+            modules = String(localized: "Enable all available modules. Clipboard recording stays under your control.")
+        }
+        return modules + " " + String(localized: "Enable the panel and drag-to-open, and turn off hover opening.")
+    }
+
 }
 
 extension SettingsStore {
     /// Changes presentation only. Data, privacy consent, shortcut, and unknown module IDs survive.
     func applyWorkflowPreset(_ preset: WorkflowPreset) {
+        guard WorkflowPreset.availableCases(experimentalModulesEnabled: experimentalModulesEnabled).contains(preset) else { return }
         if SideShelfAvailability.isEnabled {
             classicShelfEnabled = true
             edgeTabEnabled = true
@@ -31,7 +44,7 @@ extension SettingsStore {
         islandDragApproachEnabled = true
         islandHoverRevealEnabled = false
         islandEnabled = true
-        let builtIns: [IslandModuleID] = [.shelf, .transfers, .timer, .battery, .system, .media, .folders, .clipboard]
+        let builtIns = IslandModuleRegistry().descriptors.map(\.id)
         let enabled: [IslandModuleID]
         let pinned: [IslandModuleID]
         switch preset {
@@ -39,9 +52,15 @@ extension SettingsStore {
         case .clipboard: enabled = [.shelf, .transfers, .clipboard]; pinned = [.shelf, .clipboard]
         case .toolbox: enabled = builtIns; pinned = [.shelf, .clipboard, .folders, .media, .system]
         }
-        let unknownEnabled = islandModuleConfiguration.enabledModuleIDs.filter { !builtIns.contains($0) }
-        let unknownPinned = islandModuleConfiguration.pinnedModuleIDs.filter { !builtIns.contains($0) }
-        islandModuleConfiguration = IslandModuleConfiguration(enabledModuleIDs: enabled + unknownEnabled,
-                                                               pinnedModuleIDs: unknownPinned + pinned)
+        var configuration = islandModuleConfiguration
+        // Preserve hidden/unknown modules and their exact saved shortcut positions.
+        for id in builtIns where isIslandModuleAvailable(id) {
+            configuration.setEnabled(enabled.contains(id), for: id)
+            if !pinned.contains(id) { configuration.setPinned(false, for: id) }
+        }
+        for id in pinned where isIslandModuleAvailable(id) {
+            configuration.setPinned(true, for: id)
+        }
+        islandModuleConfiguration = configuration
     }
 }

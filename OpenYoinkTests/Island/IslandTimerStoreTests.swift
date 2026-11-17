@@ -83,7 +83,7 @@ final class IslandTimerStoreTests: XCTestCase {
         timer.stop()
     }
 
-    func testCompactTimerOmitsSecondsOnlyForThreeDigitMinutes() throws {
+    func testNotchTimerOmitsSecondsOnlyForThreeDigitMinutes() throws {
         let (defaults, name) = try suite()
         defer { defaults.removePersistentDomain(forName: name) }
         let now = Date(timeIntervalSince1970: 5_000)
@@ -91,10 +91,10 @@ final class IslandTimerStoreTests: XCTestCase {
 
         timer.start(duration: 105 * 60 + 47)
         XCTAssertEqual(timer.formattedRemaining, "105:47")
-        XCTAssertEqual(timer.compactRemaining, "105m")
+        XCTAssertEqual(timer.notchRemaining, "105m")
 
         timer.start(duration: 99 * 60 + 59)
-        XCTAssertEqual(timer.compactRemaining, "99:59")
+        XCTAssertEqual(timer.notchRemaining, "99:59")
         timer.stop()
     }
 
@@ -126,7 +126,7 @@ final class IslandTimerStoreTests: XCTestCase {
         timer.stop()
     }
 
-    func testFocusGoalIsUsedForCompactActivity() throws {
+    func testFocusGoalIsUsedForNotchActivity() throws {
         let (defaults, name) = try suite()
         defer { defaults.removePersistentDomain(forName: name) }
 

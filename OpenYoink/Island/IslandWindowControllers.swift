@@ -1,6 +1,6 @@
 import AppKit
 
-enum IslandWindowRole { case expanded, compact }
+enum IslandWindowRole { case expanded, notch }
 
 @MainActor
 final class IslandExpandedWindowController {
@@ -31,18 +31,18 @@ final class IslandExpandedWindowController {
 }
 
 @MainActor
-final class IslandCompactWindowController {
+final class IslandNotchWindowController {
     private let makePanel: () -> ShelfPanel
     lazy var panel = makePanel()
     init(makePanel: @escaping () -> ShelfPanel) { self.makePanel = makePanel }
 
     func update(layout: IslandGeometryResolver.Layout, enabled: Bool, level: NSWindow.Level) {
-        guard enabled, layout.compactIsVisible else { hide(); return }
+        guard enabled, layout.notchIsVisible else { hide(); return }
         panel.acceptsKeyboardFocus = false
         panel.allowsTopEdgeOverlap = true
         panel.level = level
         panel.hasShadow = false
-        if panel.frame != layout.compactFrame { panel.setFrame(layout.compactFrame, display: true) }
+        if panel.frame != layout.notchFrame { panel.setFrame(layout.notchFrame, display: true) }
         if !panel.isVisible { panel.orderFront(nil) }
     }
 

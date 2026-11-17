@@ -513,7 +513,7 @@ struct IslandEqualizerView: View {
     }
 }
 
-struct CompactNowPlayingArtworkView: View {
+struct NotchNowPlayingArtworkView: View {
     @Environment(NowPlayingModuleStore.self) private var store
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let image: NSImage

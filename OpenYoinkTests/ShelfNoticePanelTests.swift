@@ -67,7 +67,7 @@ final class ShelfNoticePanelTests: XCTestCase {
         let layout = try liveLayout()
         coordinator.currentLayout = layout
         let notices = ShelfNoticeModel()
-        let anchor = NSWindow(contentRect: layout.compactFrame, styleMask: [.borderless], backing: .buffered, defer: false)
+        let anchor = NSWindow(contentRect: layout.notchFrame, styleMask: [.borderless], backing: .buffered, defer: false)
         anchor.isReleasedWhenClosed = false
         anchor.orderFront(nil)
         defer { anchor.close() }
@@ -77,7 +77,7 @@ final class ShelfNoticePanelTests: XCTestCase {
         notices.show(.alreadyOnShelf)
         try await Task.sleep(for: .milliseconds(300))
         XCTAssertTrue(controller.panel.isVisible)
-        let compactPill = try XCTUnwrap(controller.interactionFrame)
+        let notchPill = try XCTUnwrap(controller.interactionFrame)
         anchor.setFrame(layout.expandedFrame, display: true)
         let expandedAnchorFrame = anchor.frame
         coordinator.show(module: .shelf)
@@ -87,14 +87,14 @@ final class ShelfNoticePanelTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(450))
         let expandedPill = try XCTUnwrap(controller.interactionFrame)
         XCTAssertEqual(expandedPill.maxY, expandedAnchorFrame.minY - 10, accuracy: 1)
-        XCTAssertLessThan(expandedPill.maxY, compactPill.maxY)
+        XCTAssertLessThan(expandedPill.maxY, notchPill.maxY)
         XCTAssertEqual(expandedPill.midX, expandedAnchorFrame.midX, accuracy: 1)
         coordinator.collapse()
-        anchor.setFrame(layout.compactFrame, display: true)
+        anchor.setFrame(layout.notchFrame, display: true)
         coordinator.completeSurfaceTransition(coordinator.surfaceTransitionID)
         try await Task.sleep(for: .milliseconds(450))
         XCTAssertTrue(controller.panel.isVisible)
-        XCTAssertEqual(try XCTUnwrap(controller.interactionFrame).maxY, compactPill.maxY, accuracy: 1)
+        XCTAssertEqual(try XCTUnwrap(controller.interactionFrame).maxY, notchPill.maxY, accuracy: 1)
         coordinator.show(module: .shelf)
         coordinator.completeSurfaceTransition(coordinator.surfaceTransitionID)
         notices.show(.alreadyOnShelf)

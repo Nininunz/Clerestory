@@ -174,7 +174,7 @@ final class ShelfWindowController: NSObject {
                 dragOutController: self.islandDragOutController, islandRole: role)
         })
     private var islandPanel: ShelfPanel { islandPresentation.expanded.panel }
-    private var islandCompactPanel: ShelfPanel { islandPresentation.compact.panel }
+    private var islandNotchPanel: ShelfPanel { islandPresentation.notch.panel }
 
     private var dragZoneHandoffTask: Task<Void, Never>?
     private lazy var islandDragZonePanel = makeIslandDragZonePanel()
@@ -227,8 +227,8 @@ final class ShelfWindowController: NSObject {
     private func presentationRoot(_ style: ShelfPresentationStyle, role: IslandWindowRole) -> some View {
         if style == .classic {
             ShelfView()
-        } else if role == .compact {
-            IslandCompactView()
+        } else if role == .notch {
+            IslandNotchView()
         } else {
             IslandExpandedView(
                 onPerformRecovery: { [weak self] in self?.itemRecoveryController.perform($0) },
@@ -252,8 +252,8 @@ final class ShelfWindowController: NSObject {
         )
         panel.acceptsKeyboardFocus = islandRole == .expanded
         if presentationStyle == .island {
-            panel.title = islandRole == .compact ? "OpenYoink Compact" : "OpenYoink Island"
-            panel.setAccessibilityIdentifier(islandRole == .compact
+            panel.title = islandRole == .notch ? "OpenYoink Notch" : "OpenYoink Island"
+            panel.setAccessibilityIdentifier(islandRole == .notch
                                             ? "island.window.compact" : "island.window.expanded")
         }
         // SwiftUI presentation preferences alone don't set AppKit controls'
@@ -320,8 +320,8 @@ final class ShelfWindowController: NSObject {
             // The controller owns both window frames. A disappearing module's
             // SwiftUI minimum size must not resize or move the hidden panel.
             hostingController.sizingOptions = []
-            hostingController.view.setAccessibilityLabel(islandRole == .compact
-                ? String(localized: "Compact Island") : String(localized: "Expanded Island"))
+            hostingController.view.setAccessibilityLabel(islandRole == .notch
+                ? String(localized: "Notch") : String(localized: "Expanded Island"))
         }
         let dropOverride: DragContainerDropOverride? = presentationStyle == .island && islandRole == .expanded
             ? DragContainerDropOverride(
@@ -451,7 +451,7 @@ final class ShelfWindowController: NSObject {
                 islandActivityCoordinator.surfaceState.isExpanded
                     && islandActivityCoordinator.selectedModule == .aiUsage
             },
-            compactMetric: { settings.aiUsageCompactMetric },
+            notchMetric: { settings.aiUsageNotchMetric },
             alertsEnabled: { settings.aiUsageLimitAlertsEnabled }
         )
         let favoriteFoldersStore = FavoriteFoldersStore(
@@ -705,7 +705,7 @@ final class ShelfWindowController: NSObject {
     // MARK: - Public API
 
     func shutdown() {
-        islandCompactPanel.orderOut(nil)
+        islandNotchPanel.orderOut(nil)
         islandNoticePanel?.stop()
         setIslandDragZoneActive(false)
         favoriteFolderDropCoordinator.cancelCopy()
@@ -1784,7 +1784,7 @@ final class ShelfWindowController: NSObject {
         let layout = islandPresentation.islandLayout(at: point)
         guard IslandGeometryResolver.acceptsFileDrag(
             at: point,
-            compactPointerFrame: layout.compactIsVisible ? layout.compactPointerFrame : .null,
+            notchPointerFrame: layout.notchIsVisible ? layout.notchPointerFrame : .null,
             activationFrame: layout.activationFrame,
             topApproachEnabled: settings.islandDragApproachEnabled
         ) else { return false }

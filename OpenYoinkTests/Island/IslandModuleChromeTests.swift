@@ -96,7 +96,7 @@ final class IslandModuleChromeTests: XCTestCase {
         }
     }
 
-    func testDragOutlineGrowsFromCompactBoundsAndRemainsVisibleAtCompletion() {
+    func testDragOutlineGrowsFromNotchBoundsAndRemainsVisibleAtCompletion() {
         let rect = CGRect(x: 0, y: 0, width: 492, height: 330)
         var previous = CGRect.zero
         for progress: CGFloat in [0, 0.25, 0.5, 0.75, 1] {
@@ -370,7 +370,7 @@ final class IslandModuleChromeTests: XCTestCase {
         }
     }
 
-    func testShelfNoticesFitCompactToastAtBothModuleWidths() throws {
+    func testShelfNoticesFitNotchToastAtBothModuleWidths() throws {
         for sample in ShelfFeedbackScenario.notices {
             for width in [CGFloat(260), 464] {
                 let toast = ShelfNoticeToast(notice: sample.notice, onPerformRecovery: { _ in })

@@ -20,15 +20,15 @@ final class SettingsNavigationTests: XCTestCase {
         let navigation = SettingsNavigationModel()
         navigation.selectedPane = .about
 
-        XCTAssertEqual(navigation.moveSidebarSelection(forward: false, focusedPane: .triggers), .modules)
-        XCTAssertEqual(navigation.selectedPane, .modules)
+        XCTAssertEqual(navigation.moveSidebarSelection(forward: false, focusedPane: .modules), .notch)
+        XCTAssertEqual(navigation.selectedPane, .notch)
     }
 
     func testNoFocusedButtonFallsBackToSelectedPane() {
         let navigation = SettingsNavigationModel()
         navigation.selectedPane = .general
 
-        XCTAssertEqual(navigation.moveSidebarSelection(forward: true, focusedPane: nil), .modules)
+        XCTAssertEqual(navigation.moveSidebarSelection(forward: true, focusedPane: nil), .panel)
         XCTAssertEqual(navigation.moveSidebarSelection(forward: false, focusedPane: nil), .general)
     }
 
@@ -47,7 +47,7 @@ final class SettingsNavigationTests: XCTestCase {
     func testSidebarNavigationLeavesModuleDetail() {
         let navigation = SettingsNavigationModel()
         navigation.open(.clipboard)
-        XCTAssertEqual(navigation.moveSidebarSelection(forward: true, focusedPane: .modules), .triggers)
+        XCTAssertEqual(navigation.moveSidebarSelection(forward: true, focusedPane: .modules), .storage)
         XCTAssertNil(navigation.moduleSettingsDestination)
     }
 
@@ -56,6 +56,22 @@ final class SettingsNavigationTests: XCTestCase {
         XCTAssertEqual(Set(ids).count, ids.count)
         XCTAssertEqual(Set(ids), Set([.shelf, .transfers, .timer, .battery, .system, .media, .folders, .clipboard, .aiUsage]))
         XCTAssertFalse(ids.contains(.quickSettings))
+    }
+
+    func testLegacyTriggerAndIgnoreLinksOpenPanel() {
+        let navigation = SettingsNavigationModel()
+        for pane in [SettingsPane.triggers, .ignoredApps] {
+            navigation.open(.clipboard)
+            navigation.open(pane)
+            XCTAssertEqual(navigation.selectedPane, .panel)
+            XCTAssertNil(navigation.moduleSettingsDestination)
+            XCTAssertFalse(SettingsPane.visibleCases.contains(pane))
+        }
+    }
+
+    func testSidebarSeparatesPanelNotchAndModules() {
+        XCTAssertEqual(Array(SettingsPane.visibleCases.prefix(5)), [.general, .panel, .notch, .modules, .storage])
+        XCTAssertFalse(SettingsPane.visibleCases.contains(.appearance))
     }
 
     func testArrowsDoNotWrapAtSidebarBoundaries() {

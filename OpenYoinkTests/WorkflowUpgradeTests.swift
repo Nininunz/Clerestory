@@ -97,6 +97,7 @@ final class WorkflowUpgradeTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = SettingsStore(defaults: defaults)
+        settings.experimentalModulesEnabled = true
         settings.setIslandModuleEnabled(true, id: "future.module")
         settings.setIslandModulePinned(true, id: "future.module")
         settings.clipboardHistoryEnabled = false
@@ -116,6 +117,38 @@ final class WorkflowUpgradeTests: XCTestCase {
         XCTAssertEqual(settings.islandModuleConfiguration.pinnedModuleIDs.count, 6)
         settings.clipboardHistoryShortcut = nil
         XCTAssertNil(SettingsStore(defaults: defaults).clipboardHistoryShortcut)
+    }
+
+    func testPresetsRespectExperimentalGateAndPreserveHiddenPositions() throws {
+        let suite = "WorkflowGate.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = SettingsStore(defaults: defaults)
+        settings.experimentalModulesEnabled = true
+        settings.setIslandModuleEnabled(true, id: .timer)
+        settings.assignIslandShortcut(.timer, at: 5)
+        settings.notchModuleOrder = [.timer, .shelf]
+        settings.experimentalModulesEnabled = false
+        let before = settings.islandModuleConfiguration
+        XCTAssertEqual(WorkflowPreset.availableCases(experimentalModulesEnabled: false), [.files])
+        for preset in [WorkflowPreset.clipboard, .toolbox] {
+            settings.applyWorkflowPreset(preset)
+            XCTAssertEqual(settings.islandModuleConfiguration, before)
+            XCTAssertFalse(settings.experimentalModulesEnabled)
+        }
+        settings.applyWorkflowPreset(.files)
+        XCTAssertTrue(settings.islandModuleConfiguration.isEnabled(.timer))
+        XCTAssertEqual(settings.islandModuleConfiguration.shortcutPositions[5], .timer)
+        XCTAssertEqual(settings.notchModuleOrder, [.timer, .shelf])
+        let reloaded = SettingsStore(defaults: defaults)
+        XCTAssertEqual(reloaded.islandModuleConfiguration, settings.islandModuleConfiguration)
+        XCTAssertEqual(reloaded.notchModuleOrder, settings.notchModuleOrder)
+        XCTAssertFalse(reloaded.experimentalModulesEnabled)
+        settings.experimentalModulesEnabled = true
+        settings.applyWorkflowPreset(.toolbox)
+        for descriptor in IslandModuleRegistry().descriptors {
+            XCTAssertTrue(settings.isIslandModuleEnabled(descriptor.id), descriptor.id.rawValue)
+        }
     }
 
     func testAdaptiveIntervalsAndLockSleepSuppression() {

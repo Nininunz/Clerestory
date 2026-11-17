@@ -70,7 +70,7 @@ extension IslandModuleID {
 
 enum IslandSurfaceState: Equatable, Sendable {
     case hidden
-    case compact
+    case collapsed
     case expanded
     case pinned
 
@@ -79,8 +79,8 @@ enum IslandSurfaceState: Equatable, Sendable {
     }
 }
 
-/// One source of truth for the two compact wings and their open target.
-enum IslandCompactDisplay: Hashable {
+/// One source of truth for the two notch wings and their open target.
+enum IslandNotchDisplay: Hashable {
     case media, transfers, timer, aiUsage, shelf, battery, fallback
 
     var moduleID: IslandModuleID? {
@@ -212,8 +212,8 @@ enum IslandMotion {
     /// SwiftUI reveal share a single, velocity-preserving visual rhythm.
     static let expandContentDuration: TimeInterval = 0.38
     static let expandWindowDuration: TimeInterval = 0.38
-    /// Exit remains a little quicker, but still visibly morphs back into the
-    /// compact surface rather than disappearing before the window shrinks.
+    /// Keep the panel exit slightly quicker than entry while allowing its
+    /// content, background, and shadow to finish together.
     static let collapseContentDuration: TimeInterval = 0.28
     static let collapseWindowDuration: TimeInterval = 0.30
 }
@@ -289,7 +289,7 @@ final class IslandActivityCoordinator {
         }
     }
 
-    private(set) var surfaceState: IslandSurfaceState = .compact
+    private(set) var surfaceState: IslandSurfaceState = .collapsed
     /// A completion belongs to one specific transition, even when rapid
     /// close/open/close gestures return to the same surface state.
     private(set) var surfaceTransitionID: UInt64 = 0
@@ -302,7 +302,7 @@ final class IslandActivityCoordinator {
     /// `onStateDidChange`, because pointer movement must never resize the panel.
     var isPointerHovering = false
     /// A deliberate collapse must win over hover reveal until the pointer has
-    /// actually left the compact surface. Without this latch, the mouse-move
+    /// actually left the notch surface. Without this latch, the mouse-move
     /// monitor immediately schedules another expansion while the click is
     /// still resting on the notch, which can look like the click selected the
     /// current activity's module instead of collapsing.
@@ -314,7 +314,7 @@ final class IslandActivityCoordinator {
     static let reentryGraceSeconds: TimeInterval = 3
     private var lastDepartedModule: IslandModuleID?
     private var reentryDeadline: TimeInterval = 0
-    var quickSettingsShowsCompact = false
+    var quickSettingsShowsNotch = false
 
     func rememberDeparture(at uptime: TimeInterval = ProcessInfo.processInfo.systemUptime) {
         lastDepartedModule = selectedModule
@@ -392,7 +392,7 @@ final class IslandActivityCoordinator {
             shortcutSwipeTarget = nil
         }
         let previousState = surfaceState
-        if previousState.isExpanded, state == .compact { rememberDeparture() }
+        if previousState.isExpanded, state == .collapsed { rememberDeparture() }
         onSurfaceStateWillChange?(previousState, state)
         surfaceState = state
         surfaceTransitionID &+= 1
@@ -437,7 +437,7 @@ final class IslandActivityCoordinator {
     }
 
     /// The companion can change the displayed module without releasing a pin.
-    func showFromCompact(module: IslandModuleID) {
+    func showFromNotch(module: IslandModuleID) {
         show(module: module, pinned: surfaceState == .pinned)
     }
 
@@ -451,7 +451,7 @@ final class IslandActivityCoordinator {
 
     func collapse(suppressHoverUntilPointerExit: Bool = true) {
         isHoverRevealSuppressed = suppressHoverUntilPointerExit
-        setSurfaceState(.compact)
+        setSurfaceState(.collapsed)
     }
 
     func setPinned(_ pinned: Bool) {
@@ -493,7 +493,7 @@ final class IslandActivityCoordinator {
     }
 
     /// Advisory alerts (AI limits, system load, power changes) announce
-    /// themselves in the compact Island for this long, then hand it back to
+    /// themselves in the notch display for this long, then hand it back to
     /// Now Playing. They stay published, so the module still shows them and
     /// they return to the notch once media goes away. Critical battery,
     /// finished timers, transfers and drags keep outranking media.
@@ -503,7 +503,7 @@ final class IslandActivityCoordinator {
         rankedActivity(at: date, filterSelectedModule: true)
     }
 
-    func compactPrimaryActivity(at date: Date = Date()) -> IslandActivity? {
+    func notchPrimaryActivity(at date: Date = Date()) -> IslandActivity? {
         rankedActivity(at: date, filterSelectedModule: false)
     }
 
@@ -610,6 +610,6 @@ final class IslandActivityCoordinator {
             return
         }
         if let moduleBeforeDrag { selectedModule = moduleBeforeDrag }
-        setSurfaceState(stateBeforeDrag ?? .compact)
+        setSurfaceState(stateBeforeDrag ?? .collapsed)
     }
 }

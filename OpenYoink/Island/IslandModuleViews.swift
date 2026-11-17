@@ -260,7 +260,7 @@ struct IslandExpandedView: View {
 }
 
 /// Shared wing layout used by the physical-notch Island and its rendered layout tests.
-struct IslandCompactWingRow<Leading: View, Trailing: View>: View {
+struct IslandNotchWingRow<Leading: View, Trailing: View>: View {
     /// Center every leading symbol in the same 24-point slot, biased toward the notch.
     private static var leadingOuterInset: CGFloat { 13 }
     private static var leadingSlotWidth: CGFloat { 24 }
@@ -268,14 +268,14 @@ struct IslandCompactWingRow<Leading: View, Trailing: View>: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let cameraHousingWidth: CGFloat
-    let display: IslandCompactDisplay?
+    let display: IslandNotchDisplay?
     let isBackwards: () -> Bool
     let height: CGFloat?
     let leading: Leading
     let trailing: Trailing
 
     init(cameraHousingWidth: CGFloat,
-         display: IslandCompactDisplay? = nil,
+         display: IslandNotchDisplay? = nil,
          isBackwards: @escaping () -> Bool = { false },
          height: CGFloat? = nil,
          @ViewBuilder leading: () -> Leading,
@@ -294,14 +294,14 @@ struct IslandCompactWingRow<Leading: View, Trailing: View>: View {
                 leading
                     .frame(width: Self.leadingSlotWidth, alignment: .center)
                     .padding(.leading, Self.leadingOuterInset)
-                    .padding(.trailing, IslandGeometryResolver.compactWingWidth
+                    .padding(.trailing, IslandGeometryResolver.notchWingWidth
                              - Self.leadingOuterInset - Self.leadingSlotWidth)
             }
             Spacer()
                 .frame(width: cameraHousingWidth)
             slidingWing {
                 trailing
-                    .frame(width: IslandGeometryResolver.compactWingWidth - 10,
+                    .frame(width: IslandGeometryResolver.notchWingWidth - 10,
                            alignment: .center)
                     .padding(.trailing, 10)
             }
@@ -318,14 +318,14 @@ struct IslandCompactWingRow<Leading: View, Trailing: View>: View {
                     .id(display)
                     .transition(reduceMotion ? .opacity : .asymmetric(
                         insertion: .modifier(
-                            active: IslandCompactSlideModifier(progress: 1, isBackwards: isBackwards),
-                            identity: IslandCompactSlideModifier(progress: 0, isBackwards: isBackwards)),
+                            active: IslandNotchSlideModifier(progress: 1, isBackwards: isBackwards),
+                            identity: IslandNotchSlideModifier(progress: 0, isBackwards: isBackwards)),
                         removal: .modifier(
-                            active: IslandCompactSlideModifier(progress: -1, isBackwards: isBackwards),
-                            identity: IslandCompactSlideModifier(progress: 0, isBackwards: isBackwards))
+                            active: IslandNotchSlideModifier(progress: -1, isBackwards: isBackwards),
+                            identity: IslandNotchSlideModifier(progress: 0, isBackwards: isBackwards))
                     ))
             }
-            .frame(width: IslandGeometryResolver.compactWingWidth, height: height)
+            .frame(width: IslandGeometryResolver.notchWingWidth, height: height)
             // Clip each wing independently so outgoing content never crosses the camera.
             .clipped()
             .animation(.easeInOut(duration: reduceMotion ? 0.12 : 0.24), value: display)
@@ -337,7 +337,7 @@ struct IslandCompactWingRow<Leading: View, Trailing: View>: View {
 
 /// Resolve direction live, including for a departing view created by an earlier cycle.
 /// Only progress interpolates; changing direction must not animate through the old sign.
-struct IslandCompactSlideModifier: AnimatableModifier {
+struct IslandNotchSlideModifier: AnimatableModifier {
     nonisolated var progress: CGFloat
     let isBackwards: () -> Bool
 
@@ -347,7 +347,7 @@ struct IslandCompactSlideModifier: AnimatableModifier {
     }
 
     var horizontalOffset: CGFloat {
-        progress * IslandGeometryResolver.compactWingWidth * (isBackwards() ? -1 : 1)
+        progress * IslandGeometryResolver.notchWingWidth * (isBackwards() ? -1 : 1)
     }
 
     func body(content: Content) -> some View {
@@ -357,8 +357,8 @@ struct IslandCompactSlideModifier: AnimatableModifier {
     }
 }
 
-/// Shared by the live compact Island and its rendered preview tests.
-struct IslandCompactAIValueText: View {
+/// Shared by the live notch Island and its rendered preview tests.
+struct IslandNotchAIValueText: View {
     let value: String
 
     var body: some View {
@@ -369,7 +369,7 @@ struct IslandCompactAIValueText: View {
     }
 }
 
-struct IslandCompactBatteryValueText: View {
+struct IslandNotchBatteryValueText: View {
     let percentage: Int
 
     var body: some View {
@@ -380,9 +380,9 @@ struct IslandCompactBatteryValueText: View {
     }
 }
 
-/// All compact wing SF Symbols share this typography and centered canvas.
+/// All notch wing SF Symbols share this typography and centered canvas.
 /// Color and animation belong to the caller; wing placement belongs to the row.
-struct IslandCompactWingIcon: View {
+struct IslandNotchWingIcon: View {
     let systemName: String
 
     var body: some View {
@@ -394,10 +394,10 @@ struct IslandCompactWingIcon: View {
     }
 }
 
-struct IslandCompactTransferSpinner: View {
+struct IslandNotchTransferSpinner: View {
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
-            IslandCompactWingIcon(systemName: "arrow.triangle.2.circlepath")
+            IslandNotchWingIcon(systemName: "arrow.triangle.2.circlepath")
                 .foregroundStyle(.white)
                 .rotationEffect(.degrees(context.date.timeIntervalSinceReferenceDate
                     .truncatingRemainder(dividingBy: 1.6) / 1.6 * 360))
@@ -465,29 +465,16 @@ private struct IslandEmptyModuleSlot: View {
     }
 }
 
-/// Screen-attached surfaces use shallow inward top corners and fuller convex
-/// bottom corners. The shape stays flush with the screen edge while avoiding
-/// the square, pasted-on silhouette of a regular rounded rectangle.
-
-
 struct IslandModuleLibraryView: View {
-    @Environment(SettingsStore.self) private var settings
     @Environment(IslandActivityCoordinator.self) private var coordinator
-    @Environment(IslandModuleRegistry.self) private var registry
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    @State private var draggedCompactModule: IslandModuleID?
-    @State private var compactDragOrder: [IslandModuleID]?
-    @State private var compactDragTarget: IslandModuleID?
-    @State private var hoveredCompactHandle: IslandModuleID?
-    @State private var compactRowFrames: [IslandModuleID: CGRect] = [:]
-    @GestureState private var compactDragActive = false
     @Namespace private var shortcutSwitcher
-    @Namespace private var compactRowMotion
-    private var showsCompact: Bool {
-        get { coordinator.quickSettingsShowsCompact }
-        nonmutating set { coordinator.quickSettingsShowsCompact = newValue }
+    private var supportsNotch: Bool { coordinator.currentLayout?.hasPhysicalNotch == true }
+    private var showsNotch: Bool {
+        get { supportsNotch && coordinator.quickSettingsShowsNotch }
+        nonmutating set { coordinator.quickSettingsShowsNotch = newValue }
     }
 
     let onOpenSettings: () -> Void
@@ -497,27 +484,29 @@ struct IslandModuleLibraryView: View {
         VStack(spacing: IslandModuleLayout.headerSpacing) {
             IslandModuleHeader(
                 title: "Quick Settings",
-                subtitle: showsCompact ? String(localized: "Choose compact modules and their cycling order")
+                subtitle: showsNotch ? String(localized: "Choose notch modules and their cycling order")
                     : String(localized: "Choose shortcuts and arrange their positions"),
                 systemImage: "square.grid.2x2"
             ) {
-                pageSwitcher
+                if supportsNotch { pageSwitcher }
             }
             IslandModuleScrollView {
-                // Both pages contribute their natural height, while only the selected
+                // On notched displays both pages contribute their natural height, while only the selected
                 // page is visible or interactive. Extension therefore fits the taller
                 // page before the user has visited it, with no resize on switching.
                 ZStack(alignment: .topLeading) {
-                    expandedEditor
-                        .opacity(showsCompact ? 0 : 1)
-                        .allowsHitTesting(!showsCompact)
-                        .disabled(showsCompact)
-                        .accessibilityHidden(showsCompact)
-                    compactEditor
-                        .opacity(showsCompact ? 1 : 0)
-                        .allowsHitTesting(showsCompact)
-                        .disabled(!showsCompact)
-                        .accessibilityHidden(!showsCompact)
+                    ExpandedShortcutEditor()
+                        .opacity(showsNotch ? 0 : 1)
+                        .allowsHitTesting(!showsNotch)
+                        .disabled(showsNotch)
+                        .accessibilityHidden(showsNotch)
+                    if supportsNotch {
+                        NotchModuleOrderEditor(isActive: showsNotch)
+                            .opacity(showsNotch ? 1 : 0)
+                            .allowsHitTesting(showsNotch)
+                            .disabled(!showsNotch)
+                            .accessibilityHidden(!showsNotch)
+                    }
                 }
             }
             IslandModuleFooter {
@@ -531,51 +520,20 @@ struct IslandModuleLibraryView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onChange(of: compactDragActive) { _, active in
-            if !active { clearCompactDrag() }
-        }
-        .onDisappear {
-            hoveredCompactHandle = nil
-            clearCompactDrag()
-        }
-    }
-
-    private var expandedEditor: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            ForEach(shortcutIndices, id: \.self) { index in
-                positionRow(index)
-            }
-            HStack {
-                Label("One position must contain Quick Settings", systemImage: "lock")
-                    .font(.caption2).foregroundStyle(.secondary)
-                Spacer(minLength: 8)
-                Button { settings.restoreDefaultIslandShortcuts() } label: {
-                    Text("Restore Defaults")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 6)
-                        .frame(minHeight: 28)
-                }
-                    .buttonStyle(IslandPressFeedbackStyle())
-                    .help("Restore shortcut positions without changing enabled modules")
-            }
-            .padding(.vertical, 4)
-        }
     }
 
     private var pageSwitcher: some View {
         HStack(spacing: 2) {
-            ForEach([false, true], id: \.self) { compact in
+            ForEach([false, true], id: \.self) { notch in
                 Button {
-                    clearCompactDrag()
-                    withAnimation(reduceMotion ? nil : .smooth(duration: 0.22)) { showsCompact = compact }
+                    withAnimation(reduceMotion ? nil : .smooth(duration: 0.22)) { showsNotch = notch }
                 } label: {
-                    Image(systemName: compact ? "rectangle.compress.vertical" : "rectangle.expand.vertical")
+                    Image(systemName: notch ? "macbook.gen2" : "macwindow")
                         .font(.system(size: 10, weight: .semibold))
                         .frame(width: 27, height: 24)
-                        .foregroundStyle(showsCompact == compact ? .white : IslandVisualStyle.tertiaryText)
+                        .foregroundStyle(showsNotch == notch ? .white : IslandVisualStyle.tertiaryText)
                         .background {
-                            if showsCompact == compact {
+                            if showsNotch == notch {
                                 Capsule().fill(Color.white.opacity(0.11))
                                     .matchedGeometryEffect(id: "selection", in: shortcutSwitcher)
                             }
@@ -583,9 +541,9 @@ struct IslandModuleLibraryView: View {
                         .contentShape(Capsule())
                 }
                 .buttonStyle(IslandPressFeedbackStyle(cornerRadius: 12))
-                .help(compact ? "Compact" : "Expanded")
-                .accessibilityLabel(Text(compact ? "Compact shortcuts" : "Expanded shortcuts"))
-                .modifier(IslandSelectedAccessibilityModifier(selected: showsCompact == compact))
+                .help(notch ? "Notch" : "Panel")
+                .accessibilityLabel(Text(notch ? "Notch modules" : "Panel shortcuts"))
+                .modifier(IslandSelectedAccessibilityModifier(selected: showsNotch == notch))
             }
         }
         .padding(2)
@@ -594,202 +552,4 @@ struct IslandModuleLibraryView: View {
         .overlay { Capsule().strokeBorder(IslandVisualStyle.hairline, lineWidth: 1) }
     }
 
-    private var compactEditor: some View {
-        let order = (compactDragOrder ?? settings.compactModuleOrder).filter { settings.isIslandModuleAvailable($0) }
-        let rows = order + IslandCompactDisplay.cycleOrder.filter { settings.isIslandModuleAvailable($0) && !order.contains($0) }
-        return VStack(spacing: 7) {
-            ForEach(rows, id: \.self) { id in
-                if !order.isEmpty, id == rows.dropFirst(order.count).first {
-                    Rectangle()
-                        .fill(Color.white.opacity(0.08))
-                        .frame(height: 1)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 3)
-                        .accessibilityHidden(true)
-                }
-                if let descriptor = registry.descriptor(for: id) {
-                    compactRow(descriptor)
-                        .matchedGeometryEffect(id: descriptor.id, in: compactRowMotion, properties: .position)
-                }
-            }
-            HStack {
-                Label("Drag included modules or use arrows to set cycling order.", systemImage: "arrow.up.arrow.down")
-                    .font(.caption2).foregroundStyle(.secondary)
-                Spacer()
-                Button { settings.compactModuleOrder = IslandCompactDisplay.cycleOrder } label: {
-                    Text("Restore Defaults")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 6)
-                        .frame(minHeight: 28)
-                }
-                    .buttonStyle(IslandPressFeedbackStyle())
-            }
-        }
-        .coordinateSpace(name: "compactOrder")
-        .onPreferenceChange(CompactRowFramesKey.self) { compactRowFrames = $0 }
-        .animation(reduceMotion ? nil : .smooth(duration: 0.24), value: order)
-    }
-
-    private func compactRow(_ descriptor: IslandModuleDescriptor) -> some View {
-        let order = (compactDragOrder ?? settings.compactModuleOrder).filter { settings.isIslandModuleAvailable($0) }
-        let index = order.firstIndex(of: descriptor.id)
-        let row = HStack(spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: descriptor.systemImage).frame(width: 22)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(descriptor.title).font(.system(size: 12, weight: .medium))
-                    if !settings.isIslandModuleEnabled(descriptor.id) {
-                        Text("Disabled in Modules").font(.caption2).foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
-            .contentShape(Rectangle())
-            .gesture(compactReorderGesture(descriptor.id), including: index != nil ? .all : .none)
-            .onContinuousHover { phase in
-                switch phase {
-                case .active:
-                    if index != nil { hoveredCompactHandle = descriptor.id }
-                case .ended:
-                    if hoveredCompactHandle == descriptor.id { hoveredCompactHandle = nil }
-                }
-                updateCompactDragCursor()
-            }
-            Spacer(minLength: 4)
-            if let index {
-                Button {
-                    withAnimation(reduceMotion ? nil : .smooth(duration: 0.24)) {
-                        settings.moveCompactModule(descriptor.id, to: order[index - 1])
-                    }
-                } label: { Image(systemName: "arrow.up").frame(width: 24, height: 24) }
-                .disabled(index == 0)
-                .accessibilityLabel(Text("Move earlier"))
-                Button {
-                    withAnimation(reduceMotion ? nil : .smooth(duration: 0.24)) {
-                        settings.moveCompactModule(descriptor.id, to: order[index + 1])
-                    }
-                } label: { Image(systemName: "arrow.down").frame(width: 24, height: 24) }
-                .disabled(index == order.count - 1)
-                .accessibilityLabel(Text("Move later"))
-            }
-            Toggle(descriptor.title, isOn: Binding(
-                get: { settings.compactModuleOrder.contains(descriptor.id) },
-                set: { settings.setCompactModuleIncluded($0, id: descriptor.id) }
-            ))
-            .labelsHidden()
-            .toggleStyle(IslandClipboardToggleStyle(showsLabel: false))
-        }
-        .buttonStyle(IslandPressFeedbackStyle())
-        .padding(.horizontal, 10)
-        .frame(minHeight: 38)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.055)))
-        return row
-            .background {
-                GeometryReader { geometry in
-                    Color.clear.preference(key: CompactRowFramesKey.self,
-                        value: [descriptor.id: geometry.frame(in: .named("compactOrder"))])
-                }
-            }
-            .opacity(draggedCompactModule == descriptor.id ? 0.65 : 1)
-    }
-
-    private func compactReorderGesture(_ id: IslandModuleID) -> some Gesture {
-        DragGesture(minimumDistance: 4, coordinateSpace: .named("compactOrder"))
-            .updating($compactDragActive) { _, active, _ in active = true }
-            .onChanged { value in
-                if draggedCompactModule == nil {
-                    compactDragOrder = settings.compactModuleOrder
-                    draggedCompactModule = id
-                }
-                NSCursor.closedHand.set()
-                if compactRowFrames[id]?.contains(value.location) == true {
-                    compactDragTarget = nil
-                    return
-                }
-                guard var order = compactDragOrder,
-                      let target = order.first(where: { $0 != id && compactRowFrames[$0]?.contains(value.location) == true }),
-                      compactDragTarget != target,
-                      let source = order.firstIndex(of: id),
-                      let destination = order.firstIndex(of: target) else { return }
-                compactDragTarget = target
-                order.remove(at: source)
-                order.insert(id, at: destination)
-                compactDragOrder = order
-            }
-            .onEnded { value in
-                if let order = compactDragOrder,
-                   order.contains(where: { compactRowFrames[$0]?.contains(value.location) == true }) {
-                    settings.compactModuleOrder = order
-                }
-                clearCompactDrag()
-            }
-    }
-
-    private func clearCompactDrag() {
-        draggedCompactModule = nil
-        compactDragOrder = nil
-        compactDragTarget = nil
-        updateCompactDragCursor()
-    }
-
-    private func updateCompactDragCursor() {
-        if draggedCompactModule != nil {
-            NSCursor.closedHand.set()
-        } else if hoveredCompactHandle != nil {
-            NSCursor.openHand.set()
-        } else {
-            NSCursor.arrow.set()
-        }
-    }
-
-    private func positionRow(_ index: Int) -> some View {
-        HStack(spacing: 12) {
-            Text(positionLabel(index))
-                .font(.system(size: 12, weight: .medium))
-                .frame(width: 90,
-                       alignment: .leading)
-            Picker(positionLabel(index), selection: Binding<IslandModuleID?>(
-                get: { settings.effectiveIslandShortcuts.shortcutPositions[index] },
-                set: { settings.assignIslandShortcut($0, at: index) }
-            )) {
-                Text("Empty").tag(nil as IslandModuleID?)
-                    .disabled(settings.effectiveIslandShortcuts.shortcutPositions[index] == .quickSettings)
-                Label("Quick Settings", systemImage: "square.grid.2x2")
-                    .tag(Optional(IslandModuleID.quickSettings))
-                ForEach(registry.enabledDescriptors) { descriptor in
-                    Label(descriptor.title, systemImage: descriptor.systemImage)
-                        .tag(Optional(descriptor.id))
-                        .disabled(settings.effectiveIslandShortcuts.shortcutPositions[index] == .quickSettings
-                                  && !settings.islandModuleConfiguration.isPinned(descriptor.id))
-                }
-            }
-            .labelsHidden()
-            .pickerStyle(.menu)
-            .frame(maxWidth: .infinity, alignment: .trailing)
-            .accessibilityIdentifier("island.shortcut.position.\(index)")
-        }
-        .padding(.horizontal, 10)
-        .frame(minHeight: 32)
-        .background {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Color.white.opacity(0.055))
-        }
-    }
-
-    private func positionLabel(_ index: Int) -> String {
-        String(localized: "Position \((shortcutIndices.firstIndex(of: index) ?? 0) + 1)")
-    }
-
-    private var shortcutIndices: [Int] {
-        return settings.effectiveIslandShortcuts
-            .visibleShortcutIndices()
-    }
-}
-
-private struct CompactRowFramesKey: PreferenceKey {
-    static let defaultValue: [IslandModuleID: CGRect] = [:]
-    static func reduce(value: inout [IslandModuleID: CGRect], nextValue: () -> [IslandModuleID: CGRect]) {
-        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
-    }
 }

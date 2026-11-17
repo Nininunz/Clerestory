@@ -2,15 +2,25 @@
 
 Current review baseline for `codex/separate-expanded-panel`, following the [separate-panel prototype](../../prototypes/separate-expanded-panel/README.md). The prototype remains a historical checkpoint; this document describes the unified implementation.
 
+## Settings organization
+
+- **General**: startup, menu bar icon, language, and update checks.
+- **Panel**: enablement, target display, hover/click/drag opening, delays, Shelf shortcut, mouse shake, shortcut positions, and ignored apps.
+- **Notch**: optional notch companion, cycling shortcut, and module inclusion/order.
+- **Modules**: experimental gate, module enablement, and each module's settings. Shortcut placement and notch inclusion are separate choices.
+- **Storage**, **Debug** (debug builds), and **About** retain their dedicated pages.
+
+Panel shortcut positions and Notch ordering use the same editor components and saved preferences as Quick Settings. Legacy Triggers and Ignored Apps links open Panel; Shelf and Clipboard links still open the relevant module settings. Existing preference keys are unchanged. Swift types, functions, and properties now use Notch names; the old compact preference keys and module raw values remain the storage format, and existing accessibility identifiers remain stable. Workflow presets respect the experimental gate and preserve hidden/unknown modules, including their saved shortcut positions.
+
 ## Behavior and ownership
 
 - Every display uses the same floating expanded panel, rounded surface, content padding, toolbar, and animation. Hardware geometry determines placement, not a second expanded presentation.
-- A notched display can additionally show compact Island. **Settings → General → Show Compact Island** controls that companion. The preference is preserved when a selected display has no notch.
+- A notched display can additionally show notch display. **Settings → Notch → Show in notch** controls that companion. The preference is preserved when a selected display has no notch.
 - Without compact, the top-center screen edge is the pointer trigger. Hover and click triggers each respect their own settings. File/text drag approach remains independent of hover reveal.
-- Expanded shortcuts use one left-to-right configuration with up to eight positions. Visible capacity follows enabled modules, and Quick Settings occupies one required, movable position. Existing floating positions win the one-time migration; otherwise saved positions migrate in visual order. Compact ordering remains separate.
-- `IslandCompactView` renders the companion; `IslandExpandedView` renders the expanded content. `IslandPresentationController` owns placement, native window coordination, and hover/swipe behavior. `ShelfWindowController` retains Shelf imports, keyboard routing, and the shared drag-host factory.
+- Expanded shortcuts use one left-to-right configuration with up to eight positions. Visible capacity follows enabled modules, and Quick Settings occupies one required, movable position. Existing floating positions win the one-time migration; otherwise saved positions migrate in visual order. Notch ordering remains separate.
+- `IslandNotchView` renders the companion; `IslandExpandedView` renders the expanded content. `IslandPresentationController` owns placement, native window coordination, and hover/swipe behavior. `ShelfWindowController` retains Shelf imports, keyboard routing, and the shared drag-host factory.
 - `IslandSurfaceAnimationHost` keeps content mounted until closing finishes. A new opening cancels a stale close completion. One reveal value drives the background, border, shadow, and content mask.
-- Activating the compact companion preserves an existing pin while selecting its module; reopening an unpinned panel does not pin it.
+- Activating the notch display preserves an existing pin while selecting its module; reopening an unpinned panel does not pin it.
 - The shadow has drawing room outside the interactive surface. Those transparent margins do not accept clicks or file drops. Native hit testing uses the same continuous corner path as the visible surface, verified at regular and extended heights. Detached Shelf notices anchor to the visible panel, not its shadow canvas.
 - File drags show a complete blue outline; duplicate drags show red. Insets use the same continuous rounded shape as the panel, including intermediate animation sizes.
 
@@ -37,7 +47,7 @@ Scripts/render-module-previews.sh --module shelf --module quick-settings \
 
 ## Preview scope
 
-The gallery uses synthetic files and isolated stores with the production module host, expanded surface, height resolver, and drag-outline renderer. Shelf and Quick Settings include regular and extended states. Navigation space is reserved; these module captures do not show live shortcut buttons, the compact companion, or the native window shadow. Snapshot capture does not prove blur/material fidelity, hover timing, scrolling, window stacking, or animation. Live rendering tests cover intermediate animation states separately.
+The gallery uses synthetic files and isolated stores with the production module host, expanded surface, height resolver, and drag-outline renderer. Shelf and Quick Settings include regular and extended states. Navigation space is reserved; these module captures do not show live shortcut buttons, the notch display, or the native window shadow. Snapshot capture does not prove blur/material fidelity, hover timing, scrolling, window stacking, or animation. Live rendering tests cover intermediate animation states separately.
 
 The full generated gallery and manifest are local artifacts under `/tmp/openyoink-unified-panel-review`. The representative images below are tracked so a reviewer can inspect the resulting layout without running the app.
 
@@ -48,7 +58,7 @@ Record outcomes separately from fixture/test passes. A simulated notchless displ
 | Check | Required observation | Status |
 | --- | --- | --- |
 | Compact enabled | Compact remains at cutout while expanded opens independently | Native UI tests pass for hover reveal and compact activation retaining the expanded pin |
-| Compact disabled | No compact companion; top-edge reveal still works | Native expanded launch/collapse and absence of compact pass; top-edge reveal still unverified |
+| Compact disabled | No notch display; top-edge reveal still works | Native expanded launch/collapse and absence of compact pass; top-edge reveal still unverified |
 | Simulated notchless | Same expanded layout; compact unavailable, preference retained | Native expanded launch/collapse and absence of compact pass; preference retention verified in Settings |
 | Shelf keyboard / Quick Look | Selection, arrows, Space, and Escape stay in the intended window | Native Quick Look navigation, Space/Escape close, and keyboard focus return pass |
 | Pin and menus | Pinned panel survives leaving; open menus do not cause collapse | Native pin/unpin, compact activation retaining pin, and pinned pointer departure pass; expanded menu tracking pending |

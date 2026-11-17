@@ -42,7 +42,7 @@ final class IslandExpandedShortcutTests: XCTestCase {
             let settings = SettingsStore(defaults: defaults)
             XCTAssertEqual(settings.islandModuleConfiguration.shortcutPositions, floating)
             XCTAssertTrue(settings.islandModuleConfiguration.isEnabled(unknown))
-            XCTAssertEqual(settings.compactModuleOrder, [.timer, .shelf])
+            XCTAssertEqual(settings.notchModuleOrder, [.timer, .shelf])
             settings.assignIslandShortcut(.quickSettings, at: 7)
             let edited = settings.islandModuleConfiguration.shortcutPositions
             XCTAssertEqual(SettingsStore(defaults: defaults).islandModuleConfiguration.shortcutPositions, edited)
@@ -70,16 +70,16 @@ final class IslandExpandedShortcutTests: XCTestCase {
         }
     }
 
-    func testCompactPreferencePersistsWithoutChangingModuleChoices() throws {
+    func testNotchPreferencePersistsWithoutChangingModuleChoices() throws {
         try withSettings { defaults in
             let settings = SettingsStore(defaults: defaults)
-            XCTAssertTrue(settings.showCompactIsland)
-            settings.compactModuleID = .timer
+            XCTAssertTrue(settings.showNotch)
+            settings.notchModuleID = .timer
             let saved = settings.islandModuleConfiguration
-            settings.showCompactIsland = false
+            settings.showNotch = false
             let restored = SettingsStore(defaults: defaults)
-            XCTAssertFalse(restored.showCompactIsland)
-            XCTAssertEqual(restored.compactModuleID, .timer)
+            XCTAssertFalse(restored.showNotch)
+            XCTAssertEqual(restored.notchModuleID, .timer)
             XCTAssertEqual(restored.islandModuleConfiguration, saved)
         }
     }

@@ -6,7 +6,6 @@ struct GeneralSettingsTab: View {
     @Environment(SettingsStore.self) private var settings
     @Environment(LaunchAtLoginController.self) private var launchAtLoginController
     @Environment(UpdateController.self) private var updateController
-    @State private var islandScreens: [IslandScreenCatalog.Option] = []
 
     var body: some View {
         @Bindable var settings = settings
@@ -42,59 +41,9 @@ struct GeneralSettingsTab: View {
 
             Section("Menu Bar") {
                 Toggle("Show OpenYoink in menu bar", isOn: $settings.menuBarIconEnabled)
-                Text("The icon stays visible whenever Island cannot be opened directly, so Settings remains accessible.")
+                Text("The icon stays visible whenever the panel cannot be opened directly, so Settings remains accessible.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-            }
-
-            Section("OpenYoink Island") {
-                Toggle("Enable OpenYoink Island", isOn: $settings.islandEnabled)
-
-                if settings.islandEnabled {
-                    Text("One expanded panel on every display, with an optional compact companion on notched displays.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Toggle("Show Compact Island", isOn: $settings.showCompactIsland)
-                        .disabled(!selectedDisplayHasNotch)
-                        .accessibilityIdentifier("settings.showCompactIsland")
-                    if !selectedDisplayHasNotch {
-                        Text("Compact Island requires a notched display. Your preference is kept for when one is selected.")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-
-                    if islandScreens.isEmpty {
-                        Text("Connect a display to show Island.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Picker("Display", selection: $settings.islandDisplayTarget) {
-                            Text("Main Display")
-                                .tag(SettingsStore.IslandDisplayTarget.main)
-                            Text("Follow Pointer")
-                                .tag(SettingsStore.IslandDisplayTarget.automatic)
-                            ForEach(islandScreens) { screen in
-                                Text(islandScreenTitle(screen))
-                                    .tag(SettingsStore.IslandDisplayTarget.display(screen.id))
-                            }
-                            if case let .display(id) = settings.islandDisplayTarget,
-                               !islandScreens.contains(where: { $0.id == id }) {
-                                Text("Unavailable Display")
-                                    .tag(SettingsStore.IslandDisplayTarget.display(id))
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .accessibilityIdentifier("settings.islandDisplay")
-
-                        Text(islandDisplayDescription)
-                            .font(.caption)
-                            .foregroundStyle(isSelectedIslandDisplayUnavailable
-                                             ? Color.orange : Color.secondary)
-
-                        Text("Configure Island reveal behavior in Triggers.")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                }
             }
 
             Section("Language") {
@@ -111,10 +60,9 @@ struct GeneralSettingsTab: View {
                     .foregroundStyle(.secondary)
             }
 
-            // Sparkle: 自动检查更新（应用唯一的联网行为；手动检查在菜单栏菜单）。
             Section("Updates") {
                 Toggle("Automatically check for updates", isOn: $settings.autoUpdateCheckEnabled)
-                Text("Update checks contact GitHub Pages and releases only; nothing else uses the network.")
+                Text("Update checks contact the configured update feed and release server.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -128,59 +76,9 @@ struct GeneralSettingsTab: View {
                 }
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
-            refreshIslandScreens()
-        }
         .onAppear { launchAtLoginController.refresh() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             launchAtLoginController.refresh()
-        }
-        .onAppear {
-            refreshIslandScreens()
-        }
-        .onReceive(NotificationCenter.default.publisher(
-            for: NSApplication.didChangeScreenParametersNotification
-        )) { _ in
-            refreshIslandScreens()
-        }
-    }
-
-    private var selectedDisplayHasNotch: Bool {
-        guard let screen = IslandScreenCatalog.selectedScreen(
-            for: settings.islandDisplayTarget, pointerPoint: NSEvent.mouseLocation) else { return false }
-        return IslandGeometryResolver.resolve(screen: IslandScreenCatalog.geometry(for: screen)).hasPhysicalNotch
-    }
-
-    private func refreshIslandScreens() {
-        islandScreens = IslandScreenCatalog.options()
-    }
-
-    private func islandScreenTitle(_ screen: IslandScreenCatalog.Option) -> String {
-        guard screen.isMain else { return screen.name }
-        return "\(screen.name) · \(String(localized: "Current Main"))"
-    }
-
-    private var isSelectedIslandDisplayUnavailable: Bool {
-        guard case let .display(id) = settings.islandDisplayTarget else {
-            return false
-        }
-        return !islandScreens.contains(where: { $0.id == id })
-    }
-
-    private var islandDisplayDescription: String {
-        switch settings.islandDisplayTarget {
-        case .main:
-            if islandScreens.contains(where: \.isMain) {
-                String(localized: "Island stays on the display chosen as main in System Settings.")
-            } else {
-                String(localized: "Island uses a connected display until the main display is available.")
-            }
-        case .automatic:
-            String(localized: "Island follows the pointer across displays.")
-        case .display where isSelectedIslandDisplayUnavailable:
-            String(localized: "This display is unavailable. Island temporarily uses a connected display.")
-        case .display:
-            String(localized: "Island stays on this display until you choose another.")
         }
     }
 }

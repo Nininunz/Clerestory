@@ -63,6 +63,7 @@ struct ModulesSettingsTab: View {
             }
         }
         .onChange(of: settings.experimentalModulesEnabled) {
+            pendingPreset = nil
             if let destination = navigation.moduleSettingsDestination,
                !settings.isIslandModuleAvailable(destination.moduleID) {
                 navigation.moduleSettingsDestination = nil
@@ -77,7 +78,7 @@ struct ModulesSettingsTab: View {
                 pendingPreset = nil
             }
         } message: {
-            Text(pendingPreset?.detail ?? "")
+            Text(pendingPreset?.detail(experimentalModulesEnabled: settings.experimentalModulesEnabled) ?? "")
         }
     }
 
@@ -91,9 +92,9 @@ struct ModulesSettingsTab: View {
                 Text("Enable modules beyond Shelf and Quick Settings. Turning this off keeps their saved settings and shortcut positions.")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Section("Island Modules") {
+            Section("Modules") {
                 if !settings.islandEnabled {
-                    Text("The Island is off. You can still configure its modules here.")
+                    Text("The panel is off. You can still configure its modules here.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 ForEach(destinations) { destination in
@@ -120,18 +121,22 @@ struct ModulesSettingsTab: View {
                     }
                     if destination != destinations.last { Divider() }
                 }
-                Text("One shortcut position is always reserved for Quick Settings.")
+                Text("Quick Settings is always available and must occupy one panel shortcut position.")
                     .font(.caption).foregroundStyle(.secondary)
-                Text("Open the Island module library to reorder pinned shortcuts.")
-                    .font(.caption).foregroundStyle(.secondary)
+                Button("Arrange Panel Shortcuts…") { navigation.open(.panel) }
+                Button("Configure Notch…") { navigation.open(.notch) }
             }
             Section("Workflow Presets") {
                 Menu("Apply a Preset…") {
-                    ForEach(WorkflowPreset.allCases) { preset in
+                    ForEach(WorkflowPreset.availableCases(experimentalModulesEnabled: settings.experimentalModulesEnabled)) { preset in
                         Button(preset.title) { pendingPreset = preset }
                     }
                 }
-                Text("Presets change modules and reveal behavior. Your files, history and recording choice are kept.")
+                if !settings.experimentalModulesEnabled {
+                    Text("Enable Experimental Modules to use the clipboard and toolbox presets. Hidden module preferences are preserved.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Text("Presets change modules and opening behavior. Your files, history and recording choice are kept.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
@@ -157,7 +162,7 @@ struct ModulesSettingsTab: View {
             SettingsForm {
                 Section("Module") {
                     Toggle("Enable Module", isOn: enabledBinding(destination))
-                    Toggle("Pin to Island shortcuts", isOn: Binding(
+                    Toggle("Show in panel shortcuts", isOn: Binding(
                         get: { settings.islandModuleConfiguration.isPinned(destination.moduleID) },
                         set: { settings.setIslandModulePinned($0, id: destination.moduleID) }
                     ))
@@ -165,6 +170,8 @@ struct ModulesSettingsTab: View {
                     Text("\(settings.effectiveIslandShortcuts.pinnedModuleIDs.count + 1) of \(settings.effectiveIslandShortcuts.visibleShortcutIndices().count) shortcut positions used.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
+                Text("Shortcut placement and notch inclusion are separate from enabling a module. Arrange positions in Panel or Quick Settings.")
+                    .font(.caption).foregroundStyle(.secondary)
                 specificSettings(destination)
             }
         }
@@ -191,11 +198,11 @@ struct ModulesSettingsTab: View {
             }
         case .aiUsage:
             Section("AI Usage") {
-                Picker("Show in compact Island", selection: $settings.aiUsageCompactMetric) {
-                    Text("Nothing").tag(AIUsageCompactMetric.off)
-                    Text("Today's spend").tag(AIUsageCompactMetric.todayCost)
-                    Text("Today's tokens").tag(AIUsageCompactMetric.todayTokens)
-                    Text("Highest limit usage").tag(AIUsageCompactMetric.tightestLimit)
+                Picker("Show in notch", selection: $settings.aiUsageNotchMetric) {
+                    Text("Nothing").tag(AIUsageNotchMetric.off)
+                    Text("Today's spend").tag(AIUsageNotchMetric.todayCost)
+                    Text("Today's tokens").tag(AIUsageNotchMetric.todayTokens)
+                    Text("Highest limit usage").tag(AIUsageNotchMetric.tightestLimit)
                 }
                 .pickerStyle(.menu)
                 Toggle("Notify at 80% and 95% of a usage limit", isOn: $settings.aiUsageLimitAlertsEnabled)

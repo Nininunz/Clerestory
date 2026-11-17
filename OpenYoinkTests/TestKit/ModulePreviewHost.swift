@@ -76,7 +76,7 @@ struct ModulePreviewHost: View {
         .overlay {
             if let dropTarget {
                 IslandDropOutline(progress: 1,
-                    collapsedSize: layout.compactFrame.size,
+                    collapsedSize: layout.notchFrame.size,
                     attachedToScreenTop: false, state: dropTarget)
             }
         }

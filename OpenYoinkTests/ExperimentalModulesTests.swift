@@ -13,16 +13,16 @@ final class ExperimentalModulesTests: XCTestCase {
         for id in experimental { settings.setIslandModuleEnabled(true, id: id) }
         settings.assignIslandShortcut(.timer, at: 2)
         settings.assignIslandShortcut(.battery, at: 7)
-        settings.compactModuleOrder = [.timer, .battery, .shelf]
-        settings.compactModuleID = .battery
+        settings.notchModuleOrder = [.timer, .battery, .shelf]
+        settings.notchModuleID = .battery
         let saved = settings.islandModuleConfiguration
 
         XCTAssertFalse(settings.experimentalModulesEnabled)
         registry.apply(settings: settings)
         XCTAssertEqual(registry.enabledDescriptors.map(\.id), [.shelf])
         XCTAssertTrue(registry.isEnabled(.quickSettings))
-        XCTAssertEqual(settings.compactDisplay, .shelf)
-        XCTAssertEqual(settings.effectiveCompactModuleOrder, [.shelf])
+        XCTAssertEqual(settings.notchDisplay, .shelf)
+        XCTAssertEqual(settings.effectiveNotchModuleOrder, [.shelf])
         for id in experimental {
             XCTAssertFalse(settings.isIslandModuleAvailable(id))
             XCTAssertFalse(settings.effectiveIslandModuleConfiguration.isEnabled(id))
@@ -36,7 +36,7 @@ final class ExperimentalModulesTests: XCTestCase {
         let reloaded = SettingsStore(defaults: defaults)
         XCTAssertTrue(reloaded.experimentalModulesEnabled)
         XCTAssertEqual(reloaded.effectiveIslandModuleConfiguration, saved)
-        XCTAssertEqual(reloaded.compactDisplay, .battery)
+        XCTAssertEqual(reloaded.notchDisplay, .battery)
         reloaded.experimentalModulesEnabled = false
         XCTAssertEqual(SettingsStore(defaults: defaults).islandModuleConfiguration, saved)
         XCTAssertFalse(SettingsStore(defaults: defaults).experimentalModulesEnabled)
@@ -53,9 +53,9 @@ final class ExperimentalModulesTests: XCTestCase {
         XCTAssertTrue(registry.enabledDescriptors.isEmpty)
         XCTAssertTrue(registry.isEnabled(.quickSettings))
         XCTAssertEqual(settings.effectiveIslandModuleConfiguration.shortcutPositions.compactMap { $0 }, [.quickSettings])
-        settings.compactCycleShortcut = settings.clipboardHistoryShortcut
-        XCTAssertFalse(settings.compactCycleShortcutConflicts)
+        settings.notchCycleShortcut = settings.clipboardHistoryShortcut
+        XCTAssertFalse(settings.notchCycleShortcutConflicts)
         settings.experimentalModulesEnabled = true
-        XCTAssertTrue(settings.compactCycleShortcutConflicts)
+        XCTAssertTrue(settings.notchCycleShortcutConflicts)
     }
 }

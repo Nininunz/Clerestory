@@ -36,9 +36,9 @@ enum IslandFloatingPresentation: Equatable, Sendable {
 
 enum IslandGeometryResolver {
     static let expandedPanelGap: CGFloat = 8
-    static func acceptsFileDrag(at point: CGPoint, compactPointerFrame: CGRect,
+    static func acceptsFileDrag(at point: CGPoint, notchPointerFrame: CGRect,
                                 activationFrame: CGRect, topApproachEnabled: Bool) -> Bool {
-        compactPointerFrame.contains(point)
+        notchPointerFrame.contains(point)
             || (topApproachEnabled && activationFrame.contains(point))
     }
     struct ScreenGeometry: Equatable, Sendable {
@@ -52,25 +52,25 @@ enum IslandGeometryResolver {
     struct Layout: Equatable, Sendable {
         var hasPhysicalNotch: Bool
         var cameraHousingFrame: CGRect
-        var compactFrame: CGRect
+        var notchFrame: CGRect
         var expandedFrame: CGRect
         var activationFrame: CGRect
         /// The full screen, so the floating Island can reveal from its top edge.
         var screenFrame: CGRect = .zero
 
-        var showCompactIsland = true
-        var compactIsVisible: Bool { hasPhysicalNotch && showCompactIsland }
+        var showNotch = true
+        var notchIsVisible: Bool { hasPhysicalNotch && showNotch }
 
         /// Hardware changes placement, never the expanded panel's presentation.
         var pointerTriggerFrame: CGRect {
-            if compactIsVisible { return compactPointerFrame }
+            if notchIsVisible { return notchPointerFrame }
             let width = hasPhysicalNotch ? cameraHousingFrame.width + 32 : 80
             return CGRect(x: expandedFrame.midX - width / 2,
                           y: screenFrame.maxY - 4, width: width, height: 5)
         }
 
         var closedNoticeAnchor: CGRect {
-            if compactIsVisible { return compactFrame }
+            if notchIsVisible { return notchFrame }
             return CGRect(x: expandedFrame.midX, y: expandedFrame.maxY + IslandGeometryResolver.expandedPanelGap,
                           width: 0, height: 0)
         }
@@ -83,8 +83,8 @@ enum IslandGeometryResolver {
         /// Window frame for the idle dot: centred on the pill's top edge. The
         /// hit area is larger than the drawn dot so it stays easy to point at.
         var floatingDotFrame: CGRect {
-            CGRect(x: compactFrame.midX - IslandGeometryResolver.floatingDotHitSize.width / 2,
-                   y: compactFrame.maxY - IslandGeometryResolver.floatingDotHitSize.height,
+            CGRect(x: notchFrame.midX - IslandGeometryResolver.floatingDotHitSize.width / 2,
+                   y: notchFrame.maxY - IslandGeometryResolver.floatingDotHitSize.height,
                    width: IslandGeometryResolver.floatingDotHitSize.width,
                    height: IslandGeometryResolver.floatingDotHitSize.height).integral
         }
@@ -93,19 +93,19 @@ enum IslandGeometryResolver {
         /// The pointer pinned to the top edge reports `y == screenFrame.maxY`,
         /// which `CGRect.contains` excludes, so the zone reaches past it.
         var floatingEdgeRevealFrame: CGRect {
-            CGRect(x: compactFrame.minX - 24,
+            CGRect(x: notchFrame.minX - 24,
                    y: screenFrame.maxY - 4,
-                   width: compactFrame.width + 48,
+                   width: notchFrame.width + 48,
                    height: 8)
         }
 
         /// Once revealed, the pill stays while the pointer is on it or in the
         /// strip between it and the top of the screen.
         var floatingKeepRevealedFrame: CGRect {
-            CGRect(x: compactFrame.minX - 12,
-                   y: compactFrame.minY - 10,
-                   width: compactFrame.width + 24,
-                   height: max(screenFrame.maxY, compactFrame.maxY) - compactFrame.minY + 10)
+            CGRect(x: notchFrame.minX - 12,
+                   y: notchFrame.minY - 10,
+                   width: notchFrame.width + 24,
+                   height: max(screenFrame.maxY, notchFrame.maxY) - notchFrame.minY + 10)
         }
 
         var cameraHousingWidth: CGFloat { cameraHousingFrame.width }
@@ -113,17 +113,17 @@ enum IslandGeometryResolver {
 
         /// CGRect.contains excludes maxY, while the pointer can report the
         /// screen's exact top coordinate when pressed against the menu bar.
-        var compactPointerFrame: CGRect {
-            guard hasPhysicalNotch else { return compactFrame }
-            return CGRect(x: compactFrame.minX, y: compactFrame.minY,
-                          width: compactFrame.width, height: compactFrame.height + 1)
+        var notchPointerFrame: CGRect {
+            guard hasPhysicalNotch else { return notchFrame }
+            return CGRect(x: notchFrame.minX, y: notchFrame.minY,
+                          width: notchFrame.width, height: notchFrame.height + 1)
         }
     }
 
     /// Keep the visual wings and their hit targets narrow: these overlays share
     /// the menu-bar row with status items, which macOS does not move aside for us.
-    static let compactWingWidth: CGFloat = 40
-    /// Match the compact panel to the visible surface. A transparent strip
+    static let notchWingWidth: CGFloat = 40
+    /// Match the notch panel to the visible surface. A transparent strip
     /// below the notch would intercept clicks meant for the app underneath.
     static let physicalNotchClickExtension: CGFloat = 0
     static let floatingCompactSize = CGSize(width: 224, height: 38)
@@ -143,7 +143,7 @@ enum IslandGeometryResolver {
         return resolve(screen: screen)
     }
 
-    static func resolve(screen: ScreenGeometry, preferredExpandedHeight: CGFloat = expandedPreferredHeight, showCompactIsland: Bool = true) -> Layout {
+    static func resolve(screen: ScreenGeometry, preferredExpandedHeight: CGFloat = expandedPreferredHeight, showNotch: Bool = true) -> Layout {
         let left = screen.auxiliaryTopLeftArea
         let right = screen.auxiliaryTopRightArea
         // auxiliary areas have been observed in both screen-relative and global
@@ -157,7 +157,7 @@ enum IslandGeometryResolver {
             && notchWidth >= 40
 
         let housing: CGRect
-        let compact: CGRect
+        let notch: CGRect
         let topAnchor: CGFloat
         let horizontalAnchor: CGFloat
         if hasNotch {
@@ -165,21 +165,21 @@ enum IslandGeometryResolver {
                              y: screen.frame.maxY - notchHeight,
                              width: notchWidth,
                              height: notchHeight)
-            let width = notchWidth + compactWingWidth * 2
-            let compactHeight = notchHeight + physicalNotchClickExtension
-            compact = CGRect(x: housing.midX - width / 2,
-                             y: screen.frame.maxY - compactHeight,
+            let width = notchWidth + notchWingWidth * 2
+            let notchSurfaceHeight = notchHeight + physicalNotchClickExtension
+            notch = CGRect(x: housing.midX - width / 2,
+                             y: screen.frame.maxY - notchSurfaceHeight,
                              width: width,
-                             height: compactHeight)
+                             height: notchSurfaceHeight)
             topAnchor = min(housing.minY, screen.visibleFrame.maxY) - expandedPanelGap
             horizontalAnchor = housing.midX
         } else {
             housing = .zero
-            compact = CGRect(x: screen.visibleFrame.midX - floatingCompactSize.width / 2,
+            notch = CGRect(x: screen.visibleFrame.midX - floatingCompactSize.width / 2,
                              y: screen.visibleFrame.maxY - floatingCompactSize.height - 8,
                              width: floatingCompactSize.width,
                              height: floatingCompactSize.height)
-            topAnchor = compact.maxY
+            topAnchor = notch.maxY
             horizontalAnchor = screen.visibleFrame.midX
         }
 
@@ -193,11 +193,11 @@ enum IslandGeometryResolver {
                               y: topAnchor - expandedHeight,
                               width: expandedWidth,
                               height: expandedHeight)
-        // Approaching the compact Island should reveal Shelf; the expanded
+        // Approaching the notch Island should reveal Shelf; the expanded
         // module's size must not turn a large part of the desktop into a trigger.
-        let activationLeft = max(screen.frame.minX, compact.minX - 32)
-        let activationRight = min(screen.frame.maxX, compact.maxX + 32)
-        let activationBottom = max(screen.frame.minY, compact.minY - 64)
+        let activationLeft = max(screen.frame.minX, notch.minX - 32)
+        let activationRight = min(screen.frame.maxX, notch.maxX + 32)
+        let activationBottom = max(screen.frame.minY, notch.minY - 64)
         let activation = CGRect(x: activationLeft, y: activationBottom,
                                 width: activationRight - activationLeft,
                                 height: screen.frame.maxY + 1 - activationBottom)
@@ -208,10 +208,10 @@ enum IslandGeometryResolver {
                       // areas commonly end in .5; return integral enclosing
                       // frames so layout comparisons use realizable windows.
                       // Keep the hardware housing itself at its real position.
-                      compactFrame: compact.integral,
+                      notchFrame: notch.integral,
                       expandedFrame: expanded.integral,
                       activationFrame: activation.integral,
                       screenFrame: screen.frame,
-                      showCompactIsland: showCompactIsland)
+                      showNotch: showNotch)
     }
 }

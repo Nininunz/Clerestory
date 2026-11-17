@@ -2,7 +2,7 @@ import XCTest
 @testable import OpenYoink
 
 final class ShelfNoticePresentationTests: XCTestCase {
-    private func context(_ surface: IslandSurfaceState = .compact, transitioning: Bool = false,
+    private func context(_ surface: IslandSurfaceState = .collapsed, transitioning: Bool = false,
                          dragging: Bool = false, enabled: Bool = true) -> ShelfNoticePresentation.Context {
         .init(isEnabled: enabled, surface: surface, isTransitioning: transitioning, isDragging: dragging)
     }
