@@ -30,7 +30,7 @@ struct ShelfStackView: View {
             isSelected: isSelected || (!selectionMode && isExpanded),
             isKeyboardFocused: isKeyboardFocused,
             onSelect: { additive in
-                if selectionMode || additive {
+                if selectionMode || additive || NSEvent.modifierFlags.contains(.shift) {
                     onSelect(true)
                 } else {
                     onSelect(false)
@@ -72,6 +72,7 @@ struct ShelfStackView: View {
 /// （`ShelfStore.removeChild(_:fromStack:)`：剩 1 项自动解散为普通项，
 /// 剩 0 项移除 stack；stack 消失后本浮层由 ShelfView 自动收起）。
 struct ShelfStackExpandedView: View {
+    @Environment(ShelfStore.self) private var store
     @Environment(TransferStore.self) private var transferStore
     @Environment(DropTargetState.self) private var dropTargetState
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -85,45 +86,48 @@ struct ShelfStackExpandedView: View {
     var onRecoverChild: ((ShelfItem) -> Void)? = nil
     var onCopyChild: ((ShelfItem) -> Void)? = nil
 
-    private let columns = [GridItem(.adaptive(minimum: 88), spacing: 12)]
+    private let columns = [GridItem(.adaptive(minimum: 88), spacing: 12, alignment: .top)]
 
     var body: some View {
         VStack(spacing: 8) {
             header
-            ScrollView(.vertical) {
-                LazyVGrid(columns: columns, spacing: 12) {
-                    ForEach(stack.children ?? []) { child in
-                        ShelfItemCard(
-                            item: child,
-                            isSelected: interaction.childSelection.contains(child.id),
-                            isKeyboardFocused: interaction.focusedItemID == child.id,
-                            onSelect: { additive in
-                                interaction.focusedItemID = child.id
-                                if selectionMode || additive {
-                                    interaction.childSelection.formSymmetricDifference([child.id])
-                                } else {
-                                    interaction.childSelection = [child.id]
-                                }
-                            },
-                            onRemove: onRemoveChild.map { remove in
-                                { remove(child.id) }
-                            },
-                            onRecover: onRecoverChild.map { recover in
-                                { recover(child) }
-                            },
-                            onCopy: child.availability == .available
-                                ? onCopyChild.map { copy in { copy(child) } }
-                                : nil,
-                            transferStatus: transferStore.accessibilityStatus(for: child.id),
-                            dragContentsProvider: dragContents(for:)
-                        )
+            ScrollViewReader { proxy in
+                ScrollView(.vertical) {
+                    LazyVGrid(columns: columns, spacing: 12) {
+                        ForEach(stack.children ?? []) { child in
+                            ShelfItemCard(
+                                item: child,
+                                isSelected: interaction.childSelection.contains(child.id),
+                                isKeyboardFocused: interaction.focusedItemID == child.id && interaction.showsKeyboardFocus,
+                                onSelect: { additive in
+                                    interaction.clickSelection(child.id, in: stack.children ?? [],
+                                                               additive: selectionMode || additive,
+                                                               extending: NSEvent.modifierFlags.contains(.shift),
+                                                               store: store)
+                                },
+                                onRemove: onRemoveChild.map { remove in
+                                    { remove(child.id) }
+                                },
+                                onRecover: onRecoverChild.map { recover in
+                                    { recover(child) }
+                                },
+                                onCopy: child.availability == .available
+                                    ? onCopyChild.map { copy in { copy(child) } }
+                                    : nil,
+                                transferStatus: transferStore.accessibilityStatus(for: child.id),
+                                dragContentsProvider: dragContents(for:)
+                            )
+                        }
                     }
+                    .padding(2)
+                    .animation(reduceMotion ? nil : ShelfView.cardAnimation,
+                               value: interaction.childSelection)
+                    .animation(reduceMotion ? nil : ShelfView.cardAnimation,
+                               value: stack.children)
                 }
-                .padding(2)
-                .animation(reduceMotion ? nil : ShelfView.cardAnimation,
-                           value: interaction.childSelection)
-                .animation(reduceMotion ? nil : ShelfView.cardAnimation,
-                           value: stack.children)
+                .onChange(of: interaction.focusedItemID) { _, id in
+                    if let id { proxy.scrollTo(id) }
+                }
             }
             .frame(maxHeight: 320)
             if shouldShowQuickActions {
@@ -185,28 +189,4 @@ struct ShelfStackExpandedView: View {
             .accessibilityIdentifier("shelf.stack.\(stack.id.uuidString).collapse")
         }
     }
-}
-
-// MARK: - Previews
-
-#Preview("Stack card") {
-    let stack = ShelfPreviewFixtures.sampleStack()
-    ShelfStackView(item: stack,
-                   isSelected: false,
-                   isExpanded: false,
-                   onSelect: { _ in },
-                   onToggleExpanded: {},
-                   onRemove: {})
-        .frame(width: 100)
-        .padding()
-        .environment(SettingsStore())
-}
-
-#Preview("Stack expanded") {
-    ShelfStackExpandedView(stack: ShelfPreviewFixtures.sampleStack(),
-                           onDismiss: {},
-                           interaction: ShelfInteractionState())
-        .frame(width: 288)
-        .padding()
-        .environment(SettingsStore())
 }

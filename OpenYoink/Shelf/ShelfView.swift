@@ -41,22 +41,6 @@ extension EnvironmentValues {
     }
 }
 
-private struct ShelfActionStripReveal: ViewModifier, @MainActor Animatable {
-    var progress: CGFloat
-
-    var animatableData: CGFloat {
-        get { progress }
-        set { progress = newValue }
-    }
-
-    func body(content: Content) -> some View {
-        content
-            .frame(width: 130 * max(0, min(1, progress)), alignment: .trailing)
-            .clipped()
-            .opacity(progress)
-    }
-}
-
 private struct ShelfIconButtonStyle: ButtonStyle {
     var active = false
     var expanded = false
@@ -154,6 +138,7 @@ struct ShelfView: View {
     @Environment(\.shelfFocusAction) private var shelfFocusAction
     @Environment(\.shelfUserRemovalAction) private var shelfUserRemovalAction
     @State private var showsManagementActions = false
+    @State private var duplicateHighlightIDs: Set<UUID> = []
     @FocusState private var searchFocused: Bool
 
     /// 卡片弹入/让位动画（§3：spring, response 0.35, damping 0.7）。
@@ -175,6 +160,18 @@ struct ShelfView: View {
                 interaction.normalize(for: store.visibleItems)
                 if store.items.isEmpty { interaction.isSelecting = false }
             }
+            .task(id: store.duplicateDrop?.id) {
+                duplicateHighlightIDs = []
+                guard let drop = store.duplicateDrop,
+                      Date().timeIntervalSince(drop.occurredAt) < 1.5 else { return }
+                duplicateHighlightIDs = drop.cardIDs
+                do { try await Task.sleep(for: .seconds(1.5)) }
+                catch { return }
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.25)) {
+                    duplicateHighlightIDs = []
+                }
+            }
+            .onDisappear { showsManagementActions = false }
             .onChange(of: store.searchQuery) { normalizeSearch() }
             .onChange(of: store.contentFilter) { normalizeSearch() }
             .onChange(of: transferStore.currentTask, initial: true) { _, task in
@@ -193,7 +190,6 @@ struct ShelfView: View {
                     .overlay { content }
                     .overlay { dropTargetHighlight }
                     .overlay { expandedStackOverlay }
-                    .overlay(alignment: .top) { noticeBanner }
                     .overlay(alignment: .bottom) { dropModeHint }
             }
             .animation(reduceMotion ? nil : Self.cardAnimation,
@@ -214,9 +210,7 @@ struct ShelfView: View {
         } else {
             Color.clear
                 .overlay { content }
-                .overlay { dropTargetHighlight }
                 .overlay { expandedStackOverlay }
-                .overlay(alignment: .top) { noticeBanner }
                 .overlay(alignment: .bottom) { dropModeHint }
                 .animation(reduceMotion ? nil : Self.cardAnimation,
                            value: interaction.expandedStackID)
@@ -246,26 +240,61 @@ struct ShelfView: View {
                         ? .opacity
                         : .opacity.combined(with: .move(edge: .top)))
             }
-            if store.items.isEmpty {
-                ShelfEmptyState()
+            Group {
+                if store.items.isEmpty {
+                    Group {
+                        if presentationStyle == .island {
+                            IslandEmptyState(title: "Drop files here",
+                                             message: "Hold ⌘ while dropping to move the original here",
+                                             systemImage: "tray.and.arrow.down")
+                                .accessibilityElement(children: .combine)
+                                .accessibilityIdentifier("shelf.emptyState")
+                        } else {
+                            ShelfEmptyState()
+                        }
+                    }
                     .contentShape(Rectangle())
                     .onTapGesture(perform: clearSelectionAndCollapse)
-            } else if store.visibleItems.isEmpty {
-                Text("No Results").foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if store.visibleItems.isEmpty {
+                    Group {
+                        if presentationStyle == .island {
+                            IslandModuleState(title: "No Results", message: "Try a different search or filter.",
+                                              systemImage: "magnifyingglass") {
+                                Button("Clear Search and Filters") {
+                                    store.searchQuery = ""
+                                    store.contentFilter = .all
+                                }
+                            }
+                        } else {
+                            Text("No Results").foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
+                    }
                     .contentShape(Rectangle())
                     .onTapGesture(perform: clearSelectionAndCollapse)
-            } else {
-                itemGrid
+                } else {
+                    itemGrid
+                }
             }
-            if shouldShowTopLevelQuickActions {
+            .blur(radius: showsDuplicateDropOverlay ? 6 : 0)
+            .clipped()
+            .overlay { duplicateDropOverlay }
+            .overlay(alignment: .bottom) {
+                if presentationStyle == .classic { noticeBanner }
+            }
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.18),
+                       value: showsDuplicateDropOverlay)
+            if presentationStyle == .island {
+                shelfFooter
+                    .padding(.top, IslandModuleLayout.headerSpacing - 4)
+            } else if shouldShowTopLevelQuickActions {
                 ShelfQuickActionBar(items: topLevelActionItems)
                     .transition(reduceMotion
                         ? .opacity
                         : .opacity.combined(with: .move(edge: .bottom)))
             }
         }
-        .padding(8)
+        .padding(presentationStyle == .classic ? 8 : 0)
         .background {
             // 空白处点击清除选择并收起 Stack；卡片点击由卡片自己的事件层处理。
             // 经典模式改由玻璃面命中层处理（几何不跟随高度弹簧动画）。
@@ -274,6 +303,38 @@ struct ShelfView: View {
                     .contentShape(Rectangle())
                     .onTapGesture(perform: clearSelectionAndCollapse)
             }
+        }
+    }
+
+    private var showsDuplicateDropOverlay: Bool {
+        ShelfDuplicateFeedback.usesFileOverlay && presentationStyle == .island
+            && ShelfDuplicateFeedback.isDuplicateTarget(dropTargetState)
+    }
+
+    @ViewBuilder
+    private var duplicateDropOverlay: some View {
+        if showsDuplicateDropOverlay {
+            Color.black.opacity(0.25)
+                .overlay {
+                    VStack(spacing: 10) {
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 28, weight: .medium))
+                            .foregroundStyle(Color.red)
+                        Text("Already on Shelf")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.white)
+                        Text("Existing files will be skipped. New files will still be added.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: 280)
+                    }
+                    .padding(16)
+                }
+                .allowsHitTesting(false)
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("shelf.duplicateDrop")
+                .transition(.opacity)
         }
     }
 
@@ -358,7 +419,7 @@ struct ShelfView: View {
                     ForEach(ShelfContentFilter.allCases) { Text($0.title).tag($0) }
                 }.labelsHidden().controlSize(.small)
                 Spacer(minLength: 2)
-                managementMenu
+                if presentationStyle == .classic { managementMenu }
             }
         }.font(.caption).buttonStyle(.plain)
     }
@@ -367,48 +428,114 @@ struct ShelfView: View {
         store.selection.intersection(Set(store.visibleItems.map(\.id)))
     }
 
-    private var managementMenu: some View {
-        HStack(spacing: 0) {
-            if showsManagementActions {
-                HStack(spacing: 0) {
-                    managementAction("Batch Selection", symbol: interaction.isSelecting ? "checkmark.circle.fill" : "checkmark.circle",
-                                     identifier: "shelf.selection.toggle", enabled: !store.items.isEmpty,
-                                     active: interaction.isSelecting) {
-                        setSelectionMode(!interaction.isSelecting)
-                    }
-                    managementAction(allVisibleItemsSelected ? "Deselect All" : "Select All",
-                                     symbol: allVisibleItemsSelected ? "checkmark.rectangle.stack.fill" : "checkmark.rectangle.stack",
-                                     identifier: "shelf.selection.all", enabled: !store.visibleItems.isEmpty) {
-                        if allVisibleItemsSelected {
-                            store.clearSelection()
-                        } else {
-                            setSelectionMode(true)
-                            store.selectAllVisible()
-                        }
-                    }
-                    managementDivider
-                    managementAction("Remove Selected", symbol: "trash",
-                                     identifier: "shelf.selection.remove", enabled: !visibleSelection.isEmpty,
-                                     destructive: true) {
-                        removeShelfItems(ids: visibleSelection)
-                    }
-                    managementAction("Clear Shelf", symbol: "xmark.bin",
-                                     identifier: "shelf.clear", enabled: !store.items.isEmpty,
-                                     destructive: true) {
-                        removeShelfItems(ids: Set(store.items.map(\.id)))
-                    }
-                    managementDivider
-                    managementAction("Undo Remove", symbol: "arrow.uturn.backward",
-                                     identifier: "shelf.undoRemoval", enabled: store.canUndoRemoval) {
-                        _ = store.undoLastRemoval()
+    private var shelfFooter: some View {
+        IslandModuleFooter {
+            Button(interaction.isSelecting || !visibleSelection.isEmpty ? "Done" : "Select") {
+                setSelectionMode(!(interaction.isSelecting || !visibleSelection.isEmpty))
+            }
+            .buttonStyle(IslandActionButtonStyle())
+            .disabled(store.items.isEmpty)
+            .accessibilityIdentifier("shelf.selection.toggle")
+            if !visibleSelection.isEmpty {
+                Text("\(visibleSelection.count) selected")
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 4)
+            if !visibleSelection.isEmpty {
+                ShelfQuickActionBar(items: store.visibleItems.filter { visibleSelection.contains($0.id) }, inline: true)
+                Button {
+                    removeShelfItems(ids: visibleSelection)
+                } label: { Image(systemName: "trash") }
+                .buttonStyle(IslandHeaderButtonStyle())
+                .help("Remove Selected")
+                .accessibilityLabel("Remove Selected")
+                .accessibilityIdentifier("shelf.selection.remove")
+            } else {
+                Button { _ = store.undoLastRemoval() } label: {
+                    Image(systemName: "arrow.uturn.backward")
+                }
+                .buttonStyle(IslandHeaderButtonStyle())
+                .disabled(!store.canUndoRemoval)
+                .help("Undo Remove")
+                .accessibilityLabel("Undo Remove")
+                .accessibilityIdentifier("shelf.undoRemoval")
+            }
+            Menu {
+                Button(allVisibleItemsSelected ? "Deselect All" : "Select All") {
+                    if allVisibleItemsSelected {
+                        store.clearSelection()
+                    } else {
+                        setSelectionMode(true)
+                        store.selectAllVisible()
                     }
                 }
-                .fixedSize()
-                .transition(.modifier(active: ShelfActionStripReveal(progress: 0),
-                                      identity: ShelfActionStripReveal(progress: 1)))
-                .allowsHitTesting(showsManagementActions)
-                .accessibilityHidden(!showsManagementActions)
+                .disabled(store.visibleItems.isEmpty)
+                Button("Undo Remove") { _ = store.undoLastRemoval() }
+                    .disabled(!store.canUndoRemoval)
+                Divider()
+                Button("Clear Shelf", role: .destructive) {
+                    removeShelfItems(ids: Set(store.items.map(\.id)))
+                }
+                .disabled(store.items.isEmpty)
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 12, weight: .semibold))
+                    .frame(width: 28, height: 28)
             }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .frame(width: 28, height: 28)
+            .background(Circle().fill(Color.white.opacity(0.08)))
+            .help("More Shelf Actions")
+            .accessibilityLabel("More Shelf Actions")
+            .accessibilityIdentifier("shelf.manage")
+        }
+    }
+
+    private var managementMenu: some View {
+        HStack(spacing: 0) {
+            HStack(spacing: 0) {
+                managementAction("Batch Selection", symbol: interaction.isSelecting ? "checkmark.circle.fill" : "checkmark.circle",
+                                 identifier: "shelf.selection.toggle", enabled: !store.items.isEmpty,
+                                 active: interaction.isSelecting) {
+                    setSelectionMode(!interaction.isSelecting)
+                }
+                managementAction(allVisibleItemsSelected ? "Deselect All" : "Select All",
+                                 symbol: allVisibleItemsSelected ? "checkmark.rectangle.stack.fill" : "checkmark.rectangle.stack",
+                                 identifier: "shelf.selection.all", enabled: !store.visibleItems.isEmpty) {
+                    if allVisibleItemsSelected {
+                        store.clearSelection()
+                    } else {
+                        setSelectionMode(true)
+                        store.selectAllVisible()
+                    }
+                }
+                managementDivider
+                managementAction("Remove Selected", symbol: "trash",
+                                 identifier: "shelf.selection.remove", enabled: !visibleSelection.isEmpty,
+                                 destructive: true) {
+                    removeShelfItems(ids: visibleSelection)
+                }
+                managementAction("Clear Shelf", symbol: "xmark.bin",
+                                 identifier: "shelf.clear", enabled: !store.items.isEmpty,
+                                 destructive: true) {
+                    removeShelfItems(ids: Set(store.items.map(\.id)))
+                }
+                managementDivider
+                managementAction("Undo Remove", symbol: "arrow.uturn.backward",
+                                 identifier: "shelf.undoRemoval", enabled: store.canUndoRemoval) {
+                    _ = store.undoLastRemoval()
+                }
+            }
+            .fixedSize()
+            .frame(width: showsManagementActions ? 130 : 0, alignment: .trailing)
+            .clipped()
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.28),
+                       value: showsManagementActions)
+            .allowsHitTesting(showsManagementActions)
+            .accessibilityHidden(!showsManagementActions)
             Button {
                 shelfFocusAction?()
                 showsManagementActions.toggle()
@@ -423,10 +550,7 @@ struct ShelfView: View {
             .help(Text("Manage Shelf"))
             .accessibilityLabel("Manage Shelf")
             .accessibilityIdentifier("shelf.manage")
-
         }
-        .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.88),
-                   value: showsManagementActions)
     }
 
     private var managementDivider: some View {
@@ -464,8 +588,7 @@ struct ShelfView: View {
             collapseStack()
             shelfFocusAction?()
         }
-        interaction.isSelecting = enabled
-        if !enabled { store.clearSelection() }
+        interaction.setSelectionMode(enabled, in: store)
     }
 
     private var allVisibleItemsSelected: Bool {
@@ -479,9 +602,9 @@ struct ShelfView: View {
                 guard !removed.isEmpty else { return }
                 interaction.normalize(for: store.visibleItems)
                 quickLookCoordinator?.refreshPreview(contextItem: nil)
-                notices.show(String(localized: "Removed from Shelf. Undo with ⌘Z, or recover in Settings → Storage."))
+                notices.show(.removed)
             } catch {
-                notices.show(String(localized: "Could not save a recovery copy. Nothing was removed."))
+                notices.show(.removalFailed)
             }
         }
         if let shelfUserRemovalAction {
@@ -513,14 +636,28 @@ struct ShelfView: View {
             // and non-scrolling grid agree; `adaptive` used to drop to two
             // columns inside the slightly narrower scroll container.
             let gridColumns = Array(
-                repeating: GridItem(.flexible(minimum: 0), spacing: Self.gridSpacing),
+                repeating: GridItem(.flexible(minimum: 0), spacing: Self.gridSpacing, alignment: .top),
                 count: ShelfLayoutEngine.gridColumnCount(for: viewport.size.width)
             )
             let fits = presentationStyle == .classic
                 && ShelfLayoutEngine.gridFits(itemCount: store.visibleItems.count,
                                               viewport: viewport.size)
             Group {
-                if fits {
+                if presentationStyle == .island {
+                    ScrollViewReader { proxy in
+                        IslandModuleScrollView {
+                            cardGrid(columns: gridColumns)
+                        }
+                        .onChange(of: interaction.focusedItemID) { _, id in
+                            if let id { proxy.scrollTo(id) }
+                        }
+                        .onChange(of: store.duplicateDrop) { _, drop in
+                            if let id = store.visibleItems.first(where: { drop?.cardIDs.contains($0.id) == true })?.id {
+                                proxy.scrollTo(id)
+                            }
+                        }
+                    }
+                } else if fits {
                     cardGrid(columns: gridColumns)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 } else {
@@ -540,10 +677,16 @@ struct ShelfView: View {
     }
 
     private func scrollingGrid(columns: [GridItem]) -> some View {
-        ScrollView(.vertical) {
-            cardGrid(columns: columns)
+        ScrollViewReader { proxy in
+            ScrollView(.vertical) {
+                cardGrid(columns: columns)
+            }
+            .scrollIndicators(presentationStyle == .island ? .automatic : .hidden)
+            .scrollBounceBehavior(.basedOnSize)
+            .onChange(of: interaction.focusedItemID) { _, id in
+                if let id { proxy.scrollTo(id) }
+            }
         }
-        .scrollIndicators(.hidden)
     }
 
     private func cardGrid(columns: [GridItem]) -> some View {
@@ -560,6 +703,16 @@ struct ShelfView: View {
     private func gridCell(for item: ShelfItem) -> some View {
         let index = store.index(ofItemWithID: item.id)
         return cellContent(for: item)
+            .overlay {
+                RoundedRectangle(cornerRadius: ShelfItemCard.cornerRadius)
+                    .fill(Color.accentColor.opacity(duplicateHighlightIDs.contains(item.id) ? 0.18 : 0))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: ShelfItemCard.cornerRadius)
+                            .strokeBorder(Color.accentColor.opacity(duplicateHighlightIDs.contains(item.id) ? 0.7 : 0), lineWidth: 1)
+                    }
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
             // C5/C6: 上报卡片在窗口 .global 坐标系中的 frame（含滚动偏移），
             // 供框选命中与拖入插入定位使用；cell 离屏/移除时清除，避免陈旧几何。
             .modifier(ShelfCardGeometryReporter(itemID: item.id))
@@ -581,11 +734,12 @@ struct ShelfView: View {
 
     @ViewBuilder
     private func cellContent(for item: ShelfItem) -> some View {
-        if item.kind == .stack {
+        if ShelfStackAvailability.isEnabled, item.kind == .stack {
             ShelfStackView(
                 item: item,
                 isSelected: store.selection.contains(item.id),
-                isKeyboardFocused: interaction.focusedItemID == item.id,
+                isKeyboardFocused: interaction.focusedItemID == item.id
+                    && (presentationStyle == .classic || interaction.showsKeyboardFocus),
                 isExpanded: interaction.expandedStackID == item.id,
                 onSelect: { additive in select(item.id, additive: additive) },
                 onToggleExpanded: { toggleStackExpansion(item.id) },
@@ -605,7 +759,8 @@ struct ShelfView: View {
             ShelfItemCard(
                 item: item,
                 isSelected: store.selection.contains(item.id),
-                isKeyboardFocused: interaction.focusedItemID == item.id,
+                isKeyboardFocused: interaction.focusedItemID == item.id
+                    && (presentationStyle == .classic || interaction.showsKeyboardFocus),
                 onSelect: { additive in select(item.id, additive: additive) },
                 onRemove: { store.removeForUser(ids: [item.id]) },
                 onRecover: { itemRecoveryController?.recover(item) },
@@ -664,15 +819,13 @@ struct ShelfView: View {
     }
 
     /// F-05: 悬停期间的模式提示（面板底部胶囊；notice 横幅在顶部，互不遮挡）。
-    /// ⌘ 剪切态提示「松开将原文件移动到此处」，复制态提示「松开以添加引用」。
+    /// Only show a hint for reordering or moving the original file.
     @ViewBuilder
     private var dropModeHint: some View {
-        if dropTargetState.isTargeted {
+        if dropTargetState.isTargeted && (dropTargetState.isReordering || dropTargetState.mode == .move) {
             Text(dropTargetState.isReordering
                  ? String(localized: "Release to reorder")
-                 : dropTargetState.mode == .move
-                 ? String(localized: "Release to move the original here ⌘")
-                 : String(localized: "Release to add a reference"))
+                 : String(localized: "Release to move the original here ⌘"))
                 .font(.caption)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
@@ -759,7 +912,8 @@ struct ShelfView: View {
 
     @ViewBuilder
     private var expandedStackOverlay: some View {
-        if let stackID = interaction.expandedStackID,
+        if ShelfStackAvailability.isEnabled,
+           let stackID = interaction.expandedStackID,
            let stack = store.item(withID: stackID),
            stack.kind == .stack {
             // 半透明遮罩：点击外部收起。
@@ -794,6 +948,7 @@ struct ShelfView: View {
     }
 
     private func toggleStackExpansion(_ id: UUID) {
+        guard ShelfStackAvailability.isEnabled else { return }
         withAnimation(reduceMotion ? nil : Self.cardAnimation) {
             if interaction.expandedStackID == id {
                 interaction.exitStack()
@@ -828,12 +983,10 @@ struct ShelfView: View {
     }
 
     private func select(_ id: UUID, additive: Bool) {
-        interaction.focusedItemID = id
-        if additive || interaction.isSelecting {
-            store.toggleSelection(id)
-        } else {
-            store.select(id)
-        }
+        searchFocused = false
+        shelfFocusAction?()
+        interaction.clickSelection(id, in: store.visibleItems, additive: additive,
+                                   extending: NSEvent.modifierFlags.contains(.shift), store: store)
         // S6: Quick Look 面板打开期间，预览跟随选中变化（含 ⌘点击增减多选）。
         quickLookCoordinator?.refreshPreview(contextItem: store.item(withID: id))
     }
@@ -843,13 +996,13 @@ struct ShelfView: View {
         shelfFocusAction?()
         showsManagementActions = false
         collapseStack()
-        interaction.isSelecting = false
-        store.clearSelection()
+        interaction.clearActiveSelection(in: store)
+        interaction.showsKeyboardFocus = false
     }
 
     private func copyToClipboard(_ items: [ShelfItem]) {
         let result = ClipboardController.copy(items, bookmarkService: bookmarkService)
-        notices.show(ClipboardController.statusMessage(for: result))
+        notices.show(ClipboardController.notice(for: result))
     }
 
     private func stackTransferStatus(for stack: ShelfItem) -> TransferItemAccessibilityStatus? {
@@ -890,33 +1043,32 @@ struct ShelfView: View {
             $0.kind == .stack && ($0.children ?? []).contains { $0.id == itemID }
         }) else { return }
         store.select(stack.id)
+        guard ShelfStackAvailability.isEnabled else {
+            interaction.focusedItemID = stack.id
+            return
+        }
         interaction.enterStack(stack)
         interaction.focusedItemID = itemID
         interaction.childSelection = [itemID]
     }
 
-    // MARK: - Inline notice (D10)
+    // MARK: - Transient feedback
 
-    /// 拖入/物化失败的瞬态提示胶囊（标题栏下方，自动消失；选内联而非
-    /// NSAlert 的理由见 `ShelfNoticeModel`）。
     @ViewBuilder
     private var noticeBanner: some View {
-        if let message = notices.message {
-            Label(message, systemImage: "exclamationmark.triangle.fill")
-                .font(.caption)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background { Capsule().fill(.regularMaterial) }
-                .padding(.top, 34)
-                .transition(.opacity.combined(with: .move(edge: .top)))
-                .allowsHitTesting(false)
+        if let notice = notices.current, !dropTargetState.isTargeted {
+            ShelfNoticeToast(notice: notice, onPerformRecovery: performRecovery)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 8)
+                .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom)))
         }
     }
+
 }
 
 // MARK: - Preview fixtures
 
-/// SwiftUI Preview mock 数据：覆盖 file/folder/image/text/url/stack/stale 各形态。
+/// SwiftUI Preview mock 数据：覆盖 file/folder/image/text/url/stale 各形态。
 /// 路径指向系统自带文件，保证 NSWorkspace 图标在预览中可解析；缩略图走与
 /// 运行时相同的 QL → 图标回退链路。
 enum ShelfPreviewFixtures {
@@ -961,7 +1113,7 @@ enum ShelfPreviewFixtures {
             displayName: "moved-file.png"
         )
         stale.isStale = true
-        return [app, folder, image, text, url, sampleStack(), stale]
+        return [app, folder, image, text, url, stale]
     }
 
     static func sampleStack() -> ShelfItem {

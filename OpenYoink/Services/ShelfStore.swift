@@ -21,6 +21,15 @@ final class ShelfStore {
         }
     }
 
+    struct DuplicateDrop: Equatable {
+        let id = UUID()
+        let occurredAt = Date()
+        /// Top-level cards, including a containing stack, to reveal without selecting.
+        let cardIDs: Set<UUID>
+        let skippedCount: Int
+    }
+    private(set) var duplicateDrop: DuplicateDrop?
+
     private let persistence: PersistenceController?
     var searchQuery = ""
     var contentFilter: ShelfContentFilter = .all
@@ -148,9 +157,7 @@ final class ShelfStore {
 
     /// Inserts an item at `index` (clamped to bounds), or appends when nil.
     func add(_ item: ShelfItem, at index: Int? = nil) {
-        let insertionIndex = min(max(index ?? items.count, 0), items.count)
-        items.insert(item, at: insertionIndex)
-        persist()
+        add(contentsOf: [item], at: index)
     }
 
     /// Appends multiple items, preserving their order.
@@ -162,10 +169,46 @@ final class ShelfStore {
     /// preserving their order; nil appends (S10/C6: drop-in at the indicated
     /// insertion position).
     func add(contentsOf newItems: [ShelfItem], at index: Int?) {
-        guard !newItems.isEmpty else { return }
-        let insertionIndex = min(max(index ?? items.count, 0), items.count)
-        items.insert(contentsOf: newItems, at: insertionIndex)
-        persist()
+        // Entries have fresh UUIDs on each import; compare the referenced file
+        // instead. Resolve path spelling/symlinks, never filenames or contents.
+        var knownFiles: [String: UUID] = [:]
+        for card in items {
+            for child in DragPayloadBuilder.flattenedItems([card]) {
+                if let identity = Self.fileIdentity(child), knownFiles[identity] == nil {
+                    knownFiles[identity] = card.id
+                }
+            }
+        }
+        var duplicateCards: Set<UUID> = []
+        var skippedCount = 0
+        let uniqueItems = newItems.filter { item in
+            guard let identity = Self.fileIdentity(item) else { return true }
+            if let existingID = knownFiles[identity] {
+                duplicateCards.insert(existingID)
+                skippedCount += 1
+                return false
+            }
+            knownFiles[identity] = item.id
+            return true
+        }
+        if !uniqueItems.isEmpty {
+            let insertionIndex = min(max(index ?? items.count, 0), items.count)
+            items.insert(contentsOf: uniqueItems, at: insertionIndex)
+            persist()
+        }
+        if skippedCount > 0 {
+            duplicateDrop = DuplicateDrop(cardIDs: duplicateCards, skippedCount: skippedCount)
+        }
+    }
+
+    func containsFileReference(at url: URL) -> Bool {
+        let identity = url.standardizedFileURL.resolvingSymlinksInPath().path
+        return DragPayloadBuilder.flattenedItems(items).contains { Self.fileIdentity($0) == identity }
+    }
+
+    private static func fileIdentity(_ item: ShelfItem) -> String? {
+        guard [.file, .folder, .image].contains(item.kind), let url = item.fileURL else { return nil }
+        return url.standardizedFileURL.resolvingSymlinksInPath().path
     }
 
     /// Adds an item only after the resulting shelf snapshot has been written

@@ -1,10 +1,29 @@
-import CoreGraphics
+import AppKit
 import XCTest
 @testable import OpenYoink
 
 /// UX1 拖拽开始状态机（DragGestureTracker）与自动唤出会话裁决
 /// （DragAutoShowSession）的纯逻辑单测。
 final class DragStartMonitorTests: XCTestCase {
+    func testTextApproachRequiresFreshDragPayloadAndCannotLeakIntoNextGesture() {
+        for types in [[NSPasteboard.PasteboardType.string], [.string, .html, .rtf]] {
+            var tracker = DragPasteboardTracker()
+            let eligible = PasteboardTypes.hasShelfApproachContent(in: types)
+            XCTAssertTrue(eligible)
+            tracker.mouseDown(changeCount: 10)
+            // Merely selecting text or moving a window leaves the prior pasteboard unchanged.
+            XCTAssertFalse(tracker.mouseDragged(changeCount: 10, hasEligibleContent: eligible))
+            XCTAssertTrue(tracker.mouseDragged(changeCount: 11, hasEligibleContent: eligible))
+            XCTAssertTrue(tracker.mouseDragged(changeCount: 11, hasEligibleContent: eligible))
+            tracker.mouseUp()
+            tracker.mouseDown(changeCount: 11)
+            XCTAssertFalse(tracker.mouseDragged(changeCount: 11, hasEligibleContent: eligible))
+            // A fresh browser drag with a text fallback still cannot expand Shelf.
+            XCTAssertFalse(tracker.mouseDragged(changeCount: 12, hasEligibleContent:
+                PasteboardTypes.hasShelfApproachContent(in: [.URL, .string])))
+        }
+    }
+
     // MARK: - DragGestureTracker
 
     func testClickWithoutMovement_neverStartsDrag() {

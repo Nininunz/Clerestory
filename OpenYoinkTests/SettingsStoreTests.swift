@@ -15,6 +15,23 @@ final class SettingsStoreTests: XCTestCase {
 
     // MARK: - General settings persistence
 
+    func testRestoreShortcutDefaultsPreservesEnabledModulesAndPersistsPositions() throws {
+        let suite = "OpenYoink.ShortcutDefaults.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = SettingsStore(defaults: defaults)
+        store.setIslandModuleEnabled(false, id: .timer)
+        store.setIslandModuleEnabled(true, id: .aiUsage)
+        store.assignIslandShortcut(.quickSettings, at: 0)
+        store.assignIslandShortcut(.aiUsage, at: 6)
+        let enabled = store.islandModuleConfiguration.enabledModuleIDs
+        store.restoreDefaultIslandShortcuts()
+        let positions = store.islandModuleConfiguration.shortcutPositions
+        XCTAssertEqual(positions, [nil, nil, nil, .shelf, .quickSettings, nil, nil, nil])
+        XCTAssertEqual(store.islandModuleConfiguration.enabledModuleIDs, enabled)
+        XCTAssertEqual(SettingsStore(defaults: defaults).islandModuleConfiguration.shortcutPositions, positions)
+    }
+
     func testEdgeTabIconPreferencesPersistIndependentlyOfTabVisibility() throws {
         let (defaults, name) = try makeSuite()
         defer { defaults.removePersistentDomain(forName: name) }
@@ -80,16 +97,20 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.language, .system)
         XCTAssertEqual(store.onboardingVersion, 0)
         XCTAssertFalse(store.hadPersistedOnboardingVersion)
-        XCTAssertEqual(store.shelfPresentationMode, .classic)
-        XCTAssertEqual(store.shelfPlacement, .right)
+        XCTAssertEqual(store.shelfPresentationMode, .island)
+        XCTAssertEqual(store.shelfPlacement, .island)
         XCTAssertTrue(store.classicShelfEnabled)
         XCTAssertTrue(store.islandEnabled)
+        XCTAssertTrue(store.menuBarIconEnabled)
         XCTAssertEqual(store.islandDisplayTarget, .main)
         XCTAssertTrue(store.islandShelfEnabled)
         XCTAssertEqual(store.preferredShelfSurface, .island)
-        XCTAssertEqual(store.effectivePreferredShelfSurface, .classic)
+        XCTAssertEqual(store.effectivePreferredShelfSurface, .island)
         XCTAssertFalse(store.islandHoverRevealEnabled)
-        XCTAssertFalse(store.islandDragApproachEnabled)
+        XCTAssertTrue(store.islandClickRevealEnabled)
+        XCTAssertEqual(store.islandHoverDelaySeconds, 0.15)
+        XCTAssertEqual(store.islandHoverLeaveDelaySeconds, 0.25)
+        XCTAssertTrue(store.islandDragApproachEnabled)
         XCTAssertTrue(store.islandTimerEnabled)
         XCTAssertTrue(store.islandBatteryEnabled)
         XCTAssertFalse(store.islandMediaEnabled)
@@ -98,7 +119,9 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.islandModuleConfiguration.enabledModuleIDs,
                        [.shelf, .transfers, .timer, .battery, .system])
         XCTAssertEqual(store.islandModuleConfiguration.pinnedModuleIDs,
-                       [.shelf, .timer, .system])
+                       [.shelf])
+        XCTAssertEqual(store.islandModuleConfiguration.shortcutPositions[3], .shelf)
+        XCTAssertEqual(store.islandModuleConfiguration.shortcutPositions[4], .quickSettings)
         XCTAssertTrue(store.classicShelfHoverRevealEnabled)
     }
 
@@ -222,9 +245,13 @@ final class SettingsStoreTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: name) }
 
         let store = SettingsStore(defaults: defaults)
+        store.menuBarIconEnabled = false
         store.shelfPlacement = .island
         store.islandDisplayTarget = .display("display-uuid")
         store.islandHoverRevealEnabled = true
+        store.islandClickRevealEnabled = false
+        store.islandHoverDelaySeconds = 0.05
+        store.islandHoverLeaveDelaySeconds = 0.8
         store.islandDragApproachEnabled = true
         store.islandTimerEnabled = false
         store.islandBatteryEnabled = false
@@ -232,9 +259,13 @@ final class SettingsStoreTests: XCTestCase {
         store.islandMediaEnabled = true
 
         let reloaded = SettingsStore(defaults: defaults)
+        XCTAssertFalse(reloaded.menuBarIconEnabled)
         XCTAssertEqual(reloaded.shelfPresentationMode, .island)
         XCTAssertEqual(reloaded.islandDisplayTarget, .display("display-uuid"))
         XCTAssertTrue(reloaded.islandHoverRevealEnabled)
+        XCTAssertFalse(reloaded.islandClickRevealEnabled)
+        XCTAssertEqual(reloaded.islandHoverDelaySeconds, 0.05)
+        XCTAssertEqual(reloaded.islandHoverLeaveDelaySeconds, 0.8)
         XCTAssertTrue(reloaded.islandDragApproachEnabled)
         XCTAssertFalse(reloaded.islandTimerEnabled)
         XCTAssertFalse(reloaded.islandBatteryEnabled)
@@ -271,13 +302,13 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertTrue(reloaded.islandEnabled)
         XCTAssertTrue(reloaded.islandShelfEnabled)
         XCTAssertEqual(reloaded.preferredShelfSurface, .island)
-        XCTAssertEqual(reloaded.effectivePreferredShelfSurface, .classic)
+        XCTAssertEqual(reloaded.effectivePreferredShelfSurface, .island)
 
         reloaded.islandShelfEnabled = false
         XCTAssertTrue(reloaded.classicShelfEnabled)
         XCTAssertTrue(reloaded.islandEnabled)
         XCTAssertEqual(reloaded.preferredShelfSurface, .island)
-        XCTAssertEqual(reloaded.effectivePreferredShelfSurface, .classic)
+        XCTAssertNil(reloaded.effectivePreferredShelfSurface)
     }
 
     func testLegacyIslandModeMigratesToIndependentSurfaceSettings() throws {
@@ -307,7 +338,8 @@ final class SettingsStoreTests: XCTestCase {
         let store = SettingsStore(defaults: defaults)
 
         XCTAssertTrue(store.classicShelfEnabled)
-        XCTAssertFalse(store.islandEnabled)
+        XCTAssertTrue(store.islandEnabled)
+        XCTAssertTrue(store.islandShelfEnabled)
         XCTAssertEqual(store.preferredShelfSurface, .classic)
     }
 
@@ -320,10 +352,10 @@ final class SettingsStoreTests: XCTestCase {
         store.islandEnabled = true
         store.islandShelfEnabled = true
         store.preferredShelfSurface = .island
-        XCTAssertEqual(store.effectivePreferredShelfSurface, .classic)
+        XCTAssertEqual(store.effectivePreferredShelfSurface, .island)
 
         store.islandEnabled = false
-        XCTAssertEqual(store.effectivePreferredShelfSurface, .classic)
+        XCTAssertNil(store.effectivePreferredShelfSurface)
         XCTAssertEqual(store.preferredShelfSurface, .island)
 
         store.classicShelfEnabled = false

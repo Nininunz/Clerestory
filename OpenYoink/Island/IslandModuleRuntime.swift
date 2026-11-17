@@ -15,6 +15,8 @@ protocol IslandModuleRuntime: AnyObject {
 /// Island view only asks the container for content and never switches on IDs.
 struct IslandModuleViewContext {
     var onPerformRecovery: ((RecoveryAction) -> Void)?
+    var onOpenModule: (IslandModuleID) -> Void = { _ in }
+    var onOpenSettings: () -> Void = {}
 }
 
 struct IslandModuleRegistration: Identifiable {
@@ -214,7 +216,7 @@ final class IslandModuleContainer {
 
     func apply(configuration: IslandModuleConfiguration, isActive: Bool) {
         let desired = isActive
-            ? Set(configuration.enabledModuleIDs).intersection(registeredModuleIDs)
+            ? Set(configuration.enabledModuleIDs).union([.quickSettings]).intersection(registeredModuleIDs)
             : []
         for registration in registrations {
             if desired.contains(registration.id) {

@@ -8,6 +8,23 @@ import XCTest
 /// 行 1：indices 3/4，  x = 0/112，    y 76...140
 final class DropInsertionLocatorTests: XCTestCase {
     @MainActor
+    func testApproachZoneExitDoesNotClearExpandedDestinationHighlight() {
+        let state = DropTargetState()
+        let approach = UUID()
+        let expanded = UUID()
+        state.target(destination: approach)
+        state.target(destination: expanded)
+        state.leave(destination: approach)
+        XCTAssertTrue(state.isTargeted)
+        state.leave(destination: expanded)
+        XCTAssertFalse(state.isTargeted)
+        state.target(destination: expanded)
+        XCTAssertTrue(state.isTargeted)
+        state.reset()
+        XCTAssertFalse(state.isTargeted)
+    }
+
+    @MainActor
     func testOutgoingGridCannotRemoveReplacementCellsGeometry() {
         let geometry = ShelfGridGeometry()
         let itemID = UUID()

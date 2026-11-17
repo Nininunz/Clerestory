@@ -24,35 +24,60 @@ struct ClipboardHistoryView: View {
         isIsland ? IslandVisualStyle.secondaryText : .secondary
     }
 
+    private var headerSubtitle: String {
+        if !settings.clipboardHistoryEnabled { return String(localized: "Recording off") }
+        return settings.clipboardHistoryPaused
+            ? String(localized: "Paused")
+            : String(localized: "Recording")
+    }
+
+    @ViewBuilder
+    private var headerActions: some View {
+        if isIsland {
+            headerButtons.buttonStyle(IslandHeaderButtonStyle())
+        } else {
+            headerButtons.buttonStyle(.borderless)
+        }
+    }
+
+    private var headerButtons: some View {
+        Group {
+            if settings.clipboardHistoryEnabled {
+                Button {
+                    settings.clipboardHistoryPaused.toggle()
+                    history.updateRecording()
+                } label: {
+                    Image(systemName: settings.clipboardHistoryPaused ? "play.fill" : "pause.fill")
+                        .frame(width: isIsland ? nil : 26, height: isIsland ? nil : 26)
+                }
+                .help(settings.clipboardHistoryPaused ? Text("Resume Recording") : Text("Pause Recording"))
+                .accessibilityLabel(settings.clipboardHistoryPaused ? Text("Resume Recording") : Text("Pause Recording"))
+            }
+            Button { confirmsClear = true } label: {
+                Image(systemName: "trash").frame(width: isIsland ? nil : 26, height: isIsland ? nil : 26)
+            }
+            .disabled(history.entries.isEmpty && history.errorMessage == nil)
+            .help(Text("Clear Clipboard History…"))
+            .accessibilityLabel("Clear Clipboard History…")
+        }
+    }
+
     var body: some View {
         @Bindable var settings = settings
-        VStack(spacing: 10) {
-            HStack(spacing: 8) {
+        VStack(spacing: IslandModuleLayout.headerSpacing) {
+            Group {
                 if isIsland {
-                    IslandModuleHeader(title: "Clipboard History", subtitle: nil, systemImage: "doc.on.clipboard")
-                } else {
-                    Label("Clipboard History", systemImage: "doc.on.clipboard").font(.headline)
-                }
-                Spacer(minLength: 4)
-                if settings.clipboardHistoryEnabled {
-                    Button {
-                        settings.clipboardHistoryPaused.toggle()
-                        history.updateRecording()
-                    } label: {
-                        Image(systemName: settings.clipboardHistoryPaused ? "play.fill" : "pause.fill")
-                            .frame(width: 26, height: 26)
+                    IslandModuleHeader(title: "Clipboard History", subtitle: headerSubtitle, systemImage: "doc.on.clipboard") {
+                        headerActions
                     }
-                    .help(settings.clipboardHistoryPaused ? Text("Resume Recording") : Text("Pause Recording"))
-                    .accessibilityLabel(settings.clipboardHistoryPaused ? Text("Resume Recording") : Text("Pause Recording"))
+                } else {
+                    HStack(spacing: 8) {
+                        Label("Clipboard History", systemImage: "doc.on.clipboard").font(.headline)
+                        Spacer(minLength: 4)
+                        headerActions
+                    }
                 }
-                Button { confirmsClear = true } label: {
-                    Image(systemName: "trash").frame(width: 26, height: 26)
-                }
-                .disabled(history.entries.isEmpty && history.errorMessage == nil)
-                .help(Text("Clear Clipboard History…"))
-                .accessibilityLabel("Clear Clipboard History…")
             }
-            .buttonStyle(.borderless)
 
             HStack {
                 if isIsland {
@@ -69,12 +94,14 @@ struct ClipboardHistoryView: View {
             }
             .onChange(of: settings.clipboardHistoryEnabled) { _, _ in history.updateRecording() }
 
-            if let error = history.errorMessage {
-                Text(error).font(.caption).foregroundStyle(.orange)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else if let notice = history.noticeMessage {
-                Text(notice).font(.caption).foregroundStyle(secondaryForeground)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            if let message = history.errorMessage ?? history.noticeMessage {
+                if isIsland {
+                    IslandModuleNotice(message: message, isError: history.errorMessage != nil)
+                } else {
+                    Text(message).font(.caption)
+                        .foregroundStyle(history.errorMessage != nil ? Color.orange : secondaryForeground)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
 
             HStack(spacing: 6) {
@@ -100,14 +127,30 @@ struct ClipboardHistoryView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             if history.isLoading {
-                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if history.filteredEntries(query: query, filter: filter).isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "doc.on.clipboard").font(.title2).foregroundStyle(secondaryForeground)
-                    Text(query.isEmpty ? String(localized: "No Clipboard History") : String(localized: "No Results"))
-                        .font(.callout).foregroundStyle(secondaryForeground)
+                if isIsland {
+                    IslandModuleScrollView(fillsViewport: true) {
+                        IslandLoadingState(title: "Loading clipboard history…")
+                    }
+                } else {
+                    ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if history.filteredEntries(query: query, filter: filter).isEmpty {
+                if isIsland {
+                    IslandModuleScrollView(fillsViewport: true) {
+                        IslandEmptyState(
+                            title: query.isEmpty ? "No Clipboard History" : "No Results",
+                            message: query.isEmpty ? "Copied items appear here when recording is enabled." : "Try a different search or filter.",
+                            systemImage: "doc.on.clipboard"
+                        )
+                    }
+                } else {
+                    VStack(spacing: 8) {
+                        Image(systemName: "doc.on.clipboard").font(.title2).foregroundStyle(secondaryForeground)
+                        Text(query.isEmpty ? String(localized: "No Clipboard History") : String(localized: "No Results"))
+                            .font(.callout).foregroundStyle(secondaryForeground)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
@@ -119,6 +162,7 @@ struct ClipboardHistoryView: View {
                     }
                 }
                 .scrollIndicators(.automatic)
+                .scrollBounceBehavior(.basedOnSize)
             }
 
             HStack {
@@ -239,3 +283,14 @@ private struct ClipboardHistoryRow: View {
         return NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))
     }
 }
+
+#if DEBUG
+// Isolated, non-running fixtures for the module preview catalog. Never used by app startup.
+extension ClipboardHistoryView {
+    static func preview(query: String) -> ClipboardHistoryView {
+        var view = ClipboardHistoryView(isIsland: true)
+        view._query = State(initialValue: query)
+        return view
+    }
+}
+#endif

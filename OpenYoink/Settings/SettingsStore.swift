@@ -1,6 +1,12 @@
 import Foundation
 import OpenYoinkModuleCore
 
+/// Side Shelf is parked until its next implementation. Keep its code and
+/// persisted preferences, but expose only the Island in the current app.
+enum SideShelfAvailability {
+    static let isEnabled = false
+}
+
 /// UserDefaults-backed app settings, observable by SwiftUI.
 ///
 /// All keys are prefixed with `OpenYoink.` to avoid collisions. Defaults are
@@ -112,6 +118,9 @@ final class SettingsStore {
         var option: Bool
         var control: Bool
 
+        /// Control–Option–Space cycles the compact Island independently.
+        static let compactCycle = HotKeyShortcut(keyCode: 49, command: false, shift: false, option: true, control: true)
+
         /// ⌘⇧Space
         static let `default` = HotKeyShortcut(
             keyCode: 49, command: true, shift: true, option: false, control: false
@@ -157,6 +166,74 @@ final class SettingsStore {
         }
     }
 
+    var compactModuleOrder: [IslandModuleID] = IslandCompactDisplay.cycleOrder {
+        didSet {
+            let normalized = compactModuleOrder.reduce(into: [IslandModuleID]()) { result, id in
+                if IslandCompactDisplay.cycleOrder.contains(id), !result.contains(id) { result.append(id) }
+            }
+            if normalized != compactModuleOrder { compactModuleOrder = normalized }
+            defaults.set(normalized.map(\.rawValue), forKey: Keys.compactModuleOrder)
+        }
+    }
+
+    var effectiveCompactModuleOrder: [IslandModuleID] {
+        compactModuleOrder.filter { isIslandModuleAvailable($0) && isIslandModuleEnabled($0) }
+    }
+
+    var compactDisplay: IslandCompactDisplay {
+        IslandCompactDisplay.selected(compactModuleID, enabled: effectiveCompactModuleOrder,
+                                      order: effectiveCompactModuleOrder)
+    }
+
+    func setCompactModuleIncluded(_ included: Bool, id: IslandModuleID) {
+        if included {
+            if !compactModuleOrder.contains(id) { compactModuleOrder.append(id) }
+        } else {
+            compactModuleOrder.removeAll { $0 == id }
+        }
+    }
+
+    func moveCompactModule(_ id: IslandModuleID, to target: IslandModuleID) {
+        guard let source = compactModuleOrder.firstIndex(of: id),
+              let destination = compactModuleOrder.firstIndex(of: target), source != destination else { return }
+        compactModuleOrder.remove(at: source)
+        compactModuleOrder.insert(id, at: destination)
+    }
+
+    var compactModuleID: IslandModuleID = .shelf {
+        didSet { defaults.set(compactModuleID.rawValue, forKey: Keys.compactModuleID) }
+    }
+    var compactCycleShortcut: HotKeyShortcut? = .compactCycle {
+        didSet {
+            if let data = try? JSONEncoder().encode(compactCycleShortcut) {
+                defaults.set(data, forKey: Keys.compactCycleShortcut)
+            }
+        }
+    }
+    var compactCycleShortcutError: String?
+    private(set) var compactCycleBackwards = false
+
+    var compactReverseCycleShortcut: HotKeyShortcut? {
+        guard var shortcut = compactCycleShortcut else { return nil }
+        shortcut.shift.toggle()
+        return shortcut
+    }
+
+    var compactCycleShortcutConflicts: Bool {
+        guard let shortcut = compactCycleShortcut else { return false }
+        return [shortcut, compactReverseCycleShortcut].compactMap { $0 }.contains {
+            (hotKeyEnabled && $0 == hotKeyShortcut) || (experimentalModulesEnabled && $0 == clipboardHistoryShortcut)
+        }
+    }
+
+    func cycleCompactModule(backwards: Bool = false) {
+        if let next = IslandCompactDisplay.next(after: compactModuleID,
+                enabled: effectiveCompactModuleOrder, backwards: backwards, order: effectiveCompactModuleOrder) {
+            compactCycleBackwards = backwards
+            compactModuleID = next
+        }
+    }
+
     /// Edge the shelf attaches to. Default: right.
     var shelfPosition: ShelfPosition {
         didSet { defaults.set(shelfPosition.rawValue, forKey: Keys.shelfPosition) }
@@ -171,6 +248,10 @@ final class SettingsStore {
 
     var islandEnabled: Bool {
         didSet { defaults.set(islandEnabled, forKey: Keys.islandEnabled) }
+    }
+
+    var menuBarIconEnabled: Bool {
+        didSet { defaults.set(menuBarIconEnabled, forKey: Keys.menuBarIconEnabled) }
     }
 
     var islandDisplayTarget: IslandDisplayTarget {
@@ -205,7 +286,7 @@ final class SettingsStore {
         // whenever that surface is enabled. Island remains independently
         // clickable and drag-addressable; it is only the shortcut fallback
         // when the side shelf is disabled.
-        if classicShelfEnabled { return .classic }
+        if SideShelfAvailability.isEnabled && classicShelfEnabled { return .classic }
         if islandShelfAvailable { return .island }
         return nil
     }
@@ -268,15 +349,28 @@ final class SettingsStore {
         }
     }
 
-    /// Optional hover reveal. Click, drag approach and the global shortcut are
-    /// always available, so disabling hover never makes Island unreachable.
+    /// Hover and click reveal are independent. The menu, drag approach and
+    /// global shortcut can still open Island when either is disabled.
     var islandHoverRevealEnabled: Bool {
         didSet { defaults.set(islandHoverRevealEnabled, forKey: Keys.islandHoverRevealEnabled) }
     }
 
-    /// Expands the Island Shelf when a drag approaches the top-center target.
-    /// Off by default so browser tab rearrangement near the menu bar remains
-    /// unobstructed; the side shelf keeps its independent edge-drag behavior.
+    var islandClickRevealEnabled: Bool {
+        didSet { defaults.set(islandClickRevealEnabled, forKey: Keys.islandClickRevealEnabled) }
+    }
+
+    /// Time the pointer must stay over the compact Island before previewing it.
+    var islandHoverDelaySeconds: Double {
+        didSet { defaults.set(islandHoverDelaySeconds, forKey: Keys.islandHoverDelaySeconds) }
+    }
+
+    /// Grace period before a hover preview closes after the pointer leaves.
+    var islandHoverLeaveDelaySeconds: Double {
+        didSet { defaults.set(islandHoverLeaveDelaySeconds, forKey: Keys.islandHoverLeaveDelaySeconds) }
+    }
+
+    /// Expands the Island Shelf when a file or text drag approaches the top center.
+    /// Independent of pointer hover and Side Shelf drag preferences.
     var islandDragApproachEnabled: Bool {
         didSet {
             defaults.set(islandDragApproachEnabled,
@@ -338,9 +432,53 @@ final class SettingsStore {
         }
     }
 
-    /// Versioned primary configuration for Island module enablement and the
-    /// five user-controlled pinned positions. The v1.5 booleans remain shadow
-    /// keys for one release so downgrading does not discard user choices.
+    /// Opt-in availability for modules beyond Shelf and Quick Settings.
+    var experimentalModulesEnabled = false {
+        didSet { defaults.set(experimentalModulesEnabled, forKey: Keys.experimentalModulesEnabled) }
+    }
+
+    func isIslandModuleAvailable(_ id: IslandModuleID) -> Bool {
+        id == .shelf || id == .quickSettings || experimentalModulesEnabled
+    }
+
+    /// Apply feature availability without rewriting the user's saved module choices.
+    var effectiveIslandModuleConfiguration: IslandModuleConfiguration {
+        effectiveIslandShortcuts(hasPhysicalNotch: true)
+    }
+
+    private var notchlessShortcutPositions: [IslandModuleID?]? {
+        didSet {
+            if let data = try? JSONEncoder().encode(notchlessShortcutPositions) {
+                defaults.set(data, forKey: Keys.notchlessShortcutPositions)
+            }
+        }
+    }
+
+    func islandShortcuts(hasPhysicalNotch: Bool) -> IslandModuleConfiguration {
+        guard !hasPhysicalNotch else { return islandModuleConfiguration }
+        let positions = notchlessShortcutPositions ?? [.shelf, .quickSettings]
+        var configuration = IslandModuleConfiguration(
+            enabledModuleIDs: islandModuleConfiguration.enabledModuleIDs, pinnedModuleIDs: [])
+        configuration.assignShortcut(.quickSettings, at: positions.firstIndex(of: .quickSettings) ?? 1)
+        for (index, id) in positions.enumerated() where id != .quickSettings {
+            configuration.assignShortcut(id, at: index)
+        }
+        return configuration
+    }
+
+    func effectiveIslandShortcuts(hasPhysicalNotch: Bool) -> IslandModuleConfiguration {
+        var configuration = islandShortcuts(hasPhysicalNotch: hasPhysicalNotch)
+        guard !experimentalModulesEnabled else { return configuration }
+        for (index, id) in configuration.shortcutPositions.enumerated() {
+            if let id, !isIslandModuleAvailable(id) { configuration.assignShortcut(nil, at: index) }
+        }
+        for id in configuration.enabledModuleIDs where !isIslandModuleAvailable(id) {
+            configuration.setEnabled(false, for: id)
+        }
+        return configuration
+    }
+
+    /// Saved enablement and shortcut positions, independent of feature availability.
     var islandModuleConfiguration: IslandModuleConfiguration {
         didSet {
             persistIslandModuleConfiguration()
@@ -372,10 +510,41 @@ final class SettingsStore {
         islandModuleConfiguration = configuration
     }
 
-    func setIslandModulePinned(_ pinned: Bool, id: IslandModuleID) {
-        var configuration = islandModuleConfiguration
+    func setIslandModulePinned(_ pinned: Bool, id: IslandModuleID, hasPhysicalNotch: Bool = true) {
+        var configuration = islandShortcuts(hasPhysicalNotch: hasPhysicalNotch)
         configuration.setPinned(pinned, for: id)
-        islandModuleConfiguration = configuration
+        if hasPhysicalNotch {
+            islandModuleConfiguration = configuration
+        } else {
+            if pinned { setIslandModuleEnabled(true, id: id) }
+            notchlessShortcutPositions = configuration.shortcutPositions
+        }
+    }
+
+    func assignIslandShortcut(_ id: IslandModuleID?, at index: Int, hasPhysicalNotch: Bool = true) {
+        var configuration = islandShortcuts(hasPhysicalNotch: hasPhysicalNotch)
+        configuration.assignShortcut(id, at: index)
+        if hasPhysicalNotch {
+            islandModuleConfiguration = configuration
+        } else {
+            notchlessShortcutPositions = configuration.shortcutPositions
+        }
+    }
+
+    func restoreDefaultIslandShortcuts(hasPhysicalNotch: Bool = true) {
+        guard hasPhysicalNotch else {
+            notchlessShortcutPositions = nil
+            return
+        }
+        islandModuleConfiguration = Self.defaultIslandShortcuts(
+            enabled: islandModuleConfiguration.enabledModuleIDs)
+    }
+
+    private static func defaultIslandShortcuts(enabled: [IslandModuleID]) -> IslandModuleConfiguration {
+        var configuration = IslandModuleConfiguration(enabledModuleIDs: enabled, pinnedModuleIDs: [])
+        configuration.assignShortcut(.shelf, at: IslandModuleConfiguration.shortcutSlotsPerSide - 1)
+        configuration.assignShortcut(.quickSettings, at: IslandModuleConfiguration.shortcutSlotsPerSide)
+        return configuration
     }
 
     func movePinnedIslandModules(fromOffsets: IndexSet, toOffset: Int) {
@@ -604,15 +773,22 @@ final class SettingsStore {
         static let clipboardHistoryPaused = prefix + "clipboardHistoryPaused"
         static let clipboardHistoryRetentionDays = prefix + "clipboardHistoryRetentionDays"
         static let clipboardHistoryEntryLimit = prefix + "clipboardHistoryEntryLimit"
+        static let compactModuleOrder = prefix + "compactModuleOrder"
+        static let compactModuleID = prefix + "compactModuleID"
+        static let compactCycleShortcut = prefix + "compactCycleShortcut"
         static let clipboardHistoryShortcut = prefix + "clipboardHistoryShortcut"
         static let shelfPresentationMode = prefix + "shelfPresentationMode"
         static let shelfSurfaceSettingsVersion = prefix + "shelfSurfaceSettingsVersion"
         static let classicShelfEnabled = prefix + "classicShelfEnabled"
         static let islandEnabled = prefix + "islandEnabled"
+        static let menuBarIconEnabled = prefix + "menuBarIconEnabled"
         static let islandDisplayTarget = prefix + "islandDisplayTarget"
         static let islandShelfEnabled = prefix + "islandShelfEnabled"
         static let preferredShelfSurface = prefix + "preferredShelfSurface"
         static let islandHoverRevealEnabled = prefix + "islandHoverRevealEnabled"
+        static let islandClickRevealEnabled = prefix + "islandClickRevealEnabled"
+        static let islandHoverDelaySeconds = prefix + "islandHoverDelaySeconds"
+        static let islandHoverLeaveDelaySeconds = prefix + "islandHoverLeaveDelaySeconds"
         static let islandDragApproachEnabled = prefix + "islandDragApproachEnabled"
         static let islandTimerEnabled = prefix + "islandTimerEnabled"
         static let islandBatteryEnabled = prefix + "islandBatteryEnabled"
@@ -622,6 +798,8 @@ final class SettingsStore {
         static let islandFloatingIdleStyle = prefix + "islandFloatingIdleStyle"
         static let aiUsageLimitAlertsEnabled = prefix + "aiUsageLimitAlertsEnabled"
         static let aiUsageServerPort = prefix + "aiUsageServerPort"
+        static let experimentalModulesEnabled = prefix + "experimentalModulesEnabled"
+        static let notchlessShortcutPositions = prefix + "notchlessShortcutPositions"
         static let islandModuleConfiguration = prefix + "islandModuleConfiguration"
         static let islandModuleConfigurationCorruptBackup =
             prefix + "islandModuleConfigurationCorruptBackup"
@@ -704,11 +882,15 @@ final class SettingsStore {
             Keys.shelfPresentationMode: ShelfPresentationMode.classic.rawValue,
             Keys.classicShelfEnabled: true,
             Keys.islandEnabled: true,
+            Keys.menuBarIconEnabled: true,
             Keys.islandDisplayTarget: IslandDisplayTarget.main.persistedValue,
             Keys.islandShelfEnabled: true,
             Keys.preferredShelfSurface: PreferredShelfSurface.island.rawValue,
             Keys.islandHoverRevealEnabled: false,
-            Keys.islandDragApproachEnabled: false,
+            Keys.islandClickRevealEnabled: true,
+            Keys.islandHoverDelaySeconds: 0.15,
+            Keys.islandHoverLeaveDelaySeconds: 0.25,
+            Keys.islandDragApproachEnabled: true,
             Keys.islandTimerEnabled: true,
             Keys.islandBatteryEnabled: true,
             Keys.islandFullChargeAlertEnabled: false,
@@ -737,6 +919,10 @@ final class SettingsStore {
             Keys.ignoredAppBundleIDs: [String](),
         ])
 
+        experimentalModulesEnabled = defaults.bool(forKey: Keys.experimentalModulesEnabled)
+        if let data = defaults.data(forKey: Keys.notchlessShortcutPositions) {
+            notchlessShortcutPositions = try? JSONDecoder().decode([IslandModuleID?].self, from: data)
+        }
         clipboardHistoryEnabled = defaults.bool(forKey: Keys.clipboardHistoryEnabled)
         clipboardHistoryPaused = defaults.bool(forKey: Keys.clipboardHistoryPaused)
         let retentionDays = defaults.integer(forKey: Keys.clipboardHistoryRetentionDays)
@@ -747,6 +933,15 @@ final class SettingsStore {
             clipboardHistoryShortcut = (try? JSONDecoder().decode(HotKeyShortcut?.self, from: data)) ?? nil
         } else {
             clipboardHistoryShortcut = HotKeyShortcut(keyCode: 9, command: true, shift: true, option: false, control: false)
+        }
+        if let savedOrder = defaults.stringArray(forKey: Keys.compactModuleOrder) {
+            compactModuleOrder = savedOrder.map(IslandModuleID.init(rawValue:)).reduce(into: []) { result, id in
+                if IslandCompactDisplay.cycleOrder.contains(id), !result.contains(id) { result.append(id) }
+            }
+        }
+        compactModuleID = defaults.string(forKey: Keys.compactModuleID).map(IslandModuleID.init(rawValue:)) ?? .shelf
+        if let data = defaults.data(forKey: Keys.compactCycleShortcut) {
+            compactCycleShortcut = (try? JSONDecoder().decode(HotKeyShortcut?.self, from: data)) ?? nil
         }
         shelfPosition = ShelfPosition(rawValue: defaults.string(forKey: Keys.shelfPosition) ?? "")
             ?? .right
@@ -794,12 +989,21 @@ final class SettingsStore {
             ) ?? .classic
         }
         classicShelfEnabled = resolvedClassicShelfEnabled
-        islandEnabled = resolvedIslandEnabled
+        // Keep legacy Side Shelf preferences for a future implementation,
+        // while ensuring classic-only users still have a visible surface.
+        let activateIsland = !SideShelfAvailability.isEnabled && hadPersistedOnboardingVersion
+            && resolvedClassicShelfEnabled && !resolvedIslandEnabled
+        islandEnabled = resolvedIslandEnabled || activateIsland
+        menuBarIconEnabled = defaults.bool(forKey: Keys.menuBarIconEnabled)
         islandDisplayTarget = IslandDisplayTarget(
             persistedValue: defaults.string(forKey: Keys.islandDisplayTarget)
         )
-        islandShelfEnabled = resolvedIslandShelfEnabled
+        islandShelfEnabled = resolvedIslandShelfEnabled || activateIsland
         preferredShelfSurface = resolvedPreferredSurface
+        if activateIsland {
+            defaults.set(true, forKey: Keys.islandEnabled)
+            defaults.set(true, forKey: Keys.islandShelfEnabled)
+        }
         if needsSurfaceMigration {
             defaults.set(resolvedClassicShelfEnabled, forKey: Keys.classicShelfEnabled)
             defaults.set(resolvedIslandEnabled, forKey: Keys.islandEnabled)
@@ -823,6 +1027,9 @@ final class SettingsStore {
         )
         let resolvedIslandMediaEnabled = defaults.bool(forKey: Keys.islandMediaEnabled)
         islandHoverRevealEnabled = resolvedIslandHoverRevealEnabled
+        islandClickRevealEnabled = defaults.bool(forKey: Keys.islandClickRevealEnabled)
+        islandHoverDelaySeconds = min(max(defaults.double(forKey: Keys.islandHoverDelaySeconds), 0), 0.5)
+        islandHoverLeaveDelaySeconds = min(max(defaults.double(forKey: Keys.islandHoverLeaveDelaySeconds), 0), 1)
         islandDragApproachEnabled = resolvedIslandDragApproachEnabled
         islandTimerEnabled = resolvedIslandTimerEnabled
         islandBatteryEnabled = resolvedIslandBatteryEnabled
@@ -944,10 +1151,7 @@ final class SettingsStore {
         mediaEnabled: Bool
     ) -> IslandModuleConfiguration {
         if !existingInstallation {
-            return IslandModuleConfiguration(
-                enabledModuleIDs: [.shelf, .transfers, .timer, .battery, .system],
-                pinnedModuleIDs: [.shelf, .timer, .system]
-            )
+            return defaultIslandShortcuts(enabled: [.shelf, .transfers, .timer, .battery, .system])
         }
 
         var enabled: [IslandModuleID] = []

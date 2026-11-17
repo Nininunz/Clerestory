@@ -8,23 +8,38 @@ import UniformTypeIdentifiers
 @Observable
 final class SettingsNavigationModel {
     var selectedPane: SettingsPane = .general
+    var moduleSettingsDestination: ModuleSettingsDestination?
+
+    func open(_ pane: SettingsPane) {
+        switch pane {
+        case .shelf:
+            selectedPane = .modules
+            moduleSettingsDestination = .shelf
+        case .clipboard:
+            selectedPane = .modules
+            moduleSettingsDestination = .clipboard
+        default:
+            selectedPane = SettingsPane.visibleCases.contains(pane) ? pane : .general
+            moduleSettingsDestination = nil
+        }
+    }
 
     /// Tab focus can move independently of selection in the button sidebar.
     /// Arrow navigation continues from that focused button, not the old pane.
     @discardableResult
     func moveSidebarSelection(forward: Bool, focusedPane: SettingsPane?) -> SettingsPane? {
         let currentPane = focusedPane ?? selectedPane
-        guard let current = SettingsPane.allCases.firstIndex(of: currentPane) else { return nil }
+        guard let current = SettingsPane.visibleCases.firstIndex(of: currentPane) else { return nil }
         let next = current + (forward ? 1 : -1)
-        guard SettingsPane.allCases.indices.contains(next) else { return nil }
-        let pane = SettingsPane.allCases[next]
-        selectedPane = pane
+        guard SettingsPane.visibleCases.indices.contains(next) else { return nil }
+        let pane = SettingsPane.visibleCases[next]
+        open(pane)
         return pane
     }
 }
 
 /// Settings window (S8): sidebar buttons with native scrolling forms. The
-/// sidebar keeps all six destinations readable in Chinese and at larger text
+/// sidebar keeps destinations readable in Chinese and at larger text
 /// sizes without crowding the title bar. All user-visible strings are
 /// LocalizedStringKey literals,
 /// resolved through Localizable.xcstrings (S10); runtime-computed fallbacks
@@ -57,9 +72,9 @@ struct SettingsView: View {
     private var settingsContent: some View {
         HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
-                ForEach(SettingsPane.allCases) { pane in
+                ForEach(SettingsPane.visibleCases) { pane in
                     Button {
-                        navigation.selectedPane = pane
+                        navigation.open(pane)
                     } label: {
                         Label(pane.title, systemImage: pane.systemImage)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -69,12 +84,16 @@ struct SettingsView: View {
                                 if navigation.selectedPane == pane {
                                     RoundedRectangle(cornerRadius: 6)
                                         .fill(Color.accentColor.opacity(0.18))
+                                } else if focusedPane == pane {
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(Color.primary.opacity(0.06))
                                 }
                             }
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .focusable()
+                    .focusEffectDisabled()
                     .focused($focusedPane, equals: pane)
                     .accessibilityAddTraits(navigation.selectedPane == pane ? .isSelected : [])
                     .accessibilityIdentifier("settings.pane.\(pane.rawValue)")
@@ -107,14 +126,30 @@ struct SettingsView: View {
         switch pane {
         case .general:
             GeneralSettingsTab()
+        case .shelf:
+            ShelfSettingsTab()
+        case .modules:
+            ModulesSettingsTab()
+        case .clipboard:
+            ClipboardSettingsTab()
         case .appearance:
-            AppearanceSettingsTab()
+            if SideShelfAvailability.isEnabled {
+                AppearanceSettingsTab()
+            } else {
+                GeneralSettingsTab()
+            }
         case .triggers:
             TriggerSettingsTab()
         case .ignoredApps:
             IgnoredAppsSettingsTab()
         case .storage:
             StorageSettingsTab()
+        case .debug:
+            #if DEBUG
+            DebugSettingsTab()
+            #else
+            GeneralSettingsTab()
+            #endif
         case .about:
             AboutSettingsTab()
         }
@@ -123,21 +158,37 @@ struct SettingsView: View {
 
 enum SettingsPane: String, CaseIterable, Identifiable {
     case general
+    case shelf
+    case modules
+    case clipboard
     case appearance
     case triggers
     case ignoredApps
     case storage
+    case debug
     case about
+
+    static var visibleCases: [SettingsPane] {
+        #if DEBUG
+        allCases.filter { $0 != .shelf && $0 != .clipboard && (SideShelfAvailability.isEnabled || $0 != .appearance) }
+        #else
+        allCases.filter { $0 != .shelf && $0 != .clipboard && (SideShelfAvailability.isEnabled || $0 != .appearance) && $0 != .debug }
+        #endif
+    }
 
     var id: Self { self }
 
     var title: LocalizedStringKey {
         switch self {
         case .general: "General"
+        case .shelf: "Shelf"
+        case .modules: "Modules"
+        case .clipboard: "Clipboard"
         case .appearance: "Appearance"
         case .triggers: "Triggers"
         case .ignoredApps: "Ignored Apps"
         case .storage: "Storage"
+        case .debug: "Debug"
         case .about: "About"
         }
     }
@@ -145,10 +196,14 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     var systemImage: String {
         switch self {
         case .general: "gear"
+        case .shelf: "tray"
+        case .modules: "square.grid.2x2"
+        case .clipboard: "doc.on.clipboard"
         case .appearance: "paintpalette"
         case .triggers: "keyboard"
         case .ignoredApps: "hand.raised"
         case .storage: "externaldrive"
+        case .debug: "ladybug"
         case .about: "info.circle"
         }
     }
@@ -332,21 +387,79 @@ private struct TriggerSettingsTab: View {
     var body: some View {
         @Bindable var settings = settings
         SettingsForm {
+            if SideShelfAvailability.isEnabled {
             Section("Side Shelf Reveal") {
                 Toggle("Preview side shelf on hover", isOn: $settings.classicShelfHoverRevealEnabled)
                     .disabled(!settings.classicShelfEnabled)
                 Text("Drag the edge tab to reposition it. File drag reveal is configured below.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            }
             Section("Island Reveal") {
-                Toggle("Expand Island on hover", isOn: $settings.islandHoverRevealEnabled)
-                    .disabled(!settings.islandEnabled)
-                Toggle("Expand Island when dragging files near the top", isOn: $settings.islandDragApproachEnabled)
+                if FloatingIslandAvailability.isEnabled {
+                    Text("Hover at the top center of the screen to open Island.")
+                        .font(.caption).foregroundStyle(.secondary)
+                } else {
+                    Toggle("Preview Island on hover", isOn: $settings.islandHoverRevealEnabled)
+                        .disabled(!settings.islandEnabled)
+                }
+                Toggle("Click compact Island to expand", isOn: $settings.islandClickRevealEnabled)
+                    .disabled(!settings.islandEnabled || FloatingIslandAvailability.isEnabled)
+                if FloatingIslandAvailability.isEnabled {
+                    Text("Not used in notchless mode, which has no compact Island.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                LabeledContent("Hover delay") {
+                    Slider(value: $settings.islandHoverDelaySeconds, in: 0...0.5, step: 0.05)
+                        .frame(width: 180)
+                        .accessibilityIdentifier("settings.islandHoverDelay")
+                    Text("\(Int((settings.islandHoverDelaySeconds * 1_000).rounded())) ms")
+                        .monospacedDigit()
+                        .frame(width: 54, alignment: .trailing)
+                }
+                .disabled(!settings.islandEnabled
+                          || (!settings.islandHoverRevealEnabled && !FloatingIslandAvailability.isEnabled))
+                LabeledContent("Leave delay") {
+                    Slider(value: $settings.islandHoverLeaveDelaySeconds, in: 0...1, step: 0.05)
+                        .frame(width: 180)
+                        .accessibilityIdentifier("settings.islandHoverLeaveDelay")
+                    Text("\(Int((settings.islandHoverLeaveDelaySeconds * 1_000).rounded())) ms")
+                        .monospacedDigit()
+                        .frame(width: 54, alignment: .trailing)
+                }
+                .disabled(!settings.islandEnabled
+                          || (!settings.islandHoverRevealEnabled && !FloatingIslandAvailability.isEnabled))
+                Text("The preview closes after you move away. Pin Island to keep it open.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Toggle("Expand Island when dragging files or text near the top", isOn: $settings.islandDragApproachEnabled)
                     .disabled(!settings.islandEnabled)
                     .accessibilityIdentifier("settings.islandDragApproach")
-                Text("Top drag reveal is off by default to keep browser tabs unobstructed. Clicking Island always works.")
+                Text("This file-drag trigger works independently of Preview Island on hover.")
                     .font(.caption).foregroundStyle(.secondary)
+                if FloatingIslandAvailability.isEnabled {
+                    Text("File and text drags can also open Island from the top approach area.")
+                        .font(.caption).foregroundStyle(.secondary)
+                } else {
+                    Text("Dropping files on the compact Island always expands it. The wider top approach area is optional.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
+            Section("Compact Island") {
+                LabeledContent("Cycle Modules") {
+                    HStack(spacing: 8) {
+                        ShortcutRecorderView(shortcut: $settings.compactCycleShortcut)
+                        Button("Restore Default") { settings.compactCycleShortcut = .compactCycle }
+                            .disabled(settings.compactCycleShortcut == .compactCycle)
+                    }
+                }
+                Text("Choose compact modules and their cycling order in the Quick Settings page’s Compact view. Hold Shift with the shortcut to cycle backward (release Shift if it is already part of your shortcut). Your choice is remembered independently of the expanded page. Clear the shortcut to disable both directions.")
+                    .font(.caption).foregroundStyle(.secondary)
+                if let error = settings.compactCycleShortcutError {
+                    Label(error, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption).foregroundStyle(.orange)
+                }
+            }
+
             Section("Global Hot Key") {
                 Toggle("Enable", isOn: $settings.hotKeyEnabled)
 
@@ -377,6 +490,7 @@ private struct TriggerSettingsTab: View {
 
             // UX1/2: 拖拽自动出现（Yoink 核心交互）。三档单控：立即出现 /
             // 拖到贴边唤出 / 无动作。边缘灵敏度沿用旧边缘触发的三档设置。
+            if SideShelfAvailability.isEnabled {
             Section("When Dragging Files") {
                 Picker("When Dragging Files", selection: $settings.dragAutoAppearMode) {
                     Text("Show immediately").tag(SettingsStore.DragAutoAppearMode.immediate)
@@ -401,8 +515,9 @@ private struct TriggerSettingsTab: View {
                     .foregroundStyle(.secondary)
             }
 
+            }
             Section("Mouse Shake") {
-                Toggle("Shake the mouse to show the shelf", isOn: $settings.shakeTriggerEnabled)
+                Toggle("Shake the mouse to show Island", isOn: $settings.shakeTriggerEnabled)
                 Picker("Sensitivity", selection: $settings.shakeSensitivity) {
                     Text("Low").tag(TriggerSensitivity.low)
                     Text("Medium").tag(TriggerSensitivity.medium)

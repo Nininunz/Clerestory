@@ -341,7 +341,7 @@ final class EdgeTabController: NSObject {
                     return true
                 } catch {
                     store.add(item)
-                    importCoordinator.noticeCenter.show(String(localized: "The moved item is being kept for recovery because the shelf could not be saved immediately."))
+                    importCoordinator.noticeCenter.show(.moveAwaitingSave)
                     return false
                 }
             },
@@ -350,7 +350,7 @@ final class EdgeTabController: NSObject {
                     try store.addAndPersistNow(item)
                     return true
                 } catch {
-                    importCoordinator.noticeCenter.show(String(localized: "The received file was kept safely. Open Recovery to finish importing it."))
+                    importCoordinator.noticeCenter.show(.receivedAwaitingRecovery)
                     return false
                 }
             }

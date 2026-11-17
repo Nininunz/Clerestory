@@ -7,12 +7,39 @@ final class ShelfBulkActionsTests: XCTestCase {
     func testEnteringStackEndsTopLevelBulkMode() {
         let child = ShelfItem(kind: .text, displayName: "Child", text: "note")
         let stack = ShelfItem(kind: .stack, displayName: "Stack", children: [child])
-        let interaction = ShelfInteractionState()
+        let interaction = ShelfInteractionState(stacksEnabled: true)
         interaction.isSelecting = true
         interaction.enterStack(stack)
         XCTAssertFalse(interaction.isSelecting)
         XCTAssertEqual(interaction.expandedStackID, stack.id)
         XCTAssertEqual(interaction.focusedItemID, child.id)
+    }
+
+    func testDoneClearsSelectionIncludingItemsHiddenByFilter() {
+        let first = ShelfItem(kind: .text, displayName: "First", text: "one")
+        let second = ShelfItem(kind: .text, displayName: "Second", text: "two")
+        let store = ShelfStore(items: [first, second])
+        let interaction = ShelfInteractionState()
+        interaction.setSelectionMode(true, in: store)
+        XCTAssertTrue(interaction.isSelecting)
+        store.selectAllVisible()
+        store.searchQuery = "First"
+        interaction.setSelectionMode(false, in: store)
+        XCTAssertFalse(interaction.isSelecting)
+        XCTAssertTrue(store.selection.isEmpty)
+        XCTAssertEqual(store.items, [first, second])
+        XCTAssertEqual(store.searchQuery, "First")
+    }
+
+    func testDoneClearsOrdinaryClickSelectionWithoutBulkMode() {
+        let item = ShelfItem(kind: .text, displayName: "Note", text: "note")
+        let store = ShelfStore(items: [item])
+        let interaction = ShelfInteractionState()
+        store.select(item.id)
+        XCTAssertFalse(interaction.isSelecting)
+        interaction.setSelectionMode(false, in: store)
+        XCTAssertTrue(store.selection.isEmpty)
+        XCTAssertEqual(store.items, [item])
     }
 
     private func makeRoot() throws -> URL {

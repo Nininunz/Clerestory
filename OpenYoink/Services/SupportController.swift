@@ -59,13 +59,8 @@ final class SupportController {
         macOS: \(snapshot.operatingSystem)
         Architecture: \(snapshot.architecture)
         Language: \(snapshot.language.rawValue)
-        Shelf position: \(snapshot.shelfPosition.rawValue)
-        Drag auto-appear: \(snapshot.dragAutoAppearMode.rawValue)
-        Edge tab: \(enabled(snapshot.edgeTabEnabled))
         Global shortcut: \(enabled(snapshot.hotKeyEnabled))
         Mouse shake: \(enabled(snapshot.shakeTriggerEnabled))
-        Auto-hide after delivery: \(enabled(snapshot.autoHide))
-        Auto-hide when empty: \(enabled(snapshot.autoHideWhenEmpty))
         Drag-out policy: \(snapshot.dragOutRemovalPolicy.rawValue)
         Automatic update checks: \(enabled(snapshot.autoUpdateCheckEnabled))
         """

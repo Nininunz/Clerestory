@@ -4,6 +4,48 @@ import XCTest
 
 @MainActor
 final class IslandModuleContainerTests: XCTestCase {
+    func testExperimentalGateStopsRuntimeAndCanRestartSavedModule() throws {
+        let name = "ExperimentalRuntime.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let settings = SettingsStore(defaults: defaults)
+        settings.setIslandModuleEnabled(true, id: .timer)
+        let runtime = RuntimeSpy(id: .timer)
+        let container = makeContainer(runtime: runtime, coordinator: IslandActivityCoordinator())
+        container.apply(configuration: settings.effectiveIslandModuleConfiguration, isActive: true)
+        XCTAssertEqual(runtime.startCount, 0)
+        settings.experimentalModulesEnabled = true
+        container.apply(configuration: settings.effectiveIslandModuleConfiguration, isActive: true)
+        XCTAssertEqual(runtime.startCount, 1)
+        settings.experimentalModulesEnabled = false
+        container.apply(configuration: settings.effectiveIslandModuleConfiguration, isActive: true)
+        XCTAssertEqual(runtime.stopCount, 1)
+        XCTAssertTrue(container.runningModuleIDs.isEmpty)
+        settings.experimentalModulesEnabled = true
+        container.apply(configuration: settings.effectiveIslandModuleConfiguration, isActive: true)
+        XCTAssertEqual(runtime.startCount, 2)
+        container.stopAll()
+    }
+
+    func testQuickSettingsRemainsAvailableWithoutPinnedOrEnabledModules() {
+        let runtime = RuntimeSpy(id: .quickSettings)
+        let coordinator = IslandActivityCoordinator()
+        let container = makeContainer(runtime: runtime, coordinator: coordinator)
+        let configuration = IslandModuleConfiguration(enabledModuleIDs: [], pinnedModuleIDs: [])
+
+        coordinator.show(module: .quickSettings)
+        container.apply(configuration: configuration, isActive: true)
+        XCTAssertEqual(runtime.startCount, 1)
+        XCTAssertEqual(coordinator.selectedModule, .quickSettings)
+        XCTAssertTrue(IslandModuleRegistry().isEnabled(.quickSettings))
+        XCTAssertNotNil(IslandModuleRegistry().descriptor(for: .quickSettings))
+
+        coordinator.show(module: .shelf)
+        XCTAssertEqual(coordinator.selectedModule, .shelf)
+        container.apply(configuration: configuration, isActive: false)
+        XCTAssertEqual(runtime.stopCount, 1)
+    }
+
     func testLifecycleIsIdempotentAndDisabledRuntimeStops() {
         let runtime = RuntimeSpy(id: .timer)
         let coordinator = IslandActivityCoordinator()

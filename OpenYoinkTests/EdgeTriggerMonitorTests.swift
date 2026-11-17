@@ -7,38 +7,38 @@ final class EdgeTriggerMonitorTests: XCTestCase {
     // MARK: - Current-gesture file drag gate
 
     func testFileDrag_staleFilePasteboardAtMouseDownDoesNotCount() {
-        var tracker = EdgeFileDragTracker()
+        var tracker = DragPasteboardTracker()
         tracker.mouseDown(changeCount: 21)
 
-        XCTAssertFalse(tracker.mouseDragged(changeCount: 21, hasFileContent: true))
-        XCTAssertFalse(tracker.hasFreshFileContent)
+        XCTAssertFalse(tracker.mouseDragged(changeCount: 21, hasEligibleContent: true))
+        XCTAssertFalse(tracker.hasFreshContent)
     }
 
     func testFileDrag_freshFilePasteboardAfterMouseDownCounts() {
-        var tracker = EdgeFileDragTracker()
+        var tracker = DragPasteboardTracker()
         tracker.mouseDown(changeCount: 21)
 
-        XCTAssertTrue(tracker.mouseDragged(changeCount: 22, hasFileContent: true))
-        XCTAssertTrue(tracker.mouseDragged(changeCount: 22, hasFileContent: true))
+        XCTAssertTrue(tracker.mouseDragged(changeCount: 22, hasEligibleContent: true))
+        XCTAssertTrue(tracker.mouseDragged(changeCount: 22, hasEligibleContent: true))
     }
 
     func testFileDrag_freshBrowserPayloadDoesNotCount() {
-        var tracker = EdgeFileDragTracker()
+        var tracker = DragPasteboardTracker()
         tracker.mouseDown(changeCount: 21)
 
-        XCTAssertFalse(tracker.mouseDragged(changeCount: 22, hasFileContent: false))
-        XCTAssertFalse(tracker.hasFreshFileContent)
+        XCTAssertFalse(tracker.mouseDragged(changeCount: 22, hasEligibleContent: false))
+        XCTAssertFalse(tracker.hasFreshContent)
     }
 
     func testFileDrag_newGestureCannotReusePreviousFileDrag() {
-        var tracker = EdgeFileDragTracker()
+        var tracker = DragPasteboardTracker()
         tracker.mouseDown(changeCount: 21)
-        XCTAssertTrue(tracker.mouseDragged(changeCount: 22, hasFileContent: true))
+        XCTAssertTrue(tracker.mouseDragged(changeCount: 22, hasEligibleContent: true))
         tracker.mouseUp()
 
-        XCTAssertFalse(tracker.mouseDragged(changeCount: 22, hasFileContent: true))
+        XCTAssertFalse(tracker.mouseDragged(changeCount: 22, hasEligibleContent: true))
         tracker.mouseDown(changeCount: 22)
-        XCTAssertFalse(tracker.mouseDragged(changeCount: 22, hasFileContent: true))
+        XCTAssertFalse(tracker.mouseDragged(changeCount: 22, hasEligibleContent: true))
     }
 
     // MARK: - Edge band

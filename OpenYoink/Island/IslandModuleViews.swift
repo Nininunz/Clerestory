@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ShelfPresentationRootView: View {
     let presentationStyle: ShelfPresentationStyle
@@ -23,6 +24,7 @@ struct ShelfPresentationRootView: View {
 struct IslandRootView: View {
     @Environment(SettingsStore.self) private var settings
     @Environment(ShelfStore.self) private var shelfStore
+    @Environment(DropTargetState.self) private var dropTargetState
     @Environment(TransferStore.self) private var transferStore
     @Environment(IslandActivityCoordinator.self) private var coordinator
     @Environment(IslandModuleRegistry.self) private var registry
@@ -37,15 +39,13 @@ struct IslandRootView: View {
     @Environment(FavoriteFolderDropCoordinator.self) private var folderCopy
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isCompactHovering = false
-    @State private var isCompactMediaControlHovering = false
     @State private var isCollapseControlHovering = false
-    @State private var isSettingsControlHovering = false
-    @State private var isSendingCompactMediaCommand = false
     @State private var mediaAccent = ArtworkAccent.fallback
+    @State private var compactArtworkImage: NSImage?
+    @State private var dropOutlineProgress: CGFloat = 0
     @State private var renderedSurfaceState: IslandSurfaceState = .compact
     @State private var activeSurfaceAnimation: UUID?
     @State private var requestedSurfaceTransitionID: UInt64 = 0
-    @State private var isShowingModuleLibrary = false
 
     var onPerformRecovery: ((RecoveryAction) -> Void)?
     var onOpenSettings: (() -> Void)?
@@ -53,10 +53,13 @@ struct IslandRootView: View {
     var body: some View {
         ZStack(alignment: .top) {
             if renderedSurfaceState.isExpanded {
-                expandedContent
-                    .frame(width: coordinator.currentLayout?.expandedFrame.width,
-                           height: coordinator.currentLayout?.expandedFrame.height,
-                           alignment: .top)
+                GeometryReader { surface in
+                    expandedContent
+                        .environment(\.islandSurfaceHeight, surface.size.height)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                }
+                    .frame(width: coordinator.currentLayout?.expandedFrame.width)
+                    .frame(maxHeight: .infinity, alignment: .top)
                     .transition(.asymmetric(
                         insertion: .modifier(
                             active: IslandSurfaceRevealModifier(
@@ -108,6 +111,14 @@ struct IslandRootView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .overlay {
+            IslandDropOutline(
+                progress: dropOutlineProgress,
+                collapsedSize: CGSize(width: collapsedSurfaceWidth, height: collapsedSurfaceHeight),
+                attachedToScreenTop: hasPhysicalNotch,
+                state: dropTargetState
+            )
+        }
         .preferredColorScheme(.dark)
         .environment(\.colorScheme, .dark)
         .accessibilityElement(children: .contain)
@@ -125,22 +136,27 @@ struct IslandRootView: View {
         .onChange(of: coordinator.surfaceTransitionID, initial: true) {
             renderSurface(coordinator.surfaceState)
         }
-        .onChange(of: settings.islandModuleConfiguration, initial: true) {
+        .onChange(of: settings.effectiveIslandModuleConfiguration, initial: true) {
             registry.apply(settings: settings)
             moduleContainer.apply(
-                configuration: settings.islandModuleConfiguration,
+                configuration: settings.effectiveIslandModuleConfiguration,
                 isActive: settings.islandEnabled
             )
-            if !registry.isEnabled(coordinator.selectedModule),
-               let fallback = visibleModuleDescriptors.first?.id
-                    ?? registry.enabledDescriptors.first?.id {
-                coordinator.selectedModule = fallback
+            if !registry.isEnabled(coordinator.selectedModule) {
+                coordinator.selectedModule = visibleModuleDescriptors.first?.id
+                    ?? registry.enabledDescriptors.first?.id ?? .quickSettings
             }
         }
         .onChange(of: nowPlayingStore.snapshot?.artworkData, initial: true) { _, data in
+            compactArtworkImage = data.flatMap(NSImage.init(data:))
             mediaAccent = ArtworkAccentExtractor.accent(from: data)
         }
-        .onChange(of: coordinator.selectedModule) { samplingContextChanged() }
+        .onChange(of: coordinator.selectedModule) {
+            if !registry.isEnabled(coordinator.selectedModule) {
+                coordinator.selectedModule = registry.enabledDescriptors.first?.id ?? .quickSettings
+            }
+            samplingContextChanged()
+        }
         .onChange(of: coordinator.surfaceState) { samplingContextChanged() }
     }
 
@@ -149,6 +165,7 @@ struct IslandRootView: View {
         if reduceMotion {
             activeSurfaceAnimation = nil
             renderedSurfaceState = state
+            dropOutlineProgress = state.isExpanded ? 1 : 0
             coordinator.completeSurfaceTransition(requestedSurfaceTransitionID)
             return
         }
@@ -164,6 +181,7 @@ struct IslandRootView: View {
         activeSurfaceAnimation = animationID
         withAnimation(surfaceAnimation(for: state), completionCriteria: .removed) {
             renderedSurfaceState = state
+            dropOutlineProgress = state.isExpanded ? 1 : 0
         } completion: {
             guard activeSurfaceAnimation == animationID else { return }
             activeSurfaceAnimation = nil
@@ -225,7 +243,7 @@ struct IslandRootView: View {
     }
 
     private var floatingIdleDot: some View {
-        let activity = coordinator.primaryActivity()
+        let activity = coordinator.compactPrimaryActivity()
         let ring = activity?.moduleID == .media ? mediaAccent.color : activityTint(activity)
         let diameter = IslandGeometryResolver.floatingDotDiameter
         return Circle()
@@ -239,7 +257,10 @@ struct IslandRootView: View {
             .accessibilityLabel(Text(compactAccessibilityLabel))
             .accessibilityHint(Text("Open OpenYoink Island"))
             .accessibilityAddTraits(.isButton)
-            .accessibilityAction { coordinator.show(module: defaultOpenModule) }
+            .accessibilityAction {
+                guard settings.islandClickRevealEnabled else { return }
+                coordinator.show(module: defaultOpenModule)
+            }
     }
 
     private var compactContent: some View {
@@ -261,16 +282,15 @@ struct IslandRootView: View {
                 }
             }
             .buttonStyle(.plain)
-            .contentShape(Rectangle())
+            .allowsHitTesting(settings.islandClickRevealEnabled)
+            .accessibilityHidden(!settings.islandClickRevealEnabled)
+            .contentShape(compactHitShape)
             .accessibilityLabel(Text(compactAccessibilityLabel))
             .accessibilityHint(Text("Open OpenYoink Island"))
             .help(Text("Open OpenYoink Island"))
 
-            compactMediaTransportOverlay
         }
-        // The panel keeps a transparent strip below the real camera housing so
-        // clicking remains easy. Only the content above draws pixels.
-        .contentShape(Rectangle())
+        .contentShape(compactHitShape)
         .background {
             if !hasPhysicalNotch {
                 compactSurfaceShape
@@ -303,13 +323,13 @@ struct IslandRootView: View {
             IslandSurfaceShape(attachedToScreenTop: true, cornerRadius: 11)
                 .fill(Color.black)
                 .frame(height: coordinator.currentLayout?.topInset ?? 32)
-            HStack(spacing: 0) {
+            IslandCompactWingRow(cameraHousingWidth: coordinator.currentLayout?.cameraHousingWidth ?? 0,
+                                 display: compactDisplay,
+                                 isBackwards: { settings.compactCycleBackwards },
+                                 height: coordinator.currentLayout?.topInset ?? 32) {
                 compactLeading
-                    .frame(width: IslandGeometryResolver.compactWingWidth)
-                Spacer()
-                    .frame(width: coordinator.currentLayout?.cameraHousingWidth ?? 0)
+            } trailing: {
                 compactTrailing
-                    .frame(width: IslandGeometryResolver.compactWingWidth)
             }
             .frame(maxWidth: .infinity)
             .frame(height: coordinator.currentLayout?.topInset ?? 32)
@@ -319,162 +339,125 @@ struct IslandRootView: View {
 
     @ViewBuilder
     private var compactLeading: some View {
-        let activity = coordinator.primaryActivity()
-        if activity?.moduleID == .media,
-           let data = nowPlayingStore.snapshot?.artworkData,
-           let image = NSImage(data: data) {
+        let activity = coordinator.compactPrimaryActivity()
+        if compactDisplay == .media, let image = compactArtworkImage {
             CompactNowPlayingArtworkView(
                 image: image,
                 tint: mediaAccent.color,
                 isHovered: compactIsHighlighted
             )
-                .id(nowPlayingStore.snapshot?.title)
-                .transition(.opacity.combined(with: .scale(scale: 0.86)))
+            .transition(.opacity.combined(with: .scale(scale: 0.86)))
         } else {
-            Image(systemName: activity?.systemImage
-                  ?? defaultModuleDescriptor?.systemImage
-                  ?? "sparkles")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(activityTint(activity))
-                .opacity(compactIsHighlighted || activity != nil ? 1 : 0.72)
+            IslandCompactWingIcon(systemName: activity.flatMap {
+                $0.moduleID == compactDisplay.moduleID ? $0.systemImage : nil
+            } ?? compactDisplay.systemImage)
+                .foregroundStyle(activity?.moduleID == compactDisplay.moduleID
+                                 ? activityTint(activity) : .white)
+                .opacity(compactIsHighlighted || activity?.moduleID == compactDisplay.moduleID ? 1 : 0.72)
                 .accessibilityHidden(true)
         }
     }
 
+    private var compactDisplay: IslandCompactDisplay {
+        settings.compactDisplay
+    }
+
     private var compactTrailing: some View {
         Group {
-            if coordinator.primaryActivity()?.moduleID == .media,
-               let snapshot = nowPlayingStore.snapshot {
-                if nowPlayingStore.supportsTransportControls {
-                    Color.clear.frame(width: 30, height: 22)
+            switch compactDisplay {
+            case .media:
+                if let snapshot = nowPlayingStore.snapshot {
+                    compactMediaEqualizer(isPlaying: snapshot.isPlaying,
+                                          tint: mediaAccent.color,
+                                          rhythmSeed: mediaRhythmSeed)
                 } else {
-                    IslandEqualizerView(
-                        isPlaying: snapshot.isPlaying,
-                        reduceMotion: reduceMotion,
-                        tint: mediaAccent.color,
-                        rhythmSeed: mediaRhythmSeed
-                    )
-                    .scaleEffect(0.92)
+                    IslandCompactWingIcon(systemName: "pause")
                 }
-            } else if transferStore.hasVisibleActivity && !reduceMotion {
-                ProgressView()
-                    .controlSize(.mini)
-            } else if case .running = timerStore.state {
-                Text(timerStore.formattedRemaining)
-                    .font(.caption2.monospacedDigit().weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-            } else if let aiValue = aiUsageStore.compactValue {
-                // Chosen in Settings: AI usage outranks the shelf count but
-                // still yields to media, transfers and a running timer.
-                Text(aiValue)
-                    .font(.caption2.monospacedDigit().weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-            } else if registry.isEnabled(.shelf) {
-                Text("\(shelfStore.items.count)")
-                    .font(.caption.monospacedDigit().weight(.semibold))
-            } else if registry.isEnabled(.battery), powerMonitor.snapshot.hasBattery {
-                Text("\(powerMonitor.snapshot.percentage)%")
-                    .font(.caption2.monospacedDigit().weight(.semibold))
-            } else {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 11, weight: .semibold))
+            case .transfers:
+                if let task = transferStore.currentTask, task.phase.isTerminal {
+                    switch task.phase {
+                    case .failed, .partiallySucceeded:
+                        IslandCompactWingIcon(systemName: "exclamationmark.triangle")
+                    case .cancelled:
+                        IslandCompactWingIcon(systemName: "xmark")
+                    default:
+                        IslandCompactWingIcon(systemName: "checkmark")
+                    }
+                } else if !transferStore.hasVisibleActivity {
+                    IslandCompactWingIcon(systemName: "checkmark")
+                } else if reduceMotion {
+                    IslandCompactWingIcon(systemName: "arrow.triangle.2.circlepath")
+                } else {
+                    compactTransferSpinner
+                }
+            case .timer:
+                if case .finished = timerStore.state {
+                    IslandCompactWingIcon(systemName: "checkmark")
+                } else {
+                    compactTimerText(timerStore.compactRemaining)
+                }
+            case .aiUsage:
+                if let value = aiUsageStore.compactValue {
+                    IslandCompactAIValueText(value: value)
+                } else {
+                    IslandCompactWingIcon(systemName: "minus")
+                }
+            case .shelf:
+                compactShelfText(shelfStore.items.count)
+            case .battery:
+                if powerMonitor.snapshot.hasBattery {
+                    compactBatteryText(powerMonitor.snapshot.percentage)
+                } else {
+                    IslandCompactWingIcon(systemName: "minus")
+                }
+            case .fallback:
+                compactFallbackSymbol
             }
         }
         .foregroundStyle(.white)
-        .opacity(compactIsHighlighted || coordinator.primaryActivity() != nil ? 1 : 0.72)
+        .opacity(compactIsHighlighted || coordinator.compactPrimaryActivity()?.moduleID == compactDisplay.moduleID ? 1 : 0.72)
         .accessibilityHidden(true)
     }
 
     @ViewBuilder
-    private var compactMediaTransportOverlay: some View {
-        if coordinator.primaryActivity()?.moduleID == .media,
-           nowPlayingStore.snapshot != nil,
-           nowPlayingStore.supportsTransportControls {
-            if hasPhysicalNotch {
-                HStack(spacing: 0) {
-                    Spacer(minLength: 0)
-                    compactMediaTransportButton
-                        .frame(width: IslandGeometryResolver.compactWingWidth,
-                               height: coordinator.currentLayout?.topInset ?? 32)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            } else {
-                HStack(spacing: 0) {
-                    Spacer(minLength: 0)
-                    compactMediaTransportButton
-                        .frame(width: 44, height: 38)
-                }
-                .padding(.trailing, 4)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
+    private func compactMediaEqualizer(isPlaying: Bool, tint: Color,
+                                       rhythmSeed: UInt64) -> some View {
+        if !isPlaying {
+            IslandCompactWingIcon(systemName: "play.fill")
+        } else {
+        IslandEqualizerView(isPlaying: isPlaying, reduceMotion: reduceMotion,
+                            tint: tint, rhythmSeed: rhythmSeed, showsCapsule: false)
+            .scaleEffect(0.92)
+            .brightness(compactIsHighlighted ? 0.10 : 0)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.16),
+                       value: compactIsHighlighted)
         }
     }
 
-    private var compactMediaTransportButton: some View {
-        let snapshot = nowPlayingStore.snapshot
-        let isPlaying = snapshot?.isPlaying == true
-        let showsTransportControl = isCompactMediaControlHovering || compactIsHighlighted
-        let actionLabel = isPlaying ? String(localized: "Pause") : String(localized: "Play")
-        return Button {
-            guard !isSendingCompactMediaCommand else { return }
-            Task {
-                isSendingCompactMediaCommand = true
-                _ = await nowPlayingStore.send(.togglePlayPause)
-                isSendingCompactMediaCommand = false
-            }
-        } label: {
-            ZStack {
-                IslandEqualizerView(
-                    isPlaying: isPlaying,
-                    reduceMotion: reduceMotion,
-                    tint: mediaAccent.color,
-                    rhythmSeed: mediaRhythmSeed
-                )
-                .scaleEffect(showsTransportControl ? 0.84 : 0.92)
-                .opacity(showsTransportControl ? 0 : 1)
+    private var compactTransferSpinner: some View {
+        IslandCompactTransferSpinner()
+    }
 
-                Group {
-                    if isSendingCompactMediaCommand {
-                        ProgressView().controlSize(.mini)
-                    } else {
-                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(mediaAccent.color)
-                    }
-                }
-                .frame(width: 30, height: 22)
-                .background {
-                    Capsule()
-                        .fill(Color.white.opacity(0.10))
-                        .overlay {
-                            Capsule().strokeBorder(mediaAccent.color.opacity(0.38),
-                                                   lineWidth: 0.75)
-                        }
-                }
-                .scaleEffect(showsTransportControl ? 1 : 0.82)
-                .opacity(showsTransportControl ? 1 : 0)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(!nowPlayingStore.supportsTransportControls
-                  || isSendingCompactMediaCommand)
-        .opacity(nowPlayingStore.supportsTransportControls ? 1 : 0.46)
-        .onHover { hovering in
-            if reduceMotion {
-                isCompactMediaControlHovering = hovering
-            } else {
-                withAnimation(.easeOut(duration: 0.16)) {
-                    isCompactMediaControlHovering = hovering
-                }
-            }
-        }
-        .accessibilityLabel(Text(actionLabel))
-        .accessibilityHint(Text("Control playback without expanding the Island"))
-        .help(Text(actionLabel))
+    private func compactTimerText(_ value: String) -> some View {
+        Text(value)
+            .font(.caption2.monospacedDigit().weight(.semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.65)
+    }
+
+    private func compactShelfText(_ count: Int) -> some View {
+        Text("\(count)")
+            .font(.caption.monospacedDigit().weight(.semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+    }
+
+    private func compactBatteryText(_ percentage: Int) -> some View {
+        IslandCompactBatteryValueText(percentage: percentage)
+    }
+
+    private var compactFallbackSymbol: some View {
+        IslandCompactWingIcon(systemName: "sparkles")
     }
 
     private var mediaRhythmSeed: UInt64 {
@@ -486,7 +469,8 @@ struct IslandRootView: View {
 
     @ViewBuilder
     private var compactSummary: some View {
-        if let activity = coordinator.primaryActivity() {
+        if let activity = coordinator.compactPrimaryActivity(),
+           activity.moduleID == compactDisplay.moduleID {
             VStack(alignment: .leading, spacing: 0) {
                 Text(activity.title)
                     .font(.caption.weight(.semibold))
@@ -499,33 +483,24 @@ struct IslandRootView: View {
                 }
             }
         } else {
-            if let aiSummary = aiUsageStore.compactSummary {
-                Text(aiSummary)
-                    .font(.caption2.monospacedDigit().weight(.semibold))
-                    .lineLimit(1)
-            } else if registry.isEnabled(.system),
-               let cpu = systemStatusStore.snapshot.cpuUsage,
-               let used = systemStatusStore.snapshot.memoryUsedBytes,
-               let total = systemStatusStore.snapshot.memoryTotalBytes,
-               total > 0 {
-                Text("CPU \(Int((cpu * 100).rounded()))% · MEM \(Int((Double(used) / Double(total) * 100).rounded()))%")
-                    .font(.caption2.monospacedDigit().weight(.semibold))
-            } else if registry.isEnabled(.folders),
-                      coordinator.selectedModule == .folders {
-                Text("Quick Access · \(favoriteFoldersStore.items.count)")
-                    .font(.caption2.weight(.semibold))
-            } else if registry.isEnabled(.clipboard), coordinator.selectedModule == .clipboard {
-                Text(String(localized: "Clipboard History") + " · \(clipboardHistoryStore.entries.count)")
-                    .font(.caption2.weight(.semibold))
-            } else {
-                Text(String(localized: "OpenYoink Island"))
-                    .font(.caption.weight(.semibold))
+            Group {
+                switch compactDisplay {
+                case .media: Text("Now Playing")
+                case .transfers: Text("Transfers")
+                case .timer: Text("Timer")
+                case .aiUsage: Text(aiUsageStore.compactSummary ?? "AI Usage")
+                case .shelf: Text("Shelf")
+                case .battery: Text("Battery")
+                case .fallback: Text("OpenYoink Island")
+                }
             }
+            .font(.caption.weight(.semibold))
+            .lineLimit(1)
         }
     }
 
     private var expandedContent: some View {
-        VStack(spacing: 10) {
+        IslandExpandedSurface(hasPhysicalNotch: hasPhysicalNotch) {
             if hasPhysicalNotch {
                 physicalNotchModuleStrip
             } else {
@@ -533,29 +508,20 @@ struct IslandRootView: View {
                     .padding(.top, 12)
                     .padding(.horizontal, 14)
             }
-            moduleContent
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .id(coordinator.selectedModule)
-                .clipped()
-                .padding(.horizontal, 14)
-                .padding(.bottom, 14)
-        }
-        .contentShape(expandedSurfaceShape)
-        .background {
-            ZStack {
-                Color.black
-                LinearGradient(
-                    colors: [Color.white.opacity(0.035), .clear],
-                    startPoint: .top,
-                    endPoint: .center
-                )
-            }
-            .clipShape(expandedSurfaceShape)
-        }
-        .overlay {
-            if !hasPhysicalNotch {
-                expandedSurfaceShape
-                    .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
+        } content: {
+            GeometryReader { geometry in
+                let pages = [coordinator.selectedModule] + (coordinator.shortcutSwipeTarget.map { [$0] } ?? [])
+                ZStack {
+                    ForEach(pages, id: \.self) { module in
+                        modulePage(module)
+                            .frame(width: geometry.size.width, height: geometry.size.height)
+                            .offset(x: reduceMotion ? 0 : coordinator.shortcutSwipeOffset
+                                + (module == coordinator.selectedModule ? 0
+                                   : CGFloat(coordinator.shortcutSwipeDirection) * geometry.size.width))
+                            .opacity(reduceMotion && module != coordinator.selectedModule ? 0 : 1)
+                            .allowsHitTesting(module == coordinator.selectedModule && coordinator.shortcutSwipeOffset == 0)
+                    }
+                }
             }
         }
         // A physical notch is attached to the display rather than floating
@@ -589,14 +555,19 @@ struct IslandRootView: View {
         IslandSurfaceShape(attachedToScreenTop: hasPhysicalNotch, cornerRadius: 13)
     }
 
+    private var compactHitShape: IslandSurfaceShape {
+        IslandSurfaceShape(attachedToScreenTop: hasPhysicalNotch,
+                           cornerRadius: hasPhysicalNotch ? 11 : 13)
+    }
+
     private var expandedSurfaceShape: IslandSurfaceShape {
         IslandSurfaceShape(attachedToScreenTop: hasPhysicalNotch, cornerRadius: 26)
     }
 
     private var physicalNotchModuleStrip: some View {
         let slots = pinnedModuleSlots
-        let leadingSlots = Array(slots.prefix(2))
-        let trailingSlots = Array(slots.dropFirst(2))
+        let leadingIndices = shortcutIndices.filter { $0 < IslandModuleConfiguration.shortcutSlotsPerSide }
+        let trailingIndices = shortcutIndices.filter { $0 >= IslandModuleConfiguration.shortcutSlotsPerSide }
         let notchWidth = coordinator.currentLayout?.cameraHousingWidth ?? 0
         let notchHeight = coordinator.currentLayout?.topInset ?? 32
         let stripHeight = notchHeight
@@ -605,13 +576,11 @@ struct IslandRootView: View {
         return ZStack(alignment: .top) {
             HStack(spacing: 0) {
                 HStack(spacing: 2) {
-                    settingsButton(size: 26)
-
-                    ForEach(leadingSlots.indices, id: \.self) { index in
-                        if let descriptor = leadingSlots[index] {
+                    ForEach(leadingIndices, id: \.self) { index in
+                        if let descriptor = slots[index] {
                             physicalNotchModuleButton(descriptor)
                         } else {
-                            emptyModuleSlot(size: 24)
+                            emptyModuleSlot(size: 24, position: index)
                         }
                     }
                 }
@@ -622,11 +591,11 @@ struct IslandRootView: View {
                     .allowsHitTesting(false)
 
                 HStack(spacing: 2) {
-                    ForEach(trailingSlots.indices, id: \.self) { index in
-                        if let descriptor = trailingSlots[index] {
+                    ForEach(trailingIndices, id: \.self) { index in
+                        if let descriptor = slots[index] {
                             physicalNotchModuleButton(descriptor)
                         } else {
-                            emptyModuleSlot(size: 24)
+                            emptyModuleSlot(size: 24, position: index)
                         }
                     }
                 }
@@ -675,7 +644,6 @@ struct IslandRootView: View {
         let isSelected = coordinator.selectedModule == descriptor.id
         let isEnabled = registry.isEnabled(descriptor.id)
         return Button {
-            isShowingModuleLibrary = false
             coordinator.selectedModule = descriptor.id
         } label: {
             Image(systemName: descriptor.systemImage)
@@ -696,7 +664,6 @@ struct IslandRootView: View {
 
     private var floatingIslandToolbar: some View {
         HStack(spacing: 10) {
-            settingsButton(size: 30)
             moduleNavigation
             Spacer(minLength: 4)
 
@@ -726,33 +693,6 @@ struct IslandRootView: View {
         .frame(height: 38)
     }
 
-    private func settingsButton(size: CGFloat) -> some View {
-        Button {
-            isShowingModuleLibrary.toggle()
-        } label: {
-            Image(systemName: "gearshape")
-                .font(.system(size: size == 30 ? 13 : 11, weight: .semibold))
-                .foregroundStyle(Color.white.opacity(isSettingsControlHovering ? 1 : 0.72))
-                .frame(width: size, height: size)
-                .background {
-                    Circle().fill(Color.white.opacity(isSettingsControlHovering ? 0.14 : 0.07))
-                }
-                .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering in
-            if reduceMotion {
-                isSettingsControlHovering = hovering
-            } else {
-                withAnimation(.easeOut(duration: 0.14)) {
-                    isSettingsControlHovering = hovering
-                }
-            }
-        }
-        .accessibilityLabel(Text("Module Library"))
-        .help(Text("Module Library"))
-    }
-
     private func openSettings() {
         // The Island panel intentionally sits above ordinary app windows.
         // Collapse it before presenting Settings so it cannot cover the
@@ -769,11 +709,11 @@ struct IslandRootView: View {
 
     private var moduleNavigation: some View {
         HStack(spacing: 3) {
-            ForEach(pinnedModuleSlots.indices, id: \.self) { index in
+            ForEach(shortcutIndices, id: \.self) { index in
                 if let descriptor = pinnedModuleSlots[index] {
                     floatingModuleButton(descriptor)
                 } else {
-                    emptyModuleSlot(size: 30)
+                    emptyModuleSlot(size: 30, position: index)
                 }
             }
         }
@@ -787,21 +727,23 @@ struct IslandRootView: View {
         }
     }
 
-    /// The five saved positions are the only normal compact navigation slots.
+    /// Saved positions provide expanded navigation shortcuts.
     /// Enabled but unpinned modules remain available from the module library.
     private var visibleModuleDescriptors: [IslandModuleDescriptor] {
-        settings.islandModuleConfiguration.pinnedModuleIDs.compactMap {
+        settings.effectiveIslandShortcuts(hasPhysicalNotch: hasPhysicalNotch).pinnedModuleIDs.compactMap {
             registry.descriptor(for: $0)
         }
     }
 
     private var pinnedModuleSlots: [IslandModuleDescriptor?] {
-        let descriptors = visibleModuleDescriptors.map(Optional.some)
-        return descriptors + Array(
-            repeating: nil,
-            count: max(0, IslandModuleConfiguration.maximumPinnedModules
-                       - descriptors.count)
-        )
+        settings.effectiveIslandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.hasPhysicalNotch == true).shortcutPositions.map { id in
+            id.flatMap { registry.descriptor(for: $0) }
+        }
+    }
+
+    private var shortcutIndices: [Int] {
+        settings.effectiveIslandShortcuts(hasPhysicalNotch: hasPhysicalNotch)
+            .visibleShortcutIndices(hasPhysicalNotch: hasPhysicalNotch)
     }
 
     private func floatingModuleButton(
@@ -810,7 +752,6 @@ struct IslandRootView: View {
         let isSelected = coordinator.selectedModule == descriptor.id
         let isEnabled = registry.isEnabled(descriptor.id)
         return Button {
-            isShowingModuleLibrary = false
             coordinator.selectedModule = descriptor.id
         } label: {
             Image(systemName: descriptor.systemImage)
@@ -829,42 +770,54 @@ struct IslandRootView: View {
         .modifier(IslandSelectedAccessibilityModifier(selected: isSelected))
     }
 
-    private func emptyModuleSlot(size: CGFloat) -> some View {
-        IslandEmptyModuleSlot(size: size) { moduleID in
+    private func emptyModuleSlot(size: CGFloat, position: Int) -> some View {
+        IslandEmptyModuleSlot(size: size, position: position) { moduleID in
             coordinator.selectedModule = moduleID
-            isShowingModuleLibrary = false
         }
     }
 
-    private var moduleContent: some View {
-        Group {
-            if isShowingModuleLibrary {
-                IslandModuleLibraryView(
-                    onOpenModule: { moduleID in
-                        coordinator.selectedModule = moduleID
-                        isShowingModuleLibrary = false
-                    },
+    private func modulePage(_ module: IslandModuleID) -> some View {
+        let module = registry.isEnabled(module) ? module : .quickSettings
+        return IslandModuleHost(descriptor: moduleContainer.registration(for: module)?.descriptor,
+                         coordinator: coordinator) {
+            moduleContainer.contentView(
+                for: module,
+                context: IslandModuleViewContext(
+                    onPerformRecovery: onPerformRecovery,
+                    onOpenModule: { if registry.isEnabled($0) { coordinator.selectedModule = $0 } },
                     onOpenSettings: openSettings
                 )
-            } else {
-                moduleContainer.contentView(
-                    for: coordinator.selectedModule,
-                    context: IslandModuleViewContext(
-                        onPerformRecovery: onPerformRecovery
-                    )
-                )
-            }
+            )
         }
     }
 
     private var compactAccessibilityLabel: String {
-        if let activity = coordinator.primaryActivity() {
-            return [activity.title, activity.detail].compactMap { $0 }.joined(separator: ", ")
-        }
-        if registry.isEnabled(.shelf) {
+        switch compactDisplay {
+        case .battery:
+            return powerMonitor.snapshot.hasBattery
+                ? String(localized: "Battery, \(powerMonitor.snapshot.percentage) percent")
+                : String(localized: "No internal battery")
+        case .shelf:
             return String(localized: "OpenYoink Island, \(shelfStore.items.count) shelf items")
+        case .timer:
+            if case .idle = timerStore.state { return String(localized: "Timer ready") }
+            if case .finished = timerStore.state {
+                return String(localized: "Timer finished")
+            }
+            return String(localized: "Timer, \(timerStore.compactRemaining) remaining")
+        case .media:
+            return nowPlayingStore.snapshot?.title ?? String(localized: "Nothing playing")
+        case .aiUsage:
+            return aiUsageStore.compactSummary ?? String(localized: "AI Usage unavailable")
+        case .transfers:
+            return transferStore.hasVisibleActivity ? String(localized: "Transfers") : String(localized: "No active transfers")
+        default:
+            if let activity = coordinator.compactPrimaryActivity(),
+               activity.moduleID == compactDisplay.moduleID {
+                return [activity.title, activity.detail].compactMap { $0 }.joined(separator: ", ")
+            }
+            return String(localized: "OpenYoink Island")
         }
-        return String(localized: "OpenYoink Island")
     }
 
     private var defaultModuleDescriptor: IslandModuleDescriptor? {
@@ -875,10 +828,11 @@ struct IslandRootView: View {
     }
 
     private var defaultOpenModule: IslandModuleID {
-        if let activity = coordinator.primaryActivity(), registry.isEnabled(activity.moduleID) {
-            return activity.moduleID
+        if let recent = coordinator.reentryModule(isEnabled: registry.isEnabled) { return recent }
+        if let moduleID = compactDisplay.moduleID, registry.isEnabled(moduleID) {
+            return moduleID
         }
-        return defaultModuleDescriptor?.id ?? .transfers
+        return defaultModuleDescriptor?.id ?? .quickSettings
     }
 
     private func activityTint(_ activity: IslandActivity?) -> Color {
@@ -893,12 +847,161 @@ struct IslandRootView: View {
 
 }
 
+/// Shared wing layout used by the physical-notch Island and its rendered layout tests.
+struct IslandCompactWingRow<Leading: View, Trailing: View>: View {
+    /// Center every leading symbol in the same 24-point slot, biased toward the notch.
+    private static var leadingOuterInset: CGFloat { 13 }
+    private static var leadingSlotWidth: CGFloat { 24 }
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    let cameraHousingWidth: CGFloat
+    let display: IslandCompactDisplay?
+    let isBackwards: () -> Bool
+    let height: CGFloat?
+    let leading: Leading
+    let trailing: Trailing
+
+    init(cameraHousingWidth: CGFloat,
+         display: IslandCompactDisplay? = nil,
+         isBackwards: @escaping () -> Bool = { false },
+         height: CGFloat? = nil,
+         @ViewBuilder leading: () -> Leading,
+         @ViewBuilder trailing: () -> Trailing) {
+        self.cameraHousingWidth = cameraHousingWidth
+        self.display = display
+        self.isBackwards = isBackwards
+        self.height = height
+        self.leading = leading()
+        self.trailing = trailing()
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            slidingWing {
+                leading
+                    .frame(width: Self.leadingSlotWidth, alignment: .center)
+                    .padding(.leading, Self.leadingOuterInset)
+                    .padding(.trailing, IslandGeometryResolver.compactWingWidth
+                             - Self.leadingOuterInset - Self.leadingSlotWidth)
+            }
+            Spacer()
+                .frame(width: cameraHousingWidth)
+            slidingWing {
+                trailing
+                    .frame(width: IslandGeometryResolver.compactWingWidth - 10,
+                           alignment: .center)
+                    .padding(.trailing, 10)
+            }
+        }
+        .compositingGroup()
+        .clipShape(IslandSurfaceShape(attachedToScreenTop: true, cornerRadius: 11))
+    }
+
+    @ViewBuilder
+    private func slidingWing<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        if let display {
+            ZStack {
+                content()
+                    .id(display)
+                    .transition(reduceMotion ? .opacity : .asymmetric(
+                        insertion: .modifier(
+                            active: IslandCompactSlideModifier(progress: 1, isBackwards: isBackwards),
+                            identity: IslandCompactSlideModifier(progress: 0, isBackwards: isBackwards)),
+                        removal: .modifier(
+                            active: IslandCompactSlideModifier(progress: -1, isBackwards: isBackwards),
+                            identity: IslandCompactSlideModifier(progress: 0, isBackwards: isBackwards))
+                    ))
+            }
+            .frame(width: IslandGeometryResolver.compactWingWidth, height: height)
+            // Clip each wing independently so outgoing content never crosses the camera.
+            .clipped()
+            .animation(.easeInOut(duration: reduceMotion ? 0.12 : 0.24), value: display)
+        } else {
+            content()
+        }
+    }
+}
+
+/// Resolve direction live, including for a departing view created by an earlier cycle.
+/// Only progress interpolates; changing direction must not animate through the old sign.
+struct IslandCompactSlideModifier: AnimatableModifier {
+    nonisolated var progress: CGFloat
+    let isBackwards: () -> Bool
+
+    nonisolated var animatableData: CGFloat {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    var horizontalOffset: CGFloat {
+        progress * IslandGeometryResolver.compactWingWidth * (isBackwards() ? -1 : 1)
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .offset(x: horizontalOffset)
+            .opacity(1 - abs(progress))
+    }
+}
+
+/// Shared by the live compact Island and its rendered preview tests.
+struct IslandCompactAIValueText: View {
+    let value: String
+
+    var body: some View {
+        Text(value)
+            .font(.caption2.monospacedDigit().weight(.semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+    }
+}
+
+struct IslandCompactBatteryValueText: View {
+    let percentage: Int
+
+    var body: some View {
+        Text("\(percentage)%")
+            .font(.caption2.monospacedDigit().weight(.semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+    }
+}
+
+/// All compact wing SF Symbols share this typography and centered canvas.
+/// Color and animation belong to the caller; wing placement belongs to the row.
+struct IslandCompactWingIcon: View {
+    let systemName: String
+
+    var body: some View {
+        Image(systemName: systemName)
+            .font(.system(size: 13, weight: .semibold))
+            .imageScale(.medium)
+            .frame(width: 22, height: 22, alignment: .center)
+            .accessibilityHidden(true)
+    }
+}
+
+struct IslandCompactTransferSpinner: View {
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
+            IslandCompactWingIcon(systemName: "arrow.triangle.2.circlepath")
+                .foregroundStyle(.white)
+                .rotationEffect(.degrees(context.date.timeIntervalSinceReferenceDate
+                    .truncatingRemainder(dividingBy: 1.6) / 1.6 * 360))
+        }
+        .accessibilityHidden(true)
+    }
+}
+
 private struct IslandEmptyModuleSlot: View {
     @Environment(SettingsStore.self) private var settings
     @Environment(IslandModuleRegistry.self) private var registry
+    @Environment(IslandActivityCoordinator.self) private var coordinator
     @State private var isPresentingPicker = false
 
     let size: CGFloat
+    let position: Int
     let onOpenModule: (IslandModuleID) -> Void
 
     var body: some View {
@@ -926,7 +1029,7 @@ private struct IslandEmptyModuleSlot: View {
                 ForEach(unpinnedModuleDescriptors) { descriptor in
                     Button {
                         settings.setIslandModuleEnabled(true, id: descriptor.id)
-                        settings.setIslandModulePinned(true, id: descriptor.id)
+                        settings.assignIslandShortcut(descriptor.id, at: position, hasPhysicalNotch: coordinator.currentLayout?.hasPhysicalNotch == true)
                         onOpenModule(descriptor.id)
                         isPresentingPicker = false
                     } label: {
@@ -945,7 +1048,7 @@ private struct IslandEmptyModuleSlot: View {
 
     private var unpinnedModuleDescriptors: [IslandModuleDescriptor] {
         registry.descriptors.filter {
-            !settings.isIslandModulePinned($0.id)
+            settings.isIslandModuleAvailable($0.id) && !settings.islandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.hasPhysicalNotch == true).isPinned($0.id)
         }
     }
 }
@@ -953,172 +1056,348 @@ private struct IslandEmptyModuleSlot: View {
 /// Screen-attached surfaces use shallow inward top corners and fuller convex
 /// bottom corners. The shape stays flush with the screen edge while avoiding
 /// the square, pasted-on silhouette of a regular rounded rectangle.
-private struct IslandSurfaceShape: InsettableShape {
-    var attachedToScreenTop: Bool
-    var cornerRadius: CGFloat
-    var insetAmount: CGFloat = 0
-
-    func inset(by amount: CGFloat) -> IslandSurfaceShape {
-        var copy = self
-        copy.insetAmount += amount
-        return copy
-    }
-
-    func path(in rect: CGRect) -> Path {
-        let rect = rect.insetBy(dx: insetAmount, dy: insetAmount)
-        guard attachedToScreenTop else {
-            return RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .path(in: rect)
-        }
-
-        let bottomRadius = min(cornerRadius, rect.width / 2, rect.height / 2)
-        let topCut = min(7, max(4, bottomRadius * 0.45))
-        let leftBody = rect.minX + topCut
-        let rightBody = rect.maxX - topCut
-        var path = Path()
-        path.move(to: CGPoint(x: rect.minX, y: rect.minY))
-        path.addCurve(
-            to: CGPoint(x: leftBody, y: rect.minY + topCut),
-            control1: CGPoint(x: rect.minX + topCut * 0.55, y: rect.minY),
-            control2: CGPoint(x: leftBody, y: rect.minY + topCut * 0.45)
-        )
-        path.addLine(to: CGPoint(x: leftBody, y: rect.maxY - bottomRadius))
-        path.addQuadCurve(
-            to: CGPoint(x: leftBody + bottomRadius, y: rect.maxY),
-            control: CGPoint(x: leftBody, y: rect.maxY)
-        )
-        path.addLine(to: CGPoint(x: rightBody - bottomRadius, y: rect.maxY))
-        path.addQuadCurve(
-            to: CGPoint(x: rightBody, y: rect.maxY - bottomRadius),
-            control: CGPoint(x: rightBody, y: rect.maxY)
-        )
-        path.addLine(to: CGPoint(x: rightBody, y: rect.minY + topCut))
-        path.addCurve(
-            to: CGPoint(x: rect.maxX, y: rect.minY),
-            control1: CGPoint(x: rightBody, y: rect.minY + topCut * 0.45),
-            control2: CGPoint(x: rect.maxX - topCut * 0.55, y: rect.minY)
-        )
-        path.closeSubpath()
-        return path
-    }
-}
 
 
-private struct IslandModuleLibraryView: View {
+struct IslandModuleLibraryView: View {
     @Environment(SettingsStore.self) private var settings
+    @Environment(IslandActivityCoordinator.self) private var coordinator
     @Environment(IslandModuleRegistry.self) private var registry
 
-    let onOpenModule: (IslandModuleID) -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    @State private var draggedCompactModule: IslandModuleID?
+    @State private var compactDragOrder: [IslandModuleID]?
+    @State private var compactDragTarget: IslandModuleID?
+    @State private var hoveredCompactHandle: IslandModuleID?
+    @State private var compactRowFrames: [IslandModuleID: CGRect] = [:]
+    @GestureState private var compactDragActive = false
+    @Namespace private var shortcutSwitcher
+    @Namespace private var compactRowMotion
+    private var showsCompact: Bool {
+        get { coordinator.quickSettingsShowsCompact }
+        nonmutating set { coordinator.quickSettingsShowsCompact = newValue }
+    }
+
     let onOpenSettings: () -> Void
 
-    var body: some View {
-        VStack(spacing: 10) {
-            IslandModuleHeader(
-                title: "Module Library",
-                subtitle: String(localized: "Choose up to five pinned modules"),
-                systemImage: "square.grid.2x2"
-            )
 
-            ScrollView {
-                VStack(spacing: 7) {
-                    ForEach(registry.descriptors) { descriptor in
-                        moduleRow(descriptor)
-                    }
+    var body: some View {
+        VStack(spacing: IslandModuleLayout.headerSpacing) {
+            IslandModuleHeader(
+                title: "Quick Settings",
+                subtitle: showsCompact ? String(localized: "Choose compact modules and their cycling order")
+                    : String(localized: "Choose shortcuts and arrange their positions"),
+                systemImage: "square.grid.2x2",
+                showsExtendButton: false
+            ) {
+                pageSwitcher
+            }
+            IslandModuleScrollView {
+                // Both pages contribute their natural height, while only the selected
+                // page is visible or interactive. Extension therefore fits the taller
+                // page before the user has visited it, with no resize on switching.
+                ZStack(alignment: .topLeading) {
+                    expandedEditor
+                        .opacity(showsCompact ? 0 : 1)
+                        .allowsHitTesting(!showsCompact)
+                        .disabled(showsCompact)
+                        .accessibilityHidden(showsCompact)
+                    compactEditor
+                        .opacity(showsCompact ? 1 : 0)
+                        .allowsHitTesting(showsCompact)
+                        .disabled(!showsCompact)
+                        .accessibilityHidden(!showsCompact)
                 }
             }
-
-            HStack {
-                Text("Drag pinned rows to reorder the five Island positions.")
-                    .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.46))
+            IslandModuleFooter {
+                Button(action: onOpenSettings) {
+                    Image(systemName: "gearshape")
+                }
+                .buttonStyle(IslandHeaderButtonStyle())
+                .help("Settings")
+                .accessibilityLabel(Text("Settings"))
                 Spacer()
-                Button("Open Full Settings") { onOpenSettings() }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                IslandModuleExtendButton()
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onChange(of: compactDragActive) { _, active in
+            if !active { clearCompactDrag() }
+        }
+        .onDisappear {
+            hoveredCompactHandle = nil
+            clearCompactDrag()
+        }
     }
 
-    private func moduleRow(_ descriptor: IslandModuleDescriptor) -> some View {
-        let enabled = settings.isIslandModuleEnabled(descriptor.id)
-        let pinned = settings.isIslandModulePinned(descriptor.id)
-        let pinnedCount = settings.islandModuleConfiguration.pinnedModuleIDs.count
-
-        return HStack(spacing: 10) {
-            Image(systemName: descriptor.systemImage)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(enabled ? Color.accentColor : Color.white.opacity(0.42))
-                .frame(width: 24)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(descriptor.title)
-                    .font(.system(size: 12, weight: .semibold))
-                Text(pinned
-                     ? String(localized: "Pinned in the Island strip")
-                     : enabled
-                        ? String(localized: "Enabled in the module library")
-                        : String(localized: "Disabled"))
-                    .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.46))
+    private var expandedEditor: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            ForEach(shortcutIndices, id: \.self) { index in
+                positionRow(index)
             }
+            HStack {
+                Label("One position must contain Quick Settings", systemImage: "lock")
+                    .font(.caption2).foregroundStyle(.secondary)
+                Spacer(minLength: 8)
+                Button { settings.restoreDefaultIslandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.hasPhysicalNotch == true) } label: {
+                    Text("Restore Defaults")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6)
+                        .frame(minHeight: 28)
+                }
+                    .buttonStyle(IslandPressFeedbackStyle())
+                    .help("Restore shortcut positions without changing enabled modules")
+            }
+            .padding(.vertical, 4)
+        }
+    }
 
+    private var pageSwitcher: some View {
+        HStack(spacing: 2) {
+            ForEach([false, true], id: \.self) { compact in
+                Button {
+                    clearCompactDrag()
+                    withAnimation(reduceMotion ? nil : .smooth(duration: 0.22)) { showsCompact = compact }
+                } label: {
+                    Image(systemName: compact ? "rectangle.compress.vertical" : "rectangle.expand.vertical")
+                        .font(.system(size: 10, weight: .semibold))
+                        .frame(width: 27, height: 24)
+                        .foregroundStyle(showsCompact == compact ? .white : IslandVisualStyle.tertiaryText)
+                        .background {
+                            if showsCompact == compact {
+                                Capsule().fill(Color.white.opacity(0.11))
+                                    .matchedGeometryEffect(id: "selection", in: shortcutSwitcher)
+                            }
+                        }
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(IslandPressFeedbackStyle(cornerRadius: 12))
+                .help(compact ? "Compact" : "Expanded")
+                .accessibilityLabel(Text(compact ? "Compact shortcuts" : "Expanded shortcuts"))
+                .modifier(IslandSelectedAccessibilityModifier(selected: showsCompact == compact))
+            }
+        }
+        .padding(2)
+        .background(Capsule().fill(Color.white.opacity(0.07)))
+        .clipShape(Capsule())
+        .overlay { Capsule().strokeBorder(IslandVisualStyle.hairline, lineWidth: 1) }
+    }
+
+    private var compactEditor: some View {
+        let order = (compactDragOrder ?? settings.compactModuleOrder).filter { settings.isIslandModuleAvailable($0) }
+        let rows = order + IslandCompactDisplay.cycleOrder.filter { settings.isIslandModuleAvailable($0) && !order.contains($0) }
+        return VStack(spacing: 7) {
+            ForEach(rows, id: \.self) { id in
+                if !order.isEmpty, id == rows.dropFirst(order.count).first {
+                    Rectangle()
+                        .fill(Color.white.opacity(0.08))
+                        .frame(height: 1)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 3)
+                        .accessibilityHidden(true)
+                }
+                if let descriptor = registry.descriptor(for: id) {
+                    compactRow(descriptor)
+                        .matchedGeometryEffect(id: descriptor.id, in: compactRowMotion, properties: .position)
+                }
+            }
+            HStack {
+                Label("Drag included modules or use arrows to set cycling order.", systemImage: "arrow.up.arrow.down")
+                    .font(.caption2).foregroundStyle(.secondary)
+                Spacer()
+                Button { settings.compactModuleOrder = IslandCompactDisplay.cycleOrder } label: {
+                    Text("Restore Defaults")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6)
+                        .frame(minHeight: 28)
+                }
+                    .buttonStyle(IslandPressFeedbackStyle())
+            }
+        }
+        .coordinateSpace(name: "compactOrder")
+        .onPreferenceChange(CompactRowFramesKey.self) { compactRowFrames = $0 }
+        .animation(reduceMotion ? nil : .smooth(duration: 0.24), value: order)
+    }
+
+    private func compactRow(_ descriptor: IslandModuleDescriptor) -> some View {
+        let order = (compactDragOrder ?? settings.compactModuleOrder).filter { settings.isIslandModuleAvailable($0) }
+        let index = order.firstIndex(of: descriptor.id)
+        let row = HStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: descriptor.systemImage).frame(width: 22)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(descriptor.title).font(.system(size: 12, weight: .medium))
+                    if !settings.isIslandModuleEnabled(descriptor.id) {
+                        Text("Disabled in Modules").font(.caption2).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
+            .contentShape(Rectangle())
+            .gesture(compactReorderGesture(descriptor.id), including: index != nil ? .all : .none)
+            .onContinuousHover { phase in
+                switch phase {
+                case .active:
+                    if index != nil { hoveredCompactHandle = descriptor.id }
+                case .ended:
+                    if hoveredCompactHandle == descriptor.id { hoveredCompactHandle = nil }
+                }
+                updateCompactDragCursor()
+            }
             Spacer(minLength: 4)
-
-            if enabled {
-                Button("Open") { onOpenModule(descriptor.id) }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(Color.accentColor)
-                    .font(.caption.weight(.semibold))
+            if let index {
+                Button {
+                    withAnimation(reduceMotion ? nil : .smooth(duration: 0.24)) {
+                        settings.moveCompactModule(descriptor.id, to: order[index - 1])
+                    }
+                } label: { Image(systemName: "arrow.up").frame(width: 24, height: 24) }
+                .disabled(index == 0)
+                .accessibilityLabel(Text("Move earlier"))
+                Button {
+                    withAnimation(reduceMotion ? nil : .smooth(duration: 0.24)) {
+                        settings.moveCompactModule(descriptor.id, to: order[index + 1])
+                    }
+                } label: { Image(systemName: "arrow.down").frame(width: 24, height: 24) }
+                .disabled(index == order.count - 1)
+                .accessibilityLabel(Text("Move later"))
             }
-
-            Button {
-                settings.setIslandModulePinned(!pinned, id: descriptor.id)
-            } label: {
-                Image(systemName: pinned ? "pin.fill" : "pin")
-                    .frame(width: 24, height: 24)
-            }
-            .buttonStyle(.plain)
-            .disabled(!enabled || (!pinned && pinnedCount >= 5))
-            .opacity(!enabled || (!pinned && pinnedCount >= 5) ? 0.34 : 1)
-            .accessibilityLabel(Text(pinned ? "Unpin module" : "Pin module"))
-
-            Toggle("", isOn: Binding(
-                get: { settings.isIslandModuleEnabled(descriptor.id) },
-                set: { settings.setIslandModuleEnabled($0, id: descriptor.id) }
+            Toggle(descriptor.title, isOn: Binding(
+                get: { settings.compactModuleOrder.contains(descriptor.id) },
+                set: { settings.setCompactModuleIncluded($0, id: descriptor.id) }
             ))
             .labelsHidden()
-            .toggleStyle(IslandClipboardToggleStyle())
-            .controlSize(.mini)
+            .toggleStyle(IslandClipboardToggleStyle(showsLabel: false))
+        }
+        .buttonStyle(IslandPressFeedbackStyle())
+        .padding(.horizontal, 10)
+        .frame(minHeight: 38)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.055)))
+        return row
+            .background {
+                GeometryReader { geometry in
+                    Color.clear.preference(key: CompactRowFramesKey.self,
+                        value: [descriptor.id: geometry.frame(in: .named("compactOrder"))])
+                }
+            }
+            .opacity(draggedCompactModule == descriptor.id ? 0.65 : 1)
+    }
+
+    private func compactReorderGesture(_ id: IslandModuleID) -> some Gesture {
+        DragGesture(minimumDistance: 4, coordinateSpace: .named("compactOrder"))
+            .updating($compactDragActive) { _, active, _ in active = true }
+            .onChanged { value in
+                if draggedCompactModule == nil {
+                    compactDragOrder = settings.compactModuleOrder
+                    draggedCompactModule = id
+                }
+                NSCursor.closedHand.set()
+                if compactRowFrames[id]?.contains(value.location) == true {
+                    compactDragTarget = nil
+                    return
+                }
+                guard var order = compactDragOrder,
+                      let target = order.first(where: { $0 != id && compactRowFrames[$0]?.contains(value.location) == true }),
+                      compactDragTarget != target,
+                      let source = order.firstIndex(of: id),
+                      let destination = order.firstIndex(of: target) else { return }
+                compactDragTarget = target
+                order.remove(at: source)
+                order.insert(id, at: destination)
+                compactDragOrder = order
+            }
+            .onEnded { value in
+                if let order = compactDragOrder,
+                   order.contains(where: { compactRowFrames[$0]?.contains(value.location) == true }) {
+                    settings.compactModuleOrder = order
+                }
+                clearCompactDrag()
+            }
+    }
+
+    private func clearCompactDrag() {
+        draggedCompactModule = nil
+        compactDragOrder = nil
+        compactDragTarget = nil
+        updateCompactDragCursor()
+    }
+
+    private func updateCompactDragCursor() {
+        if draggedCompactModule != nil {
+            NSCursor.closedHand.set()
+        } else if hoveredCompactHandle != nil {
+            NSCursor.openHand.set()
+        } else {
+            NSCursor.arrow.set()
+        }
+    }
+
+    private func positionRow(_ index: Int) -> some View {
+        HStack(spacing: 12) {
+            if coordinator.currentLayout?.hasPhysicalNotch == true {
+                Text("\((shortcutIndices.firstIndex(of: index) ?? 0) + 1)")
+                    .font(.caption.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 20)
+            }
+            Text(positionLabel(index))
+                .font(.system(size: 12, weight: .medium))
+                .frame(width: coordinator.currentLayout?.hasPhysicalNotch == true ? 58 : 90,
+                       alignment: .leading)
+            Picker(positionLabel(index), selection: Binding<IslandModuleID?>(
+                get: { settings.effectiveIslandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.hasPhysicalNotch == true).shortcutPositions[index] },
+                set: { settings.assignIslandShortcut($0, at: index, hasPhysicalNotch: coordinator.currentLayout?.hasPhysicalNotch == true) }
+            )) {
+                Text("Empty").tag(nil as IslandModuleID?)
+                    .disabled(settings.effectiveIslandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.hasPhysicalNotch == true).shortcutPositions[index] == .quickSettings)
+                Label("Quick Settings", systemImage: "square.grid.2x2")
+                    .tag(Optional(IslandModuleID.quickSettings))
+                ForEach(registry.enabledDescriptors) { descriptor in
+                    Label(descriptor.title, systemImage: descriptor.systemImage)
+                        .tag(Optional(descriptor.id))
+                        .disabled(settings.effectiveIslandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.hasPhysicalNotch == true).shortcutPositions[index] == .quickSettings
+                                  && !settings.islandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.hasPhysicalNotch == true).isPinned(descriptor.id))
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .accessibilityIdentifier("island.shortcut.position.\(index)")
         }
         .padding(.horizontal, 10)
-        .frame(minHeight: 42)
+        .frame(minHeight: 32)
         .background {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.white.opacity(pinned ? 0.085 : 0.045))
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color.white.opacity(0.055))
         }
-        .draggable(pinned ? descriptor.id.rawValue : "")
-        .dropDestination(for: String.self) { items, _ in
-            guard pinned,
-                  let sourceRawValue = items.first,
-                  !sourceRawValue.isEmpty else { return false }
-            let ids = settings.islandModuleConfiguration.pinnedModuleIDs
-            let sourceID = IslandModuleID(rawValue: sourceRawValue)
-            guard let source = ids.firstIndex(of: sourceID),
-                  let destination = ids.firstIndex(of: descriptor.id),
-                  source != destination else { return false }
-            settings.movePinnedIslandModules(
-                fromOffsets: IndexSet(integer: source),
-                toOffset: destination > source ? destination + 1 : destination
-            )
-            return true
+    }
+
+    private func positionLabel(_ index: Int) -> String {
+        guard coordinator.currentLayout?.hasPhysicalNotch == true else {
+            return String(localized: "Position \((shortcutIndices.firstIndex(of: index) ?? 0) + 1)")
         }
+        let perSide = IslandModuleConfiguration.shortcutSlotsPerSide
+        let sideIndices = shortcutIndices.filter { ($0 < perSide) == (index < perSide) }
+        let number = (sideIndices.firstIndex(of: index) ?? 0) + 1
+        return index < perSide
+            ? String(localized: "Left \(number)")
+            : String(localized: "Right \(number)")
+    }
+
+    private var shortcutIndices: [Int] {
+        let notched = coordinator.currentLayout?.hasPhysicalNotch == true
+        return settings.effectiveIslandShortcuts(hasPhysicalNotch: notched)
+            .visibleShortcutIndices(hasPhysicalNotch: notched)
     }
 }
 
-
-
-
+private struct CompactRowFramesKey: PreferenceKey {
+    static let defaultValue: [IslandModuleID: CGRect] = [:]
+    static func reduce(value: inout [IslandModuleID: CGRect], nextValue: () -> [IslandModuleID: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+    }
+}
 
 private struct IslandSurfaceRevealModifier: ViewModifier, @MainActor Animatable {
     var progress: CGFloat

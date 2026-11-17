@@ -1,8 +1,20 @@
+import AppKit
 import XCTest
 @testable import OpenYoink
 
 /// S6: Quick Look 预览集合解析规则（`QuickLookPreviewPlanner`，纯逻辑）。
 final class QuickLookPreviewPlannerTests: XCTestCase {
+    @MainActor
+    func testPreviewAppearsAboveIslandWithoutLoweringHigherPreviewLevel() {
+        let island = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 8)
+        XCTAssertGreaterThan(QuickLookCoordinator.previewLevel(original: .floating, source: island).rawValue,
+                             island.rawValue)
+        XCTAssertGreaterThan(QuickLookCoordinator.previewLevel(original: .normal, source: .floating).rawValue,
+                             NSWindow.Level.floating.rawValue)
+        XCTAssertEqual(QuickLookCoordinator.previewLevel(original: .screenSaver, source: island), .screenSaver)
+        XCTAssertEqual(QuickLookCoordinator.previewLevel(original: .floating, source: nil), .floating)
+    }
+
     // MARK: - Helpers
 
     private func file(_ name: String, stale: Bool = false) -> ShelfItem {

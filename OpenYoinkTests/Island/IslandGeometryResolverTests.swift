@@ -3,6 +3,24 @@ import XCTest
 @testable import OpenYoink
 
 final class IslandGeometryResolverTests: XCTestCase {
+    func testExtendedHeightKeepsTopAnchorAndRespectsScreenCap() {
+        for height: CGFloat in [600, 982] {
+            let screen = IslandGeometryResolver.ScreenGeometry(
+                frame: CGRect(x: 0, y: 0, width: 1512, height: height),
+                visibleFrame: CGRect(x: 0, y: 0, width: 1512, height: height - 38),
+                safeAreaTop: 38,
+                auxiliaryTopLeftArea: CGRect(x: 0, y: height - 38, width: 645, height: 38),
+                auxiliaryTopRightArea: CGRect(x: 867, y: height - 38, width: 645, height: 38))
+            let regular = IslandGeometryResolver.resolve(screen: screen)
+            let extended = IslandGeometryResolver.resolve(screen: screen, preferredExpandedHeight: 550)
+            XCTAssertEqual(extended.expandedFrame.maxY, regular.expandedFrame.maxY)
+            XCTAssertEqual(extended.expandedFrame.width, regular.expandedFrame.width)
+            XCTAssertEqual(extended.compactFrame, regular.compactFrame)
+            XCTAssertGreaterThan(extended.expandedFrame.height, regular.expandedFrame.height)
+            XCTAssertLessThanOrEqual(extended.expandedFrame.height, (height - 38) * 0.6 + 1)
+        }
+    }
+
     func testPhysicalNotchUsesAuxiliaryGapAndWings() {
         let screen = IslandGeometryResolver.ScreenGeometry(
             frame: CGRect(x: 0, y: 0, width: 1512, height: 982),
@@ -19,9 +37,47 @@ final class IslandGeometryResolverTests: XCTestCase {
                        222 + IslandGeometryResolver.compactWingWidth * 2)
         XCTAssertEqual(layout.compactFrame.height,
                        38 + IslandGeometryResolver.physicalNotchClickExtension)
+        XCTAssertEqual(layout.compactFrame.height, layout.cameraHousingFrame.height,
+                       "The compact hit area must end with the visible notch surface")
         XCTAssertEqual(layout.compactFrame.midX, screen.frame.midX)
         XCTAssertEqual(layout.compactFrame.maxY, screen.frame.maxY)
+        XCTAssertTrue(layout.compactPointerFrame.contains(
+            CGPoint(x: layout.compactFrame.minX + 20, y: screen.frame.maxY)))
+        XCTAssertFalse(layout.compactPointerFrame.contains(
+            CGPoint(x: layout.compactFrame.minX + 20, y: layout.compactFrame.minY - 1)))
         XCTAssertEqual(layout.expandedFrame.maxY, screen.frame.maxY)
+    }
+
+    func testPhysicalNotchWingsFollowReportedGapAcrossDisplaySizes() {
+        let screenWidths: [CGFloat] = [1280, 1440, 1512, 1710, 1800, 2056, 2560]
+        let housingWidths: [CGFloat] = [160, 184, 185.5, 200, 220, 222, 222.5, 240, 260, 300]
+        for screenWidth in screenWidths {
+            for housingWidth in housingWidths {
+                for screenX in [CGFloat(0), -screenWidth] {
+                    let sideWidth = (screenWidth - housingWidth) / 2
+                    let screen = IslandGeometryResolver.ScreenGeometry(
+                        frame: CGRect(x: screenX, y: 0, width: screenWidth, height: 1329),
+                        visibleFrame: CGRect(x: screenX, y: 0, width: screenWidth, height: 1291),
+                        safeAreaTop: 38,
+                        auxiliaryTopLeftArea: CGRect(x: screenX, y: 1291,
+                                                     width: sideWidth, height: 38),
+                        auxiliaryTopRightArea: CGRect(x: screenX + sideWidth + housingWidth,
+                                                      y: 1291, width: sideWidth, height: 38)
+                    )
+                    let layout = IslandGeometryResolver.resolve(screen: screen)
+                    let leftWingEdge = layout.cameraHousingFrame.minX
+                        - IslandGeometryResolver.compactWingWidth
+                    let rightWingEdge = layout.cameraHousingFrame.maxX
+                        + IslandGeometryResolver.compactWingWidth
+                    XCTAssertTrue(layout.hasPhysicalNotch)
+                    XCTAssertEqual(layout.cameraHousingFrame.width, housingWidth)
+                    XCTAssertLessThanOrEqual(layout.compactFrame.minX, leftWingEdge)
+                    XCTAssertGreaterThan(layout.compactFrame.minX, leftWingEdge - 1)
+                    XCTAssertGreaterThanOrEqual(layout.compactFrame.maxX, rightWingEdge)
+                    XCTAssertLessThan(layout.compactFrame.maxX, rightWingEdge + 1)
+                }
+            }
+        }
     }
 
     func testNoNotchUsesFloatingPillBelowVisibleTop() {
@@ -175,6 +231,57 @@ final class IslandGeometryResolverTests: XCTestCase {
         XCTAssertNotEqual(first.compactFrame, second.compactFrame)
         XCTAssertLessThanOrEqual(second.expandedFrame.height,
                                  after.visibleFrame.height * 0.6)
+    }
+
+    func testFileDragOnCompactIslandDoesNotNeedTopApproachSetting() {
+        let compact = CGRect(x: 100, y: 900, width: 300, height: 38)
+        let topZone = CGRect(x: 50, y: 850, width: 400, height: 88)
+        XCTAssertTrue(IslandGeometryResolver.acceptsFileDrag(
+            at: CGPoint(x: 120, y: 920), compactPointerFrame: compact,
+            activationFrame: topZone, topApproachEnabled: false))
+        XCTAssertFalse(IslandGeometryResolver.acceptsFileDrag(
+            at: CGPoint(x: 80, y: 900), compactPointerFrame: compact,
+            activationFrame: topZone, topApproachEnabled: false))
+        XCTAssertTrue(IslandGeometryResolver.acceptsFileDrag(
+            at: CGPoint(x: 80, y: 900), compactPointerFrame: compact,
+            activationFrame: topZone, topApproachEnabled: true))
+    }
+
+    func testFileDragActivatesOnlyInsideTopZone() {
+        let screen = geometry(x: 0, width: 1512, height: 982)
+        let layout = IslandGeometryResolver.resolve(screen: screen)
+        XCTAssertEqual(layout.activationFrame.width, layout.compactFrame.width + 64)
+        XCTAssertEqual(layout.activationFrame.minY, layout.compactFrame.minY - 64)
+        XCTAssertEqual(layout.activationFrame.maxY, screen.frame.maxY + 1)
+        XCTAssertTrue(layout.activationFrame.contains(layout.compactFrame))
+        XCTAssertFalse(layout.activationFrame.contains(layout.expandedFrame))
+        let extended = IslandGeometryResolver.resolve(screen: screen, preferredExpandedHeight: 600)
+        XCTAssertEqual(extended.activationFrame, layout.activationFrame)
+        // Probe the full approach area, including its lower corners well
+        // outside the compact notch, rather than testing only the top edge.
+        for x in [layout.activationFrame.minX + 1, layout.activationFrame.midX, layout.activationFrame.maxX - 1] {
+            for y in [layout.activationFrame.minY + 1, layout.activationFrame.midY, layout.activationFrame.maxY - 1] {
+                XCTAssertTrue(IslandGeometryResolver.acceptsFileDrag(
+                    at: CGPoint(x: x, y: y), compactPointerFrame: .null,
+                    activationFrame: layout.activationFrame, topApproachEnabled: true))
+            }
+        }
+        XCTAssertFalse(IslandGeometryResolver.acceptsFileDrag(
+            at: CGPoint(x: layout.activationFrame.midX, y: layout.activationFrame.minY - 1),
+            compactPointerFrame: .null, activationFrame: layout.activationFrame, topApproachEnabled: true))
+
+        let approachPoint = CGPoint(x: layout.activationFrame.minX - 1,
+                                    y: screen.frame.maxY - 120)
+        XCTAssertFalse(IslandGeometryResolver.acceptsFileDrag(
+            at: approachPoint, compactPointerFrame: .null,
+            activationFrame: layout.activationFrame, topApproachEnabled: true))
+        XCTAssertTrue(IslandGeometryResolver.acceptsFileDrag(
+            at: CGPoint(x: layout.activationFrame.midX, y: screen.frame.maxY),
+            compactPointerFrame: .null, activationFrame: layout.activationFrame,
+            topApproachEnabled: true))
+        XCTAssertFalse(IslandGeometryResolver.acceptsFileDrag(
+            at: approachPoint, compactPointerFrame: .null,
+            activationFrame: layout.activationFrame, topApproachEnabled: false))
     }
 
     private func geometry(x: CGFloat, width: CGFloat,

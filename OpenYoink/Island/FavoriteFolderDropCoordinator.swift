@@ -122,3 +122,16 @@ final class FavoriteFolderDropCoordinator {
     func cancelCopy() { copyTask?.cancel(); decideConflict(.cancel) }
     func resetTarget() { target = nil }
 }
+
+#if DEBUG
+// Isolated, non-running fixtures for the module preview catalog. Never used by app startup.
+extension FavoriteFolderDropCoordinator {
+    static func preview(folders: FavoriteFoldersStore, copying: Bool = false) -> FavoriteFolderDropCoordinator {
+        let coordinator = FavoriteFolderDropCoordinator(folders: folders, bookmarks: BookmarkService())
+        coordinator.isCopying = copying
+        coordinator.completed = copying ? 2 : 0
+        coordinator.total = copying ? 5 : 0
+        return coordinator
+    }
+}
+#endif

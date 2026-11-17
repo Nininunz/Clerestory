@@ -5,6 +5,19 @@ import XCTest
 
 /// PasteboardTypes 能力探测与优先级（纯函数，不构造 pasteboard 实例）。
 final class PasteboardTypesTests: XCTestCase {
+    func testNativeApproachZoneAcceptsFilesAndTextButRejectsWindowDragsAndBrowserURLs() {
+        for types: [NSPasteboard.PasteboardType] in [[], [.URL], [.png], [.string, .URL], [.string, .png], [PasteboardTypes.uriList, .string], [.init("com.example.window-drag")]] {
+            XCTAssertFalse(DragContainerView.acceptsApproachPayload(types, isApproachZone: true))
+        }
+        for type in PasteboardTypes.textTypes {
+            XCTAssertTrue(DragContainerView.acceptsApproachPayload([type], isApproachZone: true))
+        }
+        XCTAssertTrue(DragContainerView.acceptsApproachPayload([.string, .html, .rtf], isApproachZone: true))
+        XCTAssertTrue(DragContainerView.acceptsApproachPayload([.fileURL], isApproachZone: true))
+        XCTAssertTrue(DragContainerView.acceptsApproachPayload(PasteboardTypes.filePromiseTypes, isApproachZone: true))
+        XCTAssertTrue(DragContainerView.acceptsApproachPayload([.string], isApproachZone: false))
+    }
+
     // MARK: - Category detection
 
     func testSupports_fileURL() {

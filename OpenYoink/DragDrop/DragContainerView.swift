@@ -26,6 +26,8 @@ struct DragContainerDropContext {
 final class DropTargetState {
     /// A drag is hovering over the shelf and can be accepted.
     var isTargeted = false
+    var hasDuplicateFiles = false
+    private var destinationOwner: UUID?
     /// 插入位置（目标 index 卡片前缘；等于 items.count 时画在末卡片后缘）。
     var insertionIndex: Int?
     /// F-05: 当前悬停的拖入模式（⌘ 按下为 .move），驱动 ShelfView 的
@@ -34,8 +36,20 @@ final class DropTargetState {
     /// Internal Shelf-card drags reorder existing items instead of importing.
     var isReordering = false
 
+    func target(destination: UUID) {
+        destinationOwner = destination
+        isTargeted = true
+    }
+
+    func leave(destination: UUID) {
+        guard destinationOwner == destination else { return }
+        reset()
+    }
+
     func reset() {
+        destinationOwner = nil
         isTargeted = false
+        hasDuplicateFiles = false
         insertionIndex = nil
         mode = .copy
         isReordering = false
@@ -60,6 +74,7 @@ final class DropTargetState {
 /// 就绪时回退「追加到末尾」（Yoink 语义）。
 @MainActor
 final class DragContainerView: NSView {
+    private let destinationID = UUID()
     private static let reorderActivationRatio: CGFloat = 0.10
     private let store: ShelfStore
     private let coordinator: DropImportCoordinator
@@ -69,6 +84,8 @@ final class DragContainerView: NSView {
     private let dropOverride: DragContainerDropOverride?
     private let onDestinationEntered: (Int) -> Void
     private let onDestinationEnded: (Int, Bool) -> Void
+    private let onNativeShelfDrag: () -> Void
+    private let isApproachZone: Bool
     private var currentDestinationSequenceNumber: Int?
     /// Smoothed travel of the dragged card center, used to tell a horizontal
     /// find-the-slot move from a vertical row change.
@@ -84,6 +101,8 @@ final class DragContainerView: NSView {
          dropOverride: DragContainerDropOverride? = nil,
          onDestinationEntered: @escaping (Int) -> Void = { _ in },
          onDestinationEnded: @escaping (Int, Bool) -> Void = { _, _ in },
+         onNativeShelfDrag: @escaping () -> Void = {},
+         isApproachZone: Bool = false,
          contentViewController: NSViewController) {
         self.store = store
         self.coordinator = coordinator
@@ -92,6 +111,8 @@ final class DragContainerView: NSView {
         self.dropOverride = dropOverride
         self.onDestinationEntered = onDestinationEntered
         self.onDestinationEnded = onDestinationEnded
+        self.onNativeShelfDrag = onNativeShelfDrag
+        self.isApproachZone = isApproachZone
         self.contentViewController = contentViewController
         super.init(frame: .zero)
 
@@ -121,9 +142,26 @@ final class DragContainerView: NSView {
         fatalError("DragContainerView is created programmatically")
     }
 
+    nonisolated static func acceptsApproachPayload(_ types: [NSPasteboard.PasteboardType], isApproachZone: Bool) -> Bool {
+        !isApproachZone || PasteboardTypes.hasShelfApproachContent(in: types)
+    }
+
     // MARK: - NSDraggingDestination
 
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        // The temporary approach zone has an empty child controller. Make
+        // the registered destination itself own every point in that zone.
+        if isApproachZone {
+            return bounds.contains(convert(point, from: superview)) ? self : nil
+        }
+        return super.hitTest(point)
+    }
+
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        guard Self.acceptsApproachPayload(sender.draggingPasteboard.types ?? [], isApproachZone: isApproachZone) else { return [] }
+        if PasteboardTypes.hasShelfApproachContent(in: sender.draggingPasteboard.types ?? []) {
+            onNativeShelfDrag()
+        }
         currentDestinationSequenceNumber = sender.draggingSequenceNumber
         onDestinationEntered(sender.draggingSequenceNumber)
         if let dropOverride, dropOverride.isActive() {
@@ -131,7 +169,7 @@ final class DragContainerView: NSView {
                 dropTargetState.reset()
                 return []
             }
-            dropTargetState.isTargeted = true
+            dropTargetState.target(destination: destinationID)
             dropTargetState.insertionIndex = nil
             dropTargetState.mode = .copy
             dropTargetState.isReordering = false
@@ -139,7 +177,7 @@ final class DragContainerView: NSView {
         }
         if let source = shelfReorderSource(from: sender) {
             resetReorderTravel()
-            dropTargetState.isTargeted = true
+            dropTargetState.target(destination: destinationID)
             dropTargetState.mode = .copy
             dropTargetState.isReordering = true
             updateReorderInsertionIndex(sender, source: source)
@@ -153,14 +191,19 @@ final class DragContainerView: NSView {
             return []
         }
         guard Self.hasImportableContent(sender.draggingPasteboard) else { return [] }
-        dropTargetState.isTargeted = true
+        dropTargetState.target(destination: destinationID)
         dropTargetState.isReordering = false
         updateDropMode(sender)
+        updateDuplicateFeedback(sender)
         updateExternalInsertionIndex(sender)
         return .copy
     }
 
     override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+        guard Self.acceptsApproachPayload(sender.draggingPasteboard.types ?? [], isApproachZone: isApproachZone) else { return [] }
+        if PasteboardTypes.hasShelfApproachContent(in: sender.draggingPasteboard.types ?? []) {
+            onNativeShelfDrag()
+        }
         // The global monitor delivers drag-start on the main actor. Repeating
         // this idempotent registration also covers entering before that delivery.
         onDestinationEntered(sender.draggingSequenceNumber)
@@ -169,12 +212,12 @@ final class DragContainerView: NSView {
                 dropTargetState.reset()
                 return []
             }
-            dropTargetState.isTargeted = true
+            dropTargetState.target(destination: destinationID)
             dropTargetState.isReordering = false
             return .copy
         }
         if let source = shelfReorderSource(from: sender) {
-            dropTargetState.isTargeted = true
+            dropTargetState.target(destination: destinationID)
             dropTargetState.isReordering = true
             updateReorderInsertionIndex(sender, source: source)
             return .copy
@@ -184,9 +227,11 @@ final class DragContainerView: NSView {
             return []
         }
         guard Self.hasImportableContent(sender.draggingPasteboard) else { return [] }
+        dropTargetState.target(destination: destinationID)
         dropTargetState.isReordering = false
         // F-05: ⌘ 状态在拖动期间可能变化，实时刷新模式（高亮色调/提示随之切换）。
         updateDropMode(sender)
+        updateDuplicateFeedback(sender)
         // C6: 拖动期间实时更新插入位置（行列映射见 DropInsertionLocator）。
         updateExternalInsertionIndex(sender)
         // 始终回 .copy（含 ⌘ 剪切模式）：剪切由我们自管（copy+trash，
@@ -198,15 +243,16 @@ final class DragContainerView: NSView {
 
     override func draggingExited(_ sender: NSDraggingInfo?) {
         resetReorderTravel()
-        dropTargetState.reset()
+        dropTargetState.leave(destination: destinationID)
         dropOverride?.reset()
     }
 
     override func prepareForDragOperation(_ sender: NSDraggingInfo) -> Bool {
-        true
+        Self.acceptsApproachPayload(sender.draggingPasteboard.types ?? [], isApproachZone: isApproachZone)
     }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        guard Self.acceptsApproachPayload(sender.draggingPasteboard.types ?? [], isApproachZone: isApproachZone) else { return false }
         var accepted = false
         defer { onDestinationEnded(sender.draggingSequenceNumber, accepted) }
         if let dropOverride, dropOverride.isActive() {
@@ -240,11 +286,12 @@ final class DragContainerView: NSView {
             }
         ) { [weak self] item in
             // 异步物化完成（promise / 图片数据 / 剪切失败回退）：逐个追加入架。
-            self?.store.add(item)
+            guard let self else { return }
+            self.coordinator.addDroppedItems([item], to: self.store)
         }
         guard result.handled else { return false }
         // C6: 同步项目插入到指示线所示位置（无指示线时追加到末尾）。
-        store.add(contentsOf: result.items, at: dropTargetState.insertionIndex)
+        coordinator.addDroppedItems(result.items, to: store, at: dropTargetState.insertionIndex)
         coordinator.noteSynchronousTutorialImport(from: sender.draggingPasteboard,
                                                    items: result.items)
         accepted = true
@@ -258,17 +305,25 @@ final class DragContainerView: NSView {
         guard currentDestinationSequenceNumber == sender.draggingSequenceNumber else { return }
         currentDestinationSequenceNumber = nil
         resetReorderTravel()
-        dropTargetState.reset()
+        dropTargetState.leave(destination: destinationID)
         dropOverride?.reset()
     }
 
     override func concludeDragOperation(_ sender: NSDraggingInfo?) {
         resetReorderTravel()
-        dropTargetState.reset()
+        dropTargetState.leave(destination: destinationID)
         dropOverride?.reset()
     }
 
     // MARK: - Helpers
+
+    private func updateDuplicateFeedback(_ sender: NSDraggingInfo) {
+        let urls = sender.draggingPasteboard.readObjects(
+            forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]
+        ) as? [URL] ?? []
+        dropTargetState.hasDuplicateFiles = dropTargetState.mode == .copy
+            && urls.contains { store.containsFileReference(at: $0) }
+    }
 
     private func dropContext(_ sender: NSDraggingInfo) -> DragContainerDropContext {
         .init(pasteboard: sender.draggingPasteboard,
@@ -384,7 +439,7 @@ final class DragContainerView: NSView {
             return true
         } catch {
             store.add(item)
-            coordinator.noticeCenter.show(String(localized: "The moved item is being kept for recovery because the shelf could not be saved immediately."))
+            coordinator.noticeCenter.show(.moveAwaitingSave)
             return false
         }
     }
@@ -398,7 +453,7 @@ final class DragContainerView: NSView {
             try store.addAndPersistNow(item)
             return true
         } catch {
-            coordinator.noticeCenter.show(String(localized: "The received file was kept safely. Open Recovery to finish importing it."))
+            coordinator.noticeCenter.show(.receivedAwaitingRecovery)
             return false
         }
     }

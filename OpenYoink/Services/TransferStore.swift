@@ -529,3 +529,37 @@ final class TransferStore {
         }
     }
 }
+
+#if DEBUG
+// Isolated, non-running fixtures for the module preview catalog. Never used by app startup.
+extension TransferStore {
+    static func preview(phase: TransferPhase?, direction: TransferDirection = .importIntoShelf,
+                        itemIDs: [UUID] = (0..<5).map { _ in UUID() },
+                        safetyMessage: String = "", expectedCount: Int? = 5) -> TransferStore {
+        let store = TransferStore()
+        if let phase {
+            let task = TransferTask(id: UUID(), direction: direction, startedAt: Date(), itemIDs: itemIDs,
+                                    phase: phase, safetyMessage: safetyMessage, expectedCount: expectedCount)
+            if direction == .exportFromShelf {
+                var progress = ExportProgress(expectedItemIDs: itemIDs)
+                switch phase {
+                case .targetAccepted: progress.acceptedItemIDs = Set(itemIDs)
+                case .delivered: progress.deliveredItemIDs = Set(itemIDs)
+                case .failed(let failure):
+                    if let id = itemIDs.first { progress.failuresByItemID[id] = failure }
+                case .partiallySucceeded(let count, let failures):
+                    progress.deliveredItemIDs = Set(itemIDs.prefix(count))
+                    for (id, failure) in zip(itemIDs.dropFirst(count), failures) {
+                        progress.failuresByItemID[id] = failure
+                    }
+                default: break
+                }
+                store.exportProgressByTaskID[task.id] = progress
+            }
+            store.tasks = [task]
+            store.visibleTaskIDs = [task.id]
+        }
+        return store
+    }
+}
+#endif

@@ -142,6 +142,15 @@ enum PasteboardTypes {
         supports(.fileURL, types: types) || supports(.filePromise, types: types)
     }
 
+    /// Island approach accepts files and text selections. URL/image payloads
+    /// often include a text fallback; that alone must not turn them into text drags.
+    static func hasShelfApproachContent(in types: [NSPasteboard.PasteboardType]) -> Bool {
+        if hasFileDragContent(in: types) { return true }
+        guard !supports(.url, types: types), !types.contains(uriList),
+              !supports(.image, types: types) else { return false }
+        return supports(.text, types: types)
+    }
+
     /// 图片数据中优先物化的类型：PNG 直接落盘，TIFF/通用 image 需转码为 PNG。
     static func preferredImageType(in types: [NSPasteboard.PasteboardType]) -> NSPasteboard.PasteboardType? {
         imageTypes.first { types.contains($0) }

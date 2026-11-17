@@ -99,8 +99,22 @@ final class AIUsageFormatTests: XCTestCase {
         XCTAssertEqual(AIUsageFormat.cost(19.544926), "$19.54")
         XCTAssertEqual(AIUsageFormat.cost(9515.27), "$9,515")
         XCTAssertEqual(AIUsageFormat.cost(nil), "--")
-        XCTAssertEqual(AIUsageFormat.compactCost(19.544926), "$19.5")
+        XCTAssertEqual(AIUsageFormat.compactCost(9.99), "$9.99")
+        XCTAssertEqual(AIUsageFormat.compactCost(9.995), "$10")
+        XCTAssertEqual(AIUsageFormat.compactCost(10), "$10")
+        XCTAssertEqual(AIUsageFormat.compactCost(10.49), "$10")
+        XCTAssertEqual(AIUsageFormat.compactCost(10.5), "$11")
+        XCTAssertEqual(AIUsageFormat.compactCost(19.544926), "$20")
+        XCTAssertEqual(AIUsageFormat.compactCost(99.94), "$100")
+        XCTAssertEqual(AIUsageFormat.compactCost(99.95), "$100")
+        XCTAssertEqual(AIUsageFormat.compactCost(99.75), "$100")
+        XCTAssertEqual(AIUsageFormat.compactCost(99.995), "$100")
+        XCTAssertEqual(AIUsageFormat.compactCost(100), "$100")
         XCTAssertEqual(AIUsageFormat.compactCost(976.9), "$977")
+        XCTAssertEqual(AIUsageFormat.compactCost(999.4), "$999")
+        XCTAssertEqual(AIUsageFormat.compactCost(999.5), "$1K")
+        XCTAssertEqual(AIUsageFormat.compactCost(999.9), "$1K")
+        XCTAssertEqual(AIUsageFormat.compactCost(1000), "$1K")
         XCTAssertEqual(AIUsageFormat.compactCost(2438.3), "$2.4K")
     }
 
@@ -175,7 +189,7 @@ final class AIUsageModuleStoreTests: XCTestCase {
         store.start()
         await store.refresh()
         XCTAssertEqual(store.status, .ready)
-        XCTAssertEqual(store.compactValue, "$19.5")
+        XCTAssertEqual(store.compactValue, "$20")
         metric = .tightestLimit
         XCTAssertEqual(store.compactValue, "41%")
         metric = .off

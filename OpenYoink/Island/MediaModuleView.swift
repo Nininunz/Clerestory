@@ -11,51 +11,39 @@ struct IslandNowPlayingView: View {
     @State private var isSendingCommand = false
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: IslandModuleLayout.headerSpacing) {
             IslandModuleHeader(
                 title: "Now Playing",
                 subtitle: nowPlayingSubtitle,
                 systemImage: "music.note"
             )
-            if store.availability == .disabled {
-                VStack(spacing: 12) {
-                    IslandEmptyState(
+            IslandModuleScrollView(fillsViewport: true) {
+                if store.availability == .disabled {
+                    IslandModuleState(
                         title: "Enable Now Playing",
                         message: "Show album artwork, playback progress, and media controls in the Island.",
                         systemImage: "music.note"
-                    )
-                    Button { settings.islandMediaEnabled = true } label: {
-                        Label("Enable", systemImage: "waveform")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 18)
-                            .frame(height: 36)
-                            .background(Capsule().fill(Color.accentColor))
+                    ) {
+                        Button("Enable") { settings.islandMediaEnabled = true }
+                            .buttonStyle(IslandActionButtonStyle(prominent: true))
                     }
-                    .buttonStyle(IslandPressFeedbackStyle(reduceMotion: reduceMotion))
+                } else if store.availability == .probing {
+                    IslandLoadingState(title: "Checking media access…")
+                } else if let snapshot = store.snapshot {
+                    playerCard(snapshot)
+                } else if store.availability == .available {
+                    IslandEmptyState(
+                        title: "Nothing playing",
+                        message: "Start media in a supported player.",
+                        systemImage: "music.note"
+                    )
+                } else {
+                    IslandEmptyState(
+                        title: "Now Playing unavailable",
+                        message: "OpenYoink could not read the current player. Other Island features still work normally.",
+                        systemImage: "play.slash"
+                    )
                 }
-            } else if store.availability == .probing {
-                VStack(spacing: 9) {
-                    ProgressView().controlSize(.small)
-                    Text("Checking media access…")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.white.opacity(0.48))
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let snapshot = store.snapshot {
-                playerCard(snapshot)
-            } else if store.availability == .available {
-                IslandEmptyState(
-                    title: "Nothing playing",
-                    message: "Start media in a supported player.",
-                    systemImage: "music.note"
-                )
-            } else {
-                IslandEmptyState(
-                    title: "Now Playing unavailable",
-                    message: "OpenYoink could not read the current player. Other Island features still work normally.",
-                    systemImage: "play.slash"
-                )
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -471,6 +459,7 @@ struct IslandEqualizerView: View {
     let reduceMotion: Bool
     var tint: Color = .accentColor
     var rhythmSeed: UInt64 = 0
+    var showsCapsule = true
 
     var body: some View {
         Group {
@@ -488,11 +477,13 @@ struct IslandEqualizerView: View {
         }
         .frame(width: 30, height: 22)
         .background {
-            Capsule()
-                .fill(Color.black.opacity(0.72))
-                .overlay {
-                    Capsule().strokeBorder(Color.white.opacity(0.08), lineWidth: 0.75)
-                }
+            if showsCapsule {
+                Capsule()
+                    .fill(Color.black.opacity(0.72))
+                    .overlay {
+                        Capsule().strokeBorder(Color.white.opacity(0.08), lineWidth: 0.75)
+                    }
+            }
         }
         .shadow(color: isPlaying ? tint.opacity(0.32) : .clear,
                 radius: 5)
@@ -511,7 +502,7 @@ struct IslandEqualizerView: View {
                 Capsule()
                     .fill(
                         LinearGradient(
-                            colors: [.white.opacity(0.96), tint],
+                            colors: [tint.opacity(0.82), tint],
                             startPoint: .top,
                             endPoint: .bottom
                         )
@@ -530,6 +521,18 @@ struct CompactNowPlayingArtworkView: View {
     let isHovered: Bool
 
     var body: some View {
+        artwork(size: 23)
+            .frame(width: 23, height: 23)
+            .scaleEffect(isHovered ? 1.04 : 1)
+            .shadow(color: store.snapshot?.isPlaying == true
+                    ? tint.opacity(0.38) : .clear,
+                    radius: 4)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: isHovered)
+            .accessibilityHidden(true)
+    }
+
+    // Kept for a possible future playback ring. Nothing in the active view calls this.
+    private var playbackProgressArtwork: some View {
         TimelineView(.periodic(from: .now, by: 0.5)) { context in
             let duration = store.snapshot?.duration ?? 0
             let elapsed = store.projectedElapsed(at: context.date) ?? 0
@@ -547,25 +550,19 @@ struct CompactNowPlayingArtworkView: View {
                         style: StrokeStyle(lineWidth: 1.7, lineCap: .round)
                     )
                     .rotationEffect(.degrees(-90))
-                Image(nsImage: image)
-                    .resizable()
-                    .renderingMode(.original)
-                    .interpolation(.high)
-                    .scaledToFill()
-                    .frame(width: 18, height: 18)
-                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(Color.black.opacity(isHovered ? 0.16 : 0))
-                    }
+                artwork(size: 18)
             }
             .frame(width: 23, height: 23)
-            .scaleEffect(isHovered ? 1.04 : 1)
-            .shadow(color: store.snapshot?.isPlaying == true
-                    ? tint.opacity(0.38) : .clear,
-                    radius: 4)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: isHovered)
         }
-        .accessibilityHidden(true)
+    }
+
+    private func artwork(size: CGFloat) -> some View {
+        Image(nsImage: image)
+            .resizable()
+            .renderingMode(.original)
+            .interpolation(.high)
+            .scaledToFill()
+            .frame(width: size, height: size)
+            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
     }
 }

@@ -5,30 +5,36 @@ struct IslandAIUsageView: View {
     @Environment(AIUsageModuleStore.self) private var store
 
     var body: some View {
-        VStack(spacing: 9) {
+        VStack(spacing: IslandModuleLayout.headerSpacing) {
             IslandModuleHeader(
                 title: "AI Usage",
                 subtitle: subtitle,
                 systemImage: AIUsageModuleStore.moduleDescriptor.systemImage
-            )
-            .overlay(alignment: .trailing) {
+            ) {
                 if store.status == .ready { dashboardButton }
             }
 
-            switch store.status {
-            case .notRunning:
-                notRunningState
-            case let .failed(message) where store.snapshot == nil:
-                IslandEmptyState(title: "Can't read TokenTracker",
-                                 message: LocalizedStringKey(message),
-                                 systemImage: "exclamationmark.triangle")
-            default:
-                if let snapshot = store.snapshot {
-                    content(snapshot)
-                } else {
-                    ProgressView()
-                        .controlSize(.small)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+            IslandModuleScrollView(fillsViewport: true) {
+                switch store.status {
+                case .notRunning:
+                    notRunningState
+                case let .failed(message) where store.snapshot == nil:
+                    IslandModuleState(title: "Can't read TokenTracker", message: LocalizedStringKey(message)) {
+                        Button("Retry") { store.requestRefresh() }
+                    }
+                default:
+                    if let snapshot = store.snapshot {
+                        VStack(spacing: 10) {
+                            if case let .failed(message) = store.status {
+                                IslandModuleNotice(message: message, isError: true)
+                                Button("Retry") { store.requestRefresh() }
+                                    .buttonStyle(IslandActionButtonStyle())
+                            }
+                            content(snapshot)
+                        }
+                    } else {
+                        IslandLoadingState(title: "Loading AI usage…")
+                    }
                 }
             }
         }
@@ -62,8 +68,6 @@ struct IslandAIUsageView: View {
                 limitsList(limits, now: snapshot.fetchedAt)
             }
         }
-        .padding(.horizontal, 6)
-        .padding(.top, 2)
     }
 
     /// Today's spend is the headline; tokens and conversations sit beside it.
@@ -191,13 +195,8 @@ struct IslandAIUsageView: View {
             store.openDashboard()
         } label: {
             Image(systemName: "arrow.up.right")
-                .font(.system(size: 10.5, weight: .bold))
-                .foregroundStyle(.white.opacity(0.72))
-                .frame(width: 26, height: 26)
-                .background(Circle().fill(Color.white.opacity(0.08)))
-                .contentShape(Circle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(IslandHeaderButtonStyle())
         .help(Text("Open TokenTracker's dashboard in the browser"))
         .accessibilityLabel(Text("Open Dashboard"))
     }
@@ -222,25 +221,17 @@ struct IslandAIUsageView: View {
 
     private var notRunningState: some View {
         let installed = store.isTokenTrackerInstalled
-        return VStack(spacing: 10) {
-            IslandEmptyState(
-                title: installed ? "TokenTracker isn't running" : "Get TokenTracker",
-                message: installed
-                    ? "Open TokenTracker and your AI usage shows up here."
-                    : "AI usage comes from TokenTracker, a free, open-source tracker for Claude Code, Codex, Cursor and more.",
-                systemImage: AIUsageModuleStore.moduleDescriptor.systemImage
-            )
-            .frame(maxHeight: 130)
-            HStack(spacing: 8) {
-                Button(installed ? "Open TokenTracker" : "Download TokenTracker") {
-                    store.openTokenTracker()
-                }
-                .buttonStyle(IslandCapsuleButtonStyle(prominent: true))
-                Button("Retry") { store.requestRefresh() }
-                    .buttonStyle(IslandCapsuleButtonStyle(prominent: false))
-            }
+        return IslandModuleState(
+            title: installed ? "TokenTracker isn't running" : "Get TokenTracker",
+            message: installed
+                ? "Open TokenTracker and your AI usage shows up here."
+                : "AI usage comes from TokenTracker, a free, open-source tracker for Claude Code, Codex, Cursor and more.",
+            systemImage: AIUsageModuleStore.moduleDescriptor.systemImage
+        ) {
+            Button(installed ? "Open TokenTracker" : "Download TokenTracker") { store.openTokenTracker() }
+                .buttonStyle(IslandActionButtonStyle(prominent: true))
+            Button("Retry") { store.requestRefresh() }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: Style
@@ -257,23 +248,5 @@ struct IslandAIUsageView: View {
         case "cursor": return Color.white.opacity(0.8)
         default: return Color(red: 0.45, green: 0.7, blue: 1.0)
         }
-    }
-}
-
-/// Small capsule button for the dark Island surface.
-private struct IslandCapsuleButtonStyle: ButtonStyle {
-    let prominent: Bool
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 10.5, weight: .semibold))
-            .foregroundStyle(prominent ? Color.black : Color.white.opacity(0.88))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(
-                Capsule().fill(prominent ? Color.white.opacity(configuration.isPressed ? 0.75 : 0.92)
-                                         : Color.white.opacity(configuration.isPressed ? 0.16 : 0.10))
-            )
-            .contentShape(Capsule())
     }
 }

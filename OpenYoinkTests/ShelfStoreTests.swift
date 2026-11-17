@@ -3,6 +3,72 @@ import XCTest
 
 @MainActor
 final class ShelfStoreTests: XCTestCase {
+    func testRepeatedFileDropsAreIgnoredAcrossBatchesAndInsideStacks() {
+        let existing = makeItem("existing.txt")
+        let stacked = makeItem("stacked.txt")
+        let store = ShelfStore(items: [existing, ShelfItem(kind: .stack, displayName: "Stack", children: [stacked])])
+        store.add(makeItem("existing.txt"))
+        store.add(makeItem("stacked.txt"))
+        let fresh = makeItem("new.txt")
+        store.add(contentsOf: [fresh, makeItem("new.txt"), makeItem("existing.txt")], at: 0)
+        XCTAssertEqual(store.items.count, 3)
+        XCTAssertEqual(store.items.first?.id, fresh.id)
+        XCTAssertEqual(store.items[1].id, existing.id)
+    }
+
+    func testDuplicateFeedbackTargetsExistingCardsAndRepeatsWithoutChangingSelection() throws {
+        let file = makeItem("existing.txt")
+        let child = makeItem("stacked.txt")
+        let stack = ShelfItem(kind: .stack, displayName: "Stack", children: [child])
+        let store = ShelfStore(items: [file, stack])
+        store.select(stack.id)
+        store.add(contentsOf: [makeItem("existing.txt"), makeItem("stacked.txt")])
+        let first = try XCTUnwrap(store.duplicateDrop)
+        XCTAssertEqual(first.cardIDs, [file.id, stack.id])
+        XCTAssertEqual(first.skippedCount, 2)
+        XCTAssertEqual(store.selection, [stack.id])
+        XCTAssertEqual(store.items, [file, stack])
+        store.add(makeItem("existing.txt"))
+        XCTAssertNotEqual(store.duplicateDrop?.id, first.id)
+        XCTAssertEqual(store.duplicateDrop?.cardIDs, [file.id])
+    }
+
+    func testDragPreflightFindsExistingFilesIncludingStacksWithoutChangingStore() {
+        let file = makeItem("existing.txt")
+        let child = makeItem("stacked.txt")
+        let store = ShelfStore(items: [file, ShelfItem(kind: .stack, displayName: "Stack", children: [child])])
+        XCTAssertTrue(store.containsFileReference(at: URL(fileURLWithPath: "/tmp/existing.txt")))
+        XCTAssertTrue(store.containsFileReference(at: URL(fileURLWithPath: "/tmp/stacked.txt")))
+        XCTAssertFalse(store.containsFileReference(at: URL(fileURLWithPath: "/elsewhere/existing.txt")))
+        XCTAssertNil(store.duplicateDrop)
+        XCTAssertEqual(store.items.count, 2)
+    }
+
+    func testDuplicateWithinNewBatchHighlightsRetainedEntry() {
+        let store = ShelfStore()
+        let file = makeItem("new.txt")
+        store.add(contentsOf: [file, makeItem("new.txt")])
+        XCTAssertEqual(store.items, [file])
+        XCTAssertEqual(store.duplicateDrop?.cardIDs, [file.id])
+        XCTAssertEqual(store.duplicateDrop?.skippedCount, 1)
+    }
+
+    func testDeduplicationUsesCanonicalPathsNotDisplayNamesOrText() throws {
+        let root = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("original.txt")
+        try Data("sample".utf8).write(to: file)
+        let alias = root.appendingPathComponent("alias.txt")
+        try FileManager.default.createSymbolicLink(at: alias, withDestinationURL: file)
+        let store = ShelfStore()
+        store.add(ShelfItem(kind: .file, path: file.path, displayName: "Same name"))
+        store.add(ShelfItem(kind: .file, path: alias.path, displayName: "Alias"))
+        store.add(ShelfItem(kind: .file, path: root.appendingPathComponent("different.txt").path, displayName: "Same name"))
+        store.add(ShelfItem(kind: .text, displayName: "Note", text: "same"))
+        store.add(ShelfItem(kind: .text, displayName: "Note", text: "same"))
+        XCTAssertEqual(store.items.count, 4)
+    }
+
     // MARK: - Helpers
 
     private func makeItem(_ name: String, kind: ItemKind = .file) -> ShelfItem {

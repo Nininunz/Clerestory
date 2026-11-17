@@ -5,30 +5,58 @@ struct IslandScreenSelectionCandidate: Equatable {
     let id: String
     let frame: CGRect
     let isMain: Bool
+    var hasPhysicalNotch: Bool = true
+}
+
+/// Keep the floating Island implementation for the external-display rework.
+enum FloatingIslandAvailability {
+    static var isEnabled: Bool { IslandDebugMode.simulatesNoNotch }
+}
+
+enum IslandDebugMode {
+    private static let simulateNoNotchKey = "OpenYoinkSimulateNoNotch"
+
+    static var simulatesNoNotch: Bool {
+        #if DEBUG
+        UserDefaults.standard.bool(forKey: simulateNoNotchKey)
+        #else
+        false
+        #endif
+    }
+
+    #if DEBUG
+    static func setSimulatesNoNotch(_ enabled: Bool) {
+        UserDefaults.standard.set(enabled, forKey: simulateNoNotchKey)
+    }
+    #endif
 }
 
 enum IslandScreenSelectionPolicy {
     static func selectedID(
         for target: SettingsStore.IslandDisplayTarget,
         pointerPoint: CGPoint,
-        screens: [IslandScreenSelectionCandidate]
+        screens: [IslandScreenSelectionCandidate],
+        allowFloating: Bool = FloatingIslandAvailability.isEnabled
     ) -> String? {
-        guard !screens.isEmpty else { return nil }
+        let supportedScreens = screens.filter {
+            allowFloating || $0.hasPhysicalNotch
+        }
+        guard !supportedScreens.isEmpty else { return nil }
 
         switch target {
         case .main:
-            return screens.first(where: \.isMain)?.id ?? screens[0].id
+            return supportedScreens.first(where: \.isMain)?.id ?? supportedScreens[0].id
         case .automatic:
-            return screens.first(where: { $0.frame.contains(pointerPoint) })?.id
-                ?? screens.first(where: \.isMain)?.id
-                ?? screens[0].id
+            return supportedScreens.first(where: { $0.frame.contains(pointerPoint) })?.id
+                ?? supportedScreens.first(where: \.isMain)?.id
+                ?? supportedScreens[0].id
         case let .display(id):
             // Keep the stored physical-display choice when it is disconnected.
             // Runtime placement temporarily falls back to the main display;
             // reconnecting the display makes the same ID resolve again.
-            return screens.contains(where: { $0.id == id })
+            return supportedScreens.contains(where: { $0.id == id })
                 ? id
-                : screens.first(where: \.isMain)?.id ?? screens[0].id
+                : supportedScreens.first(where: \.isMain)?.id ?? supportedScreens[0].id
         }
     }
 }
@@ -42,7 +70,9 @@ enum IslandScreenCatalog {
     }
 
     static func options() -> [Option] {
-        NSScreen.screens.enumerated().map { index, screen in
+        NSScreen.screens.enumerated().filter { _, screen in
+            FloatingIslandAvailability.isEnabled || hasPhysicalNotch(screen)
+        }.map { index, screen in
             Option(id: identifier(for: screen),
                    name: screen.localizedName,
                    isMain: index == 0)
@@ -58,7 +88,8 @@ enum IslandScreenCatalog {
             IslandScreenSelectionCandidate(
                 id: identifier(for: screen),
                 frame: screen.frame,
-                isMain: index == 0
+                isMain: index == 0,
+                hasPhysicalNotch: hasPhysicalNotch(screen)
             )
         }
         guard let selectedID = IslandScreenSelectionPolicy.selectedID(
@@ -67,7 +98,10 @@ enum IslandScreenCatalog {
             screens: candidates
         ) else { return nil }
         return screens.first { identifier(for: $0) == selectedID }
-            ?? screens.first
+    }
+
+    private static func hasPhysicalNotch(_ screen: NSScreen) -> Bool {
+        IslandGeometryResolver.resolve(screen: geometry(for: screen)).hasPhysicalNotch
     }
 
     static func geometry(for screen: NSScreen)
@@ -75,7 +109,7 @@ enum IslandScreenCatalog {
         // Lets a notched Mac exercise the floating (no-notch) Island:
         // `open OpenYoink.app --args -OpenYoinkSimulateNoNotch YES`
         // or `defaults write com.weijue.OpenYoink OpenYoinkSimulateNoNotch -bool YES`.
-        if UserDefaults.standard.bool(forKey: "OpenYoinkSimulateNoNotch") {
+        if IslandDebugMode.simulatesNoNotch {
             return IslandGeometryResolver.ScreenGeometry(
                 frame: screen.frame,
                 visibleFrame: screen.visibleFrame,

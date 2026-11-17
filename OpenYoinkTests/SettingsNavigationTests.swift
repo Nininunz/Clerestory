@@ -7,24 +7,55 @@ final class SettingsNavigationTests: XCTestCase {
         let navigation = SettingsNavigationModel()
         navigation.selectedPane = .general
 
+        #if DEBUG
+        XCTAssertEqual(navigation.moveSidebarSelection(forward: true, focusedPane: .storage), .debug)
+        XCTAssertEqual(navigation.selectedPane, .debug)
+        #else
         XCTAssertEqual(navigation.moveSidebarSelection(forward: true, focusedPane: .storage), .about)
         XCTAssertEqual(navigation.selectedPane, .about)
+        #endif
     }
 
     func testUpContinuesFromTabFocusedPaneRatherThanSelection() {
         let navigation = SettingsNavigationModel()
         navigation.selectedPane = .about
 
-        XCTAssertEqual(navigation.moveSidebarSelection(forward: false, focusedPane: .triggers), .appearance)
-        XCTAssertEqual(navigation.selectedPane, .appearance)
+        XCTAssertEqual(navigation.moveSidebarSelection(forward: false, focusedPane: .triggers), .modules)
+        XCTAssertEqual(navigation.selectedPane, .modules)
     }
 
     func testNoFocusedButtonFallsBackToSelectedPane() {
         let navigation = SettingsNavigationModel()
-        navigation.selectedPane = .appearance
+        navigation.selectedPane = .general
 
-        XCTAssertEqual(navigation.moveSidebarSelection(forward: true, focusedPane: nil), .triggers)
-        XCTAssertEqual(navigation.moveSidebarSelection(forward: false, focusedPane: nil), .appearance)
+        XCTAssertEqual(navigation.moveSidebarSelection(forward: true, focusedPane: nil), .modules)
+        XCTAssertEqual(navigation.moveSidebarSelection(forward: false, focusedPane: nil), .general)
+    }
+
+    func testFormerSidebarLinksOpenModuleDetails() {
+        let navigation = SettingsNavigationModel()
+        for (pane, destination) in [(SettingsPane.shelf, ModuleSettingsDestination.shelf), (.clipboard, .clipboard)] {
+            navigation.open(pane)
+            XCTAssertEqual(navigation.selectedPane, .modules)
+            XCTAssertEqual(navigation.moduleSettingsDestination, destination)
+            XCTAssertFalse(SettingsPane.visibleCases.contains(pane))
+        }
+        navigation.open(.modules)
+        XCTAssertNil(navigation.moduleSettingsDestination)
+    }
+
+    func testSidebarNavigationLeavesModuleDetail() {
+        let navigation = SettingsNavigationModel()
+        navigation.open(.clipboard)
+        XCTAssertEqual(navigation.moveSidebarSelection(forward: true, focusedPane: .modules), .triggers)
+        XCTAssertNil(navigation.moduleSettingsDestination)
+    }
+
+    func testModuleDestinationsAreUniqueAndExcludeFixedQuickSettings() {
+        let ids = ModuleSettingsDestination.allCases.map(\.moduleID)
+        XCTAssertEqual(Set(ids).count, ids.count)
+        XCTAssertEqual(Set(ids), Set([.shelf, .transfers, .timer, .battery, .system, .media, .folders, .clipboard, .aiUsage]))
+        XCTAssertFalse(ids.contains(.quickSettings))
     }
 
     func testArrowsDoNotWrapAtSidebarBoundaries() {

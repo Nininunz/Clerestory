@@ -116,6 +116,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                                                    onOpenSettings: { [weak self] in
                                                                        self?.settingsWindowController.show(pane: .general)
                                                                    },
+                                                                   onOpenModuleSettings: { [weak self] in
+                                                                       self?.settingsWindowController.show(pane: .modules)
+                                                                   },
                                                                    onOpenStorageRecovery: { [weak self] in
                                                                        self?.settingsWindowController.show(pane: .storage)
                                                                    },
@@ -141,6 +144,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                                                          supportController: supportController,
                                                                          clipboardHistoryStore: clipboardHistoryStore)
     private lazy var menuBarController = MenuBarController(
+        settings: settingsStore,
         isShelfExpanded: { [weak self] in
             self?.shelfPresentationCoordinator.isExpanded ?? false
         },
@@ -187,6 +191,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.saveClipboardToShelf()
         }
     )
+    lazy var compactCycleHotKeyMonitor = HotKeyMonitor(
+        shortcut: settingsStore.compactCycleShortcut, hotKeyIdentifier: 3,
+        onPress: { [weak self] in self?.settingsStore.cycleCompactModule() },
+        onDoublePress: {}
+    )
+    lazy var compactReverseCycleHotKeyMonitor = HotKeyMonitor(
+        shortcut: settingsStore.compactReverseCycleShortcut, hotKeyIdentifier: 4,
+        onPress: { [weak self] in self?.settingsStore.cycleCompactModule(backwards: true) },
+        onDoublePress: {}
+    )
     lazy var clipboardHotKeyMonitor = HotKeyMonitor(
         shortcut: settingsStore.clipboardHistoryShortcut, hotKeyIdentifier: 2,
         onPress: { [weak self] in self?.clipboardHistoryWindowController.show() },
@@ -230,7 +244,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             || IgnoreListService.frontmostAppIsIgnored(in: self.settingsStore.ignoredAppBundleIDs)
     }, onDragStart: { [weak self] in
         self?.handleDragStart()
-    }, onDragUpdate: { [weak self] point in
+    }, onPotentialDragChange: { [weak self] active in
+        self?.shelfWindowController.setIslandDragZoneActive(active)
+    }, onNativeDragUpdate: { [weak self] point in
         self?.handleDragUpdate(at: point)
     }, onDragEnd: { [weak self] in
         self?.handleDragEnd()
@@ -295,9 +311,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // 全新安装与没有 onboardingVersion 键的旧版本升级。
         let hasLegacyInstallEvidence = legacyInstallEvidence()
         _ = menuBarController
-        if !isUITesting { clipboardHistoryStore.start() }
+        if !isUITesting && settingsStore.experimentalModulesEnabled { clipboardHistoryStore.start() }
         // EdgeTab: 拉环随启动就位（shelf 初始隐藏，拉环立即在边缘就位）。
-        _ = edgeTabController
+        if SideShelfAvailability.isEnabled { _ = edgeTabController }
         // Sparkle: 启动 updater（应用「自动检查」设置后 start；幂等）。
         if !isUITesting {
             updateController.start()
@@ -369,7 +385,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let arguments = ProcessInfo.processInfo.arguments
         if arguments.contains("--ui-testing-open-settings") {
             settingsWindowController.show(pane: .general)
-        } else if arguments.contains("--ui-testing-show-shelf") {
+        } else if SideShelfAvailability.isEnabled && arguments.contains("--ui-testing-show-shelf") {
             shelfWindowController.showShelf(animated: false)
         }
     }
@@ -406,6 +422,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         bookmarkService.stopAccessingAll()
         hotKeyMonitor.setEnabled(false)
         clipboardHotKeyMonitor.setEnabled(false)
+        compactCycleHotKeyMonitor.setEnabled(false)
+        compactReverseCycleHotKeyMonitor.setEnabled(false)
         mouseShakeMonitor.stop()
         edgeTriggerMonitor.stop()
         dragStartMonitor.stop()
@@ -461,9 +479,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func handleDragUpdate(at point: CGPoint) {
         guard settingsStore.islandEnabled,
-              settingsStore.islandShelfEnabled,
-              settingsStore.islandDragApproachEnabled,
-              settingsStore.dragAutoAppearMode != .off else { return }
+              settingsStore.islandShelfEnabled else { return }
         if shelfPresentationCoordinator.dragApproachedTop(at: point) {
             islandDragWasActivated = true
         }
@@ -502,7 +518,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         guard result.handled else {
             if appState.isShelfVisible {
-                shelfNotice.show(String(localized: "Clipboard is empty or has nothing the shelf can hold."))
+                shelfNotice.show(.clipboardEmpty)
             }
             return
         }
@@ -591,7 +607,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let loadResult = managedMoveJournal.loadResult()
         guard case .loaded(let records) = loadResult, !records.isEmpty else {
             if loadResult == .failed {
-                shelfNotice.show(String(localized: "Managed move recovery data needs attention. Automatic cleanup is disabled."))
+                shelfNotice.show(.moveRecoveryNeedsAttention)
             }
             return
         }
@@ -652,7 +668,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 for record in resolved {
                     try? managedMoveJournal.remove(id: record.id)
                 }
-                shelfNotice.show(String(localized: "Recovered an interrupted managed move."))
+                shelfNotice.show(.moveRecovered)
             } catch {
                 logger.error("Failed to persist recovered managed moves: \(error.localizedDescription, privacy: .public)")
                 unresolvedCount += resolved.count
@@ -660,7 +676,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         if unresolvedCount > 0 {
-            shelfNotice.show(String(localized: "Some managed move recovery data needs attention. Automatic cleanup is disabled."))
+            shelfNotice.show(.partialMoveRecoveryNeedsAttention)
         }
     }
 
@@ -695,10 +711,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
             if remainingCount > 0 {
-                shelfNotice.show(String(localized: "A received file was kept safely. Open Recovery to finish importing it."))
+                shelfNotice.show(.interruptedImportRecovered)
             }
         case .failed:
-            shelfNotice.show(String(localized: "Pending import recovery data needs attention. Automatic cleanup is disabled."))
+            shelfNotice.show(.importRecoveryNeedsAttention)
         case .missing:
             break
         }
@@ -763,11 +779,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// 时都要保持注册；EdgeTab 起还供给拉环投放暗示的 `isDragInProgress`
     /// 状态，拉环可用（edgeTabEnabled 且非 custom）时同样保持注册。
     private func applyTriggerSettings() {
+        if !isUITesting && settingsStore.experimentalModulesEnabled {
+            clipboardHistoryStore.start()
+        } else {
+            clipboardHistoryStore.stop()
+            clipboardHistoryWindowController.hide()
+        }
+        // Release a conflicting cycle registration before registering the other action.
+        if settingsStore.compactCycleShortcutConflicts || !settingsStore.islandEnabled {
+            compactCycleHotKeyMonitor.setEnabled(false)
+            compactReverseCycleHotKeyMonitor.setEnabled(false)
+        }
         hotKeyMonitor.updateShortcut(settingsStore.hotKeyShortcut)
         hotKeyMonitor.setDoublePressEnabled(settingsStore.hotKeyDoublePressSavesClipboard)
         hotKeyMonitor.setEnabled(settingsStore.hotKeyEnabled)
         clipboardHotKeyMonitor.updateShortcut(settingsStore.clipboardHistoryShortcut)
-        clipboardHotKeyMonitor.setEnabled(settingsStore.clipboardHistoryShortcut != nil
+        clipboardHotKeyMonitor.setEnabled(settingsStore.experimentalModulesEnabled && settingsStore.clipboardHistoryShortcut != nil
             && (!settingsStore.hotKeyEnabled || settingsStore.clipboardHistoryShortcut != settingsStore.hotKeyShortcut))
         clipboardHistoryStore.shortcutRegistrationError = settingsStore.hotKeyEnabled
             && settingsStore.clipboardHistoryShortcut != nil
@@ -775,13 +802,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ? String(localized: "Choose a history shortcut different from the shelf shortcut.")
             : clipboardHotKeyMonitor.registrationError
 
+        let cycleShortcut = settingsStore.compactCycleShortcut
+        let cycleConflict = settingsStore.compactCycleShortcutConflicts
+        // Release both first so swapping the Shift modifier cannot collide with the old pair.
+        compactCycleHotKeyMonitor.setEnabled(false)
+        compactReverseCycleHotKeyMonitor.setEnabled(false)
+        compactCycleHotKeyMonitor.updateShortcut(cycleShortcut)
+        compactReverseCycleHotKeyMonitor.updateShortcut(settingsStore.compactReverseCycleShortcut)
+        compactCycleHotKeyMonitor.setEnabled(settingsStore.islandEnabled && cycleShortcut != nil && !cycleConflict)
+        compactReverseCycleHotKeyMonitor.setEnabled(settingsStore.islandEnabled && cycleShortcut != nil && !cycleConflict)
+        settingsStore.compactCycleShortcutError = cycleConflict
+            ? String(localized: "Choose a compact shortcut whose forward and reverse combinations differ from the shelf and clipboard shortcuts.")
+            : compactCycleHotKeyMonitor.registrationError ?? compactReverseCycleHotKeyMonitor.registrationError
+
         if settingsStore.shakeTriggerEnabled {
             mouseShakeMonitor.start(parameters: settingsStore.shakeSensitivity.shakeParameters)
         } else {
             mouseShakeMonitor.stop()
         }
 
-        let classicActive = settingsStore.classicShelfEnabled
+        let classicActive = SideShelfAvailability.isEnabled && settingsStore.classicShelfEnabled
         let edgeActive = classicActive
             && settingsStore.dragAutoAppearMode == .edgeOnly
             && settingsStore.shelfPosition != .custom
@@ -802,8 +842,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             && settingsStore.shelfPosition != .custom
         let islandDragActive = settingsStore.islandEnabled
             && settingsStore.islandShelfEnabled
-            && settingsStore.islandDragApproachEnabled
-            && settingsStore.dragAutoAppearMode != .off
+            && !IslandScreenCatalog.options().isEmpty
         let classicImmediateActive = settingsStore.effectivePreferredShelfSurface == .classic
             && settingsStore.dragAutoAppearMode == .immediate
         if classicImmediateActive
@@ -829,6 +868,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { @MainActor in
             self.applyTriggerSettings()
             self.shelfPresentationCoordinator.applyCurrentMode(animated: true)
+            self.menuBarController.applyVisibility()
             // Sparkle: 「自动检查更新」开关同步（值未变时不写，幂等）。
             self.updateController.applySettings()
             self.clipboardHistoryStore.prune(force: true)

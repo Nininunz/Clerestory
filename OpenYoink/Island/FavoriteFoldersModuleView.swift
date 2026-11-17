@@ -9,7 +9,6 @@ struct FavoriteFoldersModuleView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var addPanel: NSOpenPanel?
-    @State private var isAddButtonHovering = false
     @State private var renameTargetID: UUID?
     @State private var renameText = ""
 
@@ -19,40 +18,16 @@ struct FavoriteFoldersModuleView: View {
     ]
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: IslandModuleLayout.headerSpacing) {
             IslandModuleHeader(
                 title: "Quick Access",
                 subtitle: headerSubtitle,
                 systemImage: "folder"
-            )
-            .overlay(alignment: .trailing) {
+            ) {
                 Button(action: chooseFolders) {
                     Image(systemName: "plus")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(Color.white)
-                        .frame(width: 30, height: 30)
-                        .background {
-                            Circle()
-                                .fill(Color.accentColor.opacity(isAddButtonHovering ? 1 : 0.9))
-                                .overlay {
-                                    Circle()
-                                        .strokeBorder(Color.white.opacity(0.3), lineWidth: 1)
-                                }
-                                .shadow(
-                                    color: Color.accentColor.opacity(isAddButtonHovering ? 0.45 : 0.3),
-                                    radius: isAddButtonHovering ? 6 : 4,
-                                    y: 2
-                                )
-                        }
-                        .contentShape(Circle())
-                        .scaleEffect(isAddButtonHovering ? 1.06 : 1)
                 }
-                .buttonStyle(.plain)
-                .onHover { hovering in
-                    isAddButtonHovering = hovering
-                }
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.14),
-                           value: isAddButtonHovering)
+                .buttonStyle(IslandHeaderButtonStyle())
                 .accessibilityLabel(Text("Add folders"))
                 .help(Text("Add folders"))
             }
@@ -76,10 +51,10 @@ struct FavoriteFoldersModuleView: View {
                 HStack(spacing: 8) {
                     ProgressView(value: Double(copyCoordinator.completed), total: Double(max(1, copyCoordinator.total)))
                     Text("\(copyCoordinator.completed) / \(copyCoordinator.total)").font(.caption.monospacedDigit())
-                    Button("Cancel") { copyCoordinator.cancelCopy() }.buttonStyle(.plain)
+                    Button("Cancel") { copyCoordinator.cancelCopy() }.buttonStyle(IslandPressFeedbackStyle())
                 }
             } else if let message = copyCoordinator.message {
-                Text(message).font(.caption).foregroundStyle(IslandVisualStyle.secondaryText).lineLimit(2)
+                IslandModuleNotice(message: message)
             }
 
             if store.items.isEmpty {
@@ -110,11 +85,11 @@ struct FavoriteFoldersModuleView: View {
                     .padding(.vertical, 1)
                 }
                 .scrollIndicators(.automatic)
+                .scrollBounceBehavior(.basedOnSize)
                 .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { copyCoordinator.viewport = $0 }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(2)
         .onDisappear {
             copyCoordinator.tileFrames.removeAll()
             copyCoordinator.viewport = .zero
@@ -163,30 +138,7 @@ struct FavoriteFoldersModuleView: View {
     }
 
     private func notice(message: String, isError: Bool) -> some View {
-        HStack(spacing: 7) {
-            Image(systemName: isError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
-                .foregroundStyle(isError ? Color.orange : Color.green)
-            Text(message)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(IslandVisualStyle.secondaryText)
-                .lineLimit(2)
-            Spacer(minLength: 4)
-            Button {
-                store.dismissNotice()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 9, weight: .bold))
-                    .frame(width: 20, height: 20)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("Dismiss"))
-        }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 6)
-        .background {
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(Color.white.opacity(0.055))
-        }
+        IslandModuleNotice(message: message, isError: isError, onDismiss: store.dismissNotice)
     }
 
     private func chooseFolders() {

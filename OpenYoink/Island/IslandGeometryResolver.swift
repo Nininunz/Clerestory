@@ -35,6 +35,11 @@ enum IslandFloatingPresentation: Equatable, Sendable {
 }
 
 enum IslandGeometryResolver {
+    static func acceptsFileDrag(at point: CGPoint, compactPointerFrame: CGRect,
+                                activationFrame: CGRect, topApproachEnabled: Bool) -> Bool {
+        compactPointerFrame.contains(point)
+            || (topApproachEnabled && activationFrame.contains(point))
+    }
     struct ScreenGeometry: Equatable, Sendable {
         var frame: CGRect
         var visibleFrame: CGRect
@@ -82,19 +87,26 @@ enum IslandGeometryResolver {
 
         var cameraHousingWidth: CGFloat { cameraHousingFrame.width }
         var topInset: CGFloat { cameraHousingFrame.height }
+
+        /// CGRect.contains excludes maxY, while the pointer can report the
+        /// screen's exact top coordinate when pressed against the menu bar.
+        var compactPointerFrame: CGRect {
+            guard hasPhysicalNotch else { return compactFrame }
+            return CGRect(x: compactFrame.minX, y: compactFrame.minY,
+                          width: compactFrame.width, height: compactFrame.height + 1)
+        }
     }
 
     /// Keep the visual wings and their hit targets narrow: these overlays share
     /// the menu-bar row with status items, which macOS does not move aside for us.
     static let compactWingWidth: CGFloat = 40
-    /// A physical camera housing cannot receive pointer events. Extending the
-    /// attached surface slightly below it creates one obvious click target while
-    /// keeping the top edge fused to the screen hardware.
-    static let physicalNotchClickExtension: CGFloat = 10
+    /// Match the compact panel to the visible surface. A transparent strip
+    /// below the notch would intercept clicks meant for the app underneath.
+    static let physicalNotchClickExtension: CGFloat = 0
     static let floatingCompactSize = CGSize(width: 224, height: 38)
     static let floatingDotHitSize = CGSize(width: 44, height: 22)
     static let floatingDotDiameter: CGFloat = 10
-    static let maximumExpandedWidth: CGFloat = 440
+    static let maximumExpandedWidth: CGFloat = 492
     static let minimumExpandedWidth: CGFloat = 360
     static let expandedPreferredHeight: CGFloat = 330
     static let maximumExpandedHeightFraction: CGFloat = 0.6
@@ -108,7 +120,7 @@ enum IslandGeometryResolver {
         return resolve(screen: screen)
     }
 
-    static func resolve(screen: ScreenGeometry) -> Layout {
+    static func resolve(screen: ScreenGeometry, preferredExpandedHeight: CGFloat = expandedPreferredHeight) -> Layout {
         let left = screen.auxiliaryTopLeftArea
         let right = screen.auxiliaryTopRightArea
         // auxiliary areas have been observed in both screen-relative and global
@@ -153,16 +165,19 @@ enum IslandGeometryResolver {
                                 max(minimumExpandedWidth,
                                     min(availableWidth, maximumExpandedWidth)))
         let heightCap = max(260, screen.visibleFrame.height * maximumExpandedHeightFraction)
-        let expandedHeight = min(expandedPreferredHeight, heightCap)
+        let expandedHeight = min(max(expandedPreferredHeight, preferredExpandedHeight), heightCap)
         let expanded = CGRect(x: horizontalAnchor - expandedWidth / 2,
                               y: topAnchor - expandedHeight,
                               width: expandedWidth,
                               height: expandedHeight)
-        let activationHeight: CGFloat = 88
-        let activation = CGRect(x: horizontalAnchor - expandedWidth / 2,
-                                y: screen.frame.maxY - activationHeight,
-                                width: expandedWidth,
-                                height: activationHeight)
+        // Approaching the compact Island should reveal Shelf; the expanded
+        // module's size must not turn a large part of the desktop into a trigger.
+        let activationLeft = max(screen.frame.minX, compact.minX - 32)
+        let activationRight = min(screen.frame.maxX, compact.maxX + 32)
+        let activationBottom = max(screen.frame.minY, compact.minY - 64)
+        let activation = CGRect(x: activationLeft, y: activationBottom,
+                                width: activationRight - activationLeft,
+                                height: screen.frame.maxY + 1 - activationBottom)
         return Layout(hasPhysicalNotch: hasNotch,
                       cameraHousingFrame: housing,
                       // NSPanel rounds half-point window origins to whole

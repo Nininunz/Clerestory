@@ -11,30 +11,37 @@ struct IslandTimerView: View {
     @State private var customMinutes = 25
     @State private var page: Page = .timer
 
+    #if DEBUG
+    init(previewHistory: Bool = false) {
+        _page = State(initialValue: previewHistory ? .history : .timer)
+    }
+    #endif
+
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: IslandModuleLayout.headerSpacing) {
             IslandModuleHeader(
                 title: "Timer",
                 subtitle: page == .timer
                     ? timerSubtitle
                     : String(localized: "Focus history"),
                 systemImage: timerStore.mode.systemImage
-            )
-            .overlay(alignment: .trailing) {
+            ) {
                 timerPageSwitcher
             }
 
-            Group {
-                if page == .timer {
-                    timerControls
-                        .transition(.opacity.combined(with: .scale(scale: 0.985)))
-                } else {
-                    IslandFocusHistoryView()
-                        .transition(.opacity.combined(with: .scale(scale: 0.985)))
+            IslandModuleScrollView(fillsViewport: true) {
+                Group {
+                    if page == .timer {
+                        timerControls
+                            .transition(.opacity.combined(with: .scale(scale: 0.985)))
+                    } else {
+                        IslandFocusHistoryView()
+                            .transition(.opacity.combined(with: .scale(scale: 0.985)))
+                    }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                .animation(reduceMotion ? nil : .smooth(duration: 0.26), value: page)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-            .animation(reduceMotion ? nil : .smooth(duration: 0.26), value: page)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .onAppear {
@@ -72,7 +79,6 @@ struct IslandTimerView: View {
             }
             .frame(maxWidth: .infinity)
         }
-        .padding(.horizontal, 4)
     }
 
     private var timerPageSwitcher: some View {
@@ -86,6 +92,7 @@ struct IslandTimerView: View {
         }
         .padding(2)
         .background(Capsule().fill(Color.white.opacity(0.07)))
+        .clipShape(Capsule())
         .overlay {
             Capsule().strokeBorder(IslandVisualStyle.hairline, lineWidth: 1)
         }
@@ -117,7 +124,7 @@ struct IslandTimerView: View {
                 }
                 .contentShape(Capsule())
         }
-        .buttonStyle(IslandPressFeedbackStyle(reduceMotion: reduceMotion))
+        .buttonStyle(IslandPressFeedbackStyle(reduceMotion: reduceMotion, cornerRadius: 12))
         .accessibilityLabel(Text(accessibilityLabel))
         .modifier(IslandSelectedAccessibilityModifier(selected: selected))
     }
@@ -471,8 +478,6 @@ private struct IslandFocusHistoryView: View {
             }
             .frame(maxWidth: .infinity)
         }
-        .padding(.horizontal, 10)
-        .padding(.top, 2)
         .frame(maxWidth: .infinity, minHeight: 150, alignment: .center)
     }
 
