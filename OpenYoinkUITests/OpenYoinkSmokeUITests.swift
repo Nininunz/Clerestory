@@ -298,6 +298,75 @@ final class OpenYoinkSmokeUITests: XCTestCase {
         XCTAssertTrue(cards.firstMatch.label.contains("Text"))
     }
 
+    func testDuplicateNoticeStaysBelowPinnedPanel() throws {
+        try requireNotchedDisplay()
+        let app = launch(surface: "--ui-testing-drag-source")
+        let helper = launchDragSource()
+        let source = element("uitest.drag.file", in: helper)
+        XCTAssertTrue(source.waitForExistence(timeout: 5))
+        let compact = element("island.window.compact", in: app)
+        XCTAssertTrue(compact.waitForExistence(timeout: 3))
+        let target = compact.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 1))
+            .withOffset(CGVector(dx: 0, dy: 35))
+        drag(source, to: target)
+        compact.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+            .withOffset(CGVector(dx: 20, dy: 0)).click()
+        let panel = expandedPanel(in: app)
+        XCTAssertTrue(panel.waitForExistence(timeout: 5))
+        let cards = shelfCards(in: panel)
+        XCTAssertTrue(cards.firstMatch.waitForExistence(timeout: 5))
+        let pin = element("island.pin", in: panel)
+        pin.hover()
+        pin.click()
+        assertValue("pinned", of: pin)
+        drag(source, to: panel.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)))
+        let duplicate = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier == 'shelf.notice' AND label CONTAINS 'Already on Shelf'")
+        ).firstMatch
+        XCTAssertTrue(duplicate.waitForExistence(timeout: 5))
+        XCTAssertTrue(panel.exists)
+        assertValue("pinned", of: pin)
+        XCTAssertEqual(cards.count, 1)
+        let root = element("island.root", in: panel)
+        XCTAssertGreaterThan(root.frame.width, 0)
+        XCTAssertGreaterThan(root.frame.height, 0)
+        XCTAssertTrue(root.frame.maxY.isFinite)
+        XCTAssertGreaterThan(duplicate.frame.height, 0)
+        XCTAssertTrue(duplicate.frame.minY.isFinite)
+        XCTAssertGreaterThanOrEqual(duplicate.frame.minY, root.frame.maxY,
+                                   "The notice must sit below the visible panel rather than covering files")
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = "Duplicate notice below pinned panel"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    func testHoverReentryCancelsPendingDismissal() throws {
+        try requireNotchedDisplay()
+        let app = launch(surface: "--ui-testing-hover",
+                         fixtures: ["-OpenYoink.islandHoverLeaveDelaySeconds", "1"])
+        let compact = element("island.window.compact", in: app)
+        XCTAssertTrue(compact.waitForExistence(timeout: 3))
+        let wing = compact.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+            .withOffset(CGVector(dx: 20, dy: 0))
+        let outside = wing.withOffset(CGVector(dx: 0, dy: 600))
+        wing.hover()
+        let panel = expandedPanel(in: app)
+        XCTAssertTrue(panel.waitForExistence(timeout: 3))
+        for _ in 0..<3 {
+            outside.hover()
+            wing.hover()
+            XCTAssertTrue(panel.exists)
+        }
+        let disappeared = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: panel)
+        disappeared.isInverted = true
+        XCTAssertEqual(XCTWaiter.wait(for: [disappeared], timeout: 1.2), .completed)
+        outside.hover()
+        XCTAssertTrue(panel.waitForNonExistence(timeout: 3))
+        wing.hover()
+        XCTAssertTrue(panel.waitForExistence(timeout: 3))
+    }
+
     private func launchDragSource() -> XCUIApplication {
         let url = Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent("OpenYoinkUITestDragSource.app")
         let helper = XCUIApplication(url: url)
