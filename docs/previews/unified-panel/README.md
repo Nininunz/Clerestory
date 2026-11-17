@@ -21,7 +21,7 @@ Current review baseline for `codex/separate-expanded-panel`, following the [sepa
 - **11 module-core tests passed**, including parameterized shortcut capacities from zero through twelve enabled modules, fixed positions, required Quick Settings, and persistence.
 - The corner rendering regression failed with the old inset geometry and passed after using SwiftUI's rounded-shape inset. It compares both drag colors and all four corners at five reveal sizes against an independent rounded-rectangle reference.
 - Xcode app tests exited successfully. Existing compiler warnings remain; this change does not claim a warning-free build.
-- Native UI-test runner is not included in these counts. The previous runner could not establish its connection; app tests and the production-host rendering fixture are distinct from end-to-end UI coverage.
+- Native UI tests are separate from these counts. On 2026-11-17, **all 12 UI scenarios passed in one run** (148.7 seconds, zero failures): empty Shelf, compact pin retention, hover open/leave/reopen and pinned persistence, expanded navigation/pin/collapse, compact-off and simulated-notchless presentation, Settings navigation and picker menus, the core accessibility audit, cross-app file/text drops, duplicate notice/count, and Quick Look keyboard focus return. Run [`Scripts/test-ui.sh`](../../../Scripts/test-ui.sh); setup and limitations are in the [UI-test guide](../../../Scripts/README-ui-tests.md).
 
 Commands from the repository root:
 
@@ -47,18 +47,18 @@ Record outcomes separately from fixture/test passes. A simulated notchless displ
 
 | Check | Required observation | Status |
 | --- | --- | --- |
-| Compact enabled | Compact remains at cutout while expanded opens independently | Companion observed; expanded interaction still unverified |
-| Compact disabled | No compact companion; top-edge reveal still works | Settings toggled off/on; top-edge reveal unverified |
-| Simulated notchless | Same expanded layout; compact unavailable, preference retained | Preference and explanatory Settings state verified; live reveal unverified |
-| Shelf keyboard / Quick Look | Selection, arrows, Space, and Escape stay in the intended window | Pending live check |
-| Pin and menus | Pinned panel survives leaving; open menus do not cause collapse | Pending live check |
-| File/text drag and duplicates | Approach opens Shelf, drops succeed, duplicate feedback follows release | Pending hands-on check |
-| Hover travel and rapid reentry | Gap stays open; leaving closes; reentry interrupts closing safely | Pending hands-on check |
+| Compact enabled | Compact remains at cutout while expanded opens independently | Native UI tests pass for hover reveal and compact activation retaining the expanded pin |
+| Compact disabled | No compact companion; top-edge reveal still works | Native expanded launch/collapse and absence of compact pass; top-edge reveal still unverified |
+| Simulated notchless | Same expanded layout; compact unavailable, preference retained | Native expanded launch/collapse and absence of compact pass; preference retention verified in Settings |
+| Shelf keyboard / Quick Look | Selection, arrows, Space, and Escape stay in the intended window | Native Quick Look navigation, Space/Escape close, and keyboard focus return pass |
+| Pin and menus | Pinned panel survives leaving; open menus do not cause collapse | Native pin/unpin, compact activation retaining pin, and pinned pointer departure pass; expanded menu tracking pending |
+| File/text drag and duplicates | Approach opens Shelf, drops succeed, duplicate feedback follows release | Native cross-app synthetic file/text drops and duplicate notice/count pass; Finder/Show Desktop checks remain |
+| Hover travel and rapid reentry | Gap stays open; leaving closes; reentry interrupts closing safely | Native open/leave/reopen and travel to pin control pass; interrupted rapid reentry remains a hands-on check |
 | Show Desktop and Spaces | No stuck or misplaced panel; dragging still works afterward | Pending physical gesture check |
 | External display / reconnect | Placement, fallback, and optional compact follow the chosen display | Pending physical display check |
 | Reduce Motion / VoiceOver | Immediate reveal with correct focus and readable controls | Pending accessibility check |
 
-Live automation could read and change Settings but did not reliably target the separate expanded window after compact clicks or the keyboard reveal attempt. This is an inconclusive smoke check, not proof of an app failure or a pass. Only the development executable was running. The temporary global-hotkey and notchless-simulation changes were restored; compact remains enabled. Live drag, Quick Look, pin/menu, and hover-travel checks remain outstanding.
+The initial computer-use attempt could manipulate Settings but could not reliably target the separate expanded window. The repaired XCTest suite now targets the production panels by accessibility identifier across element types (AppKit exposes them as dialogs). Local signing fixes the rejected runner, and isolated launch preferences/data keep tests independent of the user's Shelf. Cross-app synthetic file/text drops, duplicate notice/count, and Quick Look keyboard focus now have native UI coverage. Finder-specific drag behavior, expanded menu tracking, rapid interrupted hover, Spaces, and physical display checks remain outstanding.
 
 ## Refreshed captures
 

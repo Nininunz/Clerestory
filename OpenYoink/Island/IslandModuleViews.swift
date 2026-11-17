@@ -118,6 +118,16 @@ struct IslandExpandedView: View {
             moduleNavigation
             Spacer(minLength: 4)
 
+            Button(action: openSettings) {
+                Image(systemName: "gearshape")
+                    .frame(width: 30, height: 30)
+                    .background(Circle().fill(Color.white.opacity(0.07)))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Settings"))
+            .accessibilityIdentifier("island.settings")
+            .help("Settings")
+
             Button {
                 coordinator.setPinned(coordinator.surfaceState != .pinned)
             } label: {
@@ -128,6 +138,8 @@ struct IslandExpandedView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text(pinLabel))
+            .accessibilityIdentifier("island.pin")
+            .accessibilityValue(coordinator.surfaceState == .pinned ? "pinned" : "unpinned")
             .help(Text(pinLabel))
 
             Button {
@@ -139,6 +151,7 @@ struct IslandExpandedView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text("Collapse Island"))
+            .accessibilityIdentifier("island.collapse")
             .help(Text("Collapse Island"))
         }
         .frame(height: 38)
@@ -217,6 +230,7 @@ struct IslandExpandedView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text(descriptor.title))
+        .accessibilityIdentifier("island.module.\(descriptor.id.rawValue)")
         .help(Text(descriptor.title))
         .modifier(IslandSelectedAccessibilityModifier(selected: isSelected))
     }
@@ -485,8 +499,7 @@ struct IslandModuleLibraryView: View {
                 title: "Quick Settings",
                 subtitle: showsCompact ? String(localized: "Choose compact modules and their cycling order")
                     : String(localized: "Choose shortcuts and arrange their positions"),
-                systemImage: "square.grid.2x2",
-                showsExtendButton: false
+                systemImage: "square.grid.2x2"
             ) {
                 pageSwitcher
             }
@@ -515,7 +528,6 @@ struct IslandModuleLibraryView: View {
                 .help("Settings")
                 .accessibilityLabel(Text("Settings"))
                 Spacer()
-                IslandModuleExtendButton()
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

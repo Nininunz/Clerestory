@@ -315,6 +315,7 @@ final class QuickLookCoordinator: NSObject, @MainActor QLPreviewPanelDataSource,
     private func present(_ sourceItems: [ShelfItem], contextItem: ShelfItem?, grabKeyFocus: Bool) {
         buildSession(from: sourceItems)
         guard !session.isEmpty, let panel = sharedPanel else { return }
+        panel.setAccessibilityIdentifier("shelf.quickLook")
         installCloseObserverIfNeeded()
         // 面板为进程内共享单例；每次会话都重新指定，确保数据源指向本协调器。
         panel.dataSource = self

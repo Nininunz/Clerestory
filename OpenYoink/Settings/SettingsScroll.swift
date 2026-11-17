@@ -85,6 +85,7 @@ final class SettingsNativeScrollView: NSScrollView {
         // The document keeps its natural height, while its width follows the
         // viewport. Text therefore wraps on resize without horizontal scrolling.
         hostingView.sizingOptions = [.intrinsicContentSize]
+        hostingView.setAccessibilityLabel(String(localized: "Settings controls"))
         hostingView.translatesAutoresizingMaskIntoConstraints = false
         documentView = hostingView
         NSLayoutConstraint.activate([

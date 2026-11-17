@@ -443,6 +443,22 @@ final class IslandActivityCoordinatorTests: XCTestCase {
         XCTAssertEqual(preview.phase, .idle)
     }
 
+    func testUnpinResumesDismissalAndAllowsReentryAndRepinning() {
+        var preview = IslandHoverPreviewStateMachine()
+        _ = preview.handle(.entered)
+        _ = preview.handle(.dwellElapsed)
+        _ = preview.handle(.committed)
+        XCTAssertEqual(preview.handle(.unpinned(pointerInside: true)), [.cancelDwell, .cancelExit])
+        XCTAssertEqual(preview.phase, .preview)
+        XCTAssertEqual(preview.handle(.left), [.scheduleExit])
+        XCTAssertEqual(preview.handle(.entered), [.cancelExit])
+        XCTAssertEqual(preview.handle(.left), [.scheduleExit])
+        XCTAssertEqual(preview.handle(.committed), [.cancelExit, .commitPreview])
+        XCTAssertEqual(preview.handle(.exitElapsed), [])
+        XCTAssertEqual(preview.handle(.unpinned(pointerInside: false)), [.cancelDwell, .cancelExit, .scheduleExit])
+        XCTAssertEqual(preview.handle(.exitElapsed), [.dismissPreview])
+    }
+
     func testHoverPreviewDismissesAfterExitGrace() {
         var preview = IslandHoverPreviewStateMachine()
         _ = preview.handle(.entered)
