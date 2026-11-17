@@ -4,17 +4,32 @@ import XCTest
 
 @MainActor
 final class ShelfNoticePanelTests: XCTestCase {
+    // These tests create real windows. Keep the fixture and the toast's shadow
+    // inside the host display so AppKit's screen-edge constraints do not move
+    // them. Screen-edge/notch geometry is covered by the pure layout tests.
+    private func liveLayout() throws -> IslandGeometryResolver.Layout {
+        let screen = try XCTUnwrap(NSScreen.main ?? NSScreen.screens.first)
+        let testArea = screen.visibleFrame.insetBy(dx: 40, dy: 80)
+        return IslandGeometryResolver.resolve(screen: .init(
+            frame: testArea,
+            visibleFrame: testArea,
+            safeAreaTop: 0,
+            auxiliaryTopLeftArea: .zero,
+            auxiliaryTopRightArea: .zero))
+    }
+
     func testUnpinnedNoticeWaitsWithoutExpiringAndIgnoresStaleCloseCompletion() async throws {
         let context = PreviewContext()
         defer { context.cleanUp() }
         let settings = context.settings()
         settings.islandEnabled = true
         let coordinator = IslandActivityCoordinator()
-        coordinator.currentLayout = IslandGeometryResolver.resolve(screen: ModulePreviewHost.screen)
+        let layout = try liveLayout()
+        coordinator.currentLayout = layout
         coordinator.show(module: .shelf)
         coordinator.completeSurfaceTransition(coordinator.surfaceTransitionID)
         let notices = ShelfNoticeModel()
-        let anchor = NSWindow(contentRect: CGRect(x: 100, y: 400, width: 492, height: 338),
+        let anchor = NSWindow(contentRect: layout.expandedFrame,
                               styleMask: [.borderless], backing: .buffered, defer: false)
         anchor.isReleasedWhenClosed = false
         anchor.orderFront(nil)
@@ -49,7 +64,7 @@ final class ShelfNoticePanelTests: XCTestCase {
         let settings = context.settings()
         settings.islandEnabled = true
         let coordinator = IslandActivityCoordinator()
-        let layout = IslandGeometryResolver.resolve(screen: ModulePreviewHost.screen)
+        let layout = try liveLayout()
         coordinator.currentLayout = layout
         let notices = ShelfNoticeModel()
         let anchor = NSWindow(contentRect: layout.compactFrame, styleMask: [.borderless], backing: .buffered, defer: false)
@@ -64,15 +79,16 @@ final class ShelfNoticePanelTests: XCTestCase {
         XCTAssertTrue(controller.panel.isVisible)
         let compactPill = try XCTUnwrap(controller.interactionFrame)
         anchor.setFrame(layout.expandedFrame, display: true)
+        let expandedAnchorFrame = anchor.frame
         coordinator.show(module: .shelf)
         try await Task.sleep(for: .milliseconds(100))
         XCTAssertTrue(controller.panel.isVisible, "Reopening must not hide a displayed toast")
         coordinator.completeSurfaceTransition(coordinator.surfaceTransitionID)
         try await Task.sleep(for: .milliseconds(450))
         let expandedPill = try XCTUnwrap(controller.interactionFrame)
-        XCTAssertEqual(expandedPill.maxY, layout.expandedFrame.minY - 10, accuracy: 1)
+        XCTAssertEqual(expandedPill.maxY, expandedAnchorFrame.minY - 10, accuracy: 1)
         XCTAssertLessThan(expandedPill.maxY, compactPill.maxY)
-        XCTAssertEqual(expandedPill.midX, layout.expandedFrame.midX, accuracy: 1)
+        XCTAssertEqual(expandedPill.midX, expandedAnchorFrame.midX, accuracy: 1)
         coordinator.collapse()
         anchor.setFrame(layout.compactFrame, display: true)
         coordinator.completeSurfaceTransition(coordinator.surfaceTransitionID)
@@ -105,14 +121,16 @@ final class ShelfNoticePanelTests: XCTestCase {
         let settings = context.settings()
         settings.islandEnabled = true
         let coordinator = IslandActivityCoordinator()
+        let layout = try liveLayout()
+        coordinator.currentLayout = layout
         coordinator.show(module: .shelf, pinned: true)
         coordinator.completeSurfaceTransition(coordinator.surfaceTransitionID)
         let notices = ShelfNoticeModel()
         let target = DropTargetState()
-        let islandFrame = CGRect(x: 100, y: 400, width: 492, height: 338)
-        let anchor = NSWindow(contentRect: islandFrame, styleMask: [.borderless], backing: .buffered, defer: false)
+        let anchor = NSWindow(contentRect: layout.expandedFrame, styleMask: [.borderless], backing: .buffered, defer: false)
         anchor.isReleasedWhenClosed = false
         anchor.orderFront(nil)
+        let islandFrame = anchor.frame
         defer { anchor.close() }
         let controller = ShelfNoticePanelController(anchor: anchor, notices: notices,
             coordinator: coordinator, settings: settings, dropTarget: target, onRecovery: { _ in })
@@ -127,7 +145,9 @@ final class ShelfNoticePanelTests: XCTestCase {
         let firstPill = try XCTUnwrap(controller.interactionFrame)
         XCTAssertEqual(anchor.frame.minY - firstPill.maxY, 10, accuracy: 1)
 
-        anchor.setFrame(CGRect(x: 200, y: 250, width: 492, height: 488), display: true)
+        var tallerFrame = islandFrame.offsetBy(dx: 20, dy: -60)
+        tallerFrame.size.height += 60
+        anchor.setFrame(tallerFrame, display: true)
         try await Task.sleep(for: .milliseconds(100))
         try await Task.sleep(for: .milliseconds(400))
         let movedPill = try XCTUnwrap(controller.interactionFrame)
@@ -157,7 +177,6 @@ final class ShelfNoticePanelTests: XCTestCase {
         target.isTargeted = false
         try await Task.sleep(for: .milliseconds(300))
         XCTAssertTrue(toast.isVisible)
-        coordinator.currentLayout = IslandGeometryResolver.resolve(screen: ModulePreviewHost.screen)
         coordinator.collapse()
         anchor.orderOut(nil)
         try await Task.sleep(for: .milliseconds(300))
@@ -166,8 +185,8 @@ final class ShelfNoticePanelTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(300))
         XCTAssertTrue(toast.isVisible, "Feedback appears once the closing animation finishes")
         XCTAssertNil(toast.parent)
-        let compactFrame = try XCTUnwrap(coordinator.currentLayout?.compactFrame)
-        XCTAssertEqual(try XCTUnwrap(controller.interactionFrame).maxY, compactFrame.minY - 10, accuracy: 1)
+        XCTAssertEqual(try XCTUnwrap(controller.interactionFrame).maxY,
+                       layout.closedNoticeAnchor.minY - 10, accuracy: 1)
         notices.show(.alreadyOnShelf)
         try await Task.sleep(for: .milliseconds(300))
         XCTAssertTrue(toast.isVisible, "A new completion notice must also work while the Island is hidden")

@@ -49,8 +49,10 @@ final class IslandSurfaceAnimationTests: XCTestCase {
                     }
                 }
                 // Optional diagnostic export; the normal suite has no file output.
-                let output = URL(fileURLWithPath: "/tmp/openyoink-shared-chrome-frames", isDirectory: true)
-                if FileManager.default.fileExists(atPath: output.path) {
+                if ProcessInfo.processInfo.environment["OPENYOINK_EXPORT_SURFACE_FRAMES"] == "1" {
+                    let output = FileManager.default.temporaryDirectory
+                        .appendingPathComponent("openyoink-shared-chrome-frames", isDirectory: true)
+                    try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
                     try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
                         .write(to: output.appendingPathComponent("reveal-\(progress)-opacity-\(opacity).png"))
                 }

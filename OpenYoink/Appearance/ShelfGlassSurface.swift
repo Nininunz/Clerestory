@@ -377,9 +377,11 @@ private struct ShelfNativeGlassBackdrop: NSViewRepresentable {
         // issue #10: interactive glass is meant for controls. On a whole panel a
         // press inflates the glass beyond its frame while the content stays put,
         // and the window clips the inflated edge into a stray outline.
+        #if compiler(>=6.4)
         if #available(macOS 27.0, *), view.effectIsInteractive {
             view.effectIsInteractive = false
         }
+        #endif
     }
 }
 

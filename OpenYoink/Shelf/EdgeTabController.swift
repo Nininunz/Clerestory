@@ -623,10 +623,12 @@ final class EdgeTabView: NSView {
         // issue #10: interactive glass inflates past the tab's window on press
         // and gets clipped into a hard outline. Hover/press feedback is drawn
         // by `applyEmphasisAppearance` instead.
+        #if compiler(>=6.4)
         if #available(macOS 27.0, *), let glass = nativeGlassView as? NSGlassEffectView,
            glass.effectIsInteractive {
             glass.effectIsInteractive = false
         }
+        #endif
     }
 
     override func viewDidChangeEffectiveAppearance() {
