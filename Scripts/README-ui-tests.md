@@ -34,6 +34,8 @@ The drag cases exercise approach below the compact companion, the native pastebo
 
 ## Latest verified run
 
+2026-11-17, final pre-merge run: `Scripts/test-ui.sh` passed all 14 native UI tests with zero failures, including both follow-up regressions and the unpin fix. App, runner, and helper signatures passed verification. Result bundle: `/tmp/openyoink-ui-signed/Logs/Test/Test-OpenYoink-2026.11.17_04-28-23--0600.xcresult`. The development app was reopened afterward. No PR CI test workflow is configured in the fork; its only workflow deploys Pages after a push to `main`.
+
 2026-11-17: `Scripts/test-ui.sh` completed all 12 UI tests with zero failures in 148.7 seconds on the notched development Mac. App, runner, and helper signature verification passed. The local result bundle is `/tmp/openyoink-ui-signed/Logs/Test/Test-OpenYoink-2026.11.17_03-51-58--0600.xcresult`.
 
 After the unpin fix, all 39 `IslandActivityCoordinatorTests` and the updated native hover test passed. The latter now verifies pin → leave → return → unpin → leave dismisses the panel, then hover reopens it. Its result bundle is `/tmp/openyoink-ui-signed/Logs/Test/Test-OpenYoink-2026.11.17_04-09-42--0600.xcresult`. The development build also passed; the toolbar Settings action and Quick Settings header height control were checked live.
