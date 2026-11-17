@@ -362,47 +362,86 @@ struct IslandClipboardToggleStyle: ToggleStyle {
     }
 }
 
-/// The live Island and module previews share the same visible edge and insets.
-struct IslandExpandedSurface<Navigation: View, Content: View>: View {
-    let hasPhysicalNotch: Bool
+/// One reveal value drives the surface silhouette, border, shadow and content mask.
+struct IslandSurfaceReveal: Equatable {
+    var progress: CGFloat = 1
+    var opacity: Double = 1
+    var collapsedSize = IslandGeometryResolver.floatingCompactSize
+
+    func frame(in size: CGSize) -> CGRect {
+        let p = min(max(progress, 0), 1)
+        let width = min(collapsedSize.width, size.width) + max(0, size.width - collapsedSize.width) * p
+        let height = min(collapsedSize.height, size.height) + max(0, size.height - collapsedSize.height) * p
+        return CGRect(x: (size.width - width) / 2, y: 0, width: width, height: height)
+    }
+}
+
+enum IslandSurfaceShadow {
+    static let inset: CGFloat = 48
+    static let radius: CGFloat = 12
+    static let offsetY: CGFloat = 6
+
+    static func windowFrame(for surface: CGRect) -> CGRect {
+        surface.insetBy(dx: -inset, dy: -inset)
+    }
+}
+
+/// The live Island and previews share the same surface, including intermediate frames.
+struct IslandExpandedSurface<Navigation: View, Content: View>: View, @MainActor Animatable {
+    var reveal = IslandSurfaceReveal()
+    var showsShadow = false
     @ViewBuilder var navigation: Navigation
     @ViewBuilder var content: Content
+
+    var animatableData: AnimatablePair<CGFloat, Double> {
+        get { AnimatablePair(reveal.progress, reveal.opacity) }
+        set {
+            reveal.progress = newValue.first
+            reveal.opacity = newValue.second
+        }
+    }
 
     static var visiblePadding: CGFloat { 14 }
 
     var body: some View {
-        let shape = IslandSurfaceShape(attachedToScreenTop: hasPhysicalNotch, cornerRadius: 26)
-        VStack(spacing: 10) {
-            navigation
-            content
-                .clipped()
-                .padding(.horizontal, IslandExpandedLayout.horizontalInset(hasPhysicalNotch: hasPhysicalNotch))
-                .padding(.bottom, Self.visiblePadding)
-        }
-        .contentShape(shape)
-        .background {
-            ZStack {
-                Color.black
-                LinearGradient(colors: [Color.white.opacity(0.035), .clear], startPoint: .top, endPoint: .center)
+        GeometryReader { geometry in
+            let frame = reveal.frame(in: geometry.size)
+            let shape = IslandSurfaceShape(attachedToScreenTop: false, cornerRadius: 26)
+            let silhouette = shape.path(in: frame)
+            ZStack(alignment: .top) {
+                silhouette.fill(Color.black)
+                    .shadow(color: showsShadow ? .black.opacity(0.30) : .clear,
+                            radius: IslandSurfaceShadow.radius, y: IslandSurfaceShadow.offsetY)
+                LinearGradient(colors: [Color.white.opacity(0.035), .clear],
+                               startPoint: .top, endPoint: .center)
+                    .frame(width: frame.width, height: frame.height)
+                    .position(x: frame.midX, y: frame.midY)
+                    .mask(silhouette)
+                VStack(spacing: 10) {
+                    navigation
+                    content
+                        .clipped()
+                        .padding(.horizontal, IslandExpandedLayout.horizontalInset)
+                        .padding(.bottom, Self.visiblePadding)
+                }
+                .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
+                .mask(silhouette)
+                shape.inset(by: 0.5).path(in: frame)
+                    .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                    .allowsHitTesting(false)
             }
-            .clipShape(shape)
-        }
-        .overlay {
-            if !hasPhysicalNotch {
-                shape.strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
-            }
-
+            .contentShape(silhouette)
+            .compositingGroup()
+            .opacity(reveal.opacity)
         }
     }
 }
 
 enum IslandExpandedLayout {
-    static func horizontalInset(hasPhysicalNotch: Bool) -> CGFloat {
-        14 + (hasPhysicalNotch ? IslandSurfaceShape.bodyInset(cornerRadius: 26) : 0)
-    }
+    static let horizontalInset: CGFloat = 14
 
-    static func contentWidth(surfaceWidth: CGFloat, hasPhysicalNotch: Bool) -> CGFloat {
-        max(1, surfaceWidth - 2 * horizontalInset(hasPhysicalNotch: hasPhysicalNotch))
+    static func contentWidth(surfaceWidth: CGFloat) -> CGFloat {
+        max(1, surfaceWidth - 2 * horizontalInset)
     }
 }
 

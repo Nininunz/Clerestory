@@ -8,11 +8,6 @@ struct IslandScreenSelectionCandidate: Equatable {
     var hasPhysicalNotch: Bool = true
 }
 
-/// Keep the floating Island implementation for the external-display rework.
-enum FloatingIslandAvailability {
-    static var isEnabled: Bool { IslandDebugMode.simulatesNoNotch }
-}
-
 enum IslandDebugMode {
     private static let simulateNoNotchKey = "OpenYoinkSimulateNoNotch"
 
@@ -35,28 +30,24 @@ enum IslandScreenSelectionPolicy {
     static func selectedID(
         for target: SettingsStore.IslandDisplayTarget,
         pointerPoint: CGPoint,
-        screens: [IslandScreenSelectionCandidate],
-        allowFloating: Bool = FloatingIslandAvailability.isEnabled
+        screens: [IslandScreenSelectionCandidate]
     ) -> String? {
-        let supportedScreens = screens.filter {
-            allowFloating || $0.hasPhysicalNotch
-        }
-        guard !supportedScreens.isEmpty else { return nil }
+        guard !screens.isEmpty else { return nil }
 
         switch target {
         case .main:
-            return supportedScreens.first(where: \.isMain)?.id ?? supportedScreens[0].id
+            return screens.first(where: \.isMain)?.id ?? screens[0].id
         case .automatic:
-            return supportedScreens.first(where: { $0.frame.contains(pointerPoint) })?.id
-                ?? supportedScreens.first(where: \.isMain)?.id
-                ?? supportedScreens[0].id
+            return screens.first(where: { $0.frame.contains(pointerPoint) })?.id
+                ?? screens.first(where: \.isMain)?.id
+                ?? screens[0].id
         case let .display(id):
             // Keep the stored physical-display choice when it is disconnected.
             // Runtime placement temporarily falls back to the main display;
             // reconnecting the display makes the same ID resolve again.
-            return supportedScreens.contains(where: { $0.id == id })
+            return screens.contains(where: { $0.id == id })
                 ? id
-                : supportedScreens.first(where: \.isMain)?.id ?? supportedScreens[0].id
+                : screens.first(where: \.isMain)?.id ?? screens[0].id
         }
     }
 }
@@ -70,9 +61,7 @@ enum IslandScreenCatalog {
     }
 
     static func options() -> [Option] {
-        NSScreen.screens.enumerated().filter { _, screen in
-            FloatingIslandAvailability.isEnabled || hasPhysicalNotch(screen)
-        }.map { index, screen in
+        NSScreen.screens.enumerated().map { index, screen in
             Option(id: identifier(for: screen),
                    name: screen.localizedName,
                    isMain: index == 0)

@@ -293,10 +293,10 @@ final class IslandModuleChromeTests: XCTestCase {
     }
 
     func testExpandedSurfacePaddingIsMeasuredFromVisibleEdge() async throws {
-        for notched in [true, false] {
+        do {
             let probe = Probe()
-            let view = IslandExpandedSurface(hasPhysicalNotch: notched) {
-                Color.clear.frame(height: 32)
+            let view = IslandExpandedSurface() {
+                Color.clear.frame(height: 50)
             } content: {
                 Color.white
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { probe.frames["body"] = $0 }
@@ -305,12 +305,12 @@ final class IslandModuleChromeTests: XCTestCase {
             defer { window.close() }
             await settle(window)
             let body = try XCTUnwrap(probe.frames["body"])
-            let visibleEdge: CGFloat = notched ? 7 : 0
+            let visibleEdge: CGFloat = 0
             XCTAssertEqual(body.minX - visibleEdge, 14, accuracy: 0.5)
             XCTAssertEqual(492 - visibleEdge - body.maxX, 14, accuracy: 0.5)
             XCTAssertEqual(330 - body.maxY, 14, accuracy: 0.5)
-            XCTAssertEqual(body.width, IslandExpandedLayout.contentWidth(surfaceWidth: 492, hasPhysicalNotch: notched), accuracy: 0.5)
-            let path = IslandSurfaceShape(attachedToScreenTop: notched, cornerRadius: 26)
+            XCTAssertEqual(body.width, IslandExpandedLayout.contentWidth(surfaceWidth: 492), accuracy: 0.5)
+            let path = IslandSurfaceShape(attachedToScreenTop: false, cornerRadius: 26)
                 .path(in: CGRect(x: 0, y: 0, width: 492, height: 330))
             XCTAssertTrue(path.contains(CGPoint(x: visibleEdge + 0.5, y: 100)))
             XCTAssertFalse(path.contains(CGPoint(x: visibleEdge - 0.5, y: 100)))

@@ -10,6 +10,16 @@ final class ShelfPanel: NSPanel {
     /// 经典模式继续保留 AppKit 的常规屏幕约束。
     var allowsTopEdgeOverlap = false
     var acceptsKeyboardFocus = true
+    /// Drawing room for a SwiftUI shadow is not part of the interactive surface.
+    var interactionInset: CGFloat = 0
+    var interactionCornerRadius: CGFloat = 0
+
+    var interactionFrame: CGRect { frame.insetBy(dx: interactionInset, dy: interactionInset) }
+
+    func containsInteractionPoint(_ point: CGPoint) -> Bool {
+        NSBezierPath(roundedRect: interactionFrame, xRadius: interactionCornerRadius,
+                     yRadius: interactionCornerRadius).contains(point)
+    }
 
     /// S6: 键盘事件回调（空格 Quick Look / Delete 移除 / Esc 取消选择或关 QL）。
     /// 由 ShelfWindowController 注入；返回 true 表示事件已消费。

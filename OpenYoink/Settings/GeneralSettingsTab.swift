@@ -51,12 +51,20 @@ struct GeneralSettingsTab: View {
                 Toggle("Enable OpenYoink Island", isOn: $settings.islandEnabled)
 
                 if settings.islandEnabled {
-                    Text("Island uses the built-in camera housing on a notched display.")
+                    Text("One expanded panel on every display, with an optional compact companion on notched displays.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
+                    Toggle("Show Compact Island", isOn: $settings.showCompactIsland)
+                        .disabled(!selectedDisplayHasNotch)
+                        .accessibilityIdentifier("settings.showCompactIsland")
+                    if !selectedDisplayHasNotch {
+                        Text("Compact Island requires a notched display. Your preference is kept for when one is selected.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+
                     if islandScreens.isEmpty {
-                        Text("Connect a notched display to show Island.")
+                        Text("Connect a display to show Island.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     } else {
@@ -120,6 +128,9 @@ struct GeneralSettingsTab: View {
                 }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+            refreshIslandScreens()
+        }
         .onAppear { launchAtLoginController.refresh() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             launchAtLoginController.refresh()
@@ -132,6 +143,12 @@ struct GeneralSettingsTab: View {
         )) { _ in
             refreshIslandScreens()
         }
+    }
+
+    private var selectedDisplayHasNotch: Bool {
+        guard let screen = IslandScreenCatalog.selectedScreen(
+            for: settings.islandDisplayTarget, pointerPoint: NSEvent.mouseLocation) else { return false }
+        return IslandGeometryResolver.resolve(screen: IslandScreenCatalog.geometry(for: screen)).hasPhysicalNotch
     }
 
     private func refreshIslandScreens() {
@@ -156,12 +173,12 @@ struct GeneralSettingsTab: View {
             if islandScreens.contains(where: \.isMain) {
                 String(localized: "Island stays on the display chosen as main in System Settings.")
             } else {
-                String(localized: "The main display has no notch. Island uses a connected notched display.")
+                String(localized: "Island uses a connected display until the main display is available.")
             }
         case .automatic:
-            String(localized: "Island follows the pointer across notched displays.")
+            String(localized: "Island follows the pointer across displays.")
         case .display where isSelectedIslandDisplayUnavailable:
-            String(localized: "This display is unavailable or has no notch. Island uses a connected notched display.")
+            String(localized: "This display is unavailable. Island temporarily uses a connected display.")
         case .display:
             String(localized: "Island stays on this display until you choose another.")
         }

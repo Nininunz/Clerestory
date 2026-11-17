@@ -35,8 +35,6 @@ enum IslandFloatingPresentation: Equatable, Sendable {
 }
 
 enum IslandGeometryResolver {
-    /// Prototype: keep compact at the cutout and open a floating panel below it.
-    static let separatesExpandedPanel = true
     static let expandedPanelGap: CGFloat = 8
     static func acceptsFileDrag(at point: CGPoint, compactPointerFrame: CGRect,
                                 activationFrame: CGRect, topApproachEnabled: Bool) -> Bool {
@@ -60,17 +58,26 @@ enum IslandGeometryResolver {
         /// The full screen, so the floating Island can reveal from its top edge.
         var screenFrame: CGRect = .zero
 
-        var hasSeparateExpandedPanel: Bool { hasPhysicalNotch && IslandGeometryResolver.separatesExpandedPanel }
-        var expandedUsesNotch: Bool { hasPhysicalNotch && !hasSeparateExpandedPanel }
+        var showCompactIsland = true
+        var compactIsVisible: Bool { hasPhysicalNotch && showCompactIsland }
 
-        /// Pointer travel across the visual gap must not dismiss the panel.
-        /// This is a hover region only; it does not create an input window.
+        /// Hardware changes placement, never the expanded panel's presentation.
+        var pointerTriggerFrame: CGRect {
+            if compactIsVisible { return compactPointerFrame }
+            let width = hasPhysicalNotch ? cameraHousingFrame.width + 32 : 80
+            return CGRect(x: expandedFrame.midX - width / 2,
+                          y: screenFrame.maxY - 4, width: width, height: 5)
+        }
+
+        var closedNoticeAnchor: CGRect {
+            if compactIsVisible { return compactFrame }
+            return CGRect(x: expandedFrame.midX, y: expandedFrame.maxY + IslandGeometryResolver.expandedPanelGap,
+                          width: 0, height: 0)
+        }
+
+        /// Hover-only bridge; no native input window intercepts clicks in the gap.
         func hoverKeepAliveFrame(panelFrame: CGRect) -> CGRect {
-            let frame = panelFrame.insetBy(dx: -8, dy: -8)
-            if hasSeparateExpandedPanel { return frame.union(compactPointerFrame) }
-            guard !hasPhysicalNotch else { return frame }
-            return CGRect(x: frame.minX, y: frame.minY, width: frame.width,
-                          height: max(0, screenFrame.maxY - frame.minY + 4))
+            panelFrame.insetBy(dx: -8, dy: -8).union(pointerTriggerFrame)
         }
 
         /// Window frame for the idle dot: centred on the pill's top edge. The
@@ -136,7 +143,7 @@ enum IslandGeometryResolver {
         return resolve(screen: screen)
     }
 
-    static func resolve(screen: ScreenGeometry, preferredExpandedHeight: CGFloat = expandedPreferredHeight) -> Layout {
+    static func resolve(screen: ScreenGeometry, preferredExpandedHeight: CGFloat = expandedPreferredHeight, showCompactIsland: Bool = true) -> Layout {
         let left = screen.auxiliaryTopLeftArea
         let right = screen.auxiliaryTopRightArea
         // auxiliary areas have been observed in both screen-relative and global
@@ -164,7 +171,7 @@ enum IslandGeometryResolver {
                              y: screen.frame.maxY - compactHeight,
                              width: width,
                              height: compactHeight)
-            topAnchor = separatesExpandedPanel ? compact.minY - expandedPanelGap : screen.frame.maxY
+            topAnchor = min(housing.minY, screen.visibleFrame.maxY) - expandedPanelGap
             horizontalAnchor = housing.midX
         } else {
             housing = .zero
@@ -204,6 +211,7 @@ enum IslandGeometryResolver {
                       compactFrame: compact.integral,
                       expandedFrame: expanded.integral,
                       activationFrame: activation.integral,
-                      screenFrame: screen.frame)
+                      screenFrame: screen.frame,
+                      showCompactIsland: showCompactIsland)
     }
 }

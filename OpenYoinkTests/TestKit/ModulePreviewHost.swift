@@ -65,8 +65,8 @@ struct ModulePreviewHost: View {
     }
 
     private var surface: some View {
-        IslandExpandedSurface(hasPhysicalNotch: layout.expandedUsesNotch) {
-            Color.clear.frame(height: layout.expandedUsesNotch ? 32 : 50)
+        IslandExpandedSurface() {
+            Color.clear.frame(height: 50)
         } content: {
             GeometryReader { geometry in
                 IslandModuleHost(descriptor: descriptor, coordinator: coordinator) { content }
@@ -77,7 +77,7 @@ struct ModulePreviewHost: View {
             if let dropTarget {
                 IslandDropOutline(progress: 1,
                     collapsedSize: layout.compactFrame.size,
-                    attachedToScreenTop: layout.expandedUsesNotch, state: dropTarget)
+                    attachedToScreenTop: false, state: dropTarget)
             }
         }
         .environment(\.islandSurfaceHeight, surfaceSize.height)

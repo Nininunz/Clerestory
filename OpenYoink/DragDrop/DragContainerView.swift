@@ -148,7 +148,16 @@ final class DragContainerView: NSView {
 
     // MARK: - NSDraggingDestination
 
+    private func isInsideInteractionSurface(_ sender: NSDraggingInfo) -> Bool {
+        guard let panel = window as? ShelfPanel, panel.interactionInset > 0 else { return true }
+        return panel.containsInteractionPoint(panel.convertPoint(toScreen: sender.draggingLocation))
+    }
+
     override func hitTest(_ point: NSPoint) -> NSView? {
+        if let panel = window as? ShelfPanel, panel.interactionInset > 0 {
+            let inWindow = convert(convert(point, from: superview), to: nil)
+            guard panel.containsInteractionPoint(panel.convertPoint(toScreen: inWindow)) else { return nil }
+        }
         // The temporary approach zone has an empty child controller. Make
         // the registered destination itself own every point in that zone.
         if isApproachZone {
@@ -158,6 +167,7 @@ final class DragContainerView: NSView {
     }
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        guard isInsideInteractionSurface(sender) else { return [] }
         guard Self.acceptsApproachPayload(sender.draggingPasteboard.types ?? [], isApproachZone: isApproachZone) else { return [] }
         if PasteboardTypes.hasShelfApproachContent(in: sender.draggingPasteboard.types ?? []) {
             onNativeShelfDrag()
@@ -200,6 +210,10 @@ final class DragContainerView: NSView {
     }
 
     override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+        guard isInsideInteractionSurface(sender) else {
+            draggingExited(sender)
+            return []
+        }
         guard Self.acceptsApproachPayload(sender.draggingPasteboard.types ?? [], isApproachZone: isApproachZone) else { return [] }
         if PasteboardTypes.hasShelfApproachContent(in: sender.draggingPasteboard.types ?? []) {
             onNativeShelfDrag()
@@ -248,10 +262,11 @@ final class DragContainerView: NSView {
     }
 
     override func prepareForDragOperation(_ sender: NSDraggingInfo) -> Bool {
-        Self.acceptsApproachPayload(sender.draggingPasteboard.types ?? [], isApproachZone: isApproachZone)
+        isInsideInteractionSurface(sender) && Self.acceptsApproachPayload(sender.draggingPasteboard.types ?? [], isApproachZone: isApproachZone)
     }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        guard isInsideInteractionSurface(sender) else { return false }
         guard Self.acceptsApproachPayload(sender.draggingPasteboard.types ?? [], isApproachZone: isApproachZone) else { return false }
         var accepted = false
         defer { onDestinationEnded(sender.draggingSequenceNumber, accepted) }

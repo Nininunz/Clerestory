@@ -53,12 +53,6 @@ struct ModulesSettingsTab: View {
     @Environment(SettingsNavigationModel.self) private var navigation
     @State private var pendingPreset: WorkflowPreset?
 
-    private var expandedUsesNotch: Bool {
-        guard let screen = IslandScreenCatalog.selectedScreen(
-            for: settings.islandDisplayTarget, pointerPoint: NSEvent.mouseLocation) else { return false }
-        return IslandGeometryResolver.resolve(screen: IslandScreenCatalog.geometry(for: screen)).expandedUsesNotch
-    }
-
     var body: some View {
         Group {
             if let destination = navigation.moduleSettingsDestination,
@@ -164,11 +158,11 @@ struct ModulesSettingsTab: View {
                 Section("Module") {
                     Toggle("Enable Module", isOn: enabledBinding(destination))
                     Toggle("Pin to Island shortcuts", isOn: Binding(
-                        get: { settings.islandShortcuts(hasPhysicalNotch: expandedUsesNotch).isPinned(destination.moduleID) },
-                        set: { settings.setIslandModulePinned($0, id: destination.moduleID, hasPhysicalNotch: expandedUsesNotch) }
+                        get: { settings.islandModuleConfiguration.isPinned(destination.moduleID) },
+                        set: { settings.setIslandModulePinned($0, id: destination.moduleID) }
                     ))
-                    .disabled(!settings.islandShortcuts(hasPhysicalNotch: expandedUsesNotch).canTogglePin(for: destination.moduleID))
-                    Text("\(settings.effectiveIslandShortcuts(hasPhysicalNotch: expandedUsesNotch).pinnedModuleIDs.count + 1) of \(settings.effectiveIslandShortcuts(hasPhysicalNotch: expandedUsesNotch).visibleShortcutIndices(hasPhysicalNotch: expandedUsesNotch).count) shortcut positions used.")
+                    .disabled(!settings.islandModuleConfiguration.canTogglePin(for: destination.moduleID))
+                    Text("\(settings.effectiveIslandShortcuts.pinnedModuleIDs.count + 1) of \(settings.effectiveIslandShortcuts.visibleShortcutIndices(hasPhysicalNotch: false).count) shortcut positions used.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 specificSettings(destination)

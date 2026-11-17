@@ -246,6 +246,10 @@ final class SettingsStore {
         didSet { defaults.set(classicShelfEnabled, forKey: Keys.classicShelfEnabled) }
     }
 
+    var showCompactIsland: Bool {
+        didSet { defaults.set(showCompactIsland, forKey: Keys.showCompactIsland) }
+    }
+
     var islandEnabled: Bool {
         didSet { defaults.set(islandEnabled, forKey: Keys.islandEnabled) }
     }
@@ -443,31 +447,12 @@ final class SettingsStore {
 
     /// Apply feature availability without rewriting the user's saved module choices.
     var effectiveIslandModuleConfiguration: IslandModuleConfiguration {
-        effectiveIslandShortcuts(hasPhysicalNotch: true)
+        effectiveIslandShortcuts
     }
 
-    private var notchlessShortcutPositions: [IslandModuleID?]? {
-        didSet {
-            if let data = try? JSONEncoder().encode(notchlessShortcutPositions) {
-                defaults.set(data, forKey: Keys.notchlessShortcutPositions)
-            }
-        }
-    }
-
-    func islandShortcuts(hasPhysicalNotch: Bool) -> IslandModuleConfiguration {
-        guard !hasPhysicalNotch else { return islandModuleConfiguration }
-        let positions = notchlessShortcutPositions ?? [.shelf, .quickSettings]
-        var configuration = IslandModuleConfiguration(
-            enabledModuleIDs: islandModuleConfiguration.enabledModuleIDs, pinnedModuleIDs: [])
-        configuration.assignShortcut(.quickSettings, at: positions.firstIndex(of: .quickSettings) ?? 1)
-        for (index, id) in positions.enumerated() where id != .quickSettings {
-            configuration.assignShortcut(id, at: index)
-        }
-        return configuration
-    }
-
-    func effectiveIslandShortcuts(hasPhysicalNotch: Bool) -> IslandModuleConfiguration {
-        var configuration = islandShortcuts(hasPhysicalNotch: hasPhysicalNotch)
+    /// One expanded toolbar configuration on every display.
+    var effectiveIslandShortcuts: IslandModuleConfiguration {
+        var configuration = islandModuleConfiguration
         guard !experimentalModulesEnabled else { return configuration }
         for (index, id) in configuration.shortcutPositions.enumerated() {
             if let id, !isIslandModuleAvailable(id) { configuration.assignShortcut(nil, at: index) }
@@ -510,40 +495,34 @@ final class SettingsStore {
         islandModuleConfiguration = configuration
     }
 
-    func setIslandModulePinned(_ pinned: Bool, id: IslandModuleID, hasPhysicalNotch: Bool = true) {
-        var configuration = islandShortcuts(hasPhysicalNotch: hasPhysicalNotch)
+    func setIslandModulePinned(_ pinned: Bool, id: IslandModuleID) {
+        var configuration = islandModuleConfiguration
         configuration.setPinned(pinned, for: id)
-        if hasPhysicalNotch {
-            islandModuleConfiguration = configuration
-        } else {
-            if pinned { setIslandModuleEnabled(true, id: id) }
-            notchlessShortcutPositions = configuration.shortcutPositions
-        }
+        islandModuleConfiguration = configuration
     }
 
-    func assignIslandShortcut(_ id: IslandModuleID?, at index: Int, hasPhysicalNotch: Bool = true) {
-        var configuration = islandShortcuts(hasPhysicalNotch: hasPhysicalNotch)
+    func assignIslandShortcut(_ id: IslandModuleID?, at index: Int) {
+        var configuration = islandModuleConfiguration
         configuration.assignShortcut(id, at: index)
-        if hasPhysicalNotch {
-            islandModuleConfiguration = configuration
-        } else {
-            notchlessShortcutPositions = configuration.shortcutPositions
-        }
+        islandModuleConfiguration = configuration
     }
 
-    func restoreDefaultIslandShortcuts(hasPhysicalNotch: Bool = true) {
-        guard hasPhysicalNotch else {
-            notchlessShortcutPositions = nil
-            return
-        }
+    func restoreDefaultIslandShortcuts() {
         islandModuleConfiguration = Self.defaultIslandShortcuts(
             enabled: islandModuleConfiguration.enabledModuleIDs)
     }
 
     private static func defaultIslandShortcuts(enabled: [IslandModuleID]) -> IslandModuleConfiguration {
+        expandedConfiguration(enabled: enabled, positions: [.shelf, .quickSettings])
+    }
+
+    private static func expandedConfiguration(enabled: [IslandModuleID], positions: [IslandModuleID?]) -> IslandModuleConfiguration {
         var configuration = IslandModuleConfiguration(enabledModuleIDs: enabled, pinnedModuleIDs: [])
-        configuration.assignShortcut(.shelf, at: IslandModuleConfiguration.shortcutSlotsPerSide - 1)
-        configuration.assignShortcut(.quickSettings, at: IslandModuleConfiguration.shortcutSlotsPerSide)
+        configuration.assignShortcut(.quickSettings, at: positions.firstIndex(of: .quickSettings) ?? 1)
+        for (index, id) in positions.prefix(IslandModuleConfiguration.shortcutPositionCount).enumerated()
+            where id != .quickSettings {
+            configuration.assignShortcut(id, at: index)
+        }
         return configuration
     }
 
@@ -780,6 +759,8 @@ final class SettingsStore {
         static let shelfPresentationMode = prefix + "shelfPresentationMode"
         static let shelfSurfaceSettingsVersion = prefix + "shelfSurfaceSettingsVersion"
         static let classicShelfEnabled = prefix + "classicShelfEnabled"
+        static let showCompactIsland = prefix + "showCompactIsland"
+        static let expandedShortcutsVersion = prefix + "expandedShortcutsVersion"
         static let islandEnabled = prefix + "islandEnabled"
         static let menuBarIconEnabled = prefix + "menuBarIconEnabled"
         static let islandDisplayTarget = prefix + "islandDisplayTarget"
@@ -919,10 +900,8 @@ final class SettingsStore {
             Keys.ignoredAppBundleIDs: [String](),
         ])
 
+        showCompactIsland = defaults.object(forKey: Keys.showCompactIsland) as? Bool ?? true
         experimentalModulesEnabled = defaults.bool(forKey: Keys.experimentalModulesEnabled)
-        if let data = defaults.data(forKey: Keys.notchlessShortcutPositions) {
-            notchlessShortcutPositions = try? JSONDecoder().decode([IslandModuleID?].self, from: data)
-        }
         clipboardHistoryEnabled = defaults.bool(forKey: Keys.clipboardHistoryEnabled)
         clipboardHistoryPaused = defaults.bool(forKey: Keys.clipboardHistoryPaused)
         let retentionDays = defaults.integer(forKey: Keys.clipboardHistoryRetentionDays)
@@ -1137,6 +1116,17 @@ final class SettingsStore {
             hotKeyShortcut = .default
         }
         ignoredAppBundleIDs = defaults.stringArray(forKey: Keys.ignoredAppBundleIDs) ?? []
+        let primaryConfigurationIsReadable = persistedModuleConfigurationData == nil
+            || persistedModuleConfigurationData.flatMap { try? JSONDecoder().decode(IslandModuleConfiguration.self, from: $0) } != nil
+        if defaults.integer(forKey: Keys.expandedShortcutsVersion) < 1, primaryConfigurationIsReadable {
+            let floating = defaults.data(forKey: Keys.notchlessShortcutPositions)
+                .flatMap { try? JSONDecoder().decode([IslandModuleID?].self, from: $0) }
+            let positions = floating ?? islandModuleConfiguration.shortcutPositions.compactMap { $0 }.map(Optional.some)
+            islandModuleConfiguration = Self.expandedConfiguration(
+                enabled: islandModuleConfiguration.enabledModuleIDs, positions: positions)
+            persistIslandModuleConfiguration()
+            defaults.set(1, forKey: Keys.expandedShortcutsVersion)
+        }
         // A valid primary configuration wins on every launch. Refresh the
         // one-release v1.5 shadow keys immediately, not only after the user
         // changes a module in this process.

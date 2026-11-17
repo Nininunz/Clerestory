@@ -109,7 +109,8 @@ final class ShelfNoticePanelController: NSObject {
         // During a transition the Island window still contains the visible surface.
         let usesSurfaceFrame = coordinator.surfaceState.isExpanded || coordinator.isSurfaceTransitionPending
         let anchorFrame = usesSurfaceFrame && anchor.isVisible
-            ? anchor.frame : coordinator.currentLayout?.compactFrame ?? anchor.frame
+            ? (anchor as? ShelfPanel)?.interactionFrame ?? anchor.frame
+            : coordinator.currentLayout?.closedNoticeAnchor ?? anchor.frame
         let target = ShelfNoticePlacement.frame(below: anchorFrame, pillSize: pillSize)
         panel.level = anchor.level
         if isShowing { move(to: target) } else { show(at: target) }

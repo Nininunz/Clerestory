@@ -27,7 +27,7 @@ final class SettingsStoreTests: XCTestCase {
         let enabled = store.islandModuleConfiguration.enabledModuleIDs
         store.restoreDefaultIslandShortcuts()
         let positions = store.islandModuleConfiguration.shortcutPositions
-        XCTAssertEqual(positions, [nil, nil, nil, .shelf, .quickSettings, nil, nil, nil])
+        XCTAssertEqual(positions, [.shelf, .quickSettings, nil, nil, nil, nil, nil, nil])
         XCTAssertEqual(store.islandModuleConfiguration.enabledModuleIDs, enabled)
         XCTAssertEqual(SettingsStore(defaults: defaults).islandModuleConfiguration.shortcutPositions, positions)
     }
@@ -120,8 +120,8 @@ final class SettingsStoreTests: XCTestCase {
                        [.shelf, .transfers, .timer, .battery, .system])
         XCTAssertEqual(store.islandModuleConfiguration.pinnedModuleIDs,
                        [.shelf])
-        XCTAssertEqual(store.islandModuleConfiguration.shortcutPositions[3], .shelf)
-        XCTAssertEqual(store.islandModuleConfiguration.shortcutPositions[4], .quickSettings)
+        XCTAssertEqual(store.islandModuleConfiguration.shortcutPositions[0], .shelf)
+        XCTAssertEqual(store.islandModuleConfiguration.shortcutPositions[1], .quickSettings)
         XCTAssertTrue(store.classicShelfHoverRevealEnabled)
     }
 

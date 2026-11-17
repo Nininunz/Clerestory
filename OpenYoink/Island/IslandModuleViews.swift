@@ -2,136 +2,48 @@ import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 
-struct ShelfPresentationRootView: View {
-    let presentationStyle: ShelfPresentationStyle
-    var compactOnly = false
-    var onPerformRecovery: ((RecoveryAction) -> Void)?
-    var onOpenSettings: (() -> Void)?
-
-    var body: some View {
-        Group {
-            if presentationStyle == .island {
-                IslandRootView(
-                    compactOnly: compactOnly,
-                    onPerformRecovery: onPerformRecovery,
-                    onOpenSettings: onOpenSettings
-                )
-            } else {
-                ShelfView()
-            }
-        }
-    }
-}
-
-struct IslandRootView: View {
-    var compactOnly = false
+struct IslandExpandedView: View {
     @Environment(SettingsStore.self) private var settings
-    @Environment(ShelfStore.self) private var shelfStore
     @Environment(DropTargetState.self) private var dropTargetState
-    @Environment(TransferStore.self) private var transferStore
     @Environment(IslandActivityCoordinator.self) private var coordinator
     @Environment(IslandModuleRegistry.self) private var registry
     @Environment(IslandModuleContainer.self) private var moduleContainer
-    @Environment(IslandTimerStore.self) private var timerStore
-    @Environment(PowerSourceMonitor.self) private var powerMonitor
     @Environment(NowPlayingModuleStore.self) private var nowPlayingStore
-    @Environment(SystemStatusModuleStore.self) private var systemStatusStore
-    @Environment(AIUsageModuleStore.self) private var aiUsageStore
-    @Environment(FavoriteFoldersStore.self) private var favoriteFoldersStore
-    @Environment(ClipboardHistoryStore.self) private var clipboardHistoryStore
     @Environment(FavoriteFolderDropCoordinator.self) private var folderCopy
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var isCompactHovering = false
-    @State private var isCollapseControlHovering = false
-    @State private var mediaAccent = ArtworkAccent.fallback
-    @State private var compactArtworkImage: NSImage?
-    @State private var dropOutlineProgress: CGFloat = 0
-    @State private var renderedSurfaceState: IslandSurfaceState = .compact
-    @State private var activeSurfaceAnimation: UUID?
-    @State private var requestedSurfaceTransitionID: UInt64 = 0
-
     var onPerformRecovery: ((RecoveryAction) -> Void)?
     var onOpenSettings: (() -> Void)?
 
     var body: some View {
-        ZStack(alignment: .top) {
-            if compactOnly {
-                compactContent
-            } else if renderedSurfaceState.isExpanded {
-                GeometryReader { surface in
-                    expandedContent
-                        .environment(\.islandSurfaceHeight, surface.size.height)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                }
-                    .frame(width: coordinator.currentLayout?.expandedFrame.width)
-                    .frame(maxHeight: .infinity, alignment: .top)
-                    .transition(.asymmetric(
-                        insertion: .modifier(
-                            active: IslandSurfaceRevealModifier(
-                                progress: 0,
-                                opacity: 0.82,
-                                collapsedWidth: collapsedSurfaceWidth,
-                                collapsedHeight: collapsedSurfaceHeight,
-                                attachedToScreenTop: expandedUsesNotch
-                            ),
-                            identity: IslandSurfaceRevealModifier(
-                                progress: 1,
-                                opacity: 1,
-                                collapsedWidth: collapsedSurfaceWidth,
-                                collapsedHeight: collapsedSurfaceHeight,
-                                attachedToScreenTop: expandedUsesNotch
-                            )
-                        ),
-                        removal: .modifier(
-                            active: IslandSurfaceRevealModifier(
-                                progress: 0,
-                                opacity: 0,
-                                collapsedWidth: collapsedSurfaceWidth,
-                                collapsedHeight: collapsedSurfaceHeight,
-                                attachedToScreenTop: expandedUsesNotch
-                            ),
-                            identity: IslandSurfaceRevealModifier(
-                                progress: 1,
-                                opacity: 1,
-                                collapsedWidth: collapsedSurfaceWidth,
-                                collapsedHeight: collapsedSurfaceHeight,
-                                attachedToScreenTop: expandedUsesNotch
-                            )
-                        )
-                    ))
-            } else if !hasSeparateExpandedPanel {
-                floatingAwareCompactContent
-                    // Upper bounds only: a fixed size here becomes the hosting
-                    // window's minimum size, and the floating idle dot needs
-                    // the panel to shrink below the pill (issue #11).
-                    .frame(minWidth: 0,
-                           maxWidth: coordinator.currentLayout?.compactFrame.width,
-                           minHeight: 0,
-                           maxHeight: coordinator.currentLayout?.compactFrame.height,
-                           alignment: .top)
-                    .transition(.asymmetric(
-                        insertion: .opacity,
-                        removal: .opacity
-                    ))
+        IslandSurfaceAnimationHost(
+            isExpanded: coordinator.surfaceState.isExpanded,
+            transitionID: coordinator.surfaceTransitionID,
+            onCompleted: coordinator.completeSurfaceTransition
+        ) { reveal in
+            GeometryReader { surface in
+                expandedContent(reveal: reveal)
+                    .environment(\.islandSurfaceHeight, surface.size.height)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .overlay {
-            if !compactOnly {
+            .frame(width: coordinator.currentLayout?.expandedFrame.width)
+            .frame(maxHeight: .infinity, alignment: .top)
+            .overlay {
                 IslandDropOutline(
-                    progress: dropOutlineProgress,
-                    collapsedSize: CGSize(width: collapsedSurfaceWidth, height: collapsedSurfaceHeight),
-                    attachedToScreenTop: expandedUsesNotch,
+                    progress: reveal.progress,
+                    collapsedSize: reveal.collapsedSize,
+                    attachedToScreenTop: false,
                     state: dropTargetState
                 )
+                .opacity(reveal.opacity)
             }
         }
+        .padding(IslandSurfaceShadow.inset)
         .preferredColorScheme(.dark)
         .environment(\.colorScheme, .dark)
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier(compactOnly ? "island.compact" : "island.root")
+        .accessibilityIdentifier("island.root")
         .alert("File Already Exists", isPresented: Binding(
-            get: { !compactOnly && folderCopy.conflictName != nil },
+            get: { folderCopy.conflictName != nil },
             set: { if !$0 { folderCopy.decideConflict(.cancel) } }
         )) {
             Button("Keep Both") { folderCopy.decideConflict(.keepBoth) }
@@ -140,11 +52,7 @@ struct IslandRootView: View {
         } message: {
             Text((folderCopy.conflictName ?? "") + "\n" + String(localized: "The existing file will not be overwritten."))
         }
-        .onChange(of: coordinator.surfaceTransitionID, initial: true) {
-            renderSurface(coordinator.surfaceState)
-        }
         .onChange(of: settings.effectiveIslandModuleConfiguration, initial: true) {
-            guard !compactOnly else { return }
             registry.apply(settings: settings)
             moduleContainer.apply(
                 configuration: settings.effectiveIslandModuleConfiguration,
@@ -155,12 +63,7 @@ struct IslandRootView: View {
                     ?? registry.enabledDescriptors.first?.id ?? .quickSettings
             }
         }
-        .onChange(of: nowPlayingStore.snapshot?.artworkData, initial: true) { _, data in
-            compactArtworkImage = data.flatMap(NSImage.init(data:))
-            mediaAccent = ArtworkAccentExtractor.accent(from: data)
-        }
         .onChange(of: coordinator.selectedModule) {
-            guard !compactOnly else { return }
             if !registry.isEnabled(coordinator.selectedModule) {
                 coordinator.selectedModule = registry.enabledDescriptors.first?.id ?? .quickSettings
             }
@@ -169,359 +72,18 @@ struct IslandRootView: View {
         .onChange(of: coordinator.surfaceState) { samplingContextChanged() }
     }
 
-    private func renderSurface(_ state: IslandSurfaceState) {
-        // Only the expanded host owns transition completion and window collapse.
-        guard !compactOnly else { return }
-        requestedSurfaceTransitionID = coordinator.surfaceTransitionID
-        if reduceMotion {
-            activeSurfaceAnimation = nil
-            renderedSurfaceState = state
-            dropOutlineProgress = state.isExpanded ? 1 : 0
-            coordinator.completeSurfaceTransition(requestedSurfaceTransitionID)
-            return
-        }
-        guard renderedSurfaceState != state else {
-            // A coalesced close/open/close may leave the same fold running.
-            // Its real completion must still precede the host-window resize.
-            if activeSurfaceAnimation == nil {
-                coordinator.completeSurfaceTransition(requestedSurfaceTransitionID)
-            }
-            return
-        }
-        let animationID = UUID()
-        activeSurfaceAnimation = animationID
-        withAnimation(surfaceAnimation(for: state), completionCriteria: .removed) {
-            renderedSurfaceState = state
-            dropOutlineProgress = state.isExpanded ? 1 : 0
-        } completion: {
-            guard activeSurfaceAnimation == animationID else { return }
-            activeSurfaceAnimation = nil
-            coordinator.completeSurfaceTransition(requestedSurfaceTransitionID)
-        }
-    }
-
-    private func surfaceAnimation(for state: IslandSurfaceState) -> Animation {
-        if state.isExpanded {
-            return .smooth(
-                duration: IslandMotion.expandContentDuration,
-                extraBounce: 0
-            )
-        }
-        return .smooth(
-            duration: IslandMotion.collapseContentDuration,
-            extraBounce: 0
-        )
-    }
-
     private func samplingContextChanged() {
-        guard !compactOnly else { return }
         NotificationCenter.default.post(name: .openYoinkResourcePolicyDidChange, object: nil)
         if coordinator.surfaceState.isExpanded, coordinator.selectedModule == .media {
             nowPlayingStore.refresh()
         }
     }
 
-    private var collapsedSurfaceHeight: CGFloat {
-        if hasSeparateExpandedPanel { return IslandGeometryResolver.floatingCompactSize.height }
-        return coordinator.currentLayout?.compactFrame.height
-            ?? IslandGeometryResolver.floatingCompactSize.height
-    }
-
-    private var collapsedSurfaceWidth: CGFloat {
-        if hasSeparateExpandedPanel { return IslandGeometryResolver.floatingCompactSize.width }
-        return coordinator.currentLayout?.compactFrame.width
-            ?? IslandGeometryResolver.floatingCompactSize.width
-    }
-
-    /// Displays without a notch can shrink the idle pill into a dot or hide
-    /// it entirely (issue #11). The window controller sizes the panel.
-    private var floatingAwareCompactContent: some View {
-        let presentation = hasPhysicalNotch ? .capsule : coordinator.floatingPresentation
-        return ZStack(alignment: .top) {
-            switch presentation {
-            case .capsule:
-                compactContent
-                    .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .scale(scale: 0.5, anchor: .top)),
-                        removal: .opacity.combined(with: .scale(scale: 0.08, anchor: .top))
-                    ))
-            case .dot:
-                floatingIdleDot
-                    .transition(.opacity.combined(with: .scale(scale: 0.3, anchor: .top)))
-            case .hidden:
-                Color.clear
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .animation(reduceMotion ? nil : .smooth(duration: 0.24), value: presentation)
-    }
-
-    private var floatingIdleDot: some View {
-        let activity = coordinator.compactPrimaryActivity()
-        let ring = activity?.moduleID == .media ? mediaAccent.color : activityTint(activity)
-        let diameter = IslandGeometryResolver.floatingDotDiameter
-        return Circle()
-            .fill(Color.black.opacity(0.92))
-            .overlay {
-                Circle().strokeBorder(ring.opacity(activity == nil ? 0.32 : 0.75), lineWidth: 1)
-            }
-            .frame(width: diameter, height: diameter)
-            .padding(.top, (IslandGeometryResolver.floatingDotHitSize.height - diameter) / 2)
-            .accessibilityElement()
-            .accessibilityLabel(Text(compactAccessibilityLabel))
-            .accessibilityHint(Text("Open OpenYoink Island"))
-            .accessibilityAddTraits(.isButton)
-            .accessibilityAction {
-                guard settings.islandClickRevealEnabled else { return }
-                coordinator.show(module: defaultOpenModule)
-            }
-    }
-
-    private var compactContent: some View {
-        ZStack {
-            Button {
-                coordinator.show(module: defaultOpenModule)
-            } label: {
-                if hasPhysicalNotch {
-                    physicalNotchCompactContent
-                } else {
-                    HStack(spacing: 8) {
-                        compactLeading
-                        compactSummary
-                        Spacer(minLength: 4)
-                        compactTrailing
-                    }
-                    .padding(.horizontal, 12)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-            }
-            .buttonStyle(.plain)
-            .allowsHitTesting(settings.islandClickRevealEnabled)
-            .accessibilityHidden(!settings.islandClickRevealEnabled)
-            .contentShape(compactHitShape)
-            .accessibilityLabel(Text(compactAccessibilityLabel))
-            .accessibilityHint(Text("Open OpenYoink Island"))
-            .help(Text("Open OpenYoink Island"))
-
-        }
-        .contentShape(compactHitShape)
-        .background {
-            if !hasPhysicalNotch {
-                compactSurfaceShape
-                    .fill(Color.black.opacity(0.94))
-            }
-        }
-        .overlay {
-            if !hasPhysicalNotch && compactIsHighlighted {
-                compactSurfaceShape
-                    .strokeBorder(Color.accentColor.opacity(0.55), lineWidth: 1)
-            } else if !hasPhysicalNotch {
-                compactSurfaceShape
-                    .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
-            }
-        }
-        .onHover { hovering in
-            if reduceMotion {
-                isCompactHovering = hovering
-            } else {
-                withAnimation(.easeOut(duration: 0.16)) {
-                    isCompactHovering = hovering
-                }
-            }
-        }
-    }
-
-    private var physicalNotchCompactContent: some View {
-        ZStack(alignment: .top) {
-            Color.clear
-            IslandSurfaceShape(attachedToScreenTop: true, cornerRadius: 11)
-                .fill(Color.black)
-                .frame(height: coordinator.currentLayout?.topInset ?? 32)
-            IslandCompactWingRow(cameraHousingWidth: coordinator.currentLayout?.cameraHousingWidth ?? 0,
-                                 display: compactDisplay,
-                                 isBackwards: { settings.compactCycleBackwards },
-                                 height: coordinator.currentLayout?.topInset ?? 32) {
-                compactLeading
-            } trailing: {
-                compactTrailing
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: coordinator.currentLayout?.topInset ?? 32)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-    }
-
-    @ViewBuilder
-    private var compactLeading: some View {
-        let activity = coordinator.compactPrimaryActivity()
-        if compactDisplay == .media, let image = compactArtworkImage {
-            CompactNowPlayingArtworkView(
-                image: image,
-                tint: mediaAccent.color,
-                isHovered: compactIsHighlighted
-            )
-            .transition(.opacity.combined(with: .scale(scale: 0.86)))
-        } else {
-            IslandCompactWingIcon(systemName: activity.flatMap {
-                $0.moduleID == compactDisplay.moduleID ? $0.systemImage : nil
-            } ?? compactDisplay.systemImage)
-                .foregroundStyle(activity?.moduleID == compactDisplay.moduleID
-                                 ? activityTint(activity) : .white)
-                .opacity(compactIsHighlighted || activity?.moduleID == compactDisplay.moduleID ? 1 : 0.72)
-                .accessibilityHidden(true)
-        }
-    }
-
-    private var compactDisplay: IslandCompactDisplay {
-        settings.compactDisplay
-    }
-
-    private var compactTrailing: some View {
-        Group {
-            switch compactDisplay {
-            case .media:
-                if let snapshot = nowPlayingStore.snapshot {
-                    compactMediaEqualizer(isPlaying: snapshot.isPlaying,
-                                          tint: mediaAccent.color,
-                                          rhythmSeed: mediaRhythmSeed)
-                } else {
-                    IslandCompactWingIcon(systemName: "pause")
-                }
-            case .transfers:
-                if let task = transferStore.currentTask, task.phase.isTerminal {
-                    switch task.phase {
-                    case .failed, .partiallySucceeded:
-                        IslandCompactWingIcon(systemName: "exclamationmark.triangle")
-                    case .cancelled:
-                        IslandCompactWingIcon(systemName: "xmark")
-                    default:
-                        IslandCompactWingIcon(systemName: "checkmark")
-                    }
-                } else if !transferStore.hasVisibleActivity {
-                    IslandCompactWingIcon(systemName: "checkmark")
-                } else if reduceMotion {
-                    IslandCompactWingIcon(systemName: "arrow.triangle.2.circlepath")
-                } else {
-                    compactTransferSpinner
-                }
-            case .timer:
-                if case .finished = timerStore.state {
-                    IslandCompactWingIcon(systemName: "checkmark")
-                } else {
-                    compactTimerText(timerStore.compactRemaining)
-                }
-            case .aiUsage:
-                if let value = aiUsageStore.compactValue {
-                    IslandCompactAIValueText(value: value)
-                } else {
-                    IslandCompactWingIcon(systemName: "minus")
-                }
-            case .shelf:
-                compactShelfText(shelfStore.items.count)
-            case .battery:
-                if powerMonitor.snapshot.hasBattery {
-                    compactBatteryText(powerMonitor.snapshot.percentage)
-                } else {
-                    IslandCompactWingIcon(systemName: "minus")
-                }
-            case .fallback:
-                compactFallbackSymbol
-            }
-        }
-        .foregroundStyle(.white)
-        .opacity(compactIsHighlighted || coordinator.compactPrimaryActivity()?.moduleID == compactDisplay.moduleID ? 1 : 0.72)
-        .accessibilityHidden(true)
-    }
-
-    @ViewBuilder
-    private func compactMediaEqualizer(isPlaying: Bool, tint: Color,
-                                       rhythmSeed: UInt64) -> some View {
-        if !isPlaying {
-            IslandCompactWingIcon(systemName: "play.fill")
-        } else {
-        IslandEqualizerView(isPlaying: isPlaying, reduceMotion: reduceMotion,
-                            tint: tint, rhythmSeed: rhythmSeed, showsCapsule: false)
-            .scaleEffect(0.92)
-            .brightness(compactIsHighlighted ? 0.10 : 0)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.16),
-                       value: compactIsHighlighted)
-        }
-    }
-
-    private var compactTransferSpinner: some View {
-        IslandCompactTransferSpinner()
-    }
-
-    private func compactTimerText(_ value: String) -> some View {
-        Text(value)
-            .font(.caption2.monospacedDigit().weight(.semibold))
-            .lineLimit(1)
-            .minimumScaleFactor(0.65)
-    }
-
-    private func compactShelfText(_ count: Int) -> some View {
-        Text("\(count)")
-            .font(.caption.monospacedDigit().weight(.semibold))
-            .lineLimit(1)
-            .minimumScaleFactor(0.7)
-    }
-
-    private func compactBatteryText(_ percentage: Int) -> some View {
-        IslandCompactBatteryValueText(percentage: percentage)
-    }
-
-    private var compactFallbackSymbol: some View {
-        IslandCompactWingIcon(systemName: "sparkles")
-    }
-
-    private var mediaRhythmSeed: UInt64 {
-        guard let snapshot = nowPlayingStore.snapshot else { return 0 }
-        return MusicVisualizerRhythm.seed(title: snapshot.title,
-                                          artist: snapshot.artist,
-                                          album: snapshot.album)
-    }
-
-    @ViewBuilder
-    private var compactSummary: some View {
-        if let activity = coordinator.compactPrimaryActivity(),
-           activity.moduleID == compactDisplay.moduleID {
-            VStack(alignment: .leading, spacing: 0) {
-                Text(activity.title)
-                    .font(.caption.weight(.semibold))
-                    .lineLimit(1)
-                if let detail = activity.detail {
-                    Text(detail)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-        } else {
-            Group {
-                switch compactDisplay {
-                case .media: Text("Now Playing")
-                case .transfers: Text("Transfers")
-                case .timer: Text("Timer")
-                case .aiUsage: Text(aiUsageStore.compactSummary ?? "AI Usage")
-                case .shelf: Text("Shelf")
-                case .battery: Text("Battery")
-                case .fallback: Text("OpenYoink Island")
-                }
-            }
-            .font(.caption.weight(.semibold))
-            .lineLimit(1)
-        }
-    }
-
-    private var expandedContent: some View {
-        IslandExpandedSurface(hasPhysicalNotch: expandedUsesNotch) {
-            if expandedUsesNotch {
-                physicalNotchModuleStrip
-            } else {
-                floatingIslandToolbar
-                    .padding(.top, 12)
-                    .padding(.horizontal, 14)
-            }
+    private func expandedContent(reveal: IslandSurfaceReveal) -> some View {
+        IslandExpandedSurface(reveal: reveal, showsShadow: true) {
+            expandedToolbar
+                .padding(.top, 12)
+                .padding(.horizontal, 14)
         } content: {
             GeometryReader { geometry in
                 let pages = [coordinator.selectedModule] + (coordinator.shortcutSwipeTarget.map { [$0] } ?? [])
@@ -538,11 +100,6 @@ struct IslandRootView: View {
                 }
             }
         }
-        // The detached panel on notched displays uses AppKit's window shadow.
-        // The existing notchless presentation still draws its shadow here.
-        .shadow(color: hasPhysicalNotch ? .clear : .black.opacity(0.30),
-                radius: hasPhysicalNotch ? 0 : 16,
-                y: hasPhysicalNotch ? 0 : 8)
         .contextMenu {
             Button("Settings…") {
                 openSettings()
@@ -556,134 +113,7 @@ struct IslandRootView: View {
         }
     }
 
-    private var hasPhysicalNotch: Bool {
-        coordinator.currentLayout?.hasPhysicalNotch == true
-    }
-
-    private var hasSeparateExpandedPanel: Bool {
-        coordinator.currentLayout?.hasSeparateExpandedPanel == true
-    }
-
-    private var expandedUsesNotch: Bool {
-        coordinator.currentLayout?.expandedUsesNotch == true
-    }
-
-    private var compactIsHighlighted: Bool {
-        isCompactHovering || coordinator.isPointerHovering
-    }
-
-    private var compactSurfaceShape: IslandSurfaceShape {
-        IslandSurfaceShape(attachedToScreenTop: hasPhysicalNotch, cornerRadius: 13)
-    }
-
-    private var compactHitShape: IslandSurfaceShape {
-        IslandSurfaceShape(attachedToScreenTop: hasPhysicalNotch,
-                           cornerRadius: hasPhysicalNotch ? 11 : 13)
-    }
-
-    private var expandedSurfaceShape: IslandSurfaceShape {
-        IslandSurfaceShape(attachedToScreenTop: hasPhysicalNotch, cornerRadius: 26)
-    }
-
-    private var physicalNotchModuleStrip: some View {
-        let slots = pinnedModuleSlots
-        let leadingIndices = shortcutIndices.filter { $0 < IslandModuleConfiguration.shortcutSlotsPerSide }
-        let trailingIndices = shortcutIndices.filter { $0 >= IslandModuleConfiguration.shortcutSlotsPerSide }
-        let notchWidth = coordinator.currentLayout?.cameraHousingWidth ?? 0
-        let notchHeight = coordinator.currentLayout?.topInset ?? 32
-        let stripHeight = notchHeight
-            + IslandGeometryResolver.physicalNotchClickExtension
-
-        return ZStack(alignment: .top) {
-            HStack(spacing: 0) {
-                HStack(spacing: 2) {
-                    ForEach(leadingIndices, id: \.self) { index in
-                        if let descriptor = slots[index] {
-                            physicalNotchModuleButton(descriptor)
-                        } else {
-                            emptyModuleSlot(size: 24, position: index)
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .trailing)
-
-                Color.clear
-                    .frame(width: notchWidth)
-                    .allowsHitTesting(false)
-
-                HStack(spacing: 2) {
-                    ForEach(trailingIndices, id: \.self) { index in
-                        if let descriptor = slots[index] {
-                            physicalNotchModuleButton(descriptor)
-                        } else {
-                            emptyModuleSlot(size: 24, position: index)
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .padding(.horizontal, 8)
-
-            // The hardware camera housing itself cannot receive mouse events.
-            // Give its small visible chin an explicit, top-most collapse target
-            // instead of relying on a background button underneath the module
-            // tabs. This also prevents the adjacent media tab from stealing a
-            // click intended for the center of the Island.
-            Button {
-                coordinator.collapse()
-            } label: {
-                VStack(spacing: 0) {
-                    Color.clear.frame(height: notchHeight)
-                    Capsule()
-                        .fill(Color.white.opacity(isCollapseControlHovering ? 0.50 : 0.22))
-                        .frame(width: 30, height: 3)
-                        .padding(.top, 2)
-                    Spacer(minLength: 0)
-                }
-                .frame(width: notchWidth, height: stripHeight)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .onHover { hovering in
-                if reduceMotion {
-                    isCollapseControlHovering = hovering
-                } else {
-                    withAnimation(.easeOut(duration: 0.14)) {
-                        isCollapseControlHovering = hovering
-                    }
-                }
-            }
-            .accessibilityLabel(Text("Collapse Island"))
-            .help(Text("Collapse Island"))
-        }
-        .frame(height: stripHeight)
-    }
-
-    private func physicalNotchModuleButton(
-        _ descriptor: IslandModuleDescriptor
-    ) -> some View {
-        let isSelected = coordinator.selectedModule == descriptor.id
-        let isEnabled = registry.isEnabled(descriptor.id)
-        return Button {
-            coordinator.selectedModule = descriptor.id
-        } label: {
-            Image(systemName: descriptor.systemImage)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(isSelected ? Color.accentColor : Color.white.opacity(0.72))
-                .frame(width: 24, height: 24)
-                .background {
-                    Circle().fill(isSelected ? Color.white.opacity(0.10) : Color.clear)
-                }
-                .opacity(isEnabled || isSelected ? 1 : 0.46)
-                .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(descriptor.title))
-        .help(Text(descriptor.title))
-        .modifier(IslandSelectedAccessibilityModifier(selected: isSelected))
-    }
-
-    private var floatingIslandToolbar: some View {
+    private var expandedToolbar: some View {
         HStack(spacing: 10) {
             moduleNavigation
             Spacer(minLength: 4)
@@ -732,7 +162,7 @@ struct IslandRootView: View {
         HStack(spacing: 3) {
             ForEach(shortcutIndices, id: \.self) { index in
                 if let descriptor = pinnedModuleSlots[index] {
-                    floatingModuleButton(descriptor)
+                    moduleShortcutButton(descriptor)
                 } else {
                     emptyModuleSlot(size: 30, position: index)
                 }
@@ -751,23 +181,23 @@ struct IslandRootView: View {
     /// Saved positions provide expanded navigation shortcuts.
     /// Enabled but unpinned modules remain available from the module library.
     private var visibleModuleDescriptors: [IslandModuleDescriptor] {
-        settings.effectiveIslandShortcuts(hasPhysicalNotch: expandedUsesNotch).pinnedModuleIDs.compactMap {
+        settings.effectiveIslandShortcuts.pinnedModuleIDs.compactMap {
             registry.descriptor(for: $0)
         }
     }
 
     private var pinnedModuleSlots: [IslandModuleDescriptor?] {
-        settings.effectiveIslandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.expandedUsesNotch == true).shortcutPositions.map { id in
+        settings.effectiveIslandShortcuts.shortcutPositions.map { id in
             id.flatMap { registry.descriptor(for: $0) }
         }
     }
 
     private var shortcutIndices: [Int] {
-        settings.effectiveIslandShortcuts(hasPhysicalNotch: expandedUsesNotch)
-            .visibleShortcutIndices(hasPhysicalNotch: expandedUsesNotch)
+        settings.effectiveIslandShortcuts
+            .visibleShortcutIndices(hasPhysicalNotch: false)
     }
 
-    private func floatingModuleButton(
+    private func moduleShortcutButton(
         _ descriptor: IslandModuleDescriptor
     ) -> some View {
         let isSelected = coordinator.selectedModule == descriptor.id
@@ -812,59 +242,6 @@ struct IslandRootView: View {
         }
     }
 
-    private var compactAccessibilityLabel: String {
-        switch compactDisplay {
-        case .battery:
-            return powerMonitor.snapshot.hasBattery
-                ? String(localized: "Battery, \(powerMonitor.snapshot.percentage) percent")
-                : String(localized: "No internal battery")
-        case .shelf:
-            return String(localized: "OpenYoink Island, \(shelfStore.items.count) shelf items")
-        case .timer:
-            if case .idle = timerStore.state { return String(localized: "Timer ready") }
-            if case .finished = timerStore.state {
-                return String(localized: "Timer finished")
-            }
-            return String(localized: "Timer, \(timerStore.compactRemaining) remaining")
-        case .media:
-            return nowPlayingStore.snapshot?.title ?? String(localized: "Nothing playing")
-        case .aiUsage:
-            return aiUsageStore.compactSummary ?? String(localized: "AI Usage unavailable")
-        case .transfers:
-            return transferStore.hasVisibleActivity ? String(localized: "Transfers") : String(localized: "No active transfers")
-        default:
-            if let activity = coordinator.compactPrimaryActivity(),
-               activity.moduleID == compactDisplay.moduleID {
-                return [activity.title, activity.detail].compactMap { $0 }.joined(separator: ", ")
-            }
-            return String(localized: "OpenYoink Island")
-        }
-    }
-
-    private var defaultModuleDescriptor: IslandModuleDescriptor? {
-        if registry.isEnabled(coordinator.selectedModule) {
-            return registry.descriptors.first { $0.id == coordinator.selectedModule }
-        }
-        return registry.enabledDescriptors.first
-    }
-
-    private var defaultOpenModule: IslandModuleID {
-        if let recent = coordinator.reentryModule(isEnabled: registry.isEnabled) { return recent }
-        if let moduleID = compactDisplay.moduleID, registry.isEnabled(moduleID) {
-            return moduleID
-        }
-        return defaultModuleDescriptor?.id ?? .quickSettings
-    }
-
-    private func activityTint(_ activity: IslandActivity?) -> Color {
-        switch activity?.priority {
-        case .criticalBattery: return .red
-        case .systemWarning: return .orange
-        case .timerFinished: return .orange
-        case .transfer, .userDrag: return .accentColor
-        default: return .white
-        }
-    }
 
 }
 
@@ -1050,7 +427,7 @@ private struct IslandEmptyModuleSlot: View {
                 ForEach(unpinnedModuleDescriptors) { descriptor in
                     Button {
                         settings.setIslandModuleEnabled(true, id: descriptor.id)
-                        settings.assignIslandShortcut(descriptor.id, at: position, hasPhysicalNotch: coordinator.currentLayout?.expandedUsesNotch == true)
+                        settings.assignIslandShortcut(descriptor.id, at: position)
                         onOpenModule(descriptor.id)
                         isPresentingPicker = false
                     } label: {
@@ -1069,7 +446,7 @@ private struct IslandEmptyModuleSlot: View {
 
     private var unpinnedModuleDescriptors: [IslandModuleDescriptor] {
         registry.descriptors.filter {
-            settings.isIslandModuleAvailable($0.id) && !settings.islandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.expandedUsesNotch == true).isPinned($0.id)
+            settings.isIslandModuleAvailable($0.id) && !settings.islandModuleConfiguration.isPinned($0.id)
         }
     }
 }
@@ -1160,7 +537,7 @@ struct IslandModuleLibraryView: View {
                 Label("One position must contain Quick Settings", systemImage: "lock")
                     .font(.caption2).foregroundStyle(.secondary)
                 Spacer(minLength: 8)
-                Button { settings.restoreDefaultIslandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.expandedUsesNotch == true) } label: {
+                Button { settings.restoreDefaultIslandShortcuts() } label: {
                     Text("Restore Defaults")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
@@ -1356,29 +733,23 @@ struct IslandModuleLibraryView: View {
 
     private func positionRow(_ index: Int) -> some View {
         HStack(spacing: 12) {
-            if coordinator.currentLayout?.expandedUsesNotch == true {
-                Text("\((shortcutIndices.firstIndex(of: index) ?? 0) + 1)")
-                    .font(.caption.monospacedDigit().weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 20)
-            }
             Text(positionLabel(index))
                 .font(.system(size: 12, weight: .medium))
-                .frame(width: coordinator.currentLayout?.expandedUsesNotch == true ? 58 : 90,
+                .frame(width: 90,
                        alignment: .leading)
             Picker(positionLabel(index), selection: Binding<IslandModuleID?>(
-                get: { settings.effectiveIslandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.expandedUsesNotch == true).shortcutPositions[index] },
-                set: { settings.assignIslandShortcut($0, at: index, hasPhysicalNotch: coordinator.currentLayout?.expandedUsesNotch == true) }
+                get: { settings.effectiveIslandShortcuts.shortcutPositions[index] },
+                set: { settings.assignIslandShortcut($0, at: index) }
             )) {
                 Text("Empty").tag(nil as IslandModuleID?)
-                    .disabled(settings.effectiveIslandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.expandedUsesNotch == true).shortcutPositions[index] == .quickSettings)
+                    .disabled(settings.effectiveIslandShortcuts.shortcutPositions[index] == .quickSettings)
                 Label("Quick Settings", systemImage: "square.grid.2x2")
                     .tag(Optional(IslandModuleID.quickSettings))
                 ForEach(registry.enabledDescriptors) { descriptor in
                     Label(descriptor.title, systemImage: descriptor.systemImage)
                         .tag(Optional(descriptor.id))
-                        .disabled(settings.effectiveIslandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.expandedUsesNotch == true).shortcutPositions[index] == .quickSettings
-                                  && !settings.islandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.expandedUsesNotch == true).isPinned(descriptor.id))
+                        .disabled(settings.effectiveIslandShortcuts.shortcutPositions[index] == .quickSettings
+                                  && !settings.islandModuleConfiguration.isPinned(descriptor.id))
                 }
             }
             .labelsHidden()
@@ -1395,21 +766,12 @@ struct IslandModuleLibraryView: View {
     }
 
     private func positionLabel(_ index: Int) -> String {
-        guard coordinator.currentLayout?.expandedUsesNotch == true else {
-            return String(localized: "Position \((shortcutIndices.firstIndex(of: index) ?? 0) + 1)")
-        }
-        let perSide = IslandModuleConfiguration.shortcutSlotsPerSide
-        let sideIndices = shortcutIndices.filter { ($0 < perSide) == (index < perSide) }
-        let number = (sideIndices.firstIndex(of: index) ?? 0) + 1
-        return index < perSide
-            ? String(localized: "Left \(number)")
-            : String(localized: "Right \(number)")
+        String(localized: "Position \((shortcutIndices.firstIndex(of: index) ?? 0) + 1)")
     }
 
     private var shortcutIndices: [Int] {
-        let notched = coordinator.currentLayout?.expandedUsesNotch == true
-        return settings.effectiveIslandShortcuts(hasPhysicalNotch: notched)
-            .visibleShortcutIndices(hasPhysicalNotch: notched)
+        return settings.effectiveIslandShortcuts
+            .visibleShortcutIndices(hasPhysicalNotch: false)
     }
 }
 
@@ -1417,46 +779,5 @@ private struct CompactRowFramesKey: PreferenceKey {
     static let defaultValue: [IslandModuleID: CGRect] = [:]
     static func reduce(value: inout [IslandModuleID: CGRect], nextValue: () -> [IslandModuleID: CGRect]) {
         value.merge(nextValue(), uniquingKeysWith: { _, new in new })
-    }
-}
-
-private struct IslandSurfaceRevealModifier: ViewModifier, @MainActor Animatable {
-    var progress: CGFloat
-    var opacity: Double
-    let collapsedWidth: CGFloat
-    let collapsedHeight: CGFloat
-    let attachedToScreenTop: Bool
-
-    var animatableData: AnimatablePair<CGFloat, Double> {
-        get { AnimatablePair(progress, opacity) }
-        set {
-            progress = newValue.first
-            opacity = newValue.second
-        }
-    }
-
-    func body(content: Content) -> some View {
-        content
-            .mask {
-                GeometryReader { proxy in
-                    let clampedProgress = min(max(progress, 0), 1)
-                    let minimumWidth = min(collapsedWidth, proxy.size.width)
-                    let minimumHeight = min(collapsedHeight, proxy.size.height)
-                    let revealedWidth = minimumWidth
-                        + (proxy.size.width - minimumWidth) * clampedProgress
-                    let revealedHeight = minimumHeight
-                        + (proxy.size.height - minimumHeight) * clampedProgress
-                    IslandSurfaceShape(
-                        attachedToScreenTop: attachedToScreenTop,
-                        cornerRadius: 26
-                    )
-                    .fill(Color.white)
-                    .frame(width: revealedWidth, height: revealedHeight,
-                           alignment: .top)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity,
-                           alignment: .top)
-                }
-            }
-            .opacity(opacity)
     }
 }
