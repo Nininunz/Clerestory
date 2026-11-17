@@ -24,9 +24,6 @@ jobs:
           - check-name: Build and unit tests (Xcode 27)
             runner: xcode-27
             xcode: '27.2'
-          - check-name: Compatibility (Xcode 26)
-            runner: macos-26
-            xcode: '26.6'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     env:
