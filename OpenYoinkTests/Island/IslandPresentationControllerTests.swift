@@ -175,8 +175,14 @@ final class IslandPresentationControllerTests: XCTestCase {
         presentation.scheduleIslandLayoutUpdate()
         XCTAssertTrue(presentation.notch.panel.isVisible)
         coordinator.collapse()
-        // Closing keeps the panel on the original display until animation completion.
-        XCTAssertEqual(presentation.islandLayout(at: builtInPoint).screenFrame, external.frame)
+        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            // Reduced motion dismisses immediately, releasing the display for the next trigger.
+            XCTAssertFalse(presentation.expanded.panel.isVisible)
+            XCTAssertEqual(presentation.islandLayout(at: builtInPoint).screenFrame, builtIn.frame)
+        } else {
+            // Animated dismissal keeps the original display until completion.
+            XCTAssertEqual(presentation.islandLayout(at: builtInPoint).screenFrame, external.frame)
+        }
         coordinator.completeSurfaceTransition(coordinator.surfaceTransitionID)
         presentation.handleIslandEvent(click, at: builtInPoint)
         XCTAssertEqual(coordinator.currentLayout?.screenFrame, builtIn.frame)
