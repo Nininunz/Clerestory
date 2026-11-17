@@ -46,17 +46,17 @@ struct IslandNotchView: View {
             Color.clear
             IslandSurfaceShape(attachedToScreenTop: true, cornerRadius: 11)
                 .fill(Color.black)
-                .frame(height: coordinator.currentLayout?.topInset ?? 32)
-            IslandNotchWingRow(cameraHousingWidth: coordinator.currentLayout?.cameraHousingWidth ?? 0,
+                .frame(height: coordinator.notchLayout?.topInset ?? 32)
+            IslandNotchWingRow(cameraHousingWidth: coordinator.notchLayout?.cameraHousingWidth ?? 0,
                                  display: notchDisplay,
                                  isBackwards: { settings.notchCycleBackwards },
-                                 height: coordinator.currentLayout?.topInset ?? 32) {
+                                 height: coordinator.notchLayout?.topInset ?? 32) {
                 notchLeading
             } trailing: {
                 notchTrailing
             }
             .frame(maxWidth: .infinity)
-            .frame(height: coordinator.currentLayout?.topInset ?? 32)
+            .frame(height: coordinator.notchLayout?.topInset ?? 32)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }

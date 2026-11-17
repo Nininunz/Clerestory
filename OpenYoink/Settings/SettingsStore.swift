@@ -258,6 +258,7 @@ final class SettingsStore {
         didSet { defaults.set(menuBarIconEnabled, forKey: Keys.menuBarIconEnabled) }
     }
 
+    /// Legacy preference retained for compatibility; panel placement now follows the trigger display.
     var islandDisplayTarget: IslandDisplayTarget {
         didSet {
             defaults.set(islandDisplayTarget.persistedValue,

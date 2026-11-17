@@ -47,7 +47,7 @@ final class OpenYoinkSmokeUITests: XCTestCase {
         XCTAssertEqual(element("settings.pane.compact", in: app).label, "Notch")
         XCTAssertFalse(element("settings.showCompactIsland", in: app).exists)
         element("settings.pane.panel", in: app).click()
-        XCTAssertTrue(element("settings.islandDisplay", in: app).waitForExistence(timeout: 3))
+        XCTAssertTrue(element("settings.panelDisplayBehavior", in: app).waitForExistence(timeout: 3))
         let panelCapture = XCTAttachment(screenshot: app.screenshot())
         panelCapture.name = "Panel settings"
         panelCapture.lifetime = .keepAlways
@@ -77,7 +77,6 @@ final class OpenYoinkSmokeUITests: XCTestCase {
 
         let popupIdentifiers = [
             "settings.dragOutRemovalPolicy",
-            "settings.islandDisplay",
             "settings.language",
         ]
         let systemZoomButton = app.buttons.matching(
@@ -135,7 +134,7 @@ final class OpenYoinkSmokeUITests: XCTestCase {
     func testSettingsPopupPickerOpens() throws {
         let app = launch(surface: "--ui-testing-open-settings")
 
-        for (pane, identifier) in [("general", "settings.language"), ("panel", "settings.islandDisplay")] {
+        for (pane, identifier) in [("general", "settings.language")] {
             element("settings.pane.\(pane)", in: app).click()
             let picker = element(identifier, in: app)
             XCTAssertTrue(picker.waitForExistence(timeout: 5))
@@ -252,6 +251,32 @@ final class OpenYoinkSmokeUITests: XCTestCase {
         XCTAssertTrue(element("island.shortcut.position.0", in: panel).waitForExistence(timeout: 3))
         XCTAssertFalse(panel.buttons["Notch modules"].exists)
         XCTAssertFalse(panel.buttons["Panel shortcuts"].exists)
+    }
+
+    func testQuickLookKeepsHoverPanelOpenUntilPreviewCloses() throws {
+        try requireNotchedDisplay()
+        let app = launch(surface: "--ui-testing-hover", fixtures: ["--ui-testing-shelf-files"])
+        let notch = element("island.window.compact", in: app)
+        XCTAssertTrue(notch.waitForExistence(timeout: 5))
+        notch.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+            .withOffset(CGVector(dx: 20, dy: 0)).hover()
+        let panel = expandedPanel(in: app)
+        XCTAssertTrue(panel.waitForExistence(timeout: 5))
+        let first = element("shelf.item.00000000-0000-0000-0000-000000000001", in: panel)
+        XCTAssertTrue(first.waitForExistence(timeout: 5))
+        first.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
+        app.typeKey(.space, modifierFlags: [])
+        let preview = element("shelf.quickLook", in: app)
+        XCTAssertTrue(preview.waitForExistence(timeout: 5))
+        notch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
+            .withOffset(CGVector(dx: 0, dy: 750)).hover()
+        let closed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: panel)
+        closed.isInverted = true
+        XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 1), .completed)
+        XCTAssertTrue(preview.exists)
+        app.typeKey(.escape, modifierFlags: [])
+        XCTAssertTrue(preview.waitForNonExistence(timeout: 3))
+        XCTAssertTrue(panel.waitForNonExistence(timeout: 3))
     }
 
     func testQuickLookKeyboardNavigationAndFocusReturn() throws {

@@ -294,6 +294,7 @@ final class IslandActivityCoordinator {
     /// close/open/close gestures return to the same surface state.
     private(set) var surfaceTransitionID: UInt64 = 0
     private(set) var isSurfaceTransitionPending = false
+    var notchLayout: IslandGeometryResolver.Layout?
     var currentLayout: IslandGeometryResolver.Layout?
     /// Floating (no-notch) Island only: pill, idle dot, or hidden. Visual
     /// state owned by the window controller, which also sizes the panel.

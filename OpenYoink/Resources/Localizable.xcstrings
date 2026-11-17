@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "The optional notch display stays on the built-in screen. Configure it in Notch." : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "The optional notch display stays on the built-in screen. Configure it in Notch."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "可选的刘海显示固定在内置屏幕上。可在“刘海”中配置。"}}}},
+    "The panel opens on the display where you trigger it and stays there until dismissed." : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "The panel opens on the display where you trigger it and stays there until dismissed."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "面板在触发它的显示器上打开，并停留至关闭。"}}}},
+    "Displays" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Displays"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "显示器"}}}},
     "Notch" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Notch"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "刘海"}}}},
     "Show in notch" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Show in notch"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "在刘海处显示"}}}},
     "Configure Notch…" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Configure Notch…"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "配置刘海…"}}}},
