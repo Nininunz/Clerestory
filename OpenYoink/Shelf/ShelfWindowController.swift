@@ -188,6 +188,28 @@ final class ShelfWindowController: NSObject {
 
     private var islandNoticePanel: ShelfNoticePanelController?
 
+    private lazy var islandCompactPanel: ShelfPanel = makePanel(
+        presentationStyle: .island,
+        dropTargetState: islandDropTargetState,
+        gridGeometry: islandGridGeometry,
+        dragOutController: islandDragOutController,
+        compactOnly: true
+    )
+
+    private func updateCompactPanel(for layout: IslandGeometryResolver.Layout) {
+        guard settings.islandEnabled, layout.hasSeparateExpandedPanel else {
+            islandCompactPanel.orderOut(nil)
+            return
+        }
+        islandCompactPanel.allowsTopEdgeOverlap = true
+        islandCompactPanel.level = islandPanel.level
+        islandCompactPanel.hasShadow = false
+        if islandCompactPanel.frame != layout.compactFrame {
+            islandCompactPanel.setFrame(layout.compactFrame, display: true)
+        }
+        if !islandCompactPanel.isVisible { islandCompactPanel.orderFront(nil) }
+    }
+
     private var dragZoneHandoffTask: Task<Void, Never>?
     private lazy var islandDragZonePanel = makeIslandDragZonePanel()
 
@@ -239,7 +261,8 @@ final class ShelfWindowController: NSObject {
         presentationStyle: ShelfPresentationStyle,
         dropTargetState: DropTargetState,
         gridGeometry: ShelfGridGeometry,
-        dragOutController: DragOutController
+        dragOutController: DragOutController,
+        compactOnly: Bool = false
     ) -> ShelfPanel {
         let panel = ShelfPanel(
             contentRect: NSRect(origin: .zero,
@@ -248,6 +271,10 @@ final class ShelfWindowController: NSObject {
             backing: .buffered,
             defer: false
         )
+        panel.acceptsKeyboardFocus = !compactOnly
+        if presentationStyle == .island {
+            panel.title = compactOnly ? "OpenYoink Compact" : "OpenYoink Island"
+        }
         // SwiftUI presentation preferences alone don't set AppKit controls'
         // appearance inside this custom, non-activating Island panel.
         if presentationStyle == .island {
@@ -257,6 +284,7 @@ final class ShelfWindowController: NSObject {
         let hostingController = NSHostingController(
             rootView: ShelfPresentationRootView(
                 presentationStyle: presentationStyle,
+                compactOnly: compactOnly,
                 onPerformRecovery: { [weak self] action in
                     self?.itemRecoveryController.perform(action)
                 },
@@ -316,7 +344,12 @@ final class ShelfWindowController: NSObject {
                     action()
                 })
         )
-        let dropOverride: DragContainerDropOverride? = presentationStyle == .island
+        if presentationStyle == .island {
+            // The controller owns both window frames. A disappearing module's
+            // SwiftUI minimum size must not resize or move the hidden panel.
+            hostingController.sizingOptions = []
+        }
+        let dropOverride: DragContainerDropOverride? = presentationStyle == .island && !compactOnly
             ? DragContainerDropOverride(
                 isActive: { [weak self] in
                     guard let self else { return false }
@@ -361,7 +394,7 @@ final class ShelfWindowController: NSObject {
         panel.onKeyDown = { [weak self] event in
             self?.handleItemKeyDown(event, in: panel) ?? false
         }
-        if presentationStyle == .island {
+        if presentationStyle == .island && !compactOnly {
             for name in [NSWindow.didChangeOcclusionStateNotification,
                          NSWindow.didBecomeKeyNotification,
                          NSWindow.didResignKeyNotification] {
@@ -371,7 +404,7 @@ final class ShelfWindowController: NSObject {
                 )
             }
         }
-        if presentationStyle == .island {
+        if presentationStyle == .island && !compactOnly {
             islandNoticePanel = ShelfNoticePanelController(
                 anchor: panel, notices: importCoordinator.noticeCenter,
                 coordinator: islandActivityCoordinator, settings: settings,
@@ -718,6 +751,7 @@ final class ShelfWindowController: NSObject {
     // MARK: - Public API
 
     func shutdown() {
+        islandCompactPanel.orderOut(nil)
         islandNoticePanel?.stop()
         setIslandDragZoneActive(false)
         favoriteFolderDropCoordinator.cancelCopy()
@@ -1110,10 +1144,11 @@ final class ShelfWindowController: NSObject {
             islandLayoutTask = nil
             let target = islandTargetFrame()
             _ = islandFrameTransition.request(target, currentFrame: islandPanel.frame)
-            if islandPanel.frame != target {
+            if islandActivityCoordinator.currentLayout?.hasSeparateExpandedPanel != true,
+               islandPanel.frame != target {
                 islandPanel.setFrame(target, display: true)
             }
-            if islandActivityCoordinator.currentLayout?.hasPhysicalNotch == false {
+            if islandActivityCoordinator.currentLayout?.expandedUsesNotch == false {
                 islandPanel.orderOut(nil)
             }
         }
@@ -1426,7 +1461,7 @@ final class ShelfWindowController: NSObject {
             columnCount: islandPanel.isVisible && interaction.expandedStackID == nil
                 ? ShelfLayoutEngine.gridColumnCount(for: IslandExpandedLayout.contentWidth(
                     surfaceWidth: panelWidth,
-                    hasPhysicalNotch: islandActivityCoordinator.currentLayout?.hasPhysicalNotch == true))
+                    hasPhysicalNotch: islandActivityCoordinator.currentLayout?.expandedUsesNotch == true))
                 : ShelfLayoutEngine.columnCount(forPanelWidth: panelWidth),
             direction: direction
         )
@@ -1562,6 +1597,8 @@ final class ShelfWindowController: NSObject {
         let layout = islandLayout()
         islandActivityCoordinator.currentLayout = layout
         refreshFloatingPresentation(layout: layout)
+        islandPanel.hasShadow = layout.hasSeparateExpandedPanel
+        updateCompactPanel(for: layout)
         if islandActivityCoordinator.surfaceState.isExpanded { return layout.expandedFrame }
         return compactWindowFrame(for: layout)
     }
@@ -1683,11 +1720,12 @@ final class ShelfWindowController: NSObject {
 
         let layout = islandLayout()
         islandActivityCoordinator.currentLayout = layout
-        // Give SwiftUI a fixed, top-centred canvas before the visible morph
-        // starts. The compact surface remains centred inside this transparent
-        // canvas, while its mask grows to the expanded size. Animating the
-        // AppKit window and SwiftUI hierarchy at the same time made hosting-view
-        // relayout appear as a lateral jump from the right.
+        islandPanel.hasShadow = layout.hasSeparateExpandedPanel
+        updateCompactPanel(for: layout)
+        // Size the expanded window before SwiftUI reveals its content. Compact
+        // remains in its own window when the separate-panel prototype is active.
+        // Simultaneously animating the AppKit frame and SwiftUI layout caused
+        // lateral jumps, so only SwiftUI animates the opening here.
         _ = islandFrameTransition.request(layout.expandedFrame, currentFrame: islandPanel.frame)
         if islandPanel.frame != layout.expandedFrame {
             islandPanel.setFrame(layout.expandedFrame, display: true)
@@ -1982,7 +2020,7 @@ final class ShelfWindowController: NSObject {
                 _ = islandFrameTransition.request(target, currentFrame: islandPanel.frame)
                 islandPanel.alphaValue = 1
                 islandPanel.setFrame(target, display: true)
-                if islandActivityCoordinator.currentLayout?.hasPhysicalNotch == true
+                if islandActivityCoordinator.currentLayout?.expandedUsesNotch == true
                     || islandActivityCoordinator.surfaceState.isExpanded {
                     islandPanel.orderFront(nil)
                 }
@@ -1995,6 +2033,7 @@ final class ShelfWindowController: NSObject {
             stopIslandEventMonitoring()
             islandActivityCoordinator.hide()
             islandPanel.orderOut(nil)
+            islandCompactPanel.orderOut(nil)
         }
     }
 
@@ -2050,12 +2089,13 @@ final class ShelfWindowController: NSObject {
            !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             return
         }
-        if islandActivityCoordinator.currentLayout?.hasPhysicalNotch == false,
+        if islandActivityCoordinator.currentLayout?.expandedUsesNotch == false,
            !islandActivityCoordinator.surfaceState.isExpanded {
             islandLayoutTask?.cancel()
             islandLayoutTask = nil
             islandFrameTransition.reset()
-            if islandPanel.frame != target { islandPanel.setFrame(target, display: true) }
+            if islandActivityCoordinator.currentLayout?.hasSeparateExpandedPanel != true,
+               islandPanel.frame != target { islandPanel.setFrame(target, display: true) }
             islandPanel.orderOut(nil)
             return
         }
@@ -2135,9 +2175,9 @@ final class ShelfWindowController: NSObject {
             let step = offset < 0 ? 1 : -1
             let target = IslandShortcutSwipe.target(
                 current: islandActivityCoordinator.selectedModule, step: step,
-                pinned: settings.effectiveIslandShortcuts(hasPhysicalNotch: islandActivityCoordinator.currentLayout?.hasPhysicalNotch == true).shortcutPositions.compactMap { $0 },
+                pinned: settings.effectiveIslandShortcuts(hasPhysicalNotch: islandActivityCoordinator.currentLayout?.expandedUsesNotch == true).shortcutPositions.compactMap { $0 },
                 enabled: islandModuleRegistry.isEnabled)
-            let width = IslandExpandedLayout.contentWidth(surfaceWidth: islandActivityCoordinator.currentLayout?.expandedFrame.width ?? 492, hasPhysicalNotch: islandActivityCoordinator.currentLayout?.hasPhysicalNotch == true)
+            let width = IslandExpandedLayout.contentWidth(surfaceWidth: islandActivityCoordinator.currentLayout?.expandedFrame.width ?? 492, hasPhysicalNotch: islandActivityCoordinator.currentLayout?.expandedUsesNotch == true)
             islandActivityCoordinator.shortcutSwipeDirection = step
             islandActivityCoordinator.shortcutSwipeTarget = target
             islandActivityCoordinator.shortcutSwipeOffset = target == nil
@@ -2150,7 +2190,7 @@ final class ShelfWindowController: NSObject {
         let coordinator = islandActivityCoordinator
         let revision = coordinator.shortcutNavigationRevision
         let target = coordinator.shortcutSwipeTarget
-        let width = IslandExpandedLayout.contentWidth(surfaceWidth: coordinator.currentLayout?.expandedFrame.width ?? 492, hasPhysicalNotch: coordinator.currentLayout?.hasPhysicalNotch == true)
+        let width = IslandExpandedLayout.contentWidth(surfaceWidth: coordinator.currentLayout?.expandedFrame.width ?? 492, hasPhysicalNotch: coordinator.currentLayout?.expandedUsesNotch == true)
         let projected = islandShortcutSwipe.projectedTranslation(at: timestamp)
         let commit = IslandShortcutSwipe.shouldCommit(
             projected: projected, direction: coordinator.shortcutSwipeDirection, width: width,
@@ -2258,6 +2298,10 @@ final class ShelfWindowController: NSObject {
                 islandActivityCoordinator.show(module: effectiveIslandOpenModule)
                 return
             }
+            let layout = islandLayout(at: point)
+            if layout.hasSeparateExpandedPanel, layout.compactPointerFrame.contains(point) {
+                return
+            }
             if islandHoverPreview.phase == .preview || islandHoverPreview.phase == .leaving,
                islandPanel.frame.contains(point) {
                 performIslandHoverActions(islandHoverPreview.handle(.entered))
@@ -2324,12 +2368,9 @@ final class ShelfWindowController: NSObject {
     }
 
     private func hoverKeepAliveFrame(for layout: IslandGeometryResolver.Layout) -> CGRect {
-        var frame = islandPanel.frame.insetBy(dx: -8, dy: -8)
+        var frame = layout.hoverKeepAliveFrame(panelFrame: islandPanel.frame)
         if let noticeFrame = islandNoticePanel?.interactionFrame { frame = frame.union(noticeFrame) }
-        guard !layout.hasPhysicalNotch else { return frame }
-        return CGRect(x: frame.minX, y: frame.minY,
-                      width: frame.width,
-                      height: max(0, layout.screenFrame.maxY - frame.minY + 4))
+        return frame
     }
 
     private func performIslandHoverActions(_ actions: [IslandHoverPreviewStateMachine.Action]) {

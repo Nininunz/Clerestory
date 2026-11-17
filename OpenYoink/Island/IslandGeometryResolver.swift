@@ -35,6 +35,9 @@ enum IslandFloatingPresentation: Equatable, Sendable {
 }
 
 enum IslandGeometryResolver {
+    /// Prototype: keep compact at the cutout and open a floating panel below it.
+    static let separatesExpandedPanel = true
+    static let expandedPanelGap: CGFloat = 8
     static func acceptsFileDrag(at point: CGPoint, compactPointerFrame: CGRect,
                                 activationFrame: CGRect, topApproachEnabled: Bool) -> Bool {
         compactPointerFrame.contains(point)
@@ -56,6 +59,19 @@ enum IslandGeometryResolver {
         var activationFrame: CGRect
         /// The full screen, so the floating Island can reveal from its top edge.
         var screenFrame: CGRect = .zero
+
+        var hasSeparateExpandedPanel: Bool { hasPhysicalNotch && IslandGeometryResolver.separatesExpandedPanel }
+        var expandedUsesNotch: Bool { hasPhysicalNotch && !hasSeparateExpandedPanel }
+
+        /// Pointer travel across the visual gap must not dismiss the panel.
+        /// This is a hover region only; it does not create an input window.
+        func hoverKeepAliveFrame(panelFrame: CGRect) -> CGRect {
+            let frame = panelFrame.insetBy(dx: -8, dy: -8)
+            if hasSeparateExpandedPanel { return frame.union(compactPointerFrame) }
+            guard !hasPhysicalNotch else { return frame }
+            return CGRect(x: frame.minX, y: frame.minY, width: frame.width,
+                          height: max(0, screenFrame.maxY - frame.minY + 4))
+        }
 
         /// Window frame for the idle dot: centred on the pill's top edge. The
         /// hit area is larger than the drawn dot so it stays easy to point at.
@@ -148,7 +164,7 @@ enum IslandGeometryResolver {
                              y: screen.frame.maxY - compactHeight,
                              width: width,
                              height: compactHeight)
-            topAnchor = screen.frame.maxY
+            topAnchor = separatesExpandedPanel ? compact.minY - expandedPanelGap : screen.frame.maxY
             horizontalAnchor = housing.midX
         } else {
             housing = .zero

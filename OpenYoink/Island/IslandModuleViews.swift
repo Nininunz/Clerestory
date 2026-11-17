@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 
 struct ShelfPresentationRootView: View {
     let presentationStyle: ShelfPresentationStyle
+    var compactOnly = false
     var onPerformRecovery: ((RecoveryAction) -> Void)?
     var onOpenSettings: (() -> Void)?
 
@@ -11,6 +12,7 @@ struct ShelfPresentationRootView: View {
         Group {
             if presentationStyle == .island {
                 IslandRootView(
+                    compactOnly: compactOnly,
                     onPerformRecovery: onPerformRecovery,
                     onOpenSettings: onOpenSettings
                 )
@@ -22,6 +24,7 @@ struct ShelfPresentationRootView: View {
 }
 
 struct IslandRootView: View {
+    var compactOnly = false
     @Environment(SettingsStore.self) private var settings
     @Environment(ShelfStore.self) private var shelfStore
     @Environment(DropTargetState.self) private var dropTargetState
@@ -52,7 +55,9 @@ struct IslandRootView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            if renderedSurfaceState.isExpanded {
+            if compactOnly {
+                compactContent
+            } else if renderedSurfaceState.isExpanded {
                 GeometryReader { surface in
                     expandedContent
                         .environment(\.islandSurfaceHeight, surface.size.height)
@@ -67,14 +72,14 @@ struct IslandRootView: View {
                                 opacity: 0.82,
                                 collapsedWidth: collapsedSurfaceWidth,
                                 collapsedHeight: collapsedSurfaceHeight,
-                                attachedToScreenTop: hasPhysicalNotch
+                                attachedToScreenTop: expandedUsesNotch
                             ),
                             identity: IslandSurfaceRevealModifier(
                                 progress: 1,
                                 opacity: 1,
                                 collapsedWidth: collapsedSurfaceWidth,
                                 collapsedHeight: collapsedSurfaceHeight,
-                                attachedToScreenTop: hasPhysicalNotch
+                                attachedToScreenTop: expandedUsesNotch
                             )
                         ),
                         removal: .modifier(
@@ -83,18 +88,18 @@ struct IslandRootView: View {
                                 opacity: 0,
                                 collapsedWidth: collapsedSurfaceWidth,
                                 collapsedHeight: collapsedSurfaceHeight,
-                                attachedToScreenTop: hasPhysicalNotch
+                                attachedToScreenTop: expandedUsesNotch
                             ),
                             identity: IslandSurfaceRevealModifier(
                                 progress: 1,
                                 opacity: 1,
                                 collapsedWidth: collapsedSurfaceWidth,
                                 collapsedHeight: collapsedSurfaceHeight,
-                                attachedToScreenTop: hasPhysicalNotch
+                                attachedToScreenTop: expandedUsesNotch
                             )
                         )
                     ))
-            } else {
+            } else if !hasSeparateExpandedPanel {
                 floatingAwareCompactContent
                     // Upper bounds only: a fixed size here becomes the hosting
                     // window's minimum size, and the floating idle dot needs
@@ -112,19 +117,21 @@ struct IslandRootView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .overlay {
-            IslandDropOutline(
-                progress: dropOutlineProgress,
-                collapsedSize: CGSize(width: collapsedSurfaceWidth, height: collapsedSurfaceHeight),
-                attachedToScreenTop: hasPhysicalNotch,
-                state: dropTargetState
-            )
+            if !compactOnly {
+                IslandDropOutline(
+                    progress: dropOutlineProgress,
+                    collapsedSize: CGSize(width: collapsedSurfaceWidth, height: collapsedSurfaceHeight),
+                    attachedToScreenTop: expandedUsesNotch,
+                    state: dropTargetState
+                )
+            }
         }
         .preferredColorScheme(.dark)
         .environment(\.colorScheme, .dark)
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("island.root")
+        .accessibilityIdentifier(compactOnly ? "island.compact" : "island.root")
         .alert("File Already Exists", isPresented: Binding(
-            get: { folderCopy.conflictName != nil },
+            get: { !compactOnly && folderCopy.conflictName != nil },
             set: { if !$0 { folderCopy.decideConflict(.cancel) } }
         )) {
             Button("Keep Both") { folderCopy.decideConflict(.keepBoth) }
@@ -137,6 +144,7 @@ struct IslandRootView: View {
             renderSurface(coordinator.surfaceState)
         }
         .onChange(of: settings.effectiveIslandModuleConfiguration, initial: true) {
+            guard !compactOnly else { return }
             registry.apply(settings: settings)
             moduleContainer.apply(
                 configuration: settings.effectiveIslandModuleConfiguration,
@@ -152,6 +160,7 @@ struct IslandRootView: View {
             mediaAccent = ArtworkAccentExtractor.accent(from: data)
         }
         .onChange(of: coordinator.selectedModule) {
+            guard !compactOnly else { return }
             if !registry.isEnabled(coordinator.selectedModule) {
                 coordinator.selectedModule = registry.enabledDescriptors.first?.id ?? .quickSettings
             }
@@ -161,6 +170,8 @@ struct IslandRootView: View {
     }
 
     private func renderSurface(_ state: IslandSurfaceState) {
+        // Only the expanded host owns transition completion and window collapse.
+        guard !compactOnly else { return }
         requestedSurfaceTransitionID = coordinator.surfaceTransitionID
         if reduceMotion {
             activeSurfaceAnimation = nil
@@ -203,6 +214,7 @@ struct IslandRootView: View {
     }
 
     private func samplingContextChanged() {
+        guard !compactOnly else { return }
         NotificationCenter.default.post(name: .openYoinkResourcePolicyDidChange, object: nil)
         if coordinator.surfaceState.isExpanded, coordinator.selectedModule == .media {
             nowPlayingStore.refresh()
@@ -210,12 +222,14 @@ struct IslandRootView: View {
     }
 
     private var collapsedSurfaceHeight: CGFloat {
-        coordinator.currentLayout?.compactFrame.height
+        if hasSeparateExpandedPanel { return IslandGeometryResolver.floatingCompactSize.height }
+        return coordinator.currentLayout?.compactFrame.height
             ?? IslandGeometryResolver.floatingCompactSize.height
     }
 
     private var collapsedSurfaceWidth: CGFloat {
-        coordinator.currentLayout?.compactFrame.width
+        if hasSeparateExpandedPanel { return IslandGeometryResolver.floatingCompactSize.width }
+        return coordinator.currentLayout?.compactFrame.width
             ?? IslandGeometryResolver.floatingCompactSize.width
     }
 
@@ -500,8 +514,8 @@ struct IslandRootView: View {
     }
 
     private var expandedContent: some View {
-        IslandExpandedSurface(hasPhysicalNotch: hasPhysicalNotch) {
-            if hasPhysicalNotch {
+        IslandExpandedSurface(hasPhysicalNotch: expandedUsesNotch) {
+            if expandedUsesNotch {
                 physicalNotchModuleStrip
             } else {
                 floatingIslandToolbar
@@ -524,9 +538,8 @@ struct IslandRootView: View {
                 }
             }
         }
-        // A physical notch is attached to the display rather than floating
-        // above it, so an elevation shadow reads as a translucent rectangle.
-        // Keep elevation only for the fallback pill on displays without a notch.
+        // The detached panel on notched displays uses AppKit's window shadow.
+        // The existing notchless presentation still draws its shadow here.
         .shadow(color: hasPhysicalNotch ? .clear : .black.opacity(0.30),
                 radius: hasPhysicalNotch ? 0 : 16,
                 y: hasPhysicalNotch ? 0 : 8)
@@ -545,6 +558,14 @@ struct IslandRootView: View {
 
     private var hasPhysicalNotch: Bool {
         coordinator.currentLayout?.hasPhysicalNotch == true
+    }
+
+    private var hasSeparateExpandedPanel: Bool {
+        coordinator.currentLayout?.hasSeparateExpandedPanel == true
+    }
+
+    private var expandedUsesNotch: Bool {
+        coordinator.currentLayout?.expandedUsesNotch == true
     }
 
     private var compactIsHighlighted: Bool {
@@ -730,20 +751,20 @@ struct IslandRootView: View {
     /// Saved positions provide expanded navigation shortcuts.
     /// Enabled but unpinned modules remain available from the module library.
     private var visibleModuleDescriptors: [IslandModuleDescriptor] {
-        settings.effectiveIslandShortcuts(hasPhysicalNotch: hasPhysicalNotch).pinnedModuleIDs.compactMap {
+        settings.effectiveIslandShortcuts(hasPhysicalNotch: expandedUsesNotch).pinnedModuleIDs.compactMap {
             registry.descriptor(for: $0)
         }
     }
 
     private var pinnedModuleSlots: [IslandModuleDescriptor?] {
-        settings.effectiveIslandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.hasPhysicalNotch == true).shortcutPositions.map { id in
+        settings.effectiveIslandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.expandedUsesNotch == true).shortcutPositions.map { id in
             id.flatMap { registry.descriptor(for: $0) }
         }
     }
 
     private var shortcutIndices: [Int] {
-        settings.effectiveIslandShortcuts(hasPhysicalNotch: hasPhysicalNotch)
-            .visibleShortcutIndices(hasPhysicalNotch: hasPhysicalNotch)
+        settings.effectiveIslandShortcuts(hasPhysicalNotch: expandedUsesNotch)
+            .visibleShortcutIndices(hasPhysicalNotch: expandedUsesNotch)
     }
 
     private func floatingModuleButton(
@@ -1029,7 +1050,7 @@ private struct IslandEmptyModuleSlot: View {
                 ForEach(unpinnedModuleDescriptors) { descriptor in
                     Button {
                         settings.setIslandModuleEnabled(true, id: descriptor.id)
-                        settings.assignIslandShortcut(descriptor.id, at: position, hasPhysicalNotch: coordinator.currentLayout?.hasPhysicalNotch == true)
+                        settings.assignIslandShortcut(descriptor.id, at: position, hasPhysicalNotch: coordinator.currentLayout?.expandedUsesNotch == true)
                         onOpenModule(descriptor.id)
                         isPresentingPicker = false
                     } label: {
@@ -1048,7 +1069,7 @@ private struct IslandEmptyModuleSlot: View {
 
     private var unpinnedModuleDescriptors: [IslandModuleDescriptor] {
         registry.descriptors.filter {
-            settings.isIslandModuleAvailable($0.id) && !settings.islandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.hasPhysicalNotch == true).isPinned($0.id)
+            settings.isIslandModuleAvailable($0.id) && !settings.islandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.expandedUsesNotch == true).isPinned($0.id)
         }
     }
 }
@@ -1139,7 +1160,7 @@ struct IslandModuleLibraryView: View {
                 Label("One position must contain Quick Settings", systemImage: "lock")
                     .font(.caption2).foregroundStyle(.secondary)
                 Spacer(minLength: 8)
-                Button { settings.restoreDefaultIslandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.hasPhysicalNotch == true) } label: {
+                Button { settings.restoreDefaultIslandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.expandedUsesNotch == true) } label: {
                     Text("Restore Defaults")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
@@ -1335,7 +1356,7 @@ struct IslandModuleLibraryView: View {
 
     private func positionRow(_ index: Int) -> some View {
         HStack(spacing: 12) {
-            if coordinator.currentLayout?.hasPhysicalNotch == true {
+            if coordinator.currentLayout?.expandedUsesNotch == true {
                 Text("\((shortcutIndices.firstIndex(of: index) ?? 0) + 1)")
                     .font(.caption.monospacedDigit().weight(.semibold))
                     .foregroundStyle(.secondary)
@@ -1343,21 +1364,21 @@ struct IslandModuleLibraryView: View {
             }
             Text(positionLabel(index))
                 .font(.system(size: 12, weight: .medium))
-                .frame(width: coordinator.currentLayout?.hasPhysicalNotch == true ? 58 : 90,
+                .frame(width: coordinator.currentLayout?.expandedUsesNotch == true ? 58 : 90,
                        alignment: .leading)
             Picker(positionLabel(index), selection: Binding<IslandModuleID?>(
-                get: { settings.effectiveIslandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.hasPhysicalNotch == true).shortcutPositions[index] },
-                set: { settings.assignIslandShortcut($0, at: index, hasPhysicalNotch: coordinator.currentLayout?.hasPhysicalNotch == true) }
+                get: { settings.effectiveIslandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.expandedUsesNotch == true).shortcutPositions[index] },
+                set: { settings.assignIslandShortcut($0, at: index, hasPhysicalNotch: coordinator.currentLayout?.expandedUsesNotch == true) }
             )) {
                 Text("Empty").tag(nil as IslandModuleID?)
-                    .disabled(settings.effectiveIslandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.hasPhysicalNotch == true).shortcutPositions[index] == .quickSettings)
+                    .disabled(settings.effectiveIslandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.expandedUsesNotch == true).shortcutPositions[index] == .quickSettings)
                 Label("Quick Settings", systemImage: "square.grid.2x2")
                     .tag(Optional(IslandModuleID.quickSettings))
                 ForEach(registry.enabledDescriptors) { descriptor in
                     Label(descriptor.title, systemImage: descriptor.systemImage)
                         .tag(Optional(descriptor.id))
-                        .disabled(settings.effectiveIslandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.hasPhysicalNotch == true).shortcutPositions[index] == .quickSettings
-                                  && !settings.islandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.hasPhysicalNotch == true).isPinned(descriptor.id))
+                        .disabled(settings.effectiveIslandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.expandedUsesNotch == true).shortcutPositions[index] == .quickSettings
+                                  && !settings.islandShortcuts(hasPhysicalNotch: coordinator.currentLayout?.expandedUsesNotch == true).isPinned(descriptor.id))
                 }
             }
             .labelsHidden()
@@ -1374,7 +1395,7 @@ struct IslandModuleLibraryView: View {
     }
 
     private func positionLabel(_ index: Int) -> String {
-        guard coordinator.currentLayout?.hasPhysicalNotch == true else {
+        guard coordinator.currentLayout?.expandedUsesNotch == true else {
             return String(localized: "Position \((shortcutIndices.firstIndex(of: index) ?? 0) + 1)")
         }
         let perSide = IslandModuleConfiguration.shortcutSlotsPerSide
@@ -1386,7 +1407,7 @@ struct IslandModuleLibraryView: View {
     }
 
     private var shortcutIndices: [Int] {
-        let notched = coordinator.currentLayout?.hasPhysicalNotch == true
+        let notched = coordinator.currentLayout?.expandedUsesNotch == true
         return settings.effectiveIslandShortcuts(hasPhysicalNotch: notched)
             .visibleShortcutIndices(hasPhysicalNotch: notched)
     }
