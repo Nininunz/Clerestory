@@ -517,6 +517,12 @@ struct IslandModuleLibraryView: View {
                 .help("Settings")
                 .accessibilityLabel(Text("Settings"))
                 Spacer()
+                #if DEBUG
+                Text(verbatim: AppBuildInfo.versionString)
+                    .monospacedDigit()
+                    .foregroundStyle(IslandVisualStyle.tertiaryText)
+                    .lineLimit(1)
+                #endif
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
