@@ -105,6 +105,10 @@ Releases are built with [`Scripts/make-release.sh`](Scripts/make-release.sh), ei
 
 ## Contributing
 
+Run `python3 Scripts/tree.py` from the repository root to list the source layout, including new files that Git does not ignore. The output omits ignored build artifacts and local configuration.
+
+Use `python3 Scripts/tree.py OpenYoink/Island --depth 2` to show one directory and up to two levels beneath it. Paths in the output stay relative to the repository root.
+
 Something feels off, broke, or could be better? Open an [issue](https://github.com/Nininunz/Clerestory/issues). For bugs, your macOS version, Clerestory version and steps to reproduce help a lot — and please keep private files and clipboard contents out of screenshots.
 
 Pull requests are welcome. For bigger changes, open an issue first so we can talk it through, and run the full unit test suite before submitting.

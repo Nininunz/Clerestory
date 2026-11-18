@@ -105,6 +105,10 @@ xcodebuild \
 
 ## 参与进来
 
+在仓库根目录运行 `python3 Scripts/tree.py` 可查看源码目录结构，包括未被 Git 忽略的新文件。输出会跳过已忽略的构建产物和本地配置。
+
+运行 `python3 Scripts/tree.py OpenYoink/Island --depth 2` 可查看指定目录及其下最多两层。输出路径仍以仓库根目录为基准。
+
 用着不顺手、遇到 bug 或者有想法，欢迎开 [Issue](https://github.com/Nininunz/Clerestory/issues)。报 bug 时附上 macOS 版本、Clerestory 版本和复现步骤会很有帮助；截图前留意别带上私人文件或剪贴板内容。
 
 PR 也欢迎。改动比较大的话，先开个 Issue 聊聊；提交前请跑一遍完整的单元测试。
