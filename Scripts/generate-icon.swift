@@ -1,16 +1,6 @@
 #!/usr/bin/env swift
-//
-// generate-icon.swift — 从主图重采样生成 OpenYoink AppIcon 全部槽位。
-//
-// 运行：swift Scripts/generate-icon.swift（仓库根目录任意位置均可，路径按
-// 脚本位置解析）。可重复运行：以 Scripts/AppIcon-master.png 为主图
-// （当前版本由项目作者以 AI 生成并人工选定），透明留白和圆角由本脚本
-// 烘焙，不能依赖 Launchpad 自动遮罩；各尺寸经 sips 重采样，
-// Contents.json 每次重写，产物直接入库到
-// OpenYoink/Resources/Assets.xcassets/AppIcon.appiconset/。
-//
-// 如需更换图标：替换 Scripts/AppIcon-master.png（正方形 PNG，建议 ≥1024px）
-// 后重新运行本脚本。
+// Run with swift Scripts/generate-icon.swift to regenerate the macOS icon set.
+// AppIcon-master.png is square artwork with transparent corners and its final silhouette.
 
 import AppKit
 
@@ -26,19 +16,16 @@ guard FileManager.default.fileExists(atPath: masterURL.path) else {
 
 let sizes = [16, 32, 64, 128, 256, 512, 1024]
 guard let source = NSImage(contentsOf: masterURL)?.cgImage(forProposedRect: nil, context: nil, hints: nil),
-      let cropped = source.cropping(to: CGRect(x: 22, y: 22, width: source.width - 44, height: source.height - 44)),
+      source.width == source.height, source.width >= 1024,
       let context = CGContext(data: nil, width: 1024, height: 1024, bitsPerComponent: 8,
                               bytesPerRow: 1024 * 4, space: CGColorSpaceCreateDeviceRGB(),
                               bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
     fatalError("Cannot decode or render master artwork")
 }
-// macOS app icons occupy roughly 80% of their canvas. Keep the author's
-// artwork, removing only its baked-in white perimeter before masking it.
-let bounds = CGRect(x: 100, y: 100, width: 824, height: 824)
-context.addPath(CGPath(roundedRect: bounds, cornerWidth: 184, cornerHeight: 184, transform: nil))
-context.clip()
+// Scale the transparent master to match the footprint of other macOS Dock icons.
+let bounds = CGRect(x: 64, y: 64, width: 896, height: 896)
 context.interpolationQuality = .high
-context.draw(cropped, in: bounds)
+context.draw(source, in: bounds)
 guard let rendered = context.makeImage(),
       let png = NSBitmapImageRep(cgImage: rendered).representation(using: .png, properties: [:]) else {
     fatalError("Cannot encode icon")
