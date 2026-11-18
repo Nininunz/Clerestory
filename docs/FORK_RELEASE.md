@@ -2,7 +2,7 @@
 
 This fork is maintained at https://github.com/Nininunz/OpenYoink and derives
 from https://github.com/MuQY1818/OpenYoink. The original MIT license and
-contributor attribution remain intact. The fork is branded Clerestory. The published 1.0.0 build still displays OpenYoink.
+contributor attribution remain intact. The fork is branded Clerestory. The first Clerestory release is 1.0.1 (56). Version 1.0.0 displays OpenYoink.
 
 ## Identity and updates
 
