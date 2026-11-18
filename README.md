@@ -4,11 +4,11 @@
 
 Clerestory 将暂存架和可配置的快捷入口集中在屏幕顶部的面板中，支持内置和外接显示器。配有实体刘海的 Mac 还可以显示独立的刘海入口，用来打开面板或查看模块状态。
 
-[下载 Clerestory 1.0.3](https://github.com/Nininunz/Clerestory/releases/tag/v1.0.3) · [快速上手](#快速上手) · [English](README.en.md)
+[下载 Clerestory 1.0.4](https://github.com/Nininunz/Clerestory/releases/tag/v1.0.4) · [快速上手](#快速上手) · [English](README.en.md)
 
 ## 安装
 
-Clerestory 支持运行 macOS 15 或更新版本的 Apple 芯片和 Intel Mac。打开已签名并通过 Apple 公证的 [Clerestory 1.0.3 DMG](https://github.com/Nininunz/Clerestory/releases/download/v1.0.3/Clerestory-1.0.3.dmg)，将应用拖入「应用程序」。
+Clerestory 支持运行 macOS 15 或更新版本的 Apple 芯片和 Intel Mac。打开已签名并通过 Apple 公证的 [Clerestory 1.0.4 DMG](https://github.com/Nininunz/Clerestory/releases/download/v1.0.4/Clerestory-1.0.4.dmg)，将应用拖入「应用程序」。
 
 使用 Nininunz 分支的用户，可以从菜单栏图标选择 **检查更新…**，将本分支的 OpenYoink 1.0.0 原位升级到 Clerestory。从上游 OpenYoink 切换时，Clerestory 会使用自己的暂存架和偏好设置，上游数据仍保留在原应用中。详见[发行说明](docs/FORK_RELEASE.md)。
 
