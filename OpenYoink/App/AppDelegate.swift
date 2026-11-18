@@ -32,35 +32,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private let startup = AppDelegate.makeStartupSettings()
     private let appState = AppState()
-    /// JSON 持久化（原子写 + 500ms 防抖）；store 的一切变更经它落盘。
+    /// Persists Shelf changes as atomic JSON writes with a 500 ms debounce.
     private let persistence = PersistenceController()
-    /// 安全书签服务（拖入创建 / 启动解析 / 缩略图与打开操作的访问权管理）。
+    /// Creates and resolves security-scoped bookmarks and manages access for thumbnails and opening files.
     private let bookmarkService = BookmarkService()
-    /// 物化临时文件目录（file promise 与图片数据落盘处）。
+    /// Stores files materialized from file promises and image data.
     private let tempFileService = TempFileService()
-    /// v1.2: ⌘ 拖入托管移动的崩溃恢复事务。独立于 shelf.json，且其引用
-    /// 必须参与所有 Materialized 清理保护集合。
+    /// Tracks crash recovery for managed Command-drops independently of shelf.json.
+    /// Every materialized-file cleanup pass must protect paths referenced by the journal.
     private let managedMoveJournal = ManagedMoveJournal()
     /// v1.2: file-promise staging/finalization recovery. Lazy construction
     /// keeps its managed root identical to TempFileService in every build.
     private lazy var pendingImportJournal = PendingImportJournal(
         managedDirectoryURL: tempFileService.directoryURL
     )
-    /// S10: 拖入/物化失败的内联提示（shelf 标题栏下方短暂胶囊，自动消失）。
+    /// Shows a temporary inline notice when a drop or materialization fails.
     private let shelfNotice = ShelfNoticeModel()
-    /// 仅承载活动 tutorial item 的 token，避免 shelf 与 onboarding lazy init 成环。
+    /// Share the active tutorial item token without coupling the lazy Shelf and onboarding objects.
     private let onboardingDragContext = OnboardingDragContext()
     private let logger = Logger(subsystem: "com.nininunz.OpenYoink", category: "App")
     private var isUITesting: Bool {
         Self.isUITestingEnvironment
     }
-    /// shelf.json 在整个启动链路中只读取一次。读取失败会隔离损坏文件；若再读
-    /// 一次就会得到 `.missing`，从而错误放行 Materialized 孤儿清理。
+    /// Read shelf.json only once at startup. A failed read quarantines the corrupt
+    /// file. Reading again would report it missing and could allow unsafe orphan cleanup.
     private lazy var initialShelfLoadResult = persistence.loadResult()
-    /// Shelf 数据（S3 起由 AppDelegate 持有并注入 ShelfView）。
+    /// Owns the Shelf item store that is injected into ShelfView.
     private lazy var shelfStore = ShelfStore(items: initialShelfLoadResult.items,
                                              persistence: persistence)
-    /// S4: 拖入分派器（pasteboard → ShelfItem）。S10: 失败路径经 shelfNotice 反馈。
+    /// Dispatches pasteboard data to Shelf items and reports failures through shelfNotice.
     private lazy var dropImportCoordinator = DropImportCoordinator(bookmarkService: bookmarkService,
                                                                    tempFileService: tempFileService,
                                                                    noticeCenter: shelfNotice,
@@ -350,19 +350,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                                selector: #selector(userDefaultsDidChange(_:)),
                                                name: UserDefaults.didChangeNotification,
                                                object: nil)
-        // v1.2: 先协调 ⌘ 拖入的未完成事务。恢复必须发生在 bookmark 解析与
-        // orphan cleanup 之前，否则尚未写进 shelf 的托管副本会被误删。
+        // Recover unfinished managed Command-drops before resolving bookmarks
+        // or cleaning up orphans. A managed copy may still be awaiting its Shelf record.
         recoverManagedMoveTransactions()
         reconcilePendingImports()
-        // S4: 批量解析持久化项目的 bookmark（失败标记 stale，过期书签重建并更新
-        // 路径），再按最新路径清理物化目录里的孤儿文件。
+        // Resolve saved bookmarks first so cleanup uses current paths. Mark unresolved
+        // items unavailable and recreate stale bookmarks with their updated paths.
         resolvePersistedBookmarks()
-        // 评审 P1：仅在 shelf.json 加载成功（或本就不存在），且不存在任何
-        // shelf.json.corrupt-* 恢复快照时清理孤儿文件——
-        // 加载失败（文件损坏已隔离）时禁止清理：此刻 store 是被迫为空，
-        // 若照常清理会把全部保管文件连锁删除。损坏文件留在
-        // shelf.json.corrupt-* 供人工恢复；只要恢复快照仍在，跨重启也持续
-        // 保留 Materialized 文件，避免第二次启动把恢复材料删掉。
+        // Only clean up orphans when shelf.json was read successfully or was absent
+        // and no quarantined recovery snapshot remains. A failed read leaves the store
+        // empty, so using it for cleanup could delete every managed file. Preserve
+        // Materialized across restarts while a recovery snapshot still exists.
         if !persistence.canSafelyCleanupMaterializedOrphans(after: initialShelfLoadResult)
             || !managedMoveJournal.permitsManagedOrphanCleanup
             || !pendingImportJournal.permitsOrphanCleanup {
@@ -370,13 +368,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             cleanupMaterializedOrphans()
         }
-        // 评审 P1：promise 共享 staging 的按龄清理（与 shelf 加载结果无关，
-        // 只删 1 小时前的 PromiseStaging-* 残留，刚完成的拖入不受影响）。
+        // Staging cleanup is independent of the Shelf load result. It sweeps
+        // PromiseStaging directories older than an hour and protects pending imports.
         tempFileService.cleanupStaleStagingDirectories(
             keepingPaths: pendingImportJournal.protectedPaths()
         )
-        // 引导必须排在 shelf 读取、事务恢复、bookmark 解析和安全清理之后，
-        // 此时「空架」才是可信事实。
+        // Start onboarding after loading Shelf, recovering transactions, resolving
+        // bookmarks, and cleaning up. Only then can onboarding trust an empty Shelf.
         if isUITesting && !ProcessInfo.processInfo.arguments.contains("--ui-testing-onboarding") {
             presentRequestedUITestSurface()
         } else {
@@ -582,11 +580,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Bookmark resolution at launch (S4)
 
-    /// 启动时批量解析已持久化项目的 bookmark：
-    /// - 外部引用解析失败 → `externalFileOffline`，允许用户重新定位；
-    /// - 托管副本解析失败 → `managedCopyMissing`，只进入存储与恢复；
-    /// - 解析成功但 bookmark 过期（文件移动过）→ 重建 bookmark 并更新 path；
-    /// - Stack 子项递归处理。
+    /// Resolve saved bookmarks at startup.
+    /// - An unavailable external reference can be relinked by the user.
+    /// - A missing managed copy is handled through Storage and recovery.
+    /// - Refresh a stale bookmark and update the stored path when resolution succeeds.
+    /// - Resolve stack children recursively.
     private func resolvePersistedBookmarks() {
         for item in shelfStore.items {
             if let refreshed = refreshedByResolvingBookmark(item) {
@@ -595,7 +593,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// 返回需要更新的项目副本；无需更新返回 nil。递归处理 Stack 子项。
+    /// Return an updated item only when it changed. Process stack children recursively.
     private func refreshedByResolvingBookmark(_ item: ShelfItem) -> ShelfItem? {
         let result = ItemAvailabilityResolver.refresh(
             item,
@@ -748,12 +746,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return ids
     }
 
-    /// 清理物化目录中的孤儿文件：保留仍被 shelf 项目（含 Stack 子项）引用的
-    /// 物化文件，其余视为上次会话中断的残留删除。
+    /// Remove orphaned materialized files while preserving files referenced by
+    /// Shelf items, including stack children.
     private func cleanupMaterializedOrphans() {
         let managedPrefix = tempFileService.directoryURL.standardizedFileURL.path + "/"
-        // 上一份有效快照也可能引用 promise/图片物化文件；恢复功能存在时，
-        // 启动清理必须同时保护这些路径，否则“能恢复条目却丢了文件内容”。
+        // Protect files referenced by the last valid snapshot so restoring a Shelf item
+        // also restores access to its materialized contents.
         let protectedItems = shelfStore.items + persistence.recoverableSnapshotItems()
         var protectedPaths = materializedPaths(in: protectedItems, managedPrefix: managedPrefix)
         protectedPaths.formUnion(managedMoveJournal.protectedManagedPaths())

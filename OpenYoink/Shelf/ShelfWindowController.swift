@@ -8,8 +8,8 @@ import SwiftUI
 struct EmptyShelfAutoHideRule: Sendable, Equatable {
     private var previousCount: Int?
 
-    /// 每次 items 变更时评估。返回 true = 应立即自动隐藏。
-    /// 无论结果如何都记录本次数量作为下次基线。
+    /// Evaluates each item update. A true result requests immediate auto-hide.
+    /// Always record the new count as the baseline for the next update.
     mutating func evaluate(itemCount: Int, isVisible: Bool, isEnabled: Bool) -> Bool {
         evaluate(itemCount: itemCount, isVisible: isVisible, isEnabled: isEnabled,
                  isDragInProgress: false)
@@ -25,20 +25,18 @@ struct EmptyShelfAutoHideRule: Sendable, Equatable {
         return isEnabled && isVisible && previousCount > 0 && itemCount == 0
     }
 
-    /// 清空基线（下一次评估只记录不触发）。
+    /// Clears the baseline so the next update records a count without triggering auto-hide.
     mutating func reset() {
         previousCount = nil
     }
 }
 
-/// 负责 shelf 面板的显示/隐藏（滑入滑出 + 透明度组合动画）、
-/// 基于鼠标所在屏幕的 frame 计算，以及屏幕参数变化时的重新布局。
-/// S6 起同时承担：Quick Look 会话持有（`QuickLookCoordinator`）与卡片键盘
-/// 事件分派（空格/Delete/Esc，经 `ShelfPanel.onKeyDown` 回调）。
+/// Controls Shelf visibility, window placement, and display changes. It also
+/// owns the Quick Look session and dispatches Shelf keyboard events through
+/// `ShelfPanel.onKeyDown`.
 ///
-/// 公开 API 约定（S7 触发器、S8 设置均通过这里驱动面板）：
-/// - `toggleShelf(animated:)` / `showShelf(animated:)` / `hideShelf(animated:)`
-/// - `isShelfVisible: Bool`（只读，实际状态存于 `AppState`）
+/// Triggers and settings use `toggleShelf(animated:)`, `showShelf(animated:)`,
+/// or `hideShelf(animated:)`. `isShelfVisible` reads the state stored in `AppState`.
 @MainActor
 final class ShelfWindowController: NSObject {
     private static let animationDuration: TimeInterval = 0.2
@@ -47,36 +45,33 @@ final class ShelfWindowController: NSObject {
     var onClassicPresentationRequested: (() -> Void)?
 
     private let appState: AppState
-    /// S8: shelf 位置/宽度/autoHide 等布局与行为设置的来源（原
-    /// `static let shelfWidth` 占位常量已移除，宽度由此供给）。
+    /// Source of Shelf position, width, and auto-hide preferences.
     private let settings: SettingsStore
     private let clipboardHistoryStore: ClipboardHistoryStore
-    /// Shelf 数据（S3 起注入 ShelfView 的 @Environment）。
-    /// S4: DragContainerView（NSDraggingDestination 桥接）同样持有此 store。
+    /// Shared item store for ShelfView and the AppKit drop destination.
     private let store: ShelfStore
-    /// UX6: 空架自动隐藏裁决状态（跨 items 变更保持上一轮数量基线）。
+    /// Keeps the previous count for empty-Shelf auto-hide decisions.
     private var emptyAutoHideRule = EmptyShelfAutoHideRule()
     private var isUserRemovalInProgress = false
-    /// S4: 拖入分派（pasteboard → ShelfItem），供 DragContainerView 调用。
+    /// Converts dropped pasteboard data into Shelf items for DragContainerView.
     private let importCoordinator: DropImportCoordinator
-    /// S4: 拖入悬停高亮/插入位置状态，DragContainerView 驱动、ShelfView 渲染。
+    /// DragContainerView updates drop feedback and insertion position for ShelfView to render.
     private let classicDropTargetState = DropTargetState()
     private let islandDropTargetState = DropTargetState()
-    /// C5/C6: 卡片网格几何（ShelfView 上报 frame；DragContainerView 拖入定位、
-    /// ShelfView 框选命中共用）。
+    /// ShelfView reports card frames. Drop positioning and marquee selection
+    /// share this geometry.
     private let classicGridGeometry = ShelfGridGeometry()
     private let islandGridGeometry = ShelfGridGeometry()
     /// Runtime focus/expanded-stack state shared with SwiftUI card rendering.
     private let interaction = ShelfInteractionState()
-    /// S5: 拖出总控（卡片 mouseDragged → NSDraggingSession；结束后按设置策略
-    /// 移除/保留/询问（S8 .ask NSAlert）并记入最近历史；S8 起经
-    /// onSuccessfulDrop 回调接 autoHide）。
+    /// Starts drag-out sessions and applies the remove, keep, or ask preference
+    /// after the drop. Successful drops enter recent history and can trigger auto-hide.
     private let classicDragOutController: DragOutController
     private let islandDragOutController: DragOutController
-    /// S6: 物化临时文件目录（注入 SwiftUI 环境，供卡片菜单的 text 项操作使用）。
+    /// Temporary file storage for text actions in the card context menu.
     private let tempFileService: TempFileService
-    /// S6: Quick Look 会话（QLPreviewPanel 数据源/代理；空格/双击/右键入口
-    /// 汇聚于此，随窗口控制器长期存活）。
+    /// Owns the Quick Look session across window presentations. Space,
+    /// double-click, and the context menu share this coordinator.
     private let quickLookCoordinator: QuickLookCoordinator
     /// v1.2: distinguishes external references from managed-copy loss and owns
     /// the safe user-driven recovery actions.
@@ -87,8 +82,8 @@ final class ShelfWindowController: NSObject {
     /// Batch-level VoiceOver announcements live for the controller lifetime so
     /// SwiftUI redraws cannot repeat already spoken events.
     private let accessibilityAnnouncementCenter = AccessibilityAnnouncementCenter()
-    /// 任务二：拖拽进行中状态（`DragStartMonitor.isDragInProgress`），供给
-    /// 空架自动隐藏的门控 —— 拖拽期间任何自动显隐不得收起已可见的 shelf。
+    /// Reads DragStartMonitor.isDragInProgress. Auto-hide must keep an already
+    /// visible Shelf open during a drag.
     private let dragStartMonitor: DragStartMonitor
     /// Expanded Island's visible Settings control uses the app's retained,
     /// LSUIElement-safe settings window rather than SwiftUI's response-chain
@@ -116,26 +111,26 @@ final class ShelfWindowController: NSObject {
     private var classicHoverGlobalMonitor: Any?
     private var classicHoverLocalMonitor: Any?
     private var isOpeningClassicHoverPreview = false
-    /// 快速上手期间只暂停自动隐藏，不改写用户的 autoHide 设置。
+    /// Onboarding pauses auto-hide without changing the saved preference.
     private var onboardingPresentationCount = 0
     private var quickActionLayoutTask: Task<Void, Never>?
     private var classicFrameTransition = ShelfFrameTransitionState()
     private var classicVisibilityTransition = ShelfVisibilityTransitionState()
-    /// issue #10：侧边 shelf 从拉环长出 / 收回拉环的形变状态。
+    /// Tracks the classic side Shelf transition to or from its edge tab.
     private let classicReveal = ShelfRevealState()
-    /// 拉环 ↔ 面板形变进行中：期间不改窗口阴影与 frame（任意偏好写入都会
-    /// 触发 applyPresentationSettings），结束后统一恢复。
+    /// Defer window frame and shadow updates during the edge-tab transition.
+    /// Any preference write can trigger applyPresentationSettings.
     private var isClassicMorphing = false
-    /// 形变期间被推迟的布局请求（数量/设置变化），形变结束后补做。
+    /// Replays layout requests from item or preference changes after the transition.
     private var isClassicLayoutDeferred = false
-    /// 可见期间高度变化动画的代次；新请求或隐藏会让旧动画的收尾失效。
+    /// New height requests and hiding invalidate completion of an older animation.
     private var classicResizeGeneration: UInt = 0
-    /// 面板窗口与玻璃面之间的透明边距（ShelfView classic 分支的 `.padding(8)`）。
+    /// Transparent padding between the classic window frame and its glass surface.
     private static let classicSurfaceInset: CGFloat = 8
 
-    /// shelf 逻辑上占用的 frame。可见期间变矮时窗口不缩（见
-    /// `resizeClassicSurface`），只有顶部玻璃面是 shelf，底部多出的部分
-    /// 透明、不接收点击；悬停、命中与形变都以这里为准，而不是窗口 frame。
+    /// Bounds used for hover, hit testing, and transitions. When the glass
+    /// surface shrinks in resizeClassicSurface, the extra window area below
+    /// it remains transparent and ignores clicks.
     private var classicLogicalFrame: NSRect {
         let frame = classicPanel.frame
         guard let surfaceHeight = classicReveal.surfaceHeight else { return frame }
@@ -143,7 +138,7 @@ final class ShelfWindowController: NSObject {
         return NSRect(x: frame.minX, y: frame.maxY - height, width: frame.width, height: height)
     }
 
-    /// 窗口 frame 即将被直接改写：作废进行中的高度动画，玻璃面重新撑满窗口。
+    /// A direct frame change invalidates the height animation and lets the glass fill the window again.
     private func resetClassicSurfaceHeight() {
         classicResizeGeneration &+= 1
         classicReveal.pinSurfaceHeight(nil)
@@ -274,7 +269,7 @@ final class ShelfWindowController: NSObject {
         if presentationStyle == .island {
             panel.appearance = NSAppearance(named: .darkAqua)
         }
-        // S4: DragContainerView（NSDraggingDestination）包裹 hosting 视图。
+        // Wrap the hosting view in DragContainerView for AppKit drag destination events.
         let hostingController = NSHostingController(
             rootView: presentationRoot(presentationStyle, role: islandRole)
                 .environment(store)
@@ -303,7 +298,7 @@ final class ShelfWindowController: NSObject {
                 .environment(\.shelfActionRunner, shelfActionRunner)
                 .environment(\.accessibilityAnnouncementCenter,
                               accessibilityAnnouncementCenter)
-                // 任务三：内缘收起把手点击 → 走标准 hideShelf 滑出动画。
+                // The inner collapse handle uses the standard hideShelf animation.
                 .environment(\.shelfRevealState,
                              presentationStyle == .classic ? classicReveal : nil)
                 .environment(\.shelfHideAction, { [weak self] in
@@ -376,8 +371,8 @@ final class ShelfWindowController: NSObject {
         )
         panel.contentView?.wantsLayer = true
         panel.contentView?.layer?.backgroundColor = NSColor.clear.cgColor
-        // S6: 键盘链路入口 —— 卡片单击已让面板成为 key，未被内容消费的
-        // keyDown 到达这里（空格/Delete/Esc，见 handleItemKeyDown）。
+        // A card click has already made the panel key. Dispatch the Space,
+        // Delete, and Escape events that the content leaves unhandled.
         panel.onKeyDown = { [weak self] event in
             self?.handleItemKeyDown(event, in: panel) ?? false
         }
@@ -636,7 +631,7 @@ final class ShelfWindowController: NSObject {
         nowPlayingModuleStore.onActivity = { [weak self] activity in
             self?.mediaModuleRuntime.replaceActivity(activity)
         }
-        // UX5/UX6: 项目增删 → 紧凑高度动画过渡 + 空架自动隐藏裁决。
+        // Item updates can animate the height and trigger empty-Shelf auto-hide.
         store.onItemsDidChange = { [weak self] in
             self?.handleItemsDidChange()
         }
@@ -649,9 +644,8 @@ final class ShelfWindowController: NSObject {
         importCoordinator.transferStore.onVisibilityDidChange = { [weak self] in
             self?.handleActivityVisibilityDidChange()
         }
-        // S8: autoHide —— 拖出成功（operation 非空）且设置开启时隐藏 shelf。
-        // 回调在 DragSessionController.draggingSession(endedAt:) 里按
-        // 「实际发生 drop」判定后触发；隐藏与否在此处按最新设置裁决。
+        // DragSessionController reports a successful drop only when the operation
+        // is nonempty. Read the current auto-hide preference when the callback runs.
         classicDragOutController.onSuccessfulDrop = { [weak self] in
             guard let self,
                   self.onboardingPresentationCount == 0,
@@ -664,9 +658,6 @@ final class ShelfWindowController: NSObject {
                   self.settings.autoHide else { return }
             self.collapseIsland(animated: true)
         }
-        // S6: QL 面板关闭后让 ShelfPanel 重新成为 key（nonactivating：只接
-        // 键盘焦点、不激活应用），空格/Delete/Esc 保持可用。闭包内访问 panel
-        // 发生在 QL 关闭时，面板早已创建，不影响 lazy 语义。
         quickLookCoordinator.onNavigationKey = { [weak self] event in
             guard let self else { return false }
             let panel = self.islandPanel.isVisible ? self.islandPanel : self.classicPanel
@@ -679,6 +670,8 @@ final class ShelfWindowController: NSObject {
         quickLookCoordinator.onPreviewVisibilityChanged = { [weak self] visible in
             self?.islandPresentation.setQuickLookVisible(visible)
         }
+        // Restore keyboard focus to a visible Shelf after Quick Look closes
+        // so Space, Delete, and Escape work without activating Clerestory.
         quickLookCoordinator.onPanelClosed = { [weak self] in
             guard let self,
                   self.appState.isShelfVisible
@@ -695,14 +688,14 @@ final class ShelfWindowController: NSObject {
             name: NSApplication.didChangeScreenParametersNotification,
             object: nil
         )
-        // S9: Space 切换后的在位校正（见 revalidateFrameAfterSpaceChange）。
+        // Revalidate the frame in place after switching Spaces.
         NSWorkspace.shared.notificationCenter.addObserver(
             self,
             selector: #selector(activeSpaceDidChange(_:)),
             name: NSWorkspace.activeSpaceDidChangeNotification,
             object: nil
         )
-        // S8: 位置/宽度设置变更时动画过渡到新 frame（见 applyLayoutSettings）。
+        // Animate to the new frame when the position or width changes.
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(userDefaultsDidChange(_:)),
@@ -798,7 +791,7 @@ final class ShelfWindowController: NSObject {
         }
     }
 
-    /// 从贴附缘滑入并淡入（贴左缘时自左侧滑入，贴右缘时自右侧滑入）。
+    /// Slides and fades in from the attached screen edge.
     func showShelf(animated: Bool = true, takeKeyboardFocus: Bool = false) {
         guard SideShelfAvailability.isEnabled else { return }
         onClassicPresentationRequested?()
@@ -865,17 +858,17 @@ final class ShelfWindowController: NSObject {
 
     // MARK: - Edge tab ↔ shelf morph (issue #10)
 
-    /// 原生液态玻璃自带边缘光学；再叠窗口阴影会在面板外多出一圈深色描边，
-    /// 且只能在形变结束后整块出现（issue #10）。其余材质没有玻璃边缘，
-    /// 仍靠窗口阴影体现层次。
+    /// Native Liquid Glass already renders its edge. An AppKit shadow adds
+    /// a second dark rim that appears all at once after the transition.
+    /// Other materials rely on the window shadow for depth.
     private var classicWantsWindowShadow: Bool {
         !settings.appearance.usesNativeGlass(
             reduceTransparency: NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
         )
     }
 
-    /// 拉环在玻璃面局部坐标中的矩形；custom 位置（无贴附缘）返回 nil，
-    /// 显隐退回原有的滑入/淡入。
+    /// Returns the edge tab's frame in glass coordinates. Custom placement
+    /// has no attached edge and falls back to the slide and fade transition.
     private func classicRevealOrigin(for panelFrame: NSRect) -> CGRect? {
         let surface = panelFrame.insetBy(dx: Self.classicSurfaceInset, dy: Self.classicSurfaceInset)
         let visibleFrame = Self.screen(containing: CGPoint(x: panelFrame.midX, y: panelFrame.midY))
@@ -907,12 +900,12 @@ final class ShelfWindowController: NSObject {
         }
     }
 
-    /// 窗口直接就位到目标 frame，只让 SwiftUI 玻璃面从拉环矩形弹性长出
-    /// （窗口 frame 不参与动画 → 网格不在动画中重排）。
+    /// Position the window at its final frame first. Animate the SwiftUI glass
+    /// surface from the edge tab so the grid stays laid out at its final size.
     private func growClassicShelf(from origin: CGRect, to targetFrame: NSRect, wasOnscreen: Bool,
                                   generation: UInt, takeKeyboardFocus: Bool) {
-        // 形变期间窗口形状每帧都在变；AppKit 的窗口阴影只按某一帧计算，会残留
-        // 成错位的轮廓。动画结束后再恢复并重算。
+        // AppKit's shadow can retain an intermediate window shape. Restore and
+        // recalculate it after the glass transition completes.
         isClassicMorphing = true
         classicPanel.hasShadow = false
         if !wasOnscreen {
@@ -920,7 +913,7 @@ final class ShelfWindowController: NSObject {
             classicReveal.prepareCollapsed(at: origin)
         }
         classicReveal.capturesWholeSurface = dragStartMonitor.isDragInProgress
-        // 悬停预览要跟手：用更快、不回弹的版本。
+        // Use a quicker transition without bounce for hover previews.
         let quick = isOpeningClassicHoverPreview
         classicPanel.alphaValue = 1
         if classicPanel.frame != targetFrame {
@@ -929,7 +922,7 @@ final class ShelfWindowController: NSObject {
         }
         presentClassicPanel()
         if takeKeyboardFocus { classicPanel.makeKey() }
-        // 先让收拢态真正提交一帧，再在下一拍开始生长，避免两次状态合并成跳变。
+        // Commit the collapsed state for one frame so SwiftUI cannot coalesce both states and skip the animation.
         classicPanel.contentView?.layoutSubtreeIfNeeded()
         classicPanel.displayIfNeeded()
         DispatchQueue.main.async { [weak self] in
@@ -952,8 +945,8 @@ final class ShelfWindowController: NSObject {
     }
 
     private func finishClassicGrow(generation: UInt) {
-        // 先撤掉拖放兜底覆盖层，等 SwiftUI 重绘后再按最终圆角形状计算阴影，
-        // 否则阴影会按整块矩形算出来。
+        // Remove the drop fallback overlay and wait for SwiftUI to redraw before
+        // recalculating the shadow. Otherwise the shadow follows the overlay's rectangle.
         let hadWholeSurfaceCapture = classicReveal.capturesWholeSurface
         classicReveal.capturesWholeSurface = false
         let restore = { [weak self] in
@@ -972,7 +965,7 @@ final class ShelfWindowController: NSObject {
         }
     }
 
-    /// 结束形变：补做形变期间被推迟的布局。
+    /// Applies layout requests that were deferred during the edge-tab transition.
     private func endClassicMorph() {
         guard isClassicMorphing else { return }
         isClassicMorphing = false
@@ -982,7 +975,7 @@ final class ShelfWindowController: NSObject {
         }
     }
 
-    /// 内容先淡出，玻璃面收回拉环矩形，结束后 orderOut（拉环随即淡入）。
+    /// Fades the content, shrinks the glass to the edge tab, then orders out the window and reveals the tab.
     private func foldClassicShelf(into origin: CGRect, generation: UInt) {
         isClassicMorphing = true
         classicPanel.hasShadow = false
@@ -993,7 +986,7 @@ final class ShelfWindowController: NSObject {
                 guard let self,
                       self.classicVisibilityTransition.isCurrent(generation, visible: false),
                       !self.appState.isShelfVisible else { return }
-                // 已隐藏：推迟的布局下次显示时会按最新目标 frame 重新计算。
+                // The next presentation recomputes the target frame using the latest layout.
                 self.isClassicLayoutDeferred = false
                 self.isClassicMorphing = false
                 self.classicPanel.orderOut(nil)
@@ -1014,8 +1007,8 @@ final class ShelfWindowController: NSObject {
         if takeKeyboardFocus { islandPanel.makeKey() }
     }
 
-    /// 快速上手获得一个显示租约：记录进入前可见性、暂停所有自动隐藏并显示
-    /// shelf。租约结束时恢复原可见性，不写任何用户设置。
+    /// Onboarding saves the prior visibility, pauses auto-hide, and shows Shelf.
+    /// When the lease ends, it restores visibility without writing preferences.
     func beginOnboardingPresentation() -> OnboardingPresentationSnapshot {
         let surface = effectivePreferredShelfSurface ?? .classic
         let wasVisible = surface == .classic
@@ -1043,8 +1036,8 @@ final class ShelfWindowController: NSObject {
         }
     }
 
-    /// 引导面板布局使用。隐藏时返回当前设置对应的目标 frame，不要求先创建
-    /// 或展示 NSPanel。
+    /// Onboarding can lay out against the target frame while Shelf is hidden,
+    /// without creating or showing the panel.
     var visibleOrTargetFrame: CGRect {
         if effectivePreferredShelfSurface == .island {
             return islandActivityCoordinator.surfaceState.isExpanded
@@ -1053,7 +1046,7 @@ final class ShelfWindowController: NSObject {
         return appState.isShelfVisible ? classicLogicalFrame : classicTargetFrame()
     }
 
-    /// 向贴附缘滑出并淡出，结束后 orderOut。
+    /// Slides and fades out toward the attached edge, then orders the window out.
     func hideShelf(animated: Bool = true) {
         onClassicPresentationRequested?()
         let animated = animated && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
@@ -1067,7 +1060,7 @@ final class ShelfWindowController: NSObject {
         let visibleFrame = classicFrameTransition.targetFrame ?? classicLogicalFrame
         appState.hideShelf()
         classicFrameTransition.reset()
-        // S6: shelf 隐藏时关掉 Quick Look 并释放会话资源（不恢复键盘焦点）。
+        // Close Quick Look and release its resources as Shelf hides, without restoring keyboard focus.
         quickLookCoordinator.closeForShelfHide()
         let targetFrame = classicHiddenFrame(for: visibleFrame)
         guard animated else {
@@ -1088,7 +1081,7 @@ final class ShelfWindowController: NSObject {
             classicPanel.animator().alphaValue = 0
             classicPanel.animator().setFrame(targetFrame, display: true)
         }, completionHandler: { [weak self] in
-            // 隐藏期间若用户重新唤出，则不打断显示状态。
+            // Let a new show request interrupt the hide transition.
             MainActor.assumeIsolated {
                 guard let self, let generation,
                       self.classicVisibilityTransition.isCurrent(generation, visible: false),
@@ -1251,12 +1244,12 @@ final class ShelfWindowController: NSObject {
 
     // MARK: - Item keyboard handling (S6)
 
-    /// Arrow keys select the focused item; Shift+Arrow adjusts an anchored range.
-    /// Quick Look forwards navigation here so preview and Shelf selection agree.
+    /// Arrow keys select the focused item. Shift plus an arrow adjusts an
+    /// anchored range. Quick Look forwards navigation here so the preview and
+    /// Shelf selection agree. Quick Look handles its own Space and Escape keys.
     ///
-    /// 事件到达前提：卡片单击让面板成为 key（CardDragSourceAnchorView.mouseUp）。
-    /// 带修饰键的组合一律放行（⌘⇧Space 等由 AppDelegate 的快捷键监听处理）；
-    /// Quick Look retains Space/Escape handling and forwards only navigation keys.
+    /// A card click makes Shelf key through CardDragSourceAnchorView.mouseUp.
+    /// Pass through global shortcuts such as Command-Shift-Space for AppDelegate.
     private func handleItemKeyDown(_ event: NSEvent, in sourcePanel: ShelfPanel) -> Bool {
         if let editor = sourcePanel.firstResponder as? NSTextView, editor.isFieldEditor { return false }
         var modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
@@ -1526,12 +1519,13 @@ final class ShelfWindowController: NSObject {
 
     // MARK: - Layout
 
-    /// 位置与宽度由 SettingsStore 供给；纯计算收敛在 `ShelfLayoutEngine`（S9）。
-    /// 左/右跟随鼠标所在屏幕（鼠标屏被拔掉回退主屏），贴设定缘；UX5 起高度
-    /// 贴合内容（按 `store.items.count` 推算行数，上限可见高度 80%）；EdgeTab
-    /// 起垂直位置按 `shelfEdgeOffset`（0 = 底缘、1 = 顶缘，默认 0.5 居中）；
-    /// custom 用校验后的持久化 frame（首次/所在屏被拔掉时从目标屏
-    /// 右缘默认 frame 起步）。
+    /// SettingsStore supplies position and width. ShelfLayoutEngine computes
+    /// the frame from display geometry and item count. Edge placement uses the
+    /// pointer's display and falls back to the main display when necessary.
+    /// Height fits the content up to 80% of the visible screen height.
+    /// shelfEdgeOffset controls vertical placement from 0 (bottom) to 1 (top).
+    /// Custom placement uses a validated saved frame or starts at the target
+    /// display's right edge when the saved display is unavailable.
     private func classicTargetFrame() -> NSRect {
         ShelfLayoutEngine.targetFrame(
             position: settings.shelfPosition,
@@ -1558,25 +1552,26 @@ final class ShelfWindowController: NSObject {
         return ShelfActionCatalog.hasAnyAction(for: items)
     }
 
-    /// 隐藏态 frame：左/右向贴附缘方向平移一个面板宽度；custom 原位（淡出）。
+    /// Edge placement slides one panel width offscreen. Custom placement fades in place.
     private func classicHiddenFrame(for frame: NSRect) -> NSRect {
         ShelfLayoutEngine.hiddenFrame(for: frame, position: settings.shelfPosition)
     }
 
-    /// 当前屏幕几何快照（NSScreen → 纯值，供 ShelfLayoutEngine）。
+    /// Captures display geometry as values for ShelfLayoutEngine.
     private static func screenGeometries() -> [ShelfLayoutEngine.ScreenGeometry] {
         NSScreen.screens.map { .init(frame: $0.frame, visibleFrame: $0.visibleFrame) }
     }
 
-    /// 包含指定点的屏幕（回退主屏）。S7 的 EdgeTriggerMonitor 与本类布局
-    /// 共用「鼠标所在屏幕」判定，保证边缘触发的一侧与 shelf 出现的一侧一致。
+    /// Finds the screen containing the point, falling back to the main screen.
+    /// EdgeTriggerMonitor shares this lookup so the trigger and Shelf open on the same display.
     static func screen(containing point: CGPoint) -> NSScreen {
         NSScreen.screens.first(where: { $0.frame.contains(point) }) ?? NSScreen.screens[0]
     }
 
-    /// S9: 插拔屏/改分辨率 → 可见即按新几何重算 frame（鼠标所在屏被拔掉时
-    /// ShelfLayoutEngine 回退主屏；custom frame 落出所有屏幕则回退右缘默认）。
-    /// 隐藏态无持久目标，show 时自会按最新几何计算，这里无需动作。
+    /// Recompute a visible Shelf's frame after display or resolution changes.
+    /// When the selected display disappears, use the main display. A saved
+    /// custom frame outside every screen falls back to the default right edge.
+    /// A hidden Shelf calculates its frame the next time it opens.
     @objc private func screenParametersDidChange(_ notification: Notification) {
         if appState.isShelfVisible {
             let target = classicTargetFrame()
@@ -1587,12 +1582,12 @@ final class ShelfWindowController: NSObject {
         applyPresentationSettings()
     }
 
-    /// S9: Space 切换后的在位校正。canJoinAllSpaces + stationary 让面板留在原
-    /// 全局坐标、跟随出现在每个 Space，屏幕几何并未变化 —— 因此只校验当前
-    /// frame（落出可见区域时瞬时夹回，无动画），不按鼠标重新跟随，避免切
-    /// Space 时 shelf 漂到鼠标所在屏。
+    /// The stationary window joins all Spaces at the same global coordinates.
+    /// After a Space switch, clamp its existing frame without animation if needed.
+    /// Following the pointer here could move Shelf to a different display.
     ///
-    /// 必须 nonisolated：通知按投递线程同步回调（同 userDefaultsDidChange）。
+    /// NotificationCenter delivers synchronously on the posting thread, so this
+    /// selector stays nonisolated and dispatches window work to the main actor.
     @objc private nonisolated func activeSpaceDidChange(_ notification: Notification) {
         Task { @MainActor in
             self.islandPresentation.logIslandPresentation("active-space-changed")
@@ -1620,12 +1615,12 @@ final class ShelfWindowController: NSObject {
         classicPanel.setFrame(corrected, display: true)
     }
 
-    /// S8: 设置变更 → 可见时动画过渡到新 frame。任何 UserDefaults 写入都会
-    /// 投递该通知，frame 未实际变化时直接返回，无关设置项不会触发布局动画。
+    /// A preference change can animate the visible Shelf to its new frame.
+    /// Skip the animation when the frame is unchanged because UserDefaults also
+    /// posts this notification for unrelated writes.
     ///
-    /// 必须 nonisolated：通知按投递线程同步回调，投递方可能是任意线程；
-    /// 选择器方法若保留 MainActor 隔离会在投递线程上触发隔离断言
-    /// （同 AppDelegate.userDefaultsDidChange 的说明）。
+    /// NotificationCenter calls the selector on the posting thread. Keep it
+    /// nonisolated and move window work to the main actor to avoid an isolation assertion.
     @objc private nonisolated func userDefaultsDidChange(_ notification: Notification) {
         Task { @MainActor in
             self.applyLayoutSettings()
@@ -1638,15 +1633,15 @@ final class ShelfWindowController: NSObject {
 
     private func applyClassicLayout(animated: Bool = true) {
         guard appState.isShelfVisible else { return }
-        // 形变以当前窗口 frame 为画布；中途改 frame 会让拉环起点错位。
+        // Changing the window frame mid-transition would move the edge tab's origin.
         guard !isClassicMorphing else {
             isClassicLayoutDeferred = true
             return
         }
         let current = classicLogicalFrame
         var target = classicTargetFrame()
-        // 只是内容高度变了（选中出现操作栏、增删卡片）：顶边保持不动，否则
-        // 标题和搜索框会随高度变化上下跳。
+        // Keep the top edge fixed for content-only height changes so the title
+        // and search field do not jump when items or selection actions change.
         let isHeightOnly = settings.shelfPosition != .custom
             && classicPanel.isVisible
             && target.width == current.width && target.minX == current.minX
@@ -1674,13 +1669,13 @@ final class ShelfWindowController: NSObject {
         }
     }
 
-    /// 顶边不动的高度变化：玻璃与内容的高度交给 SwiftUI 逐帧动画，窗口
-    /// 只在需要变高时瞬间扩高（多出的部分先透明），变矮时**不缩**。
+    /// Animate the glass and content height while keeping the top edge fixed.
+    /// Grow the window immediately when needed, initially leaving the added area transparent.
     ///
-    /// 不缩窗口是因为 WindowServer 对「顶边固定」的缩小（高度减小 + 原点
-    /// 上移）并不保证原子：点过 Share 菜单之后尤其明显，新尺寸先生效、
-    /// 原点晚几帧才跟上，整块 shelf 会往下掉一截再弹回。多出的透明区域
-    /// 不接收点击，隐藏或下次改 frame 时自然收回。
+    /// WindowServer can apply a smaller height before moving the window's origin
+    /// up, especially after opening the Share menu. That makes the whole Shelf
+    /// jump down for a few frames. Keep the unused bottom area transparent and
+    /// noninteractive until the next hide or frame change reclaims it.
     private func resizeClassicSurface(to target: NSRect) {
         classicResizeGeneration &+= 1
         let generation = classicResizeGeneration
@@ -1698,17 +1693,15 @@ final class ShelfWindowController: NSObject {
         let fillsWindow = needsTallerWindow || target.height == window.height
         classicReveal.animateSurfaceHeight(to: targetHeight) { [weak self] in
             guard let self, self.classicResizeGeneration == generation else { return }
-            // 玻璃面恰好撑满窗口时解除锁定；否则保持锁定，底部维持透明。
+            // Unlock the glass height when it fills the window. Otherwise keep the bottom area transparent.
             if fillsWindow { self.classicReveal.pinSurfaceHeight(nil) }
             if self.classicPanel.hasShadow { self.classicPanel.invalidateShadow() }
         }
     }
 
-    /// UX5/UX6: items 变更（store.onItemsDidChange 钩子）统一处理：
-    /// 1. UX5 紧凑高度 —— 可见时数量变化动画过渡到新目标 frame（custom
-    ///    位置的目标 frame 不含内容高度，天然 no-op）；
-    /// 2. Apply empty-shelf auto-hide unless a management removal or drag
-    ///    currently owns the transition.
+    /// On item changes, animate the visible Shelf to the new content height.
+    /// Custom placement keeps its height. Apply empty-Shelf auto-hide unless a
+    /// management removal or drag currently owns the transition.
     private func handleItemsDidChange() {
         interaction.normalize(for: store.items)
         let shouldAutoHide = emptyAutoHideRule.evaluate(
@@ -1721,7 +1714,7 @@ final class ShelfWindowController: NSObject {
         if appState.isShelfVisible {
             applyClassicLayout()
         }
-        // 空架隐藏放在高度动画之后裁决：两者同帧时隐藏优先（隐藏动画覆盖）。
+        // Evaluate auto-hide after the height transition so hiding wins if both happen in the same frame.
         if shouldAutoHide {
             hideShelf(animated: true)
         }
@@ -1766,7 +1759,7 @@ final class ShelfWindowController: NSObject {
         islandModuleRegistry.apply(settings: settings)
         classicPanel.allowsTopEdgeOverlap = false
         classicPanel.level = .floating
-        // 形变中途按半成品形状算出的阴影会残留成错位轮廓；形变结束时会恢复。
+        // Restore the shadow only after the transition so it follows the final outline.
         if !isClassicMorphing { classicPanel.hasShadow = classicWantsWindowShadow }
         if SideShelfAvailability.isEnabled && settings.classicShelfEnabled {
             if appState.isShelfVisible {
