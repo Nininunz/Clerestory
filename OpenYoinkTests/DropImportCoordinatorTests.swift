@@ -3,11 +3,12 @@ import UniformTypeIdentifiers
 import XCTest
 @testable import OpenYoink
 
-/// DropImportCoordinator 的分类/排序/字段断言。直接构造 `NSPasteboard(name:)`
-/// 实例喂 fileURL/文本/URL/图片数据，验证产出的 ShelfItem。
+/// Verify import classification, ordering, and item fields. Feed file URLs, text, URLs, and image data
+/// through `NSPasteboard(name:)` and inspect the resulting ShelfItems.
 ///
-/// file promise 路径无法单测：`NSFilePromiseReceiver` 只能由真实拖拽会话的
-/// 来源应用创建（无法在测试中实例化），该链路列入手动回归清单。
+/// file promise path cannot be unit tested: `NSFilePromiseReceiver` can only be created by the source app
+/// of a real drag session
+/// (cannot be instantiated in tests), this path is listed in manual regression checklist.
 @MainActor
 final class DropImportCoordinatorTests: XCTestCase {
     func testReleasedDuplicateDropShowsNoticeAndStillAddsNewFiles() {
@@ -29,10 +30,10 @@ final class DropImportCoordinatorTests: XCTestCase {
         XCTAssertEqual(store.items.count, 2)
     }
 
-    /// 每个用例的 fixtures：就地构造、用例末尾 `cleanup()`（经 defer）。
-    /// 不使用 setUp/tearDown —— XCTestCase 的这两个 override 是非隔离的，
-    /// 在 @MainActor 测试类中访问隔离状态会产生告警（与 ShelfStoreTests 的
-    /// defer 清理模式一致）。
+    /// Fixtures for each test case: Construct in place, cleanup() at the end of the test case (via defer).
+    /// Do not use setUp/tearDown —— these overrides in XCTestCase are non-isolated,
+    /// accessing isolated state in @MainActor test class will generate warnings (consistent with defer
+    /// cleanup pattern in ShelfStoreTests).
     @MainActor
     private struct Context {
         let bookmarkService = BookmarkService()
@@ -90,7 +91,7 @@ final class DropImportCoordinatorTests: XCTestCase {
         return try XCTUnwrap(rep.representation(using: .png, properties: [:]))
     }
 
-    /// 本步不用的异步回调。
+    /// Unused asynchronous callback in this step.
     private func ignoringAsyncItems() -> @MainActor (ShelfItem) -> Void {
         { _ in XCTFail("no async materialization expected for this pasteboard") }
     }
@@ -112,14 +113,14 @@ final class DropImportCoordinatorTests: XCTestCase {
         XCTAssertEqual(item.path, fileURL.path)
         XCTAssertEqual(item.displayName, fileURL.lastPathComponent)
         XCTAssertNotNil(item.bookmark)
-        XCTAssertNil(item.sourceApp) // v1: 跨应用拖拽来源统一留 nil
+        XCTAssertNil(item.sourceApp) // v1: Cross-app drag source uniformly set to nil
     }
 
     func testImport_directoryURL_producesFolderItem_notExpanded() throws {
         var context = makeContext()
         defer { context.cleanup() }
         let folderURL = try makeTempDirectory(in: &context)
-        // 文件夹里放一个文件，验证 v1 不展开递归。
+        // Place a file in a folder, verify v1 does not expand recursively.
         try "inner".write(to: folderURL.appendingPathComponent("inner.txt"), atomically: true, encoding: .utf8)
         let pasteboard = makePasteboard()
         pasteboard.writeObjects([folderURL as NSURL])
@@ -244,7 +245,7 @@ final class DropImportCoordinatorTests: XCTestCase {
 
     // MARK: - Priority
 
-    /// fileURL 与文本同时存在时按 F-03 顺序取 fileURL，文本忽略。
+    /// When fileURL and text exist together, take fileURL in F-03 order, text is ignored.
     func testImport_fileURLAndText_fileURLWins() throws {
         var context = makeContext()
         defer { context.cleanup() }
@@ -261,7 +262,8 @@ final class DropImportCoordinatorTests: XCTestCase {
 
     // MARK: - Image data
 
-    /// 无文件 URL 的 PNG 位图：异步物化到 TempFileService 目录，kind = .image。
+    /// PNG bitmap without file URL: Asynchronously materialized to TempFileService directory, kind =
+    /// .image.
     func testImport_pngData_materializesImageItem() async throws {
         let context = makeContext()
         defer { context.cleanup() }
@@ -287,7 +289,7 @@ final class DropImportCoordinatorTests: XCTestCase {
         XCTAssertNotNil(item.bookmark)
         let path = try XCTUnwrap(item.path)
         XCTAssertTrue(path.hasPrefix(context.tempFileService.directoryURL.path))
-        // 落盘内容与原 PNG 一致。
+        // Content on disk matches the original PNG.
         XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: path)), pngData)
         XCTAssertEqual(context.coordinator.transferStore.currentTask?.phase, .delivered)
         XCTAssertEqual(context.coordinator.transferStore.currentTask?.itemIDs, [item.id])

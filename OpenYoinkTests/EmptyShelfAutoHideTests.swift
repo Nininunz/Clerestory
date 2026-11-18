@@ -1,17 +1,19 @@
 import XCTest
 @testable import OpenYoink
 
-/// UX6 空架自动隐藏裁决（EmptyShelfAutoHideRule，纯逻辑）：
-/// 基于「非空 → 空」迁移触发；手动唤出的空架（无迁移）天然豁免。
+/// UX6 Empty Shelf Auto Hide Rule (EmptyShelfAutoHideRule, pure logic):
+/// Trigger based on 'non-empty → empty' transition; manually summoned empty shelf (no transition) is
+/// naturally exempt.
 final class EmptyShelfAutoHideTests: XCTestCase {
     func testNonEmptyToEmpty_whileVisible_requestsHide() {
         var rule = EmptyShelfAutoHideRule()
-        XCTAssertFalse(rule.evaluate(itemCount: 2, isVisible: true, isEnabled: true)) // 建立基线
+        XCTAssertFalse(rule.evaluate(itemCount: 2, isVisible: true, isEnabled: true)) // Establish baseline
         XCTAssertTrue(rule.evaluate(itemCount: 0, isVisible: true, isEnabled: true))
     }
 
     func testManuallySummonedEmptyShelf_neverHides() {
-        // 用户手动唤出空架：首次评估只建基线，随后的 0→0 变更不触发。
+        // User manually summons empty shelf: initial assessment only establishes baseline, subsequent 0→0
+        // changes do not trigger.
         var rule = EmptyShelfAutoHideRule()
         XCTAssertFalse(rule.evaluate(itemCount: 0, isVisible: true, isEnabled: true))
         XCTAssertFalse(rule.evaluate(itemCount: 0, isVisible: true, isEnabled: true))
@@ -20,9 +22,10 @@ final class EmptyShelfAutoHideTests: XCTestCase {
     func testTransitionWhileHidden_doesNotFire_andKeepsBaselineFresh() {
         var rule = EmptyShelfAutoHideRule()
         XCTAssertFalse(rule.evaluate(itemCount: 3, isVisible: true, isEnabled: true))
-        // 隐藏状态下被清空（如菜单栏清空）：不触发（无架可隐），基线照常更新。
+        // Empty when hidden (e.g., menu bar cleared): no trigger (no shelf to hide), baseline updates
+        // normally.
         XCTAssertFalse(rule.evaluate(itemCount: 0, isVisible: false, isEnabled: true))
-        // 之后用户唤出空架：0→0 不触发。
+        // After user summons empty shelf: 0→0 does not trigger.
         XCTAssertFalse(rule.evaluate(itemCount: 0, isVisible: true, isEnabled: true))
     }
 
@@ -61,31 +64,34 @@ final class EmptyShelfAutoHideTests: XCTestCase {
                                     isDragInProgress: false))
     }
 
-    // MARK: - 任务二：拖拽进行中不自动隐藏（不变式门控）
+    // MARK: - Task 2: Dragging in progress does not auto-hide (invariant gate)
 
-    /// 拖拽进行中 items 从 >0 变 0（如另一只手按 Delete 清空）→ 不得隐藏，
-    /// 否则悬在 shelf 上的跨应用拖放会落空（真机验收怀疑的竞态）。
+    /// During dragging, items transition from >0 to 0 (e.g., another hand presses Delete to clear) →
+    /// cannot hide,
+    /// otherwise cross-app drag-and-drop suspended over shelf will fail (race condition suspected in real
+    /// device verification).
     func testDragInProgress_transitionToEmpty_isSuppressed() {
         var rule = EmptyShelfAutoHideRule()
         XCTAssertFalse(rule.evaluate(itemCount: 2, isVisible: true, isEnabled: true,
-                                     isDragInProgress: true)) // 建立基线
+                                     isDragInProgress: true)) // Establish baseline
         XCTAssertFalse(rule.evaluate(itemCount: 0, isVisible: true, isEnabled: true,
                                      isDragInProgress: true))
     }
 
-    /// 被抑制的隐藏不补发：拖拽结束时基线已是 0，之后的 0→0 变更不触发 ——
-    /// 空架保持可见，由用户显式收起（安全方向）。
+    /// Suppressed hide does not re-trigger: baseline is already 0 at drag end, subsequent 0→0 changes do
+    /// not trigger —
+    /// empty shelf remains visible, user explicitly folds it (safe direction).
     func testDragInProgress_suppressedHide_isNotReplayedAfterDragEnds() {
         var rule = EmptyShelfAutoHideRule()
         XCTAssertFalse(rule.evaluate(itemCount: 2, isVisible: true, isEnabled: true,
                                      isDragInProgress: true))
         XCTAssertFalse(rule.evaluate(itemCount: 0, isVisible: true, isEnabled: true,
-                                     isDragInProgress: true)) // 抑制，基线更新为 0
+                                     isDragInProgress: true)) // Suppressed, baseline updated to 0
         XCTAssertFalse(rule.evaluate(itemCount: 0, isVisible: true, isEnabled: true,
-                                     isDragInProgress: false)) // 拖拽结束，0→0 不触发
+                                     isDragInProgress: false)) // Drag ends, 0→0 no trigger
     }
 
-    /// 门控只挡「拖拽中」：拖拽结束后 refill → 再清空，照常触发。
+    /// Gate only blocks 'dragging': After dragging ends, refill → then clear, trigger normally.
     func testAfterDragEnds_ruleFiresNormally() {
         var rule = EmptyShelfAutoHideRule()
         XCTAssertFalse(rule.evaluate(itemCount: 2, isVisible: true, isEnabled: true,

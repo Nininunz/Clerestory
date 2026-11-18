@@ -3,18 +3,18 @@ import Synchronization
 import XCTest
 @testable import OpenYoink
 
-/// F-05: CutMoveService 的剪切搬运编排（copy → 校验 → trash → isCut item）
-/// 与 DropImportCoordinator 的 ⌘ 分派。临时目录实测成功路径；trash 经注入
-/// 闭包 mock（测试宿主里 trashItem 未必可用），验证编排顺序与失败分支。
+/// Cover the CutMoveService sequence of copying, verifying, and trashing before creating an isCut item,
+/// along with Command-drop dispatch in DropImportCoordinator. Use real files in a disposable directory and
+/// inject a Trash operation to verify ordering and failures without relying on Trash in the test host.
 @MainActor
 final class CutMoveServiceTests: XCTestCase {
-    /// 每个用例的 fixtures：就地构造、用例末尾 defer 清理（与
-    /// DropImportCoordinatorTests 同模式，不用 setUp/tearDown）。
+    /// Fixtures for each test case: in-place construction, defer cleanup at the end of the test case (same
+    /// pattern as DropImportCoordinatorTests, no setUp/tearDown).
     @MainActor
     private struct Context {
         let bookmarkService = BookmarkService()
         let tempFileService: TempFileService
-        /// 模拟的「app 容器」根（源在其中时拒绝剪切）。
+        /// Simulated 'app container' root (source is rejected when cutting).
         let containerURL: URL
         var temporaryURLs: [URL] = []
 
@@ -38,7 +38,7 @@ final class CutMoveServiceTests: XCTestCase {
 
     private func makeContext() -> Context { Context() }
 
-    /// 在容器外（临时目录）造一个源文件/文件夹。
+    /// Create a source file/folder outside the container (in a temporary directory).
     private func makeSourceFile(in context: inout Context, named name: String = "sample.txt") throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("OpenYoinkTests-\(UUID().uuidString)-\(name)")
@@ -47,8 +47,10 @@ final class CutMoveServiceTests: XCTestCase {
         return url
     }
 
-    /// 默认 trash mock 由调用方以闭包给出（Mutex 不可拷贝，不能跨参数传递，
-    /// 在用例内就地构造后捕获进闭包 —— 与 FilePromiseProviderTests 同模式）。
+    /// Default trash mock is provided by the caller via a closure (Mutex is not copyable and cannot be
+    /// passed across parameters,
+    /// so it is constructed in-place within the test case and captured into the closure —— same pattern as
+    /// FilePromiseProviderTests).
     private func makeService(context: Context,
                              trashOriginal: @escaping @Sendable (URL) throws -> Void) -> CutMoveService {
         CutMoveService(
@@ -65,7 +67,7 @@ final class CutMoveServiceTests: XCTestCase {
         return try FileManager.default.contentsOfDirectory(atPath: directory.path)
     }
 
-    // MARK: - 成功路径
+    // MARK: - Success path
 
     func testMakeCutItem_success_copiesToManagedDirAndTrashesOriginal() throws {
         var context = makeContext()
@@ -86,12 +88,12 @@ final class CutMoveServiceTests: XCTestCase {
         XCTAssertEqual(item.displayName, "notes.txt", "displayName 保持原名（不暴露 UUID 前缀）")
         XCTAssertEqual(item.kind, .file)
         XCTAssertNotNil(item.bookmark, "bookmark 应指向保管副本")
-        // 副本就位且内容一致。
+        // Copy is in place and content is consistent.
         let path = try XCTUnwrap(item.path)
         XCTAssertTrue(path.hasPrefix(context.tempFileService.directoryURL.path),
                       "保管副本应在 Materialized 目录内：\(path)")
         XCTAssertEqual(try String(contentsOf: URL(fileURLWithPath: path), encoding: .utf8), "sample content")
-        // 原文件进「废纸篓」（mock 删除），且 trash 在 copy 之后被调用一次。
+        // Original file is moved to the 'Trash' (mock deletion), and trash is called once after the copy.
         XCTAssertEqual(trashed.withLock { $0 }, [source])
         XCTAssertFalse(FileManager.default.fileExists(atPath: source.path), "原位置应已消失")
         guard case .loaded(let records) = service.managedMoveJournal.loadResult() else {
@@ -126,12 +128,12 @@ final class CutMoveServiceTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: folder.path))
     }
 
-    // MARK: - 失败分支
+    // MARK: - Failed branch
 
     func testMakeCutItem_copyFailure_keepsOriginalAndFallsBack() throws {
         let context = makeContext()
         defer { context.cleanup() }
-        // 源不存在 → copyItem 抛错。
+        // Source does not exist → copyItem throws an error.
         let missing = FileManager.default.temporaryDirectory
             .appendingPathComponent("OpenYoinkTests-\(UUID().uuidString)-ghost.txt")
         let trashed = Mutex<[URL]>([])
@@ -207,7 +209,7 @@ final class CutMoveServiceTests: XCTestCase {
     func testMakeCutItem_sourceInsideContainer_rejected() throws {
         let context = makeContext()
         defer { context.cleanup() }
-        // 源在「容器」内（防套娃）。
+        // Source is inside a 'container' (to prevent nesting).
         let container = context.containerURL
         try FileManager.default.createDirectory(at: container, withIntermediateDirectories: true)
         let source = container.appendingPathComponent("already-ours.txt")
@@ -230,7 +232,7 @@ final class CutMoveServiceTests: XCTestCase {
         XCTAssertEqual(try managedDirectoryContents(context), [], "拒绝剪切时不产生副本")
     }
 
-    // MARK: - dropMode 修饰键判定
+    // MARK: - dropMode modifier key determination
 
     func testDropMode_commandWithFileURL_isMove() {
         let pasteboard = NSPasteboard(name: NSPasteboard.Name("OpenYoinkTests-\(UUID().uuidString)"))
@@ -261,7 +263,7 @@ final class CutMoveServiceTests: XCTestCase {
                        "URL 没有「原文件」概念，⌘ 无效")
     }
 
-    // MARK: - 协调器集成（⌘ 分派 + 逐文件独立成败）
+    // MARK: - Coordinator integration (⌘ dispatch + per-file independent success/failure)
 
     func testImport_moveMode_perFileIndependentOutcomes() async throws {
         var context = makeContext()

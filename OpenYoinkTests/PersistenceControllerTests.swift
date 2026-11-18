@@ -101,7 +101,7 @@ final class PersistenceControllerTests: XCTestCase {
         XCTAssertEqual(controller.load().map(\.displayName), ["recovered"])
     }
 
-    // MARK: - 评审 P1：失败感知的加载语义
+    // MARK: - Review P1: Failure-aware loading semantics
 
     func testLoadResult_missingFile_returnsMissing() throws {
         let directory = try makeTempDirectory()
@@ -121,9 +121,9 @@ final class PersistenceControllerTests: XCTestCase {
         XCTAssertEqual(items.map(\.displayName), ["a", "b"])
     }
 
-    /// 评审 P1 核心回归：损坏文件必须被判为 .failed 并隔离保留（而不是
-    /// 静默视为空架）——这样启动链路才能据此跳过孤儿清理，避免连锁
-    /// 删除 Materialized 保管文件。
+    /// Review P1 core regression: damaged files must be marked as .failed and isolated (instead of
+    /// silently treated as empty) —— this allows the startup chain to skip orphan cleanup based on this,
+    /// avoiding cascading deletion of Materialized preserved files.
     func testLoadResult_corruptedJSON_returnsFailed_andQuarantinesFile() throws {
         let directory = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -139,9 +139,9 @@ final class PersistenceControllerTests: XCTestCase {
         XCTAssertEqual(quarantined.count, 1, "损坏文件应被隔离保留供人工恢复")
     }
 
-    /// 启动链路必须复用第一次读取的结果：损坏文件在首次读取时会被隔离，
-    /// 第二次读取已经变成 missing；若用第二次结果判断清理，就会误删全部
-    /// Materialized 文件。
+    /// The startup chain must reuse the result of the first read: damaged files are isolated during the
+    /// first read, and the second read becomes missing; using the second result to determine cleanup would
+    /// mistakenly delete all Materialized files.
     func testLoadResult_failedSnapshotNeverPermitsOrphanCleanup_afterQuarantine() throws {
         let directory = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -197,8 +197,9 @@ final class PersistenceControllerTests: XCTestCase {
                        "新快照不能隐式表示用户已放弃旧快照的数据恢复")
     }
 
-    /// 原子替换：已有文件时保存不得经「先删后移」（旧实现在移动失败时
-    /// 新旧俱损）；正常路径下新内容完整落盘、无临时文件残留。
+    /// Atomic replacement: when a file already exists, it must not be replaced via 'delete then move' (old
+    /// implementation would result in both old and new files being lost on failure); under normal paths,
+    /// new content is fully written to disk with no temporary file residue.
     func testWrite_existingFile_atomicallyReplaced() throws {
         let directory = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }

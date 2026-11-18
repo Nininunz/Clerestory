@@ -111,7 +111,8 @@ final class ShelfStoreTests: XCTestCase {
         XCTAssertEqual(names(store), ["a", "b", "c"])
     }
 
-    /// C6: 拖入插入位置 —— 批量插入到指定下标（夹取边界），nil 追加。
+    /// C6: Drag and drop into insertion position —— batch insert at specified index (clamped boundary),
+    /// nil appends.
     func testAddContentsOfAt_insertsAtClampedIndex() {
         let store = makeStore(names: ["a", "b"])
         store.add(contentsOf: [makeItem("c"), makeItem("d")], at: 1)
@@ -343,7 +344,7 @@ final class ShelfStoreTests: XCTestCase {
         XCTAssertEqual(names(store), ["a", "b"])
     }
 
-    // MARK: - UX4 removeChild（stack 子项 ✕ 移除）
+    // MARK: - UX4 removeChild (stack child ✕ remove)
 
     private func makeThreeItemStack() throws -> (store: ShelfStore, stackID: UUID, childIDs: [UUID]) {
         let store = makeStore(names: ["a", "b", "c", "d"])
@@ -360,8 +361,8 @@ final class ShelfStoreTests: XCTestCase {
         let stack = try XCTUnwrap(store.item(withID: stackID))
         XCTAssertEqual(stack.kind, .stack)
         XCTAssertEqual(stack.children?.map(\.id), [childIDs[0], childIDs[2]])
-        XCTAssertEqual(names(store), ["a", "d"]) // stack 沿用首个子项名
-        // stack 选中态保持（makeStack 选中 stack 本身）。
+        XCTAssertEqual(names(store), ["a", "d"]) // stack retains the name of the first child
+        // stack maintains selected state (makeStack selects the stack itself).
         XCTAssertEqual(store.selection, [stackID])
     }
 
@@ -373,7 +374,7 @@ final class ShelfStoreTests: XCTestCase {
 
         XCTAssertTrue(store.removeChild(a.id, fromStack: stackID))
 
-        // stack 原位解散为存活子项（普通项），选中跟随。
+        // stack disassembles in place into live children (normal items), selection follows.
         XCTAssertEqual(store.items.map(\.id), [store.items[0].id, b.id, store.items[2].id])
         XCTAssertEqual(store.item(withID: b.id)?.kind, .file)
         XCTAssertNil(store.item(withID: stackID))
@@ -381,7 +382,8 @@ final class ShelfStoreTests: XCTestCase {
     }
 
     func testRemoveChild_lastRemainingChild_removesStack() throws {
-        // 防御性构造：children 为 1 的 stack（makeStack 不会产出，直接构造）。
+        // Defensive construction: stack with children of 1 (makeStack does not produce, construct
+        // directly).
         let child = ShelfItem(kind: .file, path: "/tmp/solo", displayName: "solo")
         let store = ShelfStore(items: [
             ShelfItem(kind: .stack, displayName: "solo", children: [child])
@@ -397,9 +399,9 @@ final class ShelfStoreTests: XCTestCase {
     func testRemoveChild_unknownIDs_areNoOps() throws {
         let (store, stackID, childIDs) = try makeThreeItemStack()
 
-        XCTAssertFalse(store.removeChild(UUID(), fromStack: stackID)) // 子项不在 stack 中
-        XCTAssertFalse(store.removeChild(childIDs[0], fromStack: UUID())) // stack 不存在
-        // 非 stack 顶层项同样拒绝。
+        XCTAssertFalse(store.removeChild(UUID(), fromStack: stackID)) // Child not in stack
+        XCTAssertFalse(store.removeChild(childIDs[0], fromStack: UUID())) // stack does not exist
+        // Non-top-level items of stack are also rejected.
         let plainID = try XCTUnwrap(store.items.last?.id)
         XCTAssertFalse(store.removeChild(childIDs[0], fromStack: plainID))
 
@@ -442,7 +444,7 @@ final class ShelfStoreTests: XCTestCase {
         XCTAssertTrue(store.removeChild(a.id, fromStack: stackID))
         persistence.flushPendingSave()
 
-        // 解散后的存活子项被持久化（stack 已不存在）。
+        // Live children after disassembly are persisted (stack no longer exists).
         XCTAssertEqual(persistence.load().map(\.id), [b.id])
     }
 

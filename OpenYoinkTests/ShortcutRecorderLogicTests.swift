@@ -1,8 +1,8 @@
 import XCTest
 @testable import OpenYoink
 
-/// 快捷键录制控件（S8）的纯逻辑：组合校验（必须含 ⌘/⌥/⌃ 至少一个，
-/// 拒绝裸键与仅 ⇧）、修饰键符号显示顺序（⌃⌥⇧⌘）、键名表。
+/// Pure logic of shortcut recorder control (S8): combination validation (must contain ⌘/⌥/⌃ at least one,
+/// rejects bare keys and only ⇧), modifier key symbol display order (⌃⌥⇧⌘), key name list.
 final class ShortcutRecorderLogicTests: XCTestCase {
     // MARK: - Validation
 

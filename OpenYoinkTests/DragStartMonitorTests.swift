@@ -2,8 +2,8 @@ import AppKit
 import XCTest
 @testable import OpenYoink
 
-/// UX1 拖拽开始状态机（DragGestureTracker）与自动唤出会话裁决
-/// （DragAutoShowSession）的纯逻辑单测。
+/// UX1 Drag start state machine (DragGestureTracker) and pure logic unit test for auto-show session
+/// (DragAutoShowSession).
 final class DragStartMonitorTests: XCTestCase {
     func testTextApproachRequiresFreshDragPayloadAndCannotLeakIntoNextGesture() {
         for types in [[NSPasteboard.PasteboardType.string], [.string, .html, .rtf]] {
@@ -29,9 +29,9 @@ final class DragStartMonitorTests: XCTestCase {
     func testClickWithoutMovement_neverStartsDrag() {
         var tracker = DragGestureTracker(threshold: 8)
         tracker.mouseDown(at: CGPoint(x: 100, y: 100))
-        XCTAssertFalse(tracker.mouseDragged(to: CGPoint(x: 103, y: 102))) // 位移 ~3.6 < 8
+        XCTAssertFalse(tracker.mouseDragged(to: CGPoint(x: 103, y: 102))) // Displacement ~3.6 < 8
         XCTAssertEqual(tracker.phase, .pressing)
-        // 普通点击抬起：不报告拖拽结束。
+        // Normal click lift: Do not report drag end.
         XCTAssertFalse(tracker.mouseUp())
         XCTAssertEqual(tracker.phase, .idle)
     }
@@ -40,18 +40,19 @@ final class DragStartMonitorTests: XCTestCase {
         var tracker = DragGestureTracker(threshold: 8)
         tracker.mouseDown(at: CGPoint(x: 100, y: 100))
         XCTAssertFalse(tracker.mouseDragged(to: CGPoint(x: 105, y: 100))) // 5pt < 8
-        // 恰好到达阈值（>= 判定）即确认。
+        // Confirmation is made once the threshold is reached (>= determination).
         XCTAssertTrue(tracker.mouseDragged(to: CGPoint(x: 108, y: 100)))
         XCTAssertEqual(tracker.phase, .dragging)
-        // 确认后继续移动不重复回调。
+        // After confirmation, further movement does not trigger repeated callbacks.
         XCTAssertFalse(tracker.mouseDragged(to: CGPoint(x: 200, y: 200)))
-        // 抬起报告拖拽结束，随后复位。
+        // Lift reports drag end, followed by reset.
         XCTAssertTrue(tracker.mouseUp())
         XCTAssertEqual(tracker.phase, .idle)
     }
 
     func testDisplacementIsMeasuredFromOrigin_notPathLength() {
-        // 绕小圈抖动：路径长度早已超过阈值，但与起点位移从未达到 → 不触发。
+        // Small circle shaking: The path length has already exceeded the threshold, but the displacement
+        // from the start has never reached → no trigger.
         var tracker = DragGestureTracker(threshold: 8)
         tracker.mouseDown(at: CGPoint(x: 100, y: 100))
         XCTAssertFalse(tracker.mouseDragged(to: CGPoint(x: 104, y: 100)))
@@ -69,7 +70,7 @@ final class DragStartMonitorTests: XCTestCase {
     }
 
     func testNewMouseDown_rearmsAfterMissedMouseUp() {
-        // 上一轮抬起事件丢失（防御）：新按下重置会话，可再次触发。
+        // Lost lift event from previous round (defense): Reset session on new press to trigger again.
         var tracker = DragGestureTracker(threshold: 8)
         tracker.mouseDown(at: .zero)
         XCTAssertTrue(tracker.mouseDragged(to: CGPoint(x: 20, y: 0)))
@@ -92,7 +93,7 @@ final class DragStartMonitorTests: XCTestCase {
         session.dragBegan()
         session.markShownAutomatically()
         XCTAssertTrue(session.dragEnded())
-        // 结束后会话复位：再次抬起不重复请求。
+        // Session resets after completion: Lifting again does not repeat the request.
         XCTAssertFalse(session.dragEnded())
     }
 
@@ -234,7 +235,8 @@ final class DragStartMonitorTests: XCTestCase {
     }
 
     func testAutoShow_markedOutsideDrag_isIgnored() {
-        // 非拖拽会话中的唤出（快捷键/剪贴板保存）是显式意图，不参与自动收回。
+        // Summoning in non-drag session (shortcut/clipping save) is an explicit intent and does not
+        // participate in automatic retraction.
         var session = DragAutoShowSession()
         session.markShownAutomatically()
         XCTAssertFalse(session.shownAutomatically)
@@ -242,10 +244,11 @@ final class DragStartMonitorTests: XCTestCase {
     }
 
     func testAutoShow_shelfVisibleBeforeDrag_staysUntouched() {
-        // 拖拽前 shelf 已可见（手动唤出）：调用方不打标记，拖结束不收回。
+        // Shelf is already visible before drag (manual summon): Caller does not mark, drag end does not
+        // retract.
         var session = DragAutoShowSession()
         session.dragBegan()
-        // （无 markShownAutomatically —— 对应 AppDelegate 的可见性守卫）
+        // (No markShownAutomatically — corresponds to visibility guard in AppDelegate)
         XCTAssertFalse(session.dragEnded())
     }
 
@@ -254,7 +257,8 @@ final class DragStartMonitorTests: XCTestCase {
         session.dragBegan()
         session.markShownAutomatically()
         session.noteImport()
-        // 新一轮拖拽重置全部标记：本轮无导入的自动唤出仍会收回。
+        // Reset all marks for new drag: Any automatic summon without import in this round will still be
+        // retracted.
         session.dragBegan()
         session.markShownAutomatically()
         XCTAssertTrue(session.dragEnded())

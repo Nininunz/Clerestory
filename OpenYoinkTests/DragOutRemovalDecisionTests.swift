@@ -1,8 +1,9 @@
 import XCTest
 @testable import OpenYoink
 
-/// .ask 拖出策略确认框的裁决逻辑（S8）：本次是否移除 + 勾选
-/// 「不再询问」时固化回写的策略。NSAlert 交互本身无法无头测试。
+/// .ask Judgment logic for the drag-out strategy confirmation dialog (S8): whether to remove this time +
+/// check 'Do not ask again' to solidify the write-back strategy. NSAlert interaction cannot be headless
+/// tested.
 final class DragOutRemovalDecisionTests: XCTestCase {
     func testRemoveWithoutSuppression_removesOnceAndKeepsAskPolicy() {
         let verdict = DragOutRemovalDecision.verdict(removeChosen: true, dontAskAgain: false)

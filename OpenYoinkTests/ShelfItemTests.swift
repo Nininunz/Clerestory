@@ -62,7 +62,7 @@ final class ShelfItemTests: XCTestCase {
         XCTAssertEqual(try decoder.decode(ShelfItem.self, from: encoder.encode(link)), link)
     }
 
-    /// F-05: isCut 持久化（顶层与 stack 子项递归）。
+    /// F-05: isCut persistence (recursive for top level and stack items).
     func testCodableRoundTrip_isCut_persistsIncludingStackChildren() throws {
         let cutChild = ShelfItem(kind: .file, path: "/tmp/cut.txt", displayName: "cut.txt", isCut: true)
         let stack = ShelfItem(kind: .stack, displayName: "cut.txt", children: [cutChild])

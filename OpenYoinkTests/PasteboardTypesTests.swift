@@ -3,7 +3,7 @@ import UniformTypeIdentifiers
 import XCTest
 @testable import OpenYoink
 
-/// PasteboardTypes 能力探测与优先级（纯函数，不构造 pasteboard 实例）。
+/// PasteboardTypes capability detection and priority (pure function, no pasteboard instance construction).
 final class PasteboardTypesTests: XCTestCase {
     func testNativeApproachZoneAcceptsFilesAndTextButRejectsWindowDragsAndBrowserURLs() {
         for types: [NSPasteboard.PasteboardType] in [[], [.URL], [.png], [.string, .URL], [.string, .png], [PasteboardTypes.uriList, .string], [.init("com.example.window-drag")]] {
@@ -84,7 +84,7 @@ final class PasteboardTypesTests: XCTestCase {
         XCTAssertEqual(PasteboardTypes.preferredCategory(in: types), .filePromise)
     }
 
-    /// 文本与 fileURL 同时存在时按顺序取 fileURL。
+    /// When text and fileURL are both present, fileURL is taken in order.
     func testPreferredCategory_fileURLBeatsText() {
         XCTAssertEqual(PasteboardTypes.preferredCategory(in: [.string, .fileURL]), .fileURL)
     }
@@ -124,9 +124,10 @@ final class PasteboardTypesTests: XCTestCase {
         }
     }
 
-    // MARK: - 任务一：宽兜底注册与「Drop everything」判定
+    // MARK: - Task one: wide fallback registration and "Drop everything" determination.
 
-    /// 注册清单放宽：URL 变体 + 无 conformance 的具体类型 + 泛型兜底全部在列。
+    /// Registration list is relaxed: URL variants + specific types without conformance + generic fallbacks
+    /// are all listed.
     func testDragInTypes_includesWideNetFallbacks() {
         let registered = PasteboardTypes.dragInTypes
         for type in [PasteboardTypes.text, PasteboardTypes.uriList, PasteboardTypes.vCard,
@@ -137,7 +138,7 @@ final class PasteboardTypesTests: XCTestCase {
         }
     }
 
-    /// 「Drop everything」高亮语义：声明任意类型即接受；零类型才拒绝。
+    /// "Drop everything" semantic highlighting: declaring any type is accepted; zero types are rejected.
     func testHasImportableContent_acceptsAnythingWithDeclaredTypes() {
         XCTAssertFalse(PasteboardTypes.hasImportableContent(in: []))
         XCTAssertTrue(PasteboardTypes.hasImportableContent(in: [.string]))
@@ -146,9 +147,10 @@ final class PasteboardTypesTests: XCTestCase {
             in: [NSPasteboard.PasteboardType("com.example.unknown")]))
     }
 
-    // MARK: - 任务一：通用物化候选挑选（纯函数）
+    // MARK: - Task one: generalization of candidate selection (pure function).
 
-    /// 主链/专门分支已处理的类型不进入候选。
+    /// Types already handled by main chain or specialized branches are not entered into the candidate
+    /// list.
     func testMaterializationCandidates_excludesHandledElsewhereTypes() {
         let handled: [NSPasteboard.PasteboardType] =
             [.fileURL, PasteboardTypes.url, .string, PasteboardTypes.html, PasteboardTypes.rtf]
@@ -156,8 +158,8 @@ final class PasteboardTypesTests: XCTestCase {
         XCTAssertTrue(PasteboardTypes.materializationCandidates(in: handled).isEmpty)
     }
 
-    /// tier 归属：带扩展名的具体 UTI → 1；无扩展名的具体 UTI → 2；
-    /// 未声明标识 / 泛型信号类型 → 3。
+    /// tier classification: specific UTI with extension → 1; specific UTI without extension → 2; undclared
+    /// identifier / generic signal type → 3.
     func testMaterializationCandidates_tierAssignment() {
         XCTAssertEqual(PasteboardTypes.materializationCandidates(in: [PasteboardTypes.vCard]),
                        [.init(type: PasteboardTypes.vCard, tier: 1)])
@@ -172,8 +174,8 @@ final class PasteboardTypesTests: XCTestCase {
                        [.init(type: PasteboardTypes.data, tier: 3)])
     }
 
-    /// 排序：tier1 优先，同梯队保持声明顺序；文本族（conforms to .text 且无
-    /// 扩展名）不入选 —— 交给字符串兜底分支。
+    /// Sorting: tier1 has priority, items within the same tier maintain declaration order; text family
+    /// (conforms to .text and no extension) are excluded —— handed over to the string fallback branch.
     func testMaterializationCandidates_orderingAndTextExclusion() {
         let unknown = NSPasteboard.PasteboardType("com.openyoink.test.undeclared")
         let utf16 = NSPasteboard.PasteboardType("public.utf16-plain-text")
@@ -184,7 +186,7 @@ final class PasteboardTypesTests: XCTestCase {
                                     .init(type: unknown, tier: 3)])
     }
 
-    // MARK: - 任务一：物化扩展名与显示名
+    // MARK: - Task 1: Materialize extension and display name
 
     func testMaterializationFileExtension_preferredThenKnownTableThenDat() {
         XCTAssertEqual(PasteboardTypes.materializationFileExtension(for: PasteboardTypes.vCard), "vcf")

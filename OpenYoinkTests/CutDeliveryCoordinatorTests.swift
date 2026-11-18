@@ -2,8 +2,9 @@ import Foundation
 import XCTest
 @testable import OpenYoink
 
-/// DeliveryCoordinator 的交付确认状态机：普通直接拖出由会话结果确认；托管
-/// 剪切项需要「目标接受 × promise 交付」。覆盖逆序、取消、失败、stack 与 lease。
+/// DeliveryCoordinator's delivery confirmation state machine: normal direct drag-out is confirmed by
+/// session result; hosted cut items require 'target accepts × promise delivery'. Override reverse, cancel,
+/// failure, stack, and lease.
 @MainActor
 final class DeliveryCoordinatorTests: XCTestCase {
     @MainActor
@@ -39,7 +40,7 @@ final class DeliveryCoordinatorTests: XCTestCase {
 
     private func makeContext() -> Context { Context() }
 
-    /// 造一个保管目录里的真实文件 + 指向它的 isCut ShelfItem。
+    /// Create a real file in managed storage and an isCut ShelfItem that points to it.
     private func makeCutItem(in context: inout Context, name: String = "cut-me.txt") throws -> ShelfItem {
         let managedURL = try context.tempFileService.uniqueFileURL(suggestedName: name)
         try "managed content".write(to: managedURL, atomically: true, encoding: .utf8)
@@ -59,7 +60,7 @@ final class DeliveryCoordinatorTests: XCTestCase {
         return id
     }
 
-    // MARK: - 拖拽会话计数
+    // MARK: - Drag session count
 
     /// A drag that never starts an AppKit session (no pasteboard writer could
     /// be built) must not leave the transfer strip hidden for good.
@@ -77,9 +78,10 @@ final class DeliveryCoordinatorTests: XCTestCase {
         XCTAssertEqual(context.transferStore.dragSessionsInFlight, 0)
     }
 
-    // MARK: - 交付闭环
+    // MARK: - Delivery loop
 
-    /// 常规时序：会话成功结束 → promise 写入完成 → 移出 shelf + 删保管文件 + 记历史。
+    /// Normal timeline: session successfully ends → promise write completes → remove from shelf + delete
+    /// custody file + record history.
     func testDeliveryAfterSuccessfulSession_finalizesItem() throws {
         var context = makeContext()
         defer { context.cleanup() }
@@ -111,7 +113,8 @@ final class DeliveryCoordinatorTests: XCTestCase {
         XCTAssertEqual(entry.path, destination.path, "最近历史记录交付目标路径（保管副本已删）")
     }
 
-    /// 逆时序：promise 写入先于会话结束完成（快速小文件）→ 会话成功结束时定稿。
+    /// Reverse timeline: promise write completes before session ends (for small files) → finalize upon
+    /// session successful end.
     func testDeliveryBeforeSessionEnd_finalizesOnSessionEnd() throws {
         var context = makeContext()
         defer { context.cleanup() }
@@ -131,7 +134,7 @@ final class DeliveryCoordinatorTests: XCTestCase {
         XCTAssertEqual(context.recents.entries.first?.path, destination.path)
     }
 
-    /// 取消（operation == []）：item 与保管文件都保留，等待状态清除。
+    /// Cancel (operation == []): item and custody file are retained, waiting for state clearance.
     func testCancelledSession_keepsItemAndManagedFile() throws {
         var context = makeContext()
         defer { context.cleanup() }
@@ -144,7 +147,7 @@ final class DeliveryCoordinatorTests: XCTestCase {
         XCTAssertNotNil(context.store.item(withID: item.id))
         XCTAssertTrue(FileManager.default.fileExists(atPath: item.fileURL!.path))
         XCTAssertTrue(context.recents.entries.isEmpty)
-        // 防御：取消后来路不明的迟到交付不改变任何状态。
+        // Defense: canceling later undeliverables from unknown sources does not change any state.
         context.coordinator.noteDelivered(sessionID: sessionID,
                                           itemID: item.id,
                                           destination: URL(fileURLWithPath: "/tmp/x.txt"))
@@ -152,7 +155,7 @@ final class DeliveryCoordinatorTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: item.fileURL!.path))
     }
 
-    /// 交付失败：item 与保管文件保留（可重试），状态条给出真实失败。
+    /// Delivery failed: item is retained with custody file (retryable), status bar shows real failure.
     func testDeliveryFailure_keepsItemAndShowsTransferFailure() throws {
         var context = makeContext()
         defer { context.cleanup() }
@@ -185,7 +188,8 @@ final class DeliveryCoordinatorTests: XCTestCase {
         XCTAssertTrue(context.recents.entries.isEmpty)
     }
 
-    /// stack 子项中的剪切项：交付后从 stack 移除（子项拖出 topLevelIDs 为空）。
+    /// Cut item in stack subitem: removed from stack after delivery (subitem dragged out of topLevelIDs
+    /// becomes empty).
     func testCutChildInStack_removedFromStackOnDelivery() throws {
         var context = makeContext()
         defer { context.cleanup() }
@@ -193,7 +197,7 @@ final class DeliveryCoordinatorTests: XCTestCase {
         let sibling = ShelfItem(kind: .file, path: "/tmp/sibling.txt", displayName: "sibling.txt")
         let stack = ShelfItem(kind: .stack, displayName: "child.txt", children: [cutChild, sibling])
         context.store.add(stack)
-        // 浮层子项拖出：topLevelIDs 为空（不移除顶层 stack 本身）。
+        // Floating subitem dragged out: topLevelIDs becomes empty (top-level stack itself is not removed).
         let childContents = DragOutContents(items: [cutChild], topLevelIDs: [])
         let sessionID = UUID()
         context.coordinator.noteSessionBegan(id: sessionID, contents: childContents)
@@ -209,7 +213,8 @@ final class DeliveryCoordinatorTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: cutChild.fileURL!.path))
     }
 
-    /// 交付到达前用户已手动移除该项：保管文件仍被删除，不崩溃，历史照记。
+    /// User manually removed the item before delivery arrives: custody file is still deleted, no crash,
+    /// history is recorded.
     func testDeliveryAfterManualRemoval_stillDeletesManagedFile() throws {
         var context = makeContext()
         defer { context.cleanup() }
@@ -218,7 +223,7 @@ final class DeliveryCoordinatorTests: XCTestCase {
         let sessionID = beginSession(context, items: [item])
 
         context.coordinator.noteSessionEnded(id: sessionID, accepted: true)
-        context.store.remove(ids: [item.id]) // 用户手动移除
+        context.store.remove(ids: [item.id]) // User manually removed
         context.coordinator.noteDelivered(sessionID: sessionID,
                                           itemID: item.id,
                                           destination: URL(fileURLWithPath: "/tmp/out.txt"))
@@ -229,7 +234,7 @@ final class DeliveryCoordinatorTests: XCTestCase {
         XCTAssertEqual(context.recents.entries.first?.displayName, item.displayName)
     }
 
-    /// 普通文件未请求 promise 时，只能表达「目标已接受」。
+    /// When an ordinary file hasn't requested a promise, it can only express 'target has accepted'.
     func testOrdinaryDirectRepresentationReportsTargetAccepted() throws {
         let context = makeContext()
         defer { context.cleanup() }
@@ -244,8 +249,10 @@ final class DeliveryCoordinatorTests: XCTestCase {
         XCTAssertTrue(context.recents.entries.isEmpty, "普通项的历史由 DragSessionController 策略路径记录")
     }
 
-    /// `.remove` 策略移除普通物化项后，已接受的直接拖出会话仍保护源文件，
-    /// 避免用户在目标完成读取前从“存储”页清理掉唯一副本。
+    /// After using the `.remove` strategy to remove an ordinary materialized item, already accepted direct
+    /// drag sessions still protect the source file,
+    /// preventing users from cleaning up the only copy from the 'Storage' page before the target has
+    /// completed reading.
     func testAcceptedDirectMaterializedItemProtectsRuntimeLeaseAfterRemoval() throws {
         let context = makeContext()
         defer { context.cleanup() }
@@ -262,8 +269,9 @@ final class DeliveryCoordinatorTests: XCTestCase {
         XCTAssertTrue(context.coordinator.protectedMaterializedPaths.contains(managedURL.path))
     }
 
-    /// 普通项不再携带 file promise；即便收到来路不明的迟到回调，也不得把
-    /// 已由用户策略移除的项目回插或伪造失败状态。
+    /// Ordinary items no longer carry a file promise; even if an unknown-source late callback is received,
+    /// they cannot
+    /// reinsert or fabricate a failed state for items already removed by the user's policy.
     func testDirectItemIgnoresSpuriousPromiseCallbacks() {
         let context = makeContext()
         defer { context.cleanup() }
