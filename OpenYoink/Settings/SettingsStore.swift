@@ -854,7 +854,7 @@ final class SettingsStore {
             Keys.islandDisplayTarget: IslandDisplayTarget.main.persistedValue,
             Keys.islandShelfEnabled: true,
             Keys.preferredShelfSurface: PreferredShelfSurface.island.rawValue,
-            Keys.islandHoverRevealEnabled: false,
+            Keys.islandHoverRevealEnabled: true,
             Keys.islandClickRevealEnabled: true,
             Keys.islandHoverDelaySeconds: 0.15,
             Keys.islandHoverLeaveDelaySeconds: 0.25,

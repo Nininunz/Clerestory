@@ -84,6 +84,13 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(reloaded.language, .chinese)
     }
 
+    func testExplicitHoverOptOutSurvivesDefaultChange() throws {
+        let (defaults, name) = try makeSuite()
+        defer { defaults.removePersistentDomain(forName: name) }
+        defaults.set(false, forKey: "OpenYoink.islandHoverRevealEnabled")
+        XCTAssertFalse(SettingsStore(defaults: defaults).islandHoverRevealEnabled)
+    }
+
     func testGeneralSettings_defaults() throws {
         let (defaults, name) = try makeSuite()
         defer { defaults.removePersistentDomain(forName: name) }
@@ -106,7 +113,7 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertTrue(store.islandShelfEnabled)
         XCTAssertEqual(store.preferredShelfSurface, .island)
         XCTAssertEqual(store.effectivePreferredShelfSurface, .island)
-        XCTAssertFalse(store.islandHoverRevealEnabled)
+        XCTAssertTrue(store.islandHoverRevealEnabled)
         XCTAssertTrue(store.islandClickRevealEnabled)
         XCTAssertEqual(store.islandHoverDelaySeconds, 0.15)
         XCTAssertEqual(store.islandHoverLeaveDelaySeconds, 0.25)
