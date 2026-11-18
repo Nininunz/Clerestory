@@ -307,7 +307,7 @@ final class DragSessionController: NSObject, NSDraggingSource {
     private let recents: RecentItemsService
     private let delivery: DeliveryCoordinator?
     /// Tutorial items are cleaned up by OnboardingController after the real target is confirmed, and are
-    /// unaffected by the user's regular drag-out strategy. They must never enter the 'Recent Projects'.
+    /// unaffected by the user's regular drag-out strategy. They are never added to Recent Items.
     private let policyExcludedItemIDs: Set<UUID>
     private let onSuccessfulDrop: (@MainActor () -> Void)?
     private let anchorOffset: CGSize

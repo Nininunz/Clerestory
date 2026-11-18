@@ -283,10 +283,9 @@ final class PersistenceController {
         try FileManager.default.removeItem(at: snapshot.url)
     }
 
-    /// Decodable recovery snapshots are used for Materialized cleanup calculation to retain the set.
-    /// Damaged isolated
-    /// files are blocked from cleanup via canSafelyCleanup…; valid backups are only precisely retained for
-    /// their references.
+    /// Include items from decodable recovery snapshots when deciding which materialized files
+    /// to retain. A damaged quarantined snapshot blocks cleanup entirely. A valid backup
+    /// protects the files it references.
     func recoverableSnapshotItems() -> [ShelfItem] {
         recoverySnapshots().flatMap { snapshot in
             (try? loadRecoverySnapshot(snapshot)) ?? []
@@ -381,10 +380,9 @@ final class PersistenceController {
     }
 
     /// Atomic write: encode to a temporary file in the same directory, then
-    /// atomically replace the target with it. Never pre-delete the old file —
-    /// 「Delete old file first, then move temporary file」can lose both new and old files in case of move
-    /// failure/power outage
-    /// (Review P1: bad shelf.json will chain-clear custody files on next startup).
+    /// atomically replace the target with it. Deleting the old file first can lose both
+    /// snapshots if the move fails or power is lost. A missing snapshot can leave managed
+    /// files without references when startup checks for orphans.
     private func writeToDisk(_ items: [ShelfItem]) throws {
         let fileManager = FileManager.default
         try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)

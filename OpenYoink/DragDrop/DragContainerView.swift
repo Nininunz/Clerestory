@@ -255,10 +255,9 @@ final class DragContainerView: NSView {
         // C6: Insertion position is updated in real time during dragging (row and column mapping see
         // DropInsertionLocator).
         updateExternalInsertionIndex(sender)
-        // Always return .copy (including ⌘ cut mode): cut is handled by us (copy+trash, see
-        // CutMoveService), not relying on the source app's cooperation with .move —— if returning .move,
-        // Finder will delete the original file after drop, which duplicates and cannot be distinguished
-        // from our trash. Consistency of the cursor badge is handled by ShelfView's mode prompt.
+        // Always return .copy, even for a Command-drop. CutMoveService copies the file and moves
+        // the original to Trash. Returning .move would also tell Finder to remove the original
+        // after the drop. ShelfView shows the actual mode in its drop prompt.
         return .copy
     }
 
