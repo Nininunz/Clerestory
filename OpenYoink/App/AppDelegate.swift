@@ -66,8 +66,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                                                    noticeCenter: shelfNotice,
                                                                    managedMoveJournal: managedMoveJournal,
                                                                    pendingImportJournal: pendingImportJournal)
-    /// 用户设置（S5 起拖出后移除策略被 DragSessionController 读取；S8 由
-    /// SettingsView 编辑）。internal：OpenYoinkApp 的 Settings scene 注入环境用。
+    /// User settings shared with drag-session policy and injected into the SwiftUI Settings scene.
     var settingsStore: SettingsStore { startup.settings }
     lazy var clipboardHistoryStore: ClipboardHistoryStore = {
         let history = ClipboardHistoryStore(settings: settingsStore)
@@ -78,11 +77,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var clipboardHistoryWindowController = ClipboardHistoryWindowController(
         history: clipboardHistoryStore, settings: settingsStore
     )
-    /// 设置窗口的共享导航状态，允许不可用的托管项目直接打开“存储”页。
+    /// Shared Settings navigation lets unavailable managed items open Storage directly.
     let settingsNavigation = SettingsNavigationModel()
-    /// 系统登录项状态（不复制到 UserDefaults；SMAppService 是唯一事实源）。
+    /// Login item status comes directly from SMAppService.
     let launchAtLoginController = LaunchAtLoginController()
-    /// 恢复快照、托管目录占用与安全清理（设置-存储）。
+    /// Recovery snapshots, managed storage usage, and safe cleanup for Settings → Storage.
     lazy var storageManagementController = StorageManagementController(
         persistence: persistence,
         tempFileService: tempFileService,
@@ -100,7 +99,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return items.map { self.refreshedByResolvingBookmark($0) ?? $0 }
         }
     )
-    /// S5: 最近拖出历史（内存 + recents.json；S10 已接入菜单栏「最近项目」）。
+    /// Recent drag-outs are stored in memory and recents.json and shown in the menu bar.
     private let recentItemsService = RecentItemsService()
     /// v1.2: shared drag-out acceptance/promise-delivery coordinator. Storage
     /// cleanup consults its runtime file leases.
@@ -110,9 +109,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         tempFileService: tempFileService,
         transferStore: dropImportCoordinator.transferStore
     )
-    /// Sparkle 2 自动更新封装（懒加载：首次 start/手动检查时创建
-    /// SPUStandardUpdaterController；terminate 无需显式释放——XPC 连接与
-    /// 调度器随进程终止，无后台常驻资源）。
+    /// Sparkle creates its updater controller on first start or manual check.
+    /// The process shuts down its XPC connections and scheduler on exit.
     lazy var updateController = UpdateController(settings: settingsStore)
     /// Help, voluntary issue reporting and privacy-safe local diagnostics.
     lazy var supportController = SupportController(settings: settingsStore)
@@ -191,10 +189,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     )
 
-    /// S7: 全局快捷键监听（Carbon RegisterEventHotKey 为主、NSEvent 全局监听
-    /// 为备；注册失败状态供 S8 设置页提示）。internal：Settings scene 注入
-    /// 环境（registrationError 展示）用。
-    /// UX3: 单击 = toggle；双击 = 保存剪贴板到 shelf（识别窗 ~0.3s，设置可关）。
+    /// Registers global shortcuts using Carbon, with an NSEvent monitor as fallback.
+    /// Settings shows registration errors. One press toggles Shelf. An optional double press
+    /// within about 0.3 seconds saves the clipboard to Shelf.
     lazy var hotKeyMonitor = HotKeyMonitor(
         shortcut: settingsStore.hotKeyShortcut,
         onPress: { [weak self] in
@@ -219,13 +216,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         onPress: { [weak self] in self?.clipboardHistoryWindowController.show() },
         onDoublePress: {}
     )
-    /// UX2: 屏幕边缘触发（拖拽版）。仅「唤出」不「隐藏」：贴边的意图是取用
-    /// shelf（通常紧接着要向该侧投放），再次贴边反而隐藏会产生往复开关的
-    /// 挫败感；隐藏仍由快捷键/菜单与 UX1 拖空无落入自动收回承担。
-    /// UX2 设计变更（用户确认）：纯悬停不再触发，仅拖拽中（按住左键）贴边
-    /// 短停留唤出；custom 位置无贴附缘时暂停（applyTriggerSettings）。
-    /// EdgeTab: 拖动拉环本身（isEdgeTabBeingDragged）也是 leftMouseDragged，
-    /// 会路过贴缘带 —— 抑制，避免重定位拉环时误唤出。
+    /// A short dwell at the screen edge opens Shelf during a left-button drag.
+    /// Repeated edge contact leaves Shelf open so the user can drop items there.
+    /// The shortcut, menu, and end of an empty drag session can dismiss it.
+    /// Custom placement has no attached edge. Dragging the EdgeTab to reposition it
+    /// also suppresses the trigger.
     private lazy var edgeTriggerMonitor = EdgeTriggerMonitor(shouldSuppress: { [weak self] in
         guard let self else { return true }
         return self.appState.isShelfVisible
@@ -233,17 +228,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             || IgnoreListService.frontmostAppIsIgnored(in: self.settingsStore.ignoredAppBundleIDs)
     }, onTrigger: { [weak self] in
         guard let self, !self.appState.isShelfVisible else { return }
-        // UX2: 拖拽贴边唤出也记入自动唤出会话（拖空无落入自动收回）。
+        // Track edge-triggered reveals so an empty drag session can dismiss Shelf.
         self.shelfPresentationCoordinator.showClassic(animated: true)
         self.dragAutoShowSession.markShownAutomatically()
     })
-    /// UX1: 拖拽开始监听（按下 → 位移超阈值判定拖拽 → 抬起结束）。
-    /// 同时承担 UX2 贴边唤出的会话记帐：只要任一拖拽驱动唤出路径可能
-    /// 生效（immediate 或边缘触发可用）就保持注册。EdgeTab 起还供给
-    /// `isDragInProgress` 可观察状态（拉环投放暗示），因此拉环启用时
-    /// 同样保持注册（applyTriggerSettings）。
-    /// EdgeTab: 拖动拉环本身被识别为拖拽是正常的，但不应唤出 shelf ——
-    /// 经 isEdgeTabBeingDragged 抑制（拉环此时独占该手势）。
+    /// Tracks drag start after pointer travel crosses the threshold and drag end on mouse-up.
+    /// Keep it registered when any drag reveal can run or when EdgeTab needs drop cues.
+    /// Dragging EdgeTab updates drag state, while isEdgeTabBeingDragged suppresses Shelf reveal.
     private lazy var dragStartMonitor = DragStartMonitor(shouldSuppress: { [weak self] in
         guard let self else { return false }
         return self.appState.isEdgeTabBeingDragged
@@ -257,14 +248,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }, onDragEnd: { [weak self] in
         self?.handleDragEnd()
     })
-    /// UX1/2: 拖拽自动唤出会话裁决（纯逻辑状态机，见 Triggers/DragStartMonitor）。
+    /// Tracks drag-triggered Shelf reveals and decides when to dismiss them.
     private var dragAutoShowSession = DragAutoShowSession()
     private var islandDragWasActivated = false
     private var noticeRevisionBeforeDrag: UInt64 = 0
 
-    /// EdgeTab: 贴屏幕边缘的常驻拉环（单击展开 / 拖入接收 / 沿边拖动换位）。
-    /// 拉环与 shelf 互斥（shelf 展开时拉环隐藏；shelf 的外缘隐形热区承担
-    /// 同点位收起）。
+    /// The edge tab opens Shelf on click, accepts drops, and can be dragged along the edge.
+    /// Shelf hides the tab while open. A transparent hit area along the same edge closes Shelf.
     private lazy var edgeTabController = EdgeTabController(
         appState: appState,
         settings: settingsStore,
@@ -282,10 +272,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     )
 
-    /// S10: 语言覆盖必须在最早阶段生效——`AppleLanguages` 决定进程后续加载的
-    /// 本地化资源（Bundle 主语言在首个本地化查询时锁定），故放在
-    /// willFinishLaunching（SwiftUI scene 与任何 UI 构建之前）。
-    /// 设置页注明「重启后生效」：运行期切换只写偏好，下次启动由此应用。
+    /// Apply AppleLanguages before SwiftUI builds any views. The first localization
+    /// lookup locks the bundle language for the process. Settings saves changes for the next launch.
     func applicationWillFinishLaunching(_ notification: Notification) {
         if isUITesting {
             settingsStore.islandEnabled = true
@@ -297,8 +285,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// 按 `SettingsStore.language` 覆盖 `AppleLanguages`；`.system` 时移除覆盖，
-    /// 完全交还系统语言列表。
+    /// Apply SettingsStore.language to AppleLanguages. System mode removes the override.
     private func applyLanguageOverride() {
         switch settingsStore.language {
         case .system:
@@ -312,19 +299,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
-        // 必须在 Sparkle start 或任何新版本偏好写入之前采样，才能区分真正
-        // 全新安装与没有 onboardingVersion 键的旧版本升级。
+        // Check for existing data before Sparkle or new preferences can make a fresh install
+        // look like an upgrade from a version that predates onboardingVersion.
         let hasLegacyInstallEvidence = legacyInstallEvidence()
         _ = menuBarController
         if !isUITesting && settingsStore.experimentalModulesEnabled { clipboardHistoryStore.start() }
-        // EdgeTab: 拉环随启动就位（shelf 初始隐藏，拉环立即在边缘就位）。
+        // Install EdgeTab immediately while Shelf is still hidden.
         if SideShelfAvailability.isEnabled { _ = edgeTabController }
-        // Sparkle: 启动 updater（应用「自动检查」设置后 start；幂等）。
+        // Start Sparkle after applying the automatic update preference. Startup is idempotent.
         if !isUITesting {
             updateController.start()
         }
-        // UX1: 成功导入（拖入/剪贴板保存）→ 标记拖拽自动唤出会话「本轮
-        // 已有内容落入」，拖结束时不再自动收回。
+        // Count successful drops and clipboard saves so an automatic reveal stays open after import.
         dropImportCoordinator.onImportHandled = { [weak self] in
             self?.dragAutoShowSession.noteImport()
             self?.shelfWindowController.promoteClassicHoverPreviewIfNeeded()
@@ -404,9 +390,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// 应用已在运行时再次打开（Finder / 启动台 / Spotlight 双击）：弹出设置。
-    /// 菜单栏图标太多时 macOS 会把 OpenYoink 的图标藏起来且不提示，这是
-    /// 此时唯一能找到的入口。
+    /// Reopening the running app from Finder, Launchpad, or Spotlight opens Settings.
+    /// This gives users an entry point when macOS hides the menu bar icon for lack of space.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         settingsWindowController.show()
         return false
@@ -442,9 +427,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         dragStartMonitor.stop()
     }
 
-    /// 旧版没有 onboardingVersion，需从本版本写入前的持久化痕迹判断升级。
-    /// 注册域默认值不算证据；bundle 的持久化 domain 与 Application Support
-    /// 中既有数据任一存在即可。Tutorial 自身被排除，避免中断 session 被误判。
+    /// Older versions have no onboardingVersion key. Check persisted preferences or existing
+    /// Application Support data from before startup writes. Registered defaults and the Tutorial
+    /// directory alone do not count as evidence of an upgrade.
     private func legacyInstallEvidence() -> Bool {
         switch initialShelfLoadResult {
         case .loaded, .failed:
@@ -466,10 +451,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - UX1/UX2 drag-driven appearance
 
-    /// UX1: 拖拽确认（位移超阈值）。开启新会话记帐；用户显式选择
-    /// `.immediate` 模式时
-    /// shelf 不可见时立即唤出并打自动唤出标记（拖拽前已可见 = 用户手动
-    /// 唤出，不标记、不动它）。`.edgeOnly` 只做记帐，唤出交给边缘触发。
+    /// Start tracking a confirmed drag after it crosses the movement threshold.
+    /// Immediate mode opens a hidden Shelf and marks it as automatic. A visible Shelf stays
+    /// as it is. Edge-only mode tracks the drag and delegates opening to the edge trigger.
     private func handleDragStart() {
         noticeRevisionBeforeDrag = shelfNotice.revision
         dragAutoShowSession.dragBegan()
@@ -489,15 +473,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// UX1: 未投放时自动收回；成功拖入默认保持展开，可由设置关闭。
-    /// 本地接收区的回调可能晚于 mouse-up；状态机等待真实完成事件。
+    /// Dismiss an automatic reveal after an empty drop. A successful drop stays open by default.
+    /// The state machine waits for the receiver because its callback can arrive after mouse-up.
     ///
-    /// 任务二审查结论（拖拽中可见性不变式）：本路径不会「拖拽中误隐」——
-    /// DragStartMonitor 在派发 onDragEnd 前已把 isDragInProgress 复位，
-    /// 收回只发生在抬起之后；成功落入（含已派发的异步物化）经
-    /// onImportHandled → noteImport 置位，并由设置决定是否保持展开。
-    /// 空架自动隐藏（拖拽中唯一可能误隐的路径）已在 EmptyShelfAutoHideRule
-    /// 内按 isDragInProgress 门控。
+    /// DragStartMonitor clears isDragInProgress before delivering onDragEnd, so this path
+    /// dismisses only after mouse-up. Successful imports, including queued materialization,
+    /// are recorded through onImportHandled and noteImport. The setting controls whether Shelf
+    /// stays open. EmptyShelfAutoHideRule also checks isDragInProgress before dismissing.
     private func handleDragEnd() {
         let imported = dragAutoShowSession.receivedImport
         let shouldHideClassic = dragAutoShowSession.dragEnded(
@@ -516,9 +498,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - UX3 clipboard save
 
-    /// 双击快捷键保存剪贴板：复用 `DropImportCoordinator` 的拖入分派（文件 /
-    /// 图片 / URL / 文本）。成功导入即唤出 shelf 给出反馈；空剪贴板或无
-    /// 可导入内容时不动作（shelf 可见时走既有 notice 提示）。
+    /// A double press uses the drop import pipeline for clipboard files, images, URLs, and text.
+    /// A successful import reveals Shelf. If there is nothing to import, show the existing notice
+    /// only when Shelf is already visible.
     private func saveClipboardToShelf() {
         let result = dropImportCoordinator.importItems(from: .general) { [weak self] item in
             self?.shelfStore.add(item)
@@ -553,9 +535,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         shelfPresentationCoordinator.show(animated: true)
     }
 
-    /// 菜单栏「最近项目」点击重新入架：文件类按路径重建 ShelfItem（含新的
-    /// 安全书签；`canReadd` 已在菜单侧确认可访问），URL 直接复原。text/stack
-    /// 条目在菜单侧已置灰，不会到达这里。入架后唤出 shelf 给出明确反馈。
+    /// Re-add a recent item from the menu bar. Files get a new bookmark after the menu checks
+    /// access through canReadd. URLs are restored directly. Text and stacks are disabled in
+    /// the menu. Reveal Shelf after re-adding an item.
     private func readdRecent(_ entry: RecentEntry) {
         switch entry.kind {
         case .file, .folder, .image:
@@ -774,17 +756,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Trigger wiring (S7)
 
-    /// S7: 按当前设置启停触发监听（启动时与设置变更时调用）。各 monitor
-    /// 内部对「配置未变」做了幂等保护，因此可响应任意 UserDefaults 变更
-    /// 直接重应用，不会重复注册事件监听。
+    /// Apply trigger settings at startup and after defaults changes. Monitors ignore identical
+    /// configurations so unrelated preference changes cannot register duplicate listeners.
     ///
-    /// UX1/2: 拖拽自动出现由 `dragAutoAppearMode` 单控 —— `.immediate`
-    /// 由 DragStartMonitor 在拖拽确认时直接唤出；`.edgeOnly` 由
-    /// EdgeTriggerMonitor（拖拽贴边短停留）唤出；`.off` 两者皆停。
-    /// 边缘机制在 custom 位置无贴附缘时暂停。DragStartMonitor 还承担
-    /// 自动唤出会话记帐（拖空无落入自动收回），因此任一唤出路径可用
-    /// 时都要保持注册；EdgeTab 起还供给拉环投放暗示的 `isDragInProgress`
-    /// 状态，拉环可用（edgeTabEnabled 且非 custom）时同样保持注册。
+    /// Immediate mode reveals Shelf on drag confirmation. Edge-only mode uses a short edge
+    /// dwell, and off disables both reveal paths. Custom placement has no attached edge.
+    /// Keep drag tracking active when either reveal path is available or when an enabled edge tab
+    /// needs isDragInProgress for drop cues.
     private func applyTriggerSettings() {
         if !isUITesting && settingsStore.experimentalModulesEnabled {
             clipboardHistoryStore.start()
@@ -836,8 +814,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             edgeTriggerMonitor.stop()
         }
 
-        // EdgeTab 拉环常驻（开启 && 非 custom 即在位，不再随 shelf 显隐），
-        // monitor 注册与拉环在位同一判定 —— 拉环一在位就需要拖拽状态。
+        // Keep drag tracking active whenever EdgeTab is enabled and can attach to an edge.
         let edgeTabActive = classicActive
             && settingsStore.edgeTabEnabled
             && settingsStore.shelfPosition != .custom
@@ -854,23 +831,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// S7: 设置变更 → 重应用触发配置。
+    /// Reapply trigger configuration when settings change.
     ///
-    /// 为什么用 UserDefaults.didChangeNotification 而不是 withObservationTracking：
-    /// 后者的 onChange 是 @Sendable 非隔离闭包，Swift 6 严格并发下无法捕获
-    /// MainActor 隔离的 self；选择器式 NotificationCenter 观察不涉闭包捕获，
-    /// 是本项目已验证的等价机制（同 ShelfWindowController 的屏幕参数监听）。
-    /// applyTriggerSettings 幂等，无关设置项的变更不会导致重复注册。
+    /// The selector-based defaults observer avoids capturing main-actor state in the Sendable,
+    /// nonisolated callback used by withObservationTracking. ShelfWindowController uses the same
+    /// pattern for screen changes. applyTriggerSettings skips duplicate registrations.
     ///
-    /// 必须 nonisolated：该通知按投递线程同步回调，而投递方可能是任意线程
-    /// （XCTest 引导阶段就在后台线程 registerDefaults:）；若选择器方法保留
-    /// MainActor 隔离，运行期隔离断言会在投递线程上直接 SIGTRAP。
+    /// NotificationCenter invokes the selector synchronously on the posting thread. XCTest can
+    /// register defaults on a background thread, so the selector stays nonisolated and dispatches
+    /// to the main actor to avoid a runtime isolation trap.
     @objc private nonisolated func userDefaultsDidChange(_ notification: Notification) {
         Task { @MainActor in
             self.applyTriggerSettings()
             self.shelfPresentationCoordinator.applyCurrentMode(animated: true)
             self.menuBarController.applyVisibility()
-            // Sparkle: 「自动检查更新」开关同步（值未变时不写，幂等）。
+            // Synchronize Sparkle's automatic check setting only when it changes.
             self.updateController.applySettings()
             self.clipboardHistoryStore.prune(force: true)
             self.clipboardHistoryStore.updateRecording()

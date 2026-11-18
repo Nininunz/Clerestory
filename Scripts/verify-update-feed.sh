@@ -1,7 +1,7 @@
 #!/bin/bash
-# 对已经上传的 Sparkle feed 做端到端只读验证：feed XML → 下载附件 →
-# 长度/Ed25519 签名 → 挂载 DMG → app 版本与 Sparkle helper 签名边界。
-# 用法：verify-update-feed.sh [APPCAST_URL_OR_PATH] [EXPECTED_VERSION]
+# Verify the appcast and its download without publishing changes. Check the DMG
+# length and Ed25519 signature, app version, and Sparkle helper signing boundaries.
+# Usage: verify-update-feed.sh [APPCAST_URL_OR_PATH] [EXPECTED_VERSION]
 
 set -euo pipefail
 
@@ -73,8 +73,8 @@ if [ "$ACTUAL_LENGTH" != "$DECLARED_LENGTH" ]; then
     exit 1
 fi
 
-# Sparkle 的 SUPublicEDKey 是 32-byte raw Ed25519 key。加上标准 SPKI DER
-# 前缀后交给 OpenSSL，直接验证 appcast 的 EdDSA enclosure 签名。
+# Wrap Sparkle's raw 32-byte Ed25519 public key in SPKI DER so OpenSSL can
+# verify the appcast enclosure signature.
 TRUSTED_KEY="$(/usr/libexec/PlistBuddy -c 'Print SUPublicEDKey' "$REPO_ROOT/OpenYoink/App/Info.plist")"
 printf '302a300506032b6570032100' | xxd -r -p >"$WORK_DIR/public.der"
 printf '%s' "$TRUSTED_KEY" | base64 -D >>"$WORK_DIR/public.der"

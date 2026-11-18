@@ -1,30 +1,27 @@
 #!/bin/bash
 #
-# make-release.sh — 构建 Clerestory 发布产物并更新 Sparkle appcast。
+# make-release.sh builds Clerestory release artifacts and updates the Sparkle appcast.
 #
-# 用法：./Scripts/make-release.sh <VERSION> [BUILD] [--adhoc]
-#   VERSION   市场版本号（写入 MARKETING_VERSION，如 1.0.2）。
-#   BUILD     可选，CFBundleVersion（Sparkle 的版本比较键）；缺省取现有
-#             appcast 最大 build + 1。
-#   --adhoc   显式选择免费社区发布模式：跳过 Developer ID 与 Apple 公证。
-#             Sparkle EdDSA 更新签名仍会生成，但首次下载会触发 Gatekeeper
-#             的「无法验证开发者」提示。
+# Usage: ./Scripts/make-release.sh <VERSION> [BUILD] [--adhoc]
+#   VERSION sets MARKETING_VERSION, such as 1.0.2.
+#   BUILD sets CFBundleVersion for Sparkle. New releases default to the highest
+#   published build plus one. Rebuilds can reuse the existing version's build.
+#   --adhoc skips Developer ID signing and Apple notarization. Sparkle still signs
+#   updates, and Gatekeeper may show an unidentified developer warning on first launch.
 #
-# 流程：Developer ID archive（Release）→ 验证 app 与嵌套组件签名 →
-# Scripts/make-dmg.sh 打包 → Developer ID 签 DMG → notarytool 公证并装订
-# 最终 DMG → Sparkle sign_update 计算 EdDSA 签名 → 更新 appcast。
+# Archive with Developer ID, verify app and nested signatures, then build the DMG.
+# Sign, notarize, and staple the DMG before signing its final bytes for Sparkle.
 #
-# 本脚本不执行 gh release create——构建完成后由人工/主代理把
-# export/Clerestory-<VERSION>.dmg 上传到 GitHub Releases（tag v<VERSION>），
-# enclosure URL 才可达。
+# Upload export/Clerestory-<VERSION>.dmg to the matching GitHub Release tag
+# v<VERSION> separately to make the appcast enclosure available.
 #
-# 环境变量：
-#   DEVELOPER_ID_APPLICATION  钥匙串中的完整签名身份，例如：
+# Environment variables
+#   DEVELOPER_ID_APPLICATION is the full signing identity in Keychain, for example:
 #                 Developer ID Application: Example Name (ABCDE12345)
-#   DEVELOPMENT_TEAM_ID  10 位 Apple Developer Team ID。
-#   NOTARY_PROFILE  `xcrun notarytool store-credentials <name>` 保存的 profile。
-#   SPARKLE_BIN   sign_update 所在目录；缺省自动定位 DerivedData 里
-#                 SourcePackages/artifacts/sparkle/Sparkle/bin。
+#   DEVELOPMENT_TEAM_ID is the 10-character Apple Developer team ID.
+#   NOTARY_PROFILE is the Keychain profile from xcrun notarytool store-credentials.
+#   SPARKLE_BIN overrides the directory containing sign_update. The default
+#   comes from Xcode's Sparkle package artifacts in DerivedData.
 
 set -euo pipefail
 
@@ -100,7 +97,7 @@ else
     echo "==> 发布模式：ad hoc（免费、未公证；首次下载会触发 Gatekeeper 提示）"
 fi
 
-# ---- 定位 Sparkle 命令行工具（sign_update）----
+# Locate Sparkle's command-line tools.
 if [ -z "${SPARKLE_BIN:-}" ]; then
     SPARKLE_BIN=
     for candidate in "$HOME"/Library/Developer/Xcode/DerivedData/{Clerestory,Open-Yoink}-*/SourcePackages/artifacts/sparkle/Sparkle/bin; do
@@ -126,9 +123,9 @@ if [ "$EXPECTED_PUBLIC_KEY" != "$ACTUAL_PUBLIC_KEY" ]; then
 fi
 
 
-# ---- build number（评审 P2）：sparkle:version 必须严格递增，否则老用户
-# 不会把新包视为更新。不传 BUILD 时自动取 appcast 最大 sparkle:version + 1；
-# 传入时校验必须大于该最大值，防止误发「看似新版实则同 build」的更新。
+# Sparkle only offers an update when its build number increases. Default new versions
+# to the highest listed build plus one and reject lower or equal explicit builds.
+# An existing release version can be rebuilt with its original build number.
 MAX_BUILD="$(grep -o '<sparkle:version>[0-9]*' "$APPCAST" 2>/dev/null | grep -o '[0-9]*' | sort -n | tail -1 || true)"
 MAX_BUILD="${MAX_BUILD:-51}"
 EXISTING_VERSION_BUILD="$(python3 - "$APPCAST" "$VERSION" <<'PYEOF'
@@ -165,7 +162,7 @@ elif [ "$BUILD_NUMBER" = "$EXISTING_VERSION_BUILD" ]; then
 fi
 
 # ---- 1. Archive ----
-# build number 在上文已保证存在且严格递增，总是显式写入。
+# Always pass the resolved build number explicitly.
 VERSION_ARGS=(
     MARKETING_VERSION="$VERSION"
     CURRENT_PROJECT_VERSION="${BUILD_NUMBER}"
@@ -194,21 +191,20 @@ xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration Release \
     "${VERSION_ARGS[@]}" \
     archive
 
-# ---- 2. 导出并验证 Xcode 已签名的 app ----
+# Export and verify the Xcode-signed app.
 echo "==> 导出 $APP_PATH"
 rm -rf "$APP_PATH"
 ditto "$ARCHIVE_PATH/Products/Applications/Clerestory.app" "$APP_PATH"
 
 # Sign every nested component explicitly for the selected release mode.
-# ad hoc 模式统一把主程序与 Sparkle 嵌套组件改为临时签名，避免无 Team ID 的主程序
-# 连接到仍带第三方 Team ID 的 XPC 服务时被拒绝。ad hoc 签名之间没有可供
-# library validation 比对的 Team ID，因此该模式必须去掉 Hardened Runtime；
-# 否则 dyld 会在启动时拒载 Sparkle.framework。各组件自己的 identifier 与
-# entitlements 仍逐一保留，不能把主程序权限套给 Sparkle 的 helper/XPC。
+# Ad hoc builds sign the app and nested Sparkle components consistently. Ad hoc
+# signatures have no team ID for library validation, so disable hardened runtime
+# to let dyld load Sparkle.framework. Preserve each component's identifier and
+# entitlements, including those of Sparkle helpers and XPC services.
 if [ "$RELEASE_MODE" = "adhoc" ]; then
-    # Sparkle 官方明确要求逐个签嵌套组件，不能 --deep。--deep 会把主 app
-    # entitlements 传播给 Installer/Updater，导致安装器无法取得授权（1.0.1
-    # 的实机失败原因）。严格按叶子 → framework → 主 app 的顺序重签。
+    # Sign nested components from the leaves inward. Using --deep to sign can copy
+    # the app's entitlements to Installer and Updater and prevent installation, as
+    # observed in 1.0.1.
     SPARKLE_ROOT="$APP_PATH/Contents/Frameworks/Sparkle.framework/Versions/B"
     MEDIA_ROOT="$APP_PATH/Contents/Resources/MediaRemoteAdapterResources.bundle"
     for component in \
@@ -272,7 +268,7 @@ fi
 echo "==> 打 DMG"
 ./Scripts/make-dmg.sh "$APP_PATH"
 
-# ---- 4. Developer ID 模式签名、公证并装订最终分发 DMG ----
+# Sign, notarize, and staple the DMG for Developer ID distribution.
 if [ "$RELEASE_MODE" = "developer-id" ]; then
     echo "==> Developer ID 签名 DMG"
     codesign --force --sign "$DEVELOPER_ID_APPLICATION" --timestamp "$DMG_PATH"
@@ -281,11 +277,11 @@ else
     echo "==> 跳过 Apple 公证（ad hoc 模式）"
 fi
 
-# ---- 5. EdDSA 签名（必须在公证/装订后执行，因为 DMG 字节已改变）----
+# Create the EdDSA signature after notarization and stapling finalize the DMG bytes.
 echo "==> sign_update"
 SIGN_OUTPUT="$("$SIGN_UPDATE" --account com.nininunz.OpenYoink "$DMG_PATH")"
 echo "    $SIGN_OUTPUT"
-# 输出形如：sparkle:edSignature="..." length="..."
+# Expected output includes sparkle:edSignature and length attributes.
 ED_SIGNATURE="$(printf '%s' "$SIGN_OUTPUT" | sed -n 's/.*sparkle:edSignature="\([^"]*\)".*/\1/p')"
 DMG_LENGTH="$(printf '%s' "$SIGN_OUTPUT" | sed -n 's/.*length="\([^"]*\)".*/\1/p')"
 if [ -z "$ED_SIGNATURE" ] || [ -z "$DMG_LENGTH" ]; then
@@ -295,10 +291,9 @@ fi
 
 PUB_DATE="$(LC_TIME=C date '+%a, %d %b %Y %H:%M:%S %z')"
 
-# ---- 6. 更新 docs/appcast.xml（同 shortVersionString 替换而非追加）----
-# 注意：item 不写 <sparkle:channel> —— 应用的 Info.plist 未声明 SUChannel，
-# 带 channel 的 item 会被 Sparkle 过滤（「无频道订阅只看默认频道」），
-# 导致明明有新版却判为最新（1.0.1 发布时实测踩坑）。
+# Update the appcast, replacing any existing entry with the same marketing version.
+# Leave sparkle:channel off the item. The app uses the default channel, which
+# filters out explicitly tagged entries. This prevented update discovery in 1.0.1.
 echo "==> 更新 $APPCAST"
 python3 - "$APPCAST" "$VERSION" "$SHORT_VERSION" "$BUNDLE_VERSION" "$RELEASE_URL" "$ED_SIGNATURE" "$DMG_LENGTH" "$PUB_DATE" <<'PYEOF'
 import sys
@@ -313,7 +308,7 @@ ET.register_namespace("sparkle", SPARKLE)
 tree = ET.parse(appcast_path, parser=ET.XMLParser(target=ET.TreeBuilder(insert_comments=True)))
 channel = tree.getroot().find("channel")
 
-# 幂等：移除同 shortVersionString 的旧 item。
+# Remove any previous entry for this marketing version.
 for item in list(channel.findall("item")):
     svs = item.find(f"{{{SPARKLE}}}shortVersionString")
     if svs is not None and svs.text == short_version:
@@ -332,7 +327,7 @@ ET.SubElement(item, "enclosure", {
     "type": "application/octet-stream",
 })
 
-# 新 item 插到最前（channel 头部元素之后）。
+# Insert the new item before the first existing release entry.
 insert_at = 0
 for idx, child in enumerate(list(channel)):
     if child.tag == "item":
@@ -347,7 +342,7 @@ tree.write(appcast_path, encoding="utf-8", xml_declaration=True)
 print(f"    appcast 已更新：{short_version} ({bundle_version})")
 PYEOF
 
-# ---- 7. README 徽章本地快照（不依赖公共徽章服务，不创建定时任务）----
+# Refresh the local README badge snapshots.
 echo "==> 更新 README 徽章"
 if [ "${OPENYOINK_RELEASE_CANDIDATE:-0}" != "1" ]; then
     node "$REPO_ROOT/Scripts/update-readme-badges.mjs" --version "$SHORT_VERSION"
@@ -355,10 +350,9 @@ else
     echo "Candidate build: skipping public release badges."
 fi
 
-# ---- 8. 输出 Homebrew cask 元数据（不提前修改远端）----
-# GitHub Release 此时尚未上传；自动推送 cask 会先发布一个失效 URL。
-# 上传后重跑整条构建链又会因签名/公证时间戳生成不同 DMG，因此这里只输出
-# 最终已公证产物的精确 SHA，留给上传完成后的独立人工提交。
+# Print Homebrew cask metadata for use after upload, when the download URL works.
+# Use the hash of this exact notarized DMG. Rebuilding changes timestamped signatures
+# and therefore the digest.
 DMG_SHA="$(shasum -a 256 "$DMG_PATH" | cut -d' ' -f1)"
 echo "==> Homebrew cask：version=$SHORT_VERSION  sha256=$DMG_SHA"
 echo "    GitHub Release 上传成功后，用以上两个值更新 homebrew-tap。"
