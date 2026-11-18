@@ -55,10 +55,10 @@ Automatic migration is not implemented by this identity change.
 
 ## Before the first public release
 
-1. GitHub Pages is configured with the GitHub Actions source for this fork. The existing
-   Pages workflow publishes `docs/appcast.xml` and a redirect for the help URL used
-   by 1.0.0. The inherited website is no longer part of the deployment. Keep
-   the feed URL stable for installed copies.
+1. The account Pages repository (`Nininunz/nininunz.github.io`) serves
+   `OpenYoink/appcast.xml` and the legacy Help redirect. This URL is independent
+   of the application repository's name. Keep the `OpenYoink/` path unchanged
+   on the account site because existing installs use it.
 2. Release signing is configured locally using the Developer ID Application
    certificate for team `8KB55P2YKQ` and Keychain profile `OpenYoink-notary`.
    These are separate from the Sparkle update key. Other machines must provision
@@ -69,16 +69,34 @@ Automatic migration is not implemented by this identity change.
 3. Resolve and test the development-data migration above if retaining that data.
 4. Build using `Scripts/make-release.sh` with `DEVELOPER_ID_APPLICATION`,
    `DEVELOPMENT_TEAM_ID`, and `NOTARY_PROFILE`. Do not publish ad-hoc artifacts.
-5. Upload the signed/notarized DMG to this fork's matching GitHub release, then
-   deploy the generated feed. Validate with `Scripts/verify-update-feed.sh`.
-6. Smoke-test the deployed HTTPS feed and release download. The local signed
-   update test below covers installation, relaunch, and persistence.
+5. Upload the signed and notarized DMG to the matching GitHub release and
+   merge the signed `docs/appcast.xml` entry into the application repository's
+   `main`.
+6. Run `Scripts/publish-update-feed.sh` from a checkout with write access to
+   the account Pages repository. It reads the merged appcast, verifies the
+   release archive and signature, and updates the account site. Then run
+   `Scripts/verify-update-feed.sh` against the public URL.
+
 
 The Developer ID certificate is installed in the maintainer's login Keychain
 (expires December 17, 2027), and the notarization profile has been validated
 with Apple. Pages hosting is configured. The 1.0.0 (55) release is published with its matching stable feed. Local candidate `1.8.11 (52)` passed Apple notarization,
 DMG ticket stapling, Gatekeeper checks for both the DMG and mounted app, and
 Sparkle signature verification. The candidate is universal (arm64 and x86_64).
+
+## Rename the application repository
+
+The account Pages site owns the live URL. Keep that site enabled and leave
+the app repository's project Pages site disabled. After renaming the app
+repository to `Clerestory`, update the Git remote, release and support links,
+and the account site's legacy Help redirect. Keep the existing appcast URL,
+bundle ID, Sparkle key, and build number order.
+
+Run `Scripts/verify-update-feed.sh` against the live feed immediately after the
+rename. Confirm the historical GitHub release assets still resolve at their
+original URLs. If they stop resolving, restore the old repository name or
+update the affected enclosure URLs to the same signed assets in the renamed
+repository.
 
 ## Signed update verification
 
