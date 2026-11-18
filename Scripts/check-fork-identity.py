@@ -19,7 +19,10 @@ assert identifiers and all(value.startswith("com.nininunz.OpenYoink") for value 
 feed = ET.parse(root / "docs/appcast.xml")
 assert feed.findtext("./channel/link") == feed_url
 for enclosure in feed.findall("./channel/item/enclosure"):
-    assert enclosure.attrib["url"].startswith("https://github.com/Nininunz/OpenYoink/releases/download/")
+    assert enclosure.attrib["url"].startswith((
+        "https://github.com/Nininunz/OpenYoink/releases/download/",
+        "https://github.com/Nininunz/Clerestory/releases/download/",
+    ))
 
 for file in ["OpenYoink/Services/UpdateController.swift", "OpenYoink/Services/SupportController.swift",
              "Scripts/make-release.sh", "Scripts/verify-update-feed.sh",
