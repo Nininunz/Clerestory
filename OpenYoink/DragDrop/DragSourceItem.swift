@@ -11,6 +11,17 @@ struct DragOutContents: Equatable, Sendable {
     /// Stack 浮层子项拖出传空集 —— 子项的移除语义（unstack 局部移除）
     /// 随 S6 的 stack 批量操作一起设计，本步不移除子项。
     var topLevelIDs: Set<UUID>
+
+    /// Only items with a writer participate in the session. A stack can be
+    /// removed as a group only when every child was included in the drag.
+    func restrictingToRepresentedItems(_ representedItems: [ShelfItem]) -> DragOutContents {
+        let representedIDs = Set(representedItems.map(\.id))
+        let removableIDs = items.filter { item in
+            topLevelIDs.contains(item.id)
+                && DragPayloadBuilder.flattenedItems([item]).allSatisfy { representedIDs.contains($0.id) }
+        }.map(\.id)
+        return DragOutContents(items: representedItems, topLevelIDs: Set(removableIDs))
+    }
 }
 
 /// Tutorial 卡与普通多选拖拽之间的隔离规则（纯函数，避免练习 token 搭便车）。
@@ -89,7 +100,6 @@ final class DragOutController {
         let sessionID = UUID()
         let dragAnchorOffset = Self.dragAnchorOffset(from: sourceView, event: event)
         let deliveryCoordinator = deliveryCoordinator
-        deliveryCoordinator.noteSessionBegan(id: sessionID, contents: effectiveContents)
         let sink = DeliverySink(
             promiseRequested: { itemID in
                 Task { @MainActor in
@@ -115,7 +125,7 @@ final class DragOutController {
             bookmarkService: bookmarkService
         )
         let flattenedPreviewItems = DragPayloadBuilder.flattenedItems(effectiveContents.items)
-        let draggingItems = DragPayloadBuilder.makeDraggingItems(
+        let represented = DragPayloadBuilder.makeDraggingItems(
             for: effectiveContents.items,
             frame: sourceView.bounds,
             bookmarkService: bookmarkService,
@@ -130,12 +140,12 @@ final class DragOutController {
                                        appearance: settings.appearance)
                 : nil
         )
-        guard !draggingItems.isEmpty else {
-            deliveryCoordinator.noteSessionEnded(id: sessionID, accepted: false)
-            return
-        }
+        guard !represented.isEmpty else { return }
+        let draggingItems = represented.map(\.draggingItem)
+        let representedContents = effectiveContents.restrictingToRepresentedItems(represented.map(\.item))
+        deliveryCoordinator.noteSessionBegan(id: sessionID, contents: representedContents)
         // 每次会话独立的 NSDraggingSource：无复用状态，结果处理只依赖本次 contents。
-        let source = DragSessionController(contents: effectiveContents,
+        let source = DragSessionController(contents: representedContents,
                                            sessionID: sessionID,
                                            store: store,
                                            settings: settings,

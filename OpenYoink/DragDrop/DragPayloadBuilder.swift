@@ -149,16 +149,15 @@ enum DragPayloadBuilder {
         }
     }
 
-    /// 组装 `[NSDraggingItem]`：每个可拖项目一个；`frame` 为被拖卡片在源视图
-    /// 坐标系中的位置（多项目共用同一 frame，系统负责聚拢呈现），图像为
-    /// 系统图标合成（NSWorkspace 图标 / SF Symbol，见 `dragImage`）。
+    /// Keep each writer's Shelf item alongside its dragging item so the
+    /// session can apply its removal policy only to items it represents.
     @MainActor
     static func makeDraggingItems(for items: [ShelfItem],
                                   frame: NSRect,
                                   bookmarkService: BookmarkService,
                                   delivery: DeliverySink? = nil,
                                   tutorialTokensByItemID: [UUID: String] = [:],
-                                  cardPreviewImage: NSImage? = nil) -> [NSDraggingItem] {
+                                  cardPreviewImage: NSImage? = nil) -> [(item: ShelfItem, draggingItem: NSDraggingItem)] {
         let flattened = flattenedItems(items)
         let singleItemPreview = flattened.count == 1 ? cardPreviewImage : nil
         return flattened.compactMap { item in
@@ -183,7 +182,7 @@ enum DragPayloadBuilder {
                        height: $0.size.height)
             } ?? frame
             draggingItem.setDraggingFrame(draggingFrame, contents: contents)
-            return draggingItem
+            return (item, draggingItem)
         }
     }
 
@@ -228,17 +227,9 @@ enum DragPayloadBuilder {
                                              bookmarkService: BookmarkService,
                                              delivery: DeliverySink?,
                                              tutorialSessionToken: String?) -> NSPasteboardWriting? {
-        guard let path = item.path else { return nil }
-        // 拖拽开始时解析 bookmark 取最新路径（文件可能在 shelf 停留期间被
-        // 移动）；解析失败回退存储路径，promise 写入时会再尝试解析一次。
-        let sourceURL: URL
-        if let bookmark = item.bookmark,
-           let resolved = try? bookmarkService.resolve(bookmark) {
-            sourceURL = resolved.url
-        } else {
-            sourceURL = URL(fileURLWithPath: path)
-        }
         let bookmark = item.bookmark
+        guard let savedURL = item.fileURL,
+              let sourceURL = try? bookmarkService.resolveFileURL(savedURL, bookmark: bookmark) else { return nil }
         let includeImageFallback = strategy(for: item) == .fileBackedImage && !item.isCut
         let tiffDataProvider: (@Sendable () -> Data?)?
         if includeImageFallback {
@@ -282,10 +273,7 @@ enum DragPayloadBuilder {
     /// 图片位图回退：在安全作用域内读图并导出 TIFF 数据。NSImage 非 Sendable，
     /// 就地创建就地提取 Data（Sendable），不跨 actor。
     nonisolated static func tiffData(sourceURL: URL, bookmark: Data?, bookmarkService: BookmarkService) -> Data? {
-        var url = sourceURL
-        if let bookmark, let resolved = try? bookmarkService.resolve(bookmark) {
-            url = resolved.url
-        }
+        guard let url = try? bookmarkService.resolveFileURL(sourceURL, bookmark: bookmark) else { return nil }
         return bookmarkService.withSecurityScopedAccess(to: url) {
             NSImage(contentsOf: url)?.tiffRepresentation
         }

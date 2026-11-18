@@ -114,19 +114,13 @@ final class FilePromiseProvider: NSFilePromiseProvider {
 
     // MARK: - 写入逻辑
 
-    /// promise 落盘核心逻辑（非隔离纯函数，单测直接调用）：
-    /// bookmark 可解析则用最新路径，否则回退拖拽开始时的路径；
-    /// 经 `withSecurityScopedAccess` 获得沙箱访问权后**复制**到目标 URL
-    /// （copy 而非 move —— 任何情况下不动用户原文件）。
-    /// 目标 URL 由接收应用在 drop 时提供，已含 `fileNameForType` 给出的文件名。
+    /// Resolve the source again when the receiver asks for the file, then
+    /// copy it to the receiver's destination under security-scoped access.
+    /// A failed bookmark resolution fails delivery and leaves the source intact.
     nonisolated static func writeCopy(of payload: Payload,
                                       to destinationURL: URL,
                                       bookmarkService: BookmarkService) throws {
-        var sourceURL = payload.sourceURL
-        if let bookmark = payload.bookmark,
-           let resolved = try? bookmarkService.resolve(bookmark) {
-            sourceURL = resolved.url
-        }
+        let sourceURL = try bookmarkService.resolveFileURL(payload.sourceURL, bookmark: payload.bookmark)
         try bookmarkService.withSecurityScopedAccess(to: sourceURL) {
             try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
         }

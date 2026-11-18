@@ -93,6 +93,34 @@ final class FilePromiseProviderTests: XCTestCase {
                                   encoding: .utf8), "nested")
     }
 
+    func testUnresolvableBookmarkFailsDeliveryWithoutCopyingFromSavedPath() throws {
+        let directory = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let source = directory.appendingPathComponent("replacement.txt")
+        let contents = Data("unrelated replacement file".utf8)
+        try contents.write(to: source)
+        let destination = directory.appendingPathComponent("export.txt")
+        let delivered = Mutex(false)
+        let failed = Mutex(false)
+        let completionError = Mutex<Error??>(nil)
+        let provider = FilePromiseProvider(
+            payload: makePayload(sourceURL: source, bookmark: Data("unresolvable bookmark".utf8)),
+            bookmarkService: BookmarkService(),
+            onDelivered: { _ in delivered.withLock { $0 = true } },
+            onError: { _ in failed.withLock { $0 = true } }
+        )
+        let delegate = try XCTUnwrap(provider.delegate)
+        delegate.filePromiseProvider(provider, writePromiseTo: destination) { error in
+            completionError.withLock { $0 = error }
+        }
+
+        XCTAssertNotNil(try XCTUnwrap(completionError.withLock { $0 }))
+        XCTAssertFalse(delivered.withLock { $0 })
+        XCTAssertTrue(failed.withLock { $0 })
+        XCTAssertFalse(FileManager.default.fileExists(atPath: destination.path))
+        XCTAssertEqual(try Data(contentsOf: source), contents)
+    }
+
     func testWriteCopy_missingSource_throws() {
         let bookmarkService = BookmarkService()
         defer { bookmarkService.stopAccessingAll() }

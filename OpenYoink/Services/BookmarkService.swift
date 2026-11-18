@@ -72,13 +72,14 @@ final class BookmarkService: Sendable {
 
     /// Resolves a bookmark. Outdated-but-resolvable bookmarks succeed with
     /// `isStale == true` (file moved; caller should re-create and store a fresh
-    /// bookmark). Unresolvable bookmarks throw `BookmarkError.resolutionFailed`.
+    /// bookmark). Leave ejected volumes offline so availability checks cannot
+    /// remount them. Unresolvable bookmarks throw `BookmarkError.resolutionFailed`.
     func resolve(_ data: Data) throws -> ResolvedBookmark {
         var isStale = false
         do {
             let url = try URL(
                 resolvingBookmarkData: data,
-                options: .withSecurityScope,
+                options: [.withSecurityScope, .withoutMounting],
                 relativeTo: nil,
                 bookmarkDataIsStale: &isStale
             )
@@ -86,6 +87,13 @@ final class BookmarkService: Sendable {
         } catch {
             throw BookmarkError.resolutionFailed(underlying: error)
         }
+    }
+
+    /// A saved path is usable for entries that never had a bookmark. If a
+    /// bookmark fails to resolve, a file at that path may be unrelated.
+    func resolveFileURL(_ savedURL: URL, bookmark: Data?) throws -> URL {
+        guard let bookmark else { return savedURL }
+        return try resolve(bookmark).url
     }
 
     /// Starts accessing a security-scoped URL. Reference-counted: repeated
