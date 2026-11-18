@@ -40,7 +40,7 @@ final class SupportControllerTests: XCTestCase {
         let body = try XCTUnwrap(components.queryItems?.first(where: { $0.name == "body" })?.value)
 
         XCTAssertEqual(url.host, "github.com")
-        XCTAssertEqual(url.path, "/Nininunz/OpenYoink/issues/new")
+        XCTAssertEqual(url.path, "/Nininunz/Clerestory/issues/new")
         XCTAssertTrue(body.contains(summary))
         XCTAssertTrue(body.contains("no file names, paths, clipboard or shelf contents"))
     }

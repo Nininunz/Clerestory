@@ -1,6 +1,6 @@
 # Fork release ownership
 
-This fork is maintained at https://github.com/Nininunz/OpenYoink and derives
+This fork is maintained at https://github.com/Nininunz/Clerestory and derives
 from https://github.com/MuQY1818/OpenYoink. The original MIT license and
 contributor attribution remain intact. The fork is branded Clerestory. The first Clerestory release is 1.0.1 (56). Version 1.0.0 displays OpenYoink.
 
@@ -13,7 +13,7 @@ contributor attribution remain intact. The fork is branded Clerestory. The first
   existing bundle in Finder.
 - App bundle ID: `com.nininunz.OpenYoink` (test targets use the same namespace).
 - Feed: `https://nininunz.github.io/OpenYoink/appcast.xml`.
-- Downloads and bug reports go to Nininunz/OpenYoink.
+- Downloads and bug reports go to Nininunz/Clerestory.
 - Sparkle Keychain account: `com.nininunz.OpenYoink`.
 - Only the public Ed25519 key is stored in `OpenYoink/App/Info.plist`.
   The private key was generated in the maintainer's login Keychain. Back it up
@@ -84,19 +84,18 @@ with Apple. Pages hosting is configured. The 1.0.0 (55) release is published wit
 DMG ticket stapling, Gatekeeper checks for both the DMG and mounted app, and
 Sparkle signature verification. The candidate is universal (arm64 and x86_64).
 
-## Rename the application repository
+## Repository rename and update compatibility
 
-The account Pages site owns the live URL. Keep that site enabled and leave
-the app repository's project Pages site disabled. After renaming the app
-repository to `Clerestory`, update the Git remote, release and support links,
-and the account site's legacy Help redirect. Keep the existing appcast URL,
+The app repository is now `Nininunz/Clerestory`. The account Pages site
+continues to serve the original Sparkle and older Help URLs. Leave the app
+repository's project Pages site disabled. Keep the existing appcast URL,
 bundle ID, Sparkle key, and build number order.
 
-Run `Scripts/verify-update-feed.sh` against the live feed immediately after the
-rename. Confirm the historical GitHub release assets still resolve at their
-original URLs. If they stop resolving, restore the old repository name or
-update the affected enclosure URLs to the same signed assets in the renamed
-repository.
+New updates use download URLs from `Nininunz/Clerestory`. The four earlier
+appcast entries retain the URLs that shipped with them. After the rename,
+each of those URLs downloaded the same DMG and passed Sparkle signature
+verification. Keep those legacy paths available for older clients and
+cached feeds.
 
 ## Signed update verification
 

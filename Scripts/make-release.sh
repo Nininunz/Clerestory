@@ -70,7 +70,7 @@ if [ "${OPENYOINK_RELEASE_CANDIDATE:-0}" = "1" ]; then
     cp "$APPCAST" export/appcast-candidate.xml
     APPCAST="export/appcast-candidate.xml"
 fi
-RELEASE_URL="https://github.com/Nininunz/OpenYoink/releases/download/v$VERSION/Clerestory-$VERSION.dmg"
+RELEASE_URL="https://github.com/Nininunz/Clerestory/releases/download/v$VERSION/Clerestory-$VERSION.dmg"
 
 if ! command -v node >/dev/null 2>&1; then
     echo "error: README 徽章刷新需要 Node.js 18+。请先安装 Node.js。" >&2

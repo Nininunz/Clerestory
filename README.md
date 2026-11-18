@@ -4,11 +4,11 @@
 
 Clerestory 将暂存架和可配置的快捷入口集中在屏幕顶部的面板中，支持内置和外接显示器。配有实体刘海的 Mac 还可以显示独立的刘海入口，用来打开面板或查看模块状态。
 
-[下载 Clerestory 1.0.3](https://github.com/Nininunz/OpenYoink/releases/tag/v1.0.3) · [快速上手](#快速上手) · [English](README.en.md)
+[下载 Clerestory 1.0.3](https://github.com/Nininunz/Clerestory/releases/tag/v1.0.3) · [快速上手](#快速上手) · [English](README.en.md)
 
 ## 安装
 
-Clerestory 支持运行 macOS 15 或更新版本的 Apple 芯片和 Intel Mac。打开已签名并通过 Apple 公证的 [Clerestory 1.0.3 DMG](https://github.com/Nininunz/OpenYoink/releases/download/v1.0.3/Clerestory-1.0.3.dmg)，将应用拖入「应用程序」。
+Clerestory 支持运行 macOS 15 或更新版本的 Apple 芯片和 Intel Mac。打开已签名并通过 Apple 公证的 [Clerestory 1.0.3 DMG](https://github.com/Nininunz/Clerestory/releases/download/v1.0.3/Clerestory-1.0.3.dmg)，将应用拖入「应用程序」。
 
 使用 Nininunz 分支的用户，可以从菜单栏图标选择 **检查更新…**，将本分支的 OpenYoink 1.0.0 原位升级到 Clerestory。从上游 OpenYoink 切换时，Clerestory 会使用自己的暂存架和偏好设置，上游数据仍保留在原应用中。详见[发行说明](docs/FORK_RELEASE.md)。
 
@@ -82,8 +82,8 @@ Clerestory 支持运行 macOS 15 或更新版本的 Apple 芯片和 Intel Mac。
 需要 macOS 15+ 和 Xcode 26+。
 
 ```bash
-git clone https://github.com/Nininunz/OpenYoink.git
-cd OpenYoink
+git clone https://github.com/Nininunz/Clerestory.git
+cd Clerestory
 
 xcodebuild \
   -project Open-Yoink.xcodeproj \
@@ -105,7 +105,7 @@ xcodebuild \
 
 ## 参与进来
 
-用着不顺手、遇到 bug 或者有想法，欢迎开 [Issue](https://github.com/Nininunz/OpenYoink/issues)。报 bug 时附上 macOS 版本、Clerestory 版本和复现步骤会很有帮助；截图前留意别带上私人文件或剪贴板内容。
+用着不顺手、遇到 bug 或者有想法，欢迎开 [Issue](https://github.com/Nininunz/Clerestory/issues)。报 bug 时附上 macOS 版本、Clerestory 版本和复现步骤会很有帮助；截图前留意别带上私人文件或剪贴板内容。
 
 PR 也欢迎。改动比较大的话，先开个 Issue 聊聊；提交前请跑一遍完整的单元测试。
 
