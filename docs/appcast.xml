@@ -7,6 +7,13 @@
         <description>Updates for Clerestory, based on OpenYoink.</description>
         <language>en</language>
         <item>
+            <title>Version 1.0.2</title>
+            <pubDate>Tue, 17 Nov 2026 20:59:39 -0600</pubDate>
+            <sparkle:version>57</sparkle:version>
+            <sparkle:shortVersionString>1.0.2</sparkle:shortVersionString>
+            <enclosure url="https://github.com/Nininunz/OpenYoink/releases/download/v1.0.2/Clerestory-1.0.2.dmg" sparkle:edSignature="g/7LZtX9g4vvI7J/cNzotJIQCLsXW9mo2qbbmr76CqoKMzIZCHohMBhTuE+hpysVXcPvHBVrQj6bwReCxOCGCw==" length="7126086" type="application/octet-stream" />
+        </item>
+        <item>
             <title>Version 1.0.1</title>
             <pubDate>Tue, 17 Nov 2026 20:12:39 -0600</pubDate>
             <sparkle:version>56</sparkle:version>

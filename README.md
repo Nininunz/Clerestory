@@ -4,11 +4,11 @@
 
 Clerestory 将暂存架和可配置的快捷入口集中在屏幕顶部的面板中，支持内置和外接显示器。配有实体刘海的 Mac 还可以显示独立的刘海入口，用来打开面板或查看模块状态。
 
-[下载 Clerestory 1.0.1](https://github.com/Nininunz/OpenYoink/releases/tag/v1.0.1) · [快速上手](#快速上手) · [English](README.en.md)
+[下载 Clerestory 1.0.2](https://github.com/Nininunz/OpenYoink/releases/tag/v1.0.2) · [快速上手](#快速上手) · [English](README.en.md)
 
 ## 安装
 
-Clerestory 支持运行 macOS 15 或更新版本的 Apple 芯片和 Intel Mac。打开已签名并通过 Apple 公证的 [Clerestory 1.0.1 DMG](https://github.com/Nininunz/OpenYoink/releases/download/v1.0.1/Clerestory-1.0.1.dmg)，将应用拖入「应用程序」。
+Clerestory 支持运行 macOS 15 或更新版本的 Apple 芯片和 Intel Mac。打开已签名并通过 Apple 公证的 [Clerestory 1.0.2 DMG](https://github.com/Nininunz/OpenYoink/releases/download/v1.0.2/Clerestory-1.0.2.dmg)，将应用拖入「应用程序」。
 
 使用 Nininunz 分支的用户，可以从菜单栏图标选择 **检查更新…**，将本分支的 OpenYoink 1.0.0 原位升级到 Clerestory。从上游 OpenYoink 切换时，Clerestory 会使用自己的暂存架和偏好设置，上游数据仍保留在原应用中。详见[发行说明](docs/FORK_RELEASE.md)。
 
@@ -25,7 +25,7 @@ Clerestory 支持运行 macOS 15 或更新版本的 Apple 芯片和 Intel Mac。
 | 多选 | 点击「选择」，或按住 `⌘` 逐个切换选中状态。 |
 | 移除 | 悬停后点击 **×**、按 Delete，或使用右键菜单。按 `⌘Z` 可撤销手动移除。 |
 
-1.0.1 默认开启悬停、点击和拖拽唤出。可以在 **设置 → 面板** 中调整悬停延迟或关闭各项触发方式。拖拽唤出有独立开关。点击面板的图钉可让面板在指针移开后继续保持打开。
+默认开启悬停、点击和拖拽唤出。可以在 **设置 → 面板** 中调整悬停延迟或关闭各项触发方式。拖拽唤出有独立开关。点击面板的图钉可让面板在指针移开后继续保持打开。
 
 ## 面板、刘海与模块
 
