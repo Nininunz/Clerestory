@@ -66,9 +66,9 @@ struct ShelfVolumeProbe {
 SWIFT
 
 xcrun swiftc -module-cache-path "$work_dir/module-cache" \
-    OpenYoink/Model/ItemAvailability.swift OpenYoink/Model/ItemKind.swift \
-    OpenYoink/Model/ShelfItem.swift OpenYoink/Model/SourceAppInfo.swift \
-    OpenYoink/Services/BookmarkService.swift "$work_dir/Probe.swift" -o "$work_dir/probe"
+    Clerestory/Model/ItemAvailability.swift Clerestory/Model/ItemKind.swift \
+    Clerestory/Model/ShelfItem.swift Clerestory/Model/SourceAppInfo.swift \
+    Clerestory/Services/BookmarkService.swift "$work_dir/Probe.swift" -o "$work_dir/probe"
 
 hdiutil create -quiet -size 100m -fs APFS -volname "$volume" "$image"
 hdiutil attach -quiet -nobrowse "$image"

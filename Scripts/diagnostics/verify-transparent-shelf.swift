@@ -1,6 +1,6 @@
 // Run from the repository root in a logged-in macOS desktop session:
-// xcrun swiftc -parse-as-library OpenYoink/Appearance/ShelfAppearance.swift \
-//   OpenYoink/Appearance/ShelfGlassSurface.swift OpenYoink/Shelf/ShelfRevealState.swift \
+// xcrun swiftc -parse-as-library Clerestory/Appearance/ShelfAppearance.swift \
+//   Clerestory/Appearance/ShelfGlassSurface.swift Clerestory/Shelf/ShelfRevealState.swift \
 //   Scripts/diagnostics/verify-transparent-shelf.swift -o /tmp/openyoink-hit-region
 // /tmp/openyoink-hit-region
 // This briefly displays two owned windows without moving the pointer or
