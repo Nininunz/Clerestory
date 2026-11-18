@@ -240,50 +240,15 @@ struct ShelfView: View {
                         ? .opacity
                         : .opacity.combined(with: .move(edge: .top)))
             }
-            Group {
-                if store.items.isEmpty {
-                    Group {
-                        if presentationStyle == .island {
-                            IslandEmptyState(title: "Drop files here",
-                                             message: "Hold ⌘ while dropping to move the original here",
-                                             systemImage: "tray.and.arrow.down")
-                                .accessibilityElement(children: .combine)
-                                .accessibilityIdentifier("shelf.emptyState")
-                        } else {
-                            ShelfEmptyState()
-                        }
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture(perform: clearSelectionAndCollapse)
-                } else if store.visibleItems.isEmpty {
-                    Group {
-                        if presentationStyle == .island {
-                            IslandModuleState(title: "No Results", message: "Try a different search or filter.",
-                                              systemImage: "magnifyingglass") {
-                                Button("Clear Search and Filters") {
-                                    store.searchQuery = ""
-                                    store.contentFilter = .all
-                                }
-                            }
-                        } else {
-                            Text("No Results").foregroundStyle(.secondary)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        }
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture(perform: clearSelectionAndCollapse)
-                } else {
-                    itemGrid
+            resultsViewport
+                .blur(radius: showsDuplicateDropOverlay ? 6 : 0)
+                .clipped()
+                .overlay { duplicateDropOverlay }
+                .overlay(alignment: .bottom) {
+                    if presentationStyle == .classic { noticeBanner }
                 }
-            }
-            .blur(radius: showsDuplicateDropOverlay ? 6 : 0)
-            .clipped()
-            .overlay { duplicateDropOverlay }
-            .overlay(alignment: .bottom) {
-                if presentationStyle == .classic { noticeBanner }
-            }
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.18),
-                       value: showsDuplicateDropOverlay)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.18),
+                           value: showsDuplicateDropOverlay)
             if presentationStyle == .island {
                 shelfFooter
                     .padding(.top, IslandModuleLayout.headerSpacing - 4)
@@ -303,6 +268,54 @@ struct ShelfView: View {
                     .contentShape(Rectangle())
                     .onTapGesture(perform: clearSelectionAndCollapse)
             }
+        }
+    }
+
+    @ViewBuilder
+    private var resultsViewport: some View {
+        if presentationStyle == .island {
+            // Keep the search bar and footer in place when the grid becomes a message.
+            Color.clear.overlay { results }
+        } else {
+            results
+        }
+    }
+
+    @ViewBuilder
+    private var results: some View {
+        if store.items.isEmpty {
+            Group {
+                if presentationStyle == .island {
+                    IslandEmptyState(title: "Drop files here",
+                                     message: "Hold ⌘ while dropping to move the original here",
+                                     systemImage: "tray.and.arrow.down")
+                        .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier("shelf.emptyState")
+                } else {
+                    ShelfEmptyState()
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture(perform: clearSelectionAndCollapse)
+        } else if store.visibleItems.isEmpty {
+            Group {
+                if presentationStyle == .island {
+                    IslandModuleState(title: "No Results", message: "Try a different search or filter.",
+                                      systemImage: "magnifyingglass") {
+                        Button("Clear Search and Filters") {
+                            store.searchQuery = ""
+                            store.contentFilter = .all
+                        }
+                    }
+                } else {
+                    Text("No Results").foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture(perform: clearSelectionAndCollapse)
+        } else {
+            itemGrid
         }
     }
 
@@ -392,13 +405,18 @@ struct ShelfView: View {
                 .help(Text("Search Shelf")).accessibilityLabel("Search Shelf")
                 TextField("Search Shelf", text: $store.searchQuery)
                     .textFieldStyle(.plain).focused($searchFocused)
+                    .accessibilityIdentifier("shelf.search")
                     .onKeyPress(.escape) { store.searchQuery = ""; searchFocused = false; return .handled }
-                if !store.searchQuery.isEmpty {
-                    Button { store.searchQuery = "" } label: {
-                        Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
-                    }
-                        .help(Text("Clear Search")).accessibilityLabel("Clear Search")
+                Button { store.searchQuery = "" } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.tertiary)
+                        .frame(width: 14, height: 14)
                 }
+                .help(Text("Clear Search"))
+                .accessibilityLabel("Clear Search")
+                .opacity(store.searchQuery.isEmpty ? 0 : 1)
+                .disabled(store.searchQuery.isEmpty)
+                .accessibilityHidden(store.searchQuery.isEmpty)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
@@ -414,12 +432,16 @@ struct ShelfView: View {
                     }
             }
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: searchFocused)
-            HStack {
-                Picker("Content Type", selection: $store.contentFilter) {
-                    ForEach(ShelfContentFilter.allCases) { Text($0.title).tag($0) }
-                }.labelsHidden().controlSize(.small)
-                Spacer(minLength: 2)
-                if presentationStyle == .classic { managementMenu }
+            if presentationStyle == .classic {
+                HStack {
+                    Picker("Content Type", selection: $store.contentFilter) {
+                        ForEach(ShelfContentFilter.allCases) { Text($0.title).tag($0) }
+                    }
+                    .labelsHidden()
+                    .controlSize(.small)
+                    Spacer(minLength: 2)
+                    managementMenu
+                }
             }
         }.font(.caption).buttonStyle(.plain)
     }
