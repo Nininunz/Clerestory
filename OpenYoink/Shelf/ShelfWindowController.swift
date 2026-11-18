@@ -265,7 +265,7 @@ final class ShelfWindowController: NSObject {
         )
         panel.acceptsKeyboardFocus = islandRole == .expanded
         if presentationStyle == .island {
-            panel.title = islandRole == .notch ? "OpenYoink Notch" : "OpenYoink Island"
+            panel.title = islandRole == .notch ? "Clerestory Notch" : "Clerestory Panel"
             panel.setAccessibilityIdentifier(islandRole == .notch
                                             ? "island.window.compact" : "island.window.expanded")
         }

@@ -111,7 +111,7 @@ final class OnboardingController: NSObject, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        panel.title = String(localized: "OpenYoink Quick Start")
+        panel.title = String(localized: "Clerestory Quick Start")
         panel.delegate = self
         panel.contentViewController = NSHostingController(
             rootView: OnboardingView(
@@ -435,7 +435,7 @@ private struct OnboardingView: View {
                         TutorialDragSourceBridge(fileURL: url, token: model.token)
                     }
                 }
-                Text("This file was created by OpenYoink. It won't read, move, or upload your files.")
+                Text("This file was created by Clerestory. It won't read, move, or upload your files.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
@@ -473,7 +473,7 @@ private struct OnboardingView: View {
                     .font(.system(size: 30))
                     .foregroundStyle(.green)
                     .accessibilityHidden(true)
-                Text("You're ready. OpenYoink will appear when you start dragging, and ⌘⇧Space shows or hides it anytime.")
+                Text("You're ready. Clerestory will appear when you start dragging, and ⌘⇧Space shows or hides it anytime.")
                     .font(.callout)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -514,7 +514,7 @@ private struct OnboardingView: View {
                 .strokeBorder(Color.secondary.opacity(0.22), lineWidth: 1)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("OpenYoink practice file. Drag to the shelf.")
+        .accessibilityLabel("Clerestory practice file. Drag to the shelf.")
         .accessibilityIdentifier("onboarding.practice-file")
     }
 

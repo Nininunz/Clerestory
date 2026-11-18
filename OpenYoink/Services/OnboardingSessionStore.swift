@@ -43,7 +43,7 @@ final class OnboardingSessionStore {
                             createdAt: Date())
         let directory = try sessionDirectory(for: record.sessionID)
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: false)
-        let contents = String(localized: "This practice file was created by OpenYoink. You can delete it safely.")
+        let contents = String(localized: "This practice file was created by Clerestory. You can delete it safely.")
         try Data(contents.utf8).write(to: tutorialFileURL(for: record), options: .atomic)
         try save(record)
         return record

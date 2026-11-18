@@ -24,7 +24,7 @@ final class SupportController {
         let autoUpdateCheckEnabled: Bool
     }
 
-    static let helpURL = URL(string: "https://nininunz.github.io/OpenYoink/#usage")!
+    static let helpURL = URL(string: "https://github.com/Nininunz/OpenYoink/blob/main/README.en.md#quick-start")!
     private static let newIssueURL = URL(string: "https://github.com/Nininunz/OpenYoink/issues/new")!
 
     private let settings: SettingsStore
@@ -53,7 +53,7 @@ final class SupportController {
 
     static func diagnosticSummary(for snapshot: DiagnosticSnapshot) -> String {
         """
-        OpenYoink diagnostics
+        Clerestory diagnostics
         Version: \(snapshot.version) (\(snapshot.build))
         macOS: \(snapshot.operatingSystem)
         Architecture: \(snapshot.architecture)

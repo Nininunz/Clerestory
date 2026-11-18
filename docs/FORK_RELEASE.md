@@ -2,10 +2,12 @@
 
 This fork is maintained at https://github.com/Nininunz/OpenYoink and derives
 from https://github.com/MuQY1818/OpenYoink. The original MIT license and
-contributor attribution remain intact. The app name remains OpenYoink.
+contributor attribution remain intact. The fork is branded Clerestory. The published 1.0.0 build still displays OpenYoink.
 
 ## Identity and updates
 
+- Branded downloads use `Clerestory-<VERSION>.dmg`. The app bundle filename,
+  executable, and storage paths retain their established names for continuity.
 - App bundle ID: `com.nininunz.OpenYoink` (test targets use the same namespace).
 - Feed: `https://nininunz.github.io/OpenYoink/appcast.xml`.
 - Downloads and bug reports go to Nininunz/OpenYoink.
@@ -51,8 +53,9 @@ Automatic migration is not implemented by this identity change.
 ## Before the first public release
 
 1. GitHub Pages is configured with the GitHub Actions source for this fork. The existing
-   Pages workflow builds the website and copies `docs/appcast.xml` to its root.
-   Deploy after these changes merge; configuring Pages alone does not deploy the feed.
+   Pages workflow publishes `docs/appcast.xml` and a redirect for the help URL used
+   by 1.0.0. The inherited website is no longer part of the deployment. Keep
+   the feed URL stable for installed copies.
 2. Release signing is configured locally using the Developer ID Application
    certificate for team `8KB55P2YKQ` and Keychain profile `OpenYoink-notary`.
    These are separate from the Sparkle update key. Other machines must provision

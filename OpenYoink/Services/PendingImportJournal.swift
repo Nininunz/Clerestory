@@ -52,7 +52,7 @@ final class PendingImportJournal: @unchecked Sendable {
             case .damaged:
                 String(localized: "Pending import recovery data is damaged.")
             case .pathOutsideManagedDirectory:
-                String(localized: "The pending import points outside OpenYoink's managed storage.")
+                String(localized: "The pending import points outside Clerestory's managed storage.")
             case .missingRecord:
                 String(localized: "The pending import recovery record is missing.")
             }

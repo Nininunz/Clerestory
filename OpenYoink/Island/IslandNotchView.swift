@@ -26,7 +26,7 @@ struct IslandNotchView: View {
         .contentShape(IslandSurfaceShape(attachedToScreenTop: true, cornerRadius: 11))
         .accessibilityLabel(Text(notchAccessibilityLabel))
         .accessibilityIdentifier("island.compact")
-        .help("Open OpenYoink Island")
+        .help("Open Clerestory Panel")
         .onHover { hovering in
             withAnimation(reduceMotion ? nil : .easeOut(duration: 0.16)) {
                 isNotchHovering = hovering
@@ -198,7 +198,7 @@ struct IslandNotchView: View {
                 ? String(localized: "Battery, \(powerMonitor.snapshot.percentage) percent")
                 : String(localized: "No internal battery")
         case .shelf:
-            return String(localized: "OpenYoink Island, \(shelfStore.items.count) shelf items")
+            return String(localized: "Clerestory Panel, \(shelfStore.items.count) shelf items")
         case .timer:
             if case .idle = timerStore.state { return String(localized: "Timer ready") }
             if case .finished = timerStore.state {
@@ -216,7 +216,7 @@ struct IslandNotchView: View {
                activity.moduleID == notchDisplay.moduleID {
                 return [activity.title, activity.detail].compactMap { $0 }.joined(separator: ", ")
             }
-            return String(localized: "OpenYoink Island")
+            return String(localized: "Clerestory Panel")
         }
     }
 

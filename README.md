@@ -1,10 +1,10 @@
-> Development fork maintained by Nininunz, based on [MuQY1818/OpenYoink](https://github.com/MuQY1818/OpenYoink). First stable fork release: [1.0.0 (55)](https://github.com/Nininunz/OpenYoink/releases/tag/v1.0.0). See [release ownership](docs/FORK_RELEASE.md).
+> Clerestory is maintained by Nininunz and is based on [MuQY1818/OpenYoink](https://github.com/MuQY1818/OpenYoink). The current download still carries the OpenYoink name: [1.0.0 (55)](https://github.com/Nininunz/OpenYoink/releases/tag/v1.0.0). See [release ownership](docs/FORK_RELEASE.md).
 
 <div align="center">
 
-<img src="OpenYoink/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-128.png" width="96" alt="OpenYoink 图标">
+<img src="OpenYoink/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-128.png" width="96" alt="Clerestory 图标">
 
-# OpenYoink
+# Clerestory
 
 **随手一拖，先放一下。**
 
@@ -17,19 +17,13 @@
 [![MIT 许可证](docs/badges/license.svg)](LICENSE)
 
 [下载](https://github.com/Nininunz/OpenYoink/releases/latest) ·
-[官网](https://nininunz.github.io/OpenYoink/) ·
 [灵动岛](#灵动岛模块) ·
-[演示短片](https://nininunz.github.io/OpenYoink/#film) ·
-[使用文档](https://nininunz.github.io/OpenYoink/guide/) ·
 [English](README.en.md)
 
 </div>
 
 <br>
 
-<a href="https://nininunz.github.io/OpenYoink/">
-  <img src="docs/images/banner.jpg" width="100%" alt="OpenYoink — 随手一拖，先放一下">
-</a>
 
 想把下载文件夹里的文件发进聊天窗口？先拖到屏幕边上的 OpenYoink，松手，切到聊天窗口，再从 OpenYoink 拖出去。不用来回摆两个窗口。
 
@@ -107,7 +101,6 @@ OpenYoink Island 待在屏幕顶部。平时收成一条，显示正在播放的
 
 正在播放、快速访问、剪贴板历史这三个模块默认关着。把鼠标拖着文件靠近屏幕顶部来展开灵动岛，这个也默认关着，在 **设置 → 触发器** 里打开，和侧边暂存架的触发方式互不影响。
 
-[灵动岛使用说明](https://nininunz.github.io/OpenYoink/guide/island) · [各模块详解](https://nininunz.github.io/OpenYoink/guide/island-modules) · [看 40 秒短片](https://nininunz.github.io/OpenYoink/#film)
 
 ## 安装
 
@@ -119,8 +112,8 @@ See [release ownership and migration](docs/FORK_RELEASE.md) before switching fro
 
 | 想做什么         | 怎么做                                                   |
 | ---------------- | -------------------------------------------------------- |
-| 显示 / 隐藏      | `⌘⇧Space`、菜单栏，或点屏幕边缘的把手                    |
-| 放东西进来       | 拖到暂存架或边缘把手上                                   |
+| 显示 / 隐藏面板 | 按 `⌘⇧Space` 或使用菜单栏图标。在 **设置 → 面板** 中配置鼠标触发方式。 |
+| 放东西进来 | 将文件或选中的文本拖向屏幕顶部中央，再放入暂存架。 |
 | 移入（不留原件） | 按住 `⌘` 再拖进来，原文件会进废纸篓，[先看这里](#文件安全与生命周期) |
 | 暂存当前剪贴板   | 连按两下 `⌘⇧Space`                                       |
 | 剪贴板历史       | `⌘⇧V`（可以在设置里改或关掉）                            |
@@ -128,9 +121,7 @@ See [release ownership and migration](docs/FORK_RELEASE.md) before switching fro
 | 预览             | 选中后按空格，或双击                                     |
 | 多选             | 按住 `⌘` 点选，或在空白处拖出选框                        |
 | 移除             | 鼠标悬停点 `×`、按 `Delete`，或右键                      |
-| 换位置           | 沿屏幕边缘拖动把手，或在设置里选                         |
 
-更多操作见[使用文档](https://nininunz.github.io/OpenYoink/guide/)。
 
 ## 文件安全与生命周期
 

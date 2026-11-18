@@ -1,15 +1,12 @@
-> Development fork maintained by Nininunz, based on [MuQY1818/OpenYoink](https://github.com/MuQY1818/OpenYoink). First stable fork release: [1.0.0 (55)](https://github.com/Nininunz/OpenYoink/releases/tag/v1.0.0). See [release ownership](docs/FORK_RELEASE.md).
+> Clerestory is maintained by Nininunz and is based on [MuQY1818/OpenYoink](https://github.com/MuQY1818/OpenYoink). The current download still carries the OpenYoink name: [1.0.0 (55)](https://github.com/Nininunz/OpenYoink/releases/tag/v1.0.0). See [release ownership](docs/FORK_RELEASE.md).
 
 <div align="center">
 
-<img src="OpenYoink/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-128.png" width="96" alt="OpenYoink icon">
+<img src="OpenYoink/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-128.png" width="96" alt="Clerestory icon">
 
-# OpenYoink
+# Clerestory
 
-**Drag it. Park it. Drop it later.**
-
-A free, open-source shelf for macOS, with a Dynamic Island on top.
-Park files at the edge of the screen; keep music, timers and your clipboard in the notch.
+**A modular panel for your Mac.**
 
 <br>
 
@@ -17,23 +14,17 @@ Park files at the edge of the screen; keep music, timers and your clipboard in t
 [![MIT license](docs/badges/license.svg)](LICENSE)
 
 [Download](https://github.com/Nininunz/OpenYoink/releases/latest) ·
-[Website](https://nininunz.github.io/OpenYoink/) ·
 [Island](#island-modules) ·
-[Product film](https://nininunz.github.io/OpenYoink/en/#film) ·
-[Guide](https://nininunz.github.io/OpenYoink/en/guide/) ·
 [中文](README.md)
 
 </div>
 
 <br>
 
-<a href="https://nininunz.github.io/OpenYoink/">
-  <img src="docs/images/banner.jpg" width="100%" alt="OpenYoink — Drag it. Park it. Drop it later.">
-</a>
 
-Want to send a file from Downloads to a chat? Drag it to OpenYoink at the edge of the screen, let go, switch to the chat, and drag it back out. No more arranging two windows side by side.
+Want to send a file from Downloads to a chat? Drag it to Shelf in the Panel, let go, switch to the chat, and drag it back out. No more arranging two windows side by side.
 
-OpenYoink lives in the menu bar and stays out of the Dock. Use the side shelf, the Island at the top, or both — they hold the same items.
+Clerestory lives in the menu bar and stays out of the Dock. The Panel opens near the top of your display, with an optional Notch companion on supported built-in displays.
 
 ## What it does
 
@@ -107,7 +98,6 @@ If you'd rather not pick modules one by one, **Settings → General** has three 
 
 Now Playing, Quick Access and Clipboard History start off. Expanding Island by dragging a file to the top of the screen is also off by default; turn it on in **Settings → Triggers**. It doesn't affect how the side shelf is revealed.
 
-[Island guide](https://nininunz.github.io/OpenYoink/en/guide/island) · [Watch the 40-second film](https://nininunz.github.io/OpenYoink/en/#film)
 
 ## Install
 
@@ -119,8 +109,8 @@ See [release ownership and migration](docs/FORK_RELEASE.md) before switching fro
 
 | To…                      | Do this                                                     |
 | ------------------------ | ----------------------------------------------------------- |
-| Show / hide              | `⌘⇧Space`, the menu bar item, or click the tab on the screen edge |
-| Add something            | Drop it on the shelf or the edge tab                        |
+| Show / hide the Panel | Press `⌘⇧Space` or use the menu bar item. Configure pointer triggers in **Settings → Panel**. |
+| Add something | Drag a file or selected text toward the top center of your display, then drop it into Shelf. |
 | Move in (no original left) | Hold `⌘` while dropping; the original goes to the Trash. [Read this first](#file-safety-and-lifecycle) |
 | Park the clipboard       | Press `⌘⇧Space` twice                                       |
 | Clipboard history        | `⌘⇧V` (change or disable it in Settings)                    |
@@ -128,9 +118,7 @@ See [release ownership and migration](docs/FORK_RELEASE.md) before switching fro
 | Preview                  | Select and press Space, or double-click                     |
 | Multi-select             | `⌘`-click, or drag a selection box over empty space         |
 | Remove                   | Hover and click `×`, press `Delete`, or right-click         |
-| Move the shelf           | Drag the edge tab along the edge, or pick a side in Settings |
 
-See the [guide](https://nininunz.github.io/OpenYoink/en/guide/) for more.
 
 ## File safety and lifecycle
 

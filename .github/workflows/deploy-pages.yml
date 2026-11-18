@@ -1,4 +1,4 @@
-name: Deploy OpenYoink docs to Pages
+name: Deploy Clerestory update feed
 
 on:
   push:
@@ -23,28 +23,27 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: website/package-lock.json
-
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: Install dependencies
-        working-directory: website
-        run: npm ci
-
-      - name: Build VitePress site
-        working-directory: website
-        run: npm run build
+      - name: Stage update feed and legacy help redirect
+        run: |
+          mkdir -p _pages
+          cp docs/appcast.xml _pages/appcast.xml
+          cat > _pages/index.html <<'EOF'
+          <!doctype html>
+          <html lang="en">
+          <meta charset="utf-8">
+          <title>Clerestory Help</title>
+          <meta http-equiv="refresh" content="0; url=https://github.com/Nininunz/OpenYoink/blob/main/README.en.md#quick-start">
+          <p><a href="https://github.com/Nininunz/OpenYoink/blob/main/README.en.md#quick-start">Clerestory help on GitHub</a></p>
+          </html>
+          EOF
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: website/.vitepress/dist
+          path: _pages
 
   deploy:
     environment:

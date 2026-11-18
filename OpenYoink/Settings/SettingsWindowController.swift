@@ -58,11 +58,11 @@ final class SettingsWindowController {
                 .environment(clipboardHistoryStore)
             let hostingController = NSHostingController(rootView: rootView)
             hostingController.view.setAccessibilityLabel(
-                String(localized: "OpenYoink Settings")
+                String(localized: "Clerestory Settings")
             )
 
             let window = NSWindow(contentViewController: hostingController)
-            window.title = String(localized: "OpenYoink Settings")
+            window.title = String(localized: "Clerestory Settings")
             window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
             // 侧边栏需要稳定的最小宽度；允许继续放大，长文案和辅助功能字号
             // 会自然获得更多空间，而不是和顶部导航挤在一起。

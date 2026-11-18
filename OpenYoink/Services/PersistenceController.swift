@@ -206,7 +206,7 @@ final class PersistenceController {
         var errorDescription: String? {
             switch self {
             case .invalidSnapshot:
-                String(localized: "The selected recovery file is not managed by OpenYoink.")
+                String(localized: "The selected recovery file is not managed by Clerestory.")
             case .snapshotIsUnreadable:
                 String(localized: "This recovery file is damaged and cannot be restored automatically.")
             }
