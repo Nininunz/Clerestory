@@ -64,7 +64,7 @@ enum PasteboardTypes {
     static let fileContents = NSPasteboard.PasteboardType("public.file-contents")
     /// 快速上手练习的进程私有令牌。它只用于确认同一 tutorial session 的
     /// 真实拖入/拖出，不携带文件内容，也不进入普通拖放注册清单。
-    static let tutorialSession = NSPasteboard.PasteboardType("com.weijue.OpenYoink.tutorial-session")
+    static let tutorialSession = NSPasteboard.PasteboardType("com.nininunz.OpenYoink.tutorial-session")
 
     /// `NSFilePromiseReceiver` 可读取的 promise 类型（Apple 推荐直接用其
     /// `readableDraggedTypes` 注册，而不是手写 UTI 字符串）。

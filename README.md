@@ -1,3 +1,5 @@
+> Development fork maintained by Nininunz, based on [MuQY1818/OpenYoink](https://github.com/MuQY1818/OpenYoink). No fork release has been published yet. See [release ownership](docs/FORK_RELEASE.md).
+
 <div align="center">
 
 <img src="OpenYoink/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-128.png" width="96" alt="OpenYoink 图标">
@@ -11,24 +13,21 @@
 
 <br>
 
-[![最新版本](docs/badges/release.svg)](https://github.com/MuQY1818/OpenYoink/releases/latest)
-[![下载量](docs/badges/downloads.svg)](https://github.com/MuQY1818/OpenYoink/releases)
 [![macOS 15+](docs/badges/macos.svg)](https://developer.apple.com/macos/)
-[![GitHub Stars](docs/badges/stars.svg)](https://github.com/MuQY1818/OpenYoink/stargazers)
 [![MIT 许可证](docs/badges/license.svg)](LICENSE)
 
-[下载](https://github.com/MuQY1818/OpenYoink/releases/latest) ·
-[官网](https://muqy1818.github.io/OpenYoink/) ·
+[下载](https://github.com/Nininunz/OpenYoink/releases/latest) ·
+[官网](https://nininunz.github.io/OpenYoink/) ·
 [灵动岛](#灵动岛模块) ·
-[演示短片](https://muqy1818.github.io/OpenYoink/#film) ·
-[使用文档](https://muqy1818.github.io/OpenYoink/guide/) ·
+[演示短片](https://nininunz.github.io/OpenYoink/#film) ·
+[使用文档](https://nininunz.github.io/OpenYoink/guide/) ·
 [English](README.en.md)
 
 </div>
 
 <br>
 
-<a href="https://muqy1818.github.io/OpenYoink/">
+<a href="https://nininunz.github.io/OpenYoink/">
   <img src="docs/images/banner.jpg" width="100%" alt="OpenYoink — 随手一拖，先放一下">
 </a>
 
@@ -108,45 +107,13 @@ OpenYoink Island 待在屏幕顶部。平时收成一条，显示正在播放的
 
 正在播放、快速访问、剪贴板历史这三个模块默认关着。把鼠标拖着文件靠近屏幕顶部来展开灵动岛，这个也默认关着，在 **设置 → 触发器** 里打开，和侧边暂存架的触发方式互不影响。
 
-[灵动岛使用说明](https://muqy1818.github.io/OpenYoink/guide/island) · [各模块详解](https://muqy1818.github.io/OpenYoink/guide/island-modules) · [看 40 秒短片](https://muqy1818.github.io/OpenYoink/#film)
+[灵动岛使用说明](https://nininunz.github.io/OpenYoink/guide/island) · [各模块详解](https://nininunz.github.io/OpenYoink/guide/island-modules) · [看 40 秒短片](https://nininunz.github.io/OpenYoink/#film)
 
 ## 安装
 
-需要 macOS 15 Sequoia 或更新的系统，Apple 芯片和 Intel 都能用。
-
-### Homebrew（推荐）
-
-```bash
-brew install --cask muqy1818/tap/openyoink
-```
-
-安装包同样来自 GitHub Releases。装完后 Homebrew 会去掉 OpenYoink 的隔离标记，所以第一次打开不会被 Gatekeeper 拦下来（但这不代表它经过了 Apple 公证）。
-
-### 手动安装
-
-1. 从 [GitHub Releases](https://github.com/MuQY1818/OpenYoink/releases/latest) 下载最新的 DMG。
-2. 打开 DMG，把 OpenYoink 拖进 `Applications`。
-3. 第一次打开如果被系统拦住，在 Finder 里右键 OpenYoink 选"打开"，或者去 **系统设置 → 隐私与安全性** 里放行。
-
-> [!NOTE]
-> 我目前没有 Apple 开发者证书，Releases 里的版本是 ad hoc 签名，没做公证，所以手动安装时 macOS 会拦一下。之后的自动更新会用 Sparkle 的 EdDSA 签名校验安装包，但第一次下载请自己确认来源。
-
-<details>
-<summary>还是打不开？</summary>
-
-先确认安装包是从上面的 GitHub Releases 下的，再核对一下校验值：
-
-```bash
-shasum -a 256 OpenYoink-VERSION.dmg   # VERSION 换成实际版本号
-```
-
-结果应该和 [Homebrew cask](https://github.com/MuQY1818/homebrew-tap/blob/main/Casks/openyoink.rb) 里对应版本的 `sha256` 一致。确认没问题后，用下面这条命令去掉隔离标记（相当于让 Gatekeeper 放过这一个应用）：
-
-```bash
-xattr -dr com.apple.quarantine /Applications/OpenYoink.app
-```
-
-</details>
+This fork has not published a release yet. Build from source for development.
+Upstream Homebrew packages install the upstream app, not this fork.
+See [release ownership and migration](docs/FORK_RELEASE.md) before switching from an existing installation.
 
 ## 快速上手
 
@@ -163,7 +130,7 @@ xattr -dr com.apple.quarantine /Applications/OpenYoink.app
 | 移除             | 鼠标悬停点 `×`、按 `Delete`，或右键                      |
 | 换位置           | 沿屏幕边缘拖动把手，或在设置里选                         |
 
-更多操作见[使用文档](https://muqy1818.github.io/OpenYoink/guide/)。
+更多操作见[使用文档](https://nininunz.github.io/OpenYoink/guide/)。
 
 ## 文件安全与生命周期
 
@@ -214,7 +181,7 @@ xattr -dr com.apple.quarantine /Applications/OpenYoink.app
 需要 macOS 15+ 和 Xcode 26+。
 
 ```bash
-git clone https://github.com/MuQY1818/OpenYoink.git
+git clone https://github.com/Nininunz/OpenYoink.git
 cd OpenYoink
 
 xcodebuild \
@@ -237,7 +204,7 @@ xcodebuild \
 
 ## 参与进来
 
-用着不顺手、遇到 bug 或者有想法，欢迎开 [Issue](https://github.com/MuQY1818/OpenYoink/issues)。报 bug 时附上 macOS 版本、OpenYoink 版本和复现步骤会很有帮助；截图前留意别带上私人文件或剪贴板内容。
+用着不顺手、遇到 bug 或者有想法，欢迎开 [Issue](https://github.com/Nininunz/OpenYoink/issues)。报 bug 时附上 macOS 版本、OpenYoink 版本和复现步骤会很有帮助；截图前留意别带上私人文件或剪贴板内容。
 
 PR 也欢迎。改动比较大的话，先开个 Issue 聊聊；提交前请跑一遍完整的单元测试。
 

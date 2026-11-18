@@ -60,10 +60,10 @@ OpenYoink 是独立的社区开源项目，与商业应用 Yoink、Dropover 及�
 
 ## 下载与开始使用
 
-你可以通过 Homebrew 或 [GitHub Release](https://github.com/MuQY1818/OpenYoink/releases/latest) 免费安装。首次使用建议依次阅读：
+你可以通过 Homebrew 或 [GitHub Release](https://github.com/Nininunz/OpenYoink/releases/latest) 免费安装。首次使用建议依次阅读：
 
 1. [安装 OpenYoink](./install)
 2. [三分钟快速上手](./quick-start)
 3. [文件安全与隐私](./file-safety)
 
-OpenYoink 仍在持续迭代。如果你遇到兼容性问题，欢迎在 [GitHub Issues](https://github.com/MuQY1818/OpenYoink/issues) 提供 macOS 版本、OpenYoink 版本和复现步骤。
+OpenYoink 仍在持续迭代。如果你遇到兼容性问题，欢迎在 [GitHub Issues](https://github.com/Nininunz/OpenYoink/issues) 提供 macOS 版本、OpenYoink 版本和复现步骤。

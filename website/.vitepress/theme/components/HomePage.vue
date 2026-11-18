@@ -3,8 +3,8 @@ import { withBase } from 'vitepress'
 import MacDemo from './MacDemo.vue'
 import ProductFilm from './ProductFilm.vue'
 
-const downloadURL = 'https://github.com/MuQY1818/OpenYoink/releases/latest'
-const repository = 'https://github.com/MuQY1818/OpenYoink'
+const downloadURL = 'https://github.com/Nininunz/OpenYoink/releases/latest'
+const repository = 'https://github.com/Nininunz/OpenYoink'
 
 const features = [
   {

@@ -53,6 +53,6 @@ OpenYoink is an independent community project and is not affiliated with the com
 
 ## Download OpenYoink
 
-Install OpenYoink with Homebrew or download the latest build from [GitHub Releases](https://github.com/MuQY1818/OpenYoink/releases/latest). Then follow the [quick start](./quick-start) and review the [file-safety model](./file-safety).
+Install OpenYoink with Homebrew or download the latest build from [GitHub Releases](https://github.com/Nininunz/OpenYoink/releases/latest). Then follow the [quick start](./quick-start) and review the [file-safety model](./file-safety).
 
-Bug reports and compatibility details are welcome in [GitHub Issues](https://github.com/MuQY1818/OpenYoink/issues).
+Bug reports and compatibility details are welcome in [GitHub Issues](https://github.com/Nininunz/OpenYoink/issues).

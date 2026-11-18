@@ -57,7 +57,7 @@ final class CutMoveService: Sendable {
     /// 原文件进废纸篓；测试注入 mock 验证编排与失败分支。
     let trashOriginal: @Sendable (URL) throws -> URL?
 
-    private let logger = Logger(subsystem: "com.weijue.OpenYoink", category: "CutMove")
+    private let logger = Logger(subsystem: "com.nininunz.OpenYoink", category: "CutMove")
 
     init(tempFileService: TempFileService,
          bookmarkService: BookmarkService,

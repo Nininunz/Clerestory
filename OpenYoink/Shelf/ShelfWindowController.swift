@@ -1814,9 +1814,9 @@ final class ShelfWindowController: NSObject {
         return false
     }
 
-    func islandDragEnded(imported: Bool) {
+    func islandDragEnded(imported: Bool, hasPendingNotice: Bool = false) {
         guard settings.islandEnabled, settings.islandShelfEnabled else { return }
-        islandActivityCoordinator.endDrag(imported: imported)
+        islandActivityCoordinator.endDrag(imported: imported, hasPendingNotice: hasPendingNotice)
     }
 
     private func startEnabledIslandModules() {

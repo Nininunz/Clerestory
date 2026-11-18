@@ -9,20 +9,12 @@ description: 解决 OpenYoink 无法启动、更新失败、拖放不生效和�
 
 OpenYoink 是菜单栏应用，不显示 Dock 图标。请检查屏幕右上方菜单栏，并尝试按默认快捷键 `⌘⇧Space`。
 
-## macOS 提示应用已损坏或无法验证
+## Installation and updates
 
-免费社区构建没有 Apple 公证。请先确认安装包来自[官方 GitHub Release](https://github.com/MuQY1818/OpenYoink/releases/latest)，然后参考[安装说明](./install#仍然提示应用已损坏)。
-
-## 自动更新提示“打开安装程序时出现错误”
-
-这通常与 ad-hoc 分发、旧版本残留或隔离属性有关：
-
-1. 退出 OpenYoink。
-2. 从 GitHub Release 下载最新 DMG。
-3. 替换“应用程序”中的旧版本。
-4. 使用 Homebrew 安装，或按安装文档处理隔离属性。
-
-Sparkle 的 EdDSA 签名可以校验更新包完整性，但不能替代 Apple 公证。
+This fork has not published a signed release yet. See [installation status](./install).
+The fork's updater only trusts its own signing key. Upstream packages and update
+feeds are not interchangeable with this fork. Report fork issues to
+[Nininunz/OpenYoink](https://github.com/Nininunz/OpenYoink/issues).
 
 ## 拖动时暂存架没有出现
 

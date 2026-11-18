@@ -25,7 +25,7 @@ final class UpdateController: NSObject {
     /// 自动安装失败时的稳定兜底入口。指向 GitHub 的 latest 页面而非某个固定
     /// DMG，确保即使 appcast 或附件 URL 出错，用户仍能手动取得当前版本。
     static let manualDownloadURL = URL(
-        string: "https://github.com/MuQY1818/OpenYoink/releases/latest"
+        string: "https://github.com/Nininunz/OpenYoink/releases/latest"
     )!
 
     /// 更新检查状态摘要（供日志与将来 UI 展示；更新提示 UI 由 Sparkle
@@ -40,7 +40,7 @@ final class UpdateController: NSObject {
     private(set) var status: Status = .idle
 
     private let settings: SettingsStore
-    private let logger = Logger(subsystem: "com.weijue.OpenYoink", category: "Update")
+    private let logger = Logger(subsystem: "com.nininunz.OpenYoink", category: "Update")
 
     /// UpdateController 本身由 AppDelegate 懒加载，故 updater controller 可在
     /// init 直接创建。startingUpdater: false，由 start() 在应用完设置后显式启动。

@@ -10,7 +10,7 @@ final class FilePromiseReceiverRecoveryTests: XCTestCase {
         let temp: TempFileService
         let journal: PendingImportJournal
         let bookmarks = BookmarkService()
-        let logger = Logger(subsystem: "com.weijue.OpenYoinkTests", category: "FilePromise")
+        let logger = Logger(subsystem: "com.nininunz.OpenYoinkTests", category: "FilePromise")
 
         init() {
             root = FileManager.default.temporaryDirectory

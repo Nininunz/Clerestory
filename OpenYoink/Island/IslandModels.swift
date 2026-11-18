@@ -600,13 +600,14 @@ final class IslandActivityCoordinator {
         setSurfaceState(.expanded)
     }
 
-    func endDrag(imported: Bool) {
+    func endDrag(imported: Bool, hasPendingNotice: Bool = false) {
         removeActivity(id: "drag")
         defer {
             stateBeforeDrag = nil
             moduleBeforeDrag = nil
         }
-        guard !imported else {
+        // New drop feedback waits for the transient drag-opened panel to close.
+        guard !imported || hasPendingNotice else {
             setSurfaceState(.expanded)
             return
         }

@@ -1,3 +1,5 @@
+> Development fork maintained by Nininunz, based on [MuQY1818/OpenYoink](https://github.com/MuQY1818/OpenYoink). No fork release has been published yet. See [release ownership](docs/FORK_RELEASE.md).
+
 <div align="center">
 
 <img src="OpenYoink/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-128.png" width="96" alt="OpenYoink icon">
@@ -11,24 +13,21 @@ Park files at the edge of the screen; keep music, timers and your clipboard in t
 
 <br>
 
-[![Latest release](docs/badges/release.svg)](https://github.com/MuQY1818/OpenYoink/releases/latest)
-[![Downloads](docs/badges/downloads.svg)](https://github.com/MuQY1818/OpenYoink/releases)
 [![macOS 15+](docs/badges/macos.svg)](https://developer.apple.com/macos/)
-[![GitHub Stars](docs/badges/stars.svg)](https://github.com/MuQY1818/OpenYoink/stargazers)
 [![MIT license](docs/badges/license.svg)](LICENSE)
 
-[Download](https://github.com/MuQY1818/OpenYoink/releases/latest) ·
-[Website](https://muqy1818.github.io/OpenYoink/) ·
+[Download](https://github.com/Nininunz/OpenYoink/releases/latest) ·
+[Website](https://nininunz.github.io/OpenYoink/) ·
 [Island](#island-modules) ·
-[Product film](https://muqy1818.github.io/OpenYoink/en/#film) ·
-[Guide](https://muqy1818.github.io/OpenYoink/en/guide/) ·
+[Product film](https://nininunz.github.io/OpenYoink/en/#film) ·
+[Guide](https://nininunz.github.io/OpenYoink/en/guide/) ·
 [中文](README.md)
 
 </div>
 
 <br>
 
-<a href="https://muqy1818.github.io/OpenYoink/">
+<a href="https://nininunz.github.io/OpenYoink/">
   <img src="docs/images/banner.jpg" width="100%" alt="OpenYoink — Drag it. Park it. Drop it later.">
 </a>
 
@@ -108,45 +107,13 @@ If you'd rather not pick modules one by one, **Settings → General** has three 
 
 Now Playing, Quick Access and Clipboard History start off. Expanding Island by dragging a file to the top of the screen is also off by default; turn it on in **Settings → Triggers**. It doesn't affect how the side shelf is revealed.
 
-[Island guide](https://muqy1818.github.io/OpenYoink/en/guide/island) · [Watch the 40-second film](https://muqy1818.github.io/OpenYoink/en/#film)
+[Island guide](https://nininunz.github.io/OpenYoink/en/guide/island) · [Watch the 40-second film](https://nininunz.github.io/OpenYoink/en/#film)
 
 ## Install
 
-Requires macOS 15 Sequoia or later, on Apple silicon or Intel.
-
-### Homebrew (recommended)
-
-```bash
-brew install --cask muqy1818/tap/openyoink
-```
-
-The package comes from GitHub Releases as well. After installing, Homebrew removes OpenYoink's quarantine flag so Gatekeeper won't stop the first launch (this doesn't mean the app is notarized by Apple).
-
-### Manual install
-
-1. Download the latest DMG from [GitHub Releases](https://github.com/MuQY1818/OpenYoink/releases/latest).
-2. Open it and drag OpenYoink into `Applications`.
-3. If macOS blocks the first launch, right-click OpenYoink in Finder and choose **Open**, or allow it under **System Settings → Privacy & Security**.
-
-> [!NOTE]
-> I don't have an Apple Developer certificate yet, so release builds are ad-hoc signed and not notarized, and macOS will push back on a manual install. Later updates are checked against Sparkle's EdDSA signature, but please verify where your first download came from.
-
-<details>
-<summary>Still won't open?</summary>
-
-Make sure the DMG came from GitHub Releases above, then check its checksum:
-
-```bash
-shasum -a 256 OpenYoink-VERSION.dmg   # replace VERSION with the release number
-```
-
-It should match the `sha256` for that version in the [Homebrew cask](https://github.com/MuQY1818/homebrew-tap/blob/main/Casks/openyoink.rb). Once you're satisfied, remove the quarantine flag (this tells Gatekeeper to let this one app through):
-
-```bash
-xattr -dr com.apple.quarantine /Applications/OpenYoink.app
-```
-
-</details>
+This fork has not published a release yet. Build from source for development.
+Upstream Homebrew packages install the upstream app, not this fork.
+See [release ownership and migration](docs/FORK_RELEASE.md) before switching from an existing installation.
 
 ## Quick start
 
@@ -163,7 +130,7 @@ xattr -dr com.apple.quarantine /Applications/OpenYoink.app
 | Remove                   | Hover and click `×`, press `Delete`, or right-click         |
 | Move the shelf           | Drag the edge tab along the edge, or pick a side in Settings |
 
-See the [guide](https://muqy1818.github.io/OpenYoink/en/guide/) for more.
+See the [guide](https://nininunz.github.io/OpenYoink/en/guide/) for more.
 
 ## File safety and lifecycle
 
@@ -214,7 +181,7 @@ Items marked private by common password managers, and apps you've set to ignore,
 You'll need macOS 15+ and Xcode 26+.
 
 ```bash
-git clone https://github.com/MuQY1818/OpenYoink.git
+git clone https://github.com/Nininunz/OpenYoink.git
 cd OpenYoink
 
 xcodebuild \
@@ -237,7 +204,7 @@ Releases are built with [`Scripts/make-release.sh`](Scripts/make-release.sh), ei
 
 ## Contributing
 
-Something feels off, broke, or could be better? Open an [issue](https://github.com/MuQY1818/OpenYoink/issues). For bugs, your macOS version, OpenYoink version and steps to reproduce help a lot — and please keep private files and clipboard contents out of screenshots.
+Something feels off, broke, or could be better? Open an [issue](https://github.com/Nininunz/OpenYoink/issues). For bugs, your macOS version, OpenYoink version and steps to reproduce help a lot — and please keep private files and clipboard contents out of screenshots.
 
 Pull requests are welcome. For bigger changes, open an issue first so we can talk it through, and run the full unit test suite before submitting.
 

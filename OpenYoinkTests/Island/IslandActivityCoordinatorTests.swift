@@ -3,6 +3,16 @@ import XCTest
 
 @MainActor
 final class IslandActivityCoordinatorTests: XCTestCase {
+    func testDropFeedbackClosesTransientPanelButKeepsPinnedOrigin() {
+        for pinned in [false, true] {
+            let coordinator = IslandActivityCoordinator()
+            if pinned { coordinator.show(module: .shelf, pinned: true) }
+            coordinator.beginDrag()
+            coordinator.endDrag(imported: true, hasPendingNotice: true)
+            XCTAssertEqual(coordinator.surfaceState, pinned ? .pinned : .collapsed)
+        }
+    }
+
     func testNotchActivationPreservesPinWhileSwitchingModules() {
         let coordinator = IslandActivityCoordinator()
         coordinator.show(module: .quickSettings, pinned: true)

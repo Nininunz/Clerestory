@@ -27,6 +27,11 @@ final class OnboardingDragContext {
 /// 启动时是否自动显示快速上手的纯策略。已有未完成 session 总是优先恢复；
 /// 没有显式 onboarding 键的旧用户只做静默迁移，避免升级后被打扰。
 struct OnboardingLaunchPolicy: Equatable, Sendable {
+    static func hasExistingInstallation(preferences: [String: Any], supportEntries: [String]) -> Bool {
+        preferences.keys.contains { $0 != "OpenYoink.onboardingVersion" }
+            || supportEntries.contains { $0 != "Tutorial" }
+    }
+
     static func shouldAutomaticallyShow(onboardingVersion: Int,
                                         hadPersistedVersion: Bool,
                                         hasLegacyInstallEvidence: Bool,

@@ -24,7 +24,11 @@ if [ "$RELEASE_MODE" != "adhoc" ] && [ "$RELEASE_MODE" != "developer-id" ]; then
 fi
 
 SPARKLE_ROOT="$APP_PATH/Contents/Frameworks/Sparkle.framework/Versions/B"
+MEDIA_ROOT="$APP_PATH/Contents/Resources/MediaRemoteAdapterResources.bundle"
 COMPONENTS=(
+    "$MEDIA_ROOT/Contents/Resources/MediaRemoteAdapterTestClient"
+    "$MEDIA_ROOT/Contents/Resources/MediaRemoteAdapter.framework"
+    "$MEDIA_ROOT"
     "$SPARKLE_ROOT/XPCServices/Installer.xpc"
     "$SPARKLE_ROOT/XPCServices/Downloader.xpc"
     "$SPARKLE_ROOT/Autoupdate"
@@ -82,7 +86,7 @@ for helper in "$SPARKLE_ROOT/XPCServices/Installer.xpc" "$SPARKLE_ROOT/Updater.a
         echo "error: Sparkle helper 错误继承了主 app sandbox：$helper" >&2
         exit 1
     fi
-    if grep -Fq 'com.weijue.OpenYoink' "$file"; then
+    if grep -Fq 'com.nininunz.OpenYoink' "$file"; then
         echo "error: Sparkle helper 错误继承了 OpenYoink application identifier：$helper" >&2
         exit 1
     fi

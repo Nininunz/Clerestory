@@ -1,0 +1,7 @@
+# Copy to Scripts/release-signing.local (gitignored).
+# These are identifiers, not credentials. Never put passwords/private keys here.
+# Explicit environment variables override these local defaults.
+export DEVELOPER_ID_APPLICATION="${DEVELOPER_ID_APPLICATION:-Developer ID Application: Your Name (TEAMID1234)}"
+export DEVELOPMENT_TEAM_ID="${DEVELOPMENT_TEAM_ID:-TEAMID1234}"
+export NOTARY_PROFILE="${NOTARY_PROFILE:-OpenYoink-notary}"
+# Optional: export SPARKLE_BIN=/path/to/SourcePackages/artifacts/sparkle/Sparkle/bin

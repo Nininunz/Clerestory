@@ -17,7 +17,7 @@ hero:
       link: /en/guide/
     - theme: alt
       text: Download
-      link: https://github.com/MuQY1818/OpenYoink/releases/latest
+      link: https://github.com/Nininunz/OpenYoink/releases/latest
 
 features:
   - title: A temporary landing spot
