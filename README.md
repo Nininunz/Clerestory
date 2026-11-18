@@ -1,4 +1,4 @@
-> Development fork maintained by Nininunz, based on [MuQY1818/OpenYoink](https://github.com/MuQY1818/OpenYoink). No fork release has been published yet. See [release ownership](docs/FORK_RELEASE.md).
+> Development fork maintained by Nininunz, based on [MuQY1818/OpenYoink](https://github.com/MuQY1818/OpenYoink). First stable fork release: [1.0.0 (55)](https://github.com/Nininunz/OpenYoink/releases/tag/v1.0.0). See [release ownership](docs/FORK_RELEASE.md).
 
 <div align="center">
 
@@ -111,7 +111,7 @@ OpenYoink Island 待在屏幕顶部。平时收成一条，显示正在播放的
 
 ## 安装
 
-This fork has not published a release yet. Build from source for development.
+Download the signed and notarized [1.0.0 DMG](https://github.com/Nininunz/OpenYoink/releases/download/v1.0.0/OpenYoink-1.0.0.dmg), open it, and copy OpenYoink to Applications. Quit other OpenYoink copies before launching.
 Upstream Homebrew packages install the upstream app, not this fork.
 See [release ownership and migration](docs/FORK_RELEASE.md) before switching from an existing installation.
 

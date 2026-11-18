@@ -1,7 +1,6 @@
-# OpenYoink 1.0.0 (55) — release notes draft
+# OpenYoink 1.0.0 (55)
 
-Version: **1.0.0**, build **55**. Publication date is pending. This document is
-release copy, not an announcement that a release is available.
+Version: **1.0.0**, build **55**. Released November 17, 2026.
 
 OpenYoink is a free, MIT-licensed file shelf for macOS. This release begins the
 Nininunz-maintained fork of MuQY1818/OpenYoink.
@@ -31,6 +30,13 @@ updates within this fork use Sparkle.
 
 The side shelf and stack/grouping features are currently disabled. Mouse-shake
 activation has been removed. Experimental modules may change between releases.
+
+## Known limitations
+
+An intermittent keyboard-focus issue was observed during testing: Space went to
+the previously active app instead of opening Quick Look. Relaunching resolved
+it in that session; the cause remains unconfirmed. Physical external-display
+and Intel-hardware checks have not been completed.
 
 ## Credits
 
