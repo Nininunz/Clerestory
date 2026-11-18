@@ -1,131 +1,41 @@
-> Clerestory is maintained by Nininunz and is based on [MuQY1818/OpenYoink](https://github.com/MuQY1818/OpenYoink). Latest release [Clerestory 1.0.1 (56)](https://github.com/Nininunz/OpenYoink/releases/tag/v1.0.1). See [release ownership](docs/FORK_RELEASE.md).
-
-<div align="center">
-
-<img src="OpenYoink/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-128.png" width="96" alt="Clerestory 图标">
-
 # Clerestory
 
-**随手一拖，先放一下。**
+**Mac 上的模块化面板。**
 
-一个免费、开源的 macOS 暂存架，顺带一座灵动岛。
-文件先放边上，音乐、计时、剪贴板都在屏幕顶部。
+Clerestory 将暂存架和可配置的快捷入口集中在屏幕顶部的面板中，支持内置和外接显示器。配有实体刘海的 Mac 还可以显示独立的刘海入口，用来打开面板或查看模块状态。
 
-<br>
-
-[![macOS 15+](docs/badges/macos.svg)](https://developer.apple.com/macos/)
-[![MIT 许可证](docs/badges/license.svg)](LICENSE)
-
-[下载](https://github.com/Nininunz/OpenYoink/releases/latest) ·
-[灵动岛](#灵动岛模块) ·
-[English](README.en.md)
-
-</div>
-
-<br>
-
-
-想把下载文件夹里的文件发进聊天窗口？先拖到屏幕边上的 OpenYoink，松手，切到聊天窗口，再从 OpenYoink 拖出去。不用来回摆两个窗口。
-
-它只待在菜单栏，不占 Dock。侧边暂存架和顶部灵动岛可以只开一个，也可以都开，里面的东西是同一份。
-
-## 能做什么
-
-- **什么都能放**：文件、文件夹、文本、图片、链接。来源应用愿意给的话，邮件、日历事件和联系人也行。
-- **找得到、理得清**：空格预览，多选、框选、叠成一摞（Stack），搜索、按类型筛选，手滑删了按 `⌘Z` 找回来。
-- **随叫随到**：点屏幕边缘的把手、按快捷键、摇一摇鼠标，或者拖着文件靠过去都能唤出。不想在某个应用里被打扰，可以单独关掉。
-- **剪贴板历史**：可收藏、搜索、预览，一键丢进暂存架。默认不记录，要你自己打开。
-- 多显示器、多个桌面和全屏应用下都能用；中英文界面，可登录时启动，会自动更新。
-
-## 灵动岛模块
-
-OpenYoink Island 待在屏幕顶部。平时收成一条，显示正在播放的歌、倒计时或者传输进度；点一下展开对应的模块。有刘海的 Mac 上它和刘海连成一体，外接屏和没刘海的机器上是一枚悬浮胶囊。
-
-下面都是实际截图，点开看大图。
-
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <a href="docs/screenshots/island/now-playing.png"><img src="docs/screenshots/island/now-playing.png" width="100%" alt="OpenYoink 灵动岛正在播放模块，显示 QQ 音乐的封面、歌曲信息、进度和播放控制"></a>
-      <p><strong>正在播放</strong><br>不切回播放器也能看封面、暂停、切歌。图里是 QQ 音乐；能不能拖进度条、显示哪些信息，要看播放器或网页自己开放了多少。</p>
-    </td>
-    <td width="50%" valign="top">
-      <a href="docs/screenshots/island/quick-access.png"><img src="docs/screenshots/island/quick-access.png" width="100%" alt="灵动岛快速访问，显示文件夹收藏、添加按钮和拖入添加区域"></a>
-      <p><strong>快速访问</strong><br>收藏常去的文件夹，双击用你默认的文件管理器打开（Finder、QSpace 都行）。把文件拖到收藏上就是复制过去，重名会先问你。</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <a href="docs/screenshots/island/shelf.png"><img src="docs/screenshots/island/shelf.png" width="100%" alt="灵动岛暂存架，带有搜索、类型筛选和文件拖放区域"></a>
-      <p><strong>暂存架</strong><br>和侧边暂存架是同一份内容，拖进拖出、搜索、筛选、Quick Look 都一样。</p>
-    </td>
-    <td width="50%" valign="top">
-      <a href="docs/screenshots/island/clipboard-history.png"><img src="docs/screenshots/island/clipboard-history.png" width="100%" alt="灵动岛剪贴板历史，带有记录开关、搜索、类型筛选、收藏和复制操作"></a>
-      <p><strong>剪贴板历史</strong><br>翻找复制过的文本、链接和图片，常用的收藏起来。记录开关是单独的，默认关着。</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <a href="docs/screenshots/island/timer.png"><img src="docs/screenshots/island/timer.png" width="100%" alt="灵动岛计时器，显示专注、短休息、长休息、目标输入和时长选择"></a>
-      <p><strong>专注计时</strong><br>专注、短休息、长休息三档，可以写一句这轮要干什么。时长自己定，会记下每次专注。</p>
-    </td>
-    <td width="50%" valign="top">
-      <a href="docs/screenshots/island/battery.png"><img src="docs/screenshots/island/battery.png" width="100%" alt="灵动岛电池模块，显示电量、电源状态、瓦数和最近两分钟的功率波形"></a>
-      <p><strong>电池与功率</strong><br>电量、是否在充电、此刻多少瓦，外加最近两分钟的功率曲线和平均值。</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <a href="docs/screenshots/island/system-status.png"><img src="docs/screenshots/island/system-status.png" width="100%" alt="灵动岛系统状态，显示 CPU、内存、网络、磁盘、电池、热状态和应用占用排行"></a>
-      <p><strong>系统状态</strong><br>CPU、内存、网速、磁盘剩余、发热状态，以及哪些应用最占资源。只看不动，不会帮你杀进程或清文件。</p>
-    </td>
-    <td width="50%" valign="top">
-      <a href="docs/screenshots/island/module-library.png"><img src="docs/screenshots/island/module-library.png" width="100%" alt="灵动岛模块库，支持启停、打开、固定模块和拖动排序"></a>
-      <p><strong>模块库</strong><br>用到哪个开哪个，最多钉五个在顶部，拖动排序。没钉的也能从库里打开。</p>
-    </td>
-  </tr>
-</table>
-
-> [!TIP]
-> 电池模块显示的是电池这一侧的功率，不是插座的耗电。正数是在充，负数是在放；插着电且已充满时接近 `0 W`，这是正常的。
-
-另外还有一个传输模块，用来看后台交付文件的进度和失败情况。
-
-**AI 用量**（1.8.8 新增，默认关着）：今天在 Claude Code、Codex、Cursor 等工具上花了多少钱、用了多少 token，近 7 天、30 天和累计用量，以及各家额度窗口用到了多少、什么时候重置。快到 80% 和 95% 会在灵动岛提醒一下，收起时也可以选择显示今日花费。数据来自免费开源的 [TokenTracker](https://github.com/xiufengsun/TokenTracker)，用这个模块需要先装好它并让它在后台跑着。
-
-### 怎么配置
-
-新装的 OpenYoink 默认开着灵动岛（**设置 → 通用** 里可以关）。展开后点左上角的齿轮进模块库，打开想用的模块、点图钉钉到顶部，拖一拖调整顺序。收起按 `Esc`，或者点外面、点顶部中间。
-
-懒得一个个挑的话，**设置 → 通用** 里有"文件暂存""文件与剪贴板""完整工具箱"三套预设，只换模块和展开方式，不会动你的文件和历史，也不会替你打开剪贴板记录。
-
-正在播放、快速访问、剪贴板历史这三个模块默认关着。把鼠标拖着文件靠近屏幕顶部来展开灵动岛，这个也默认关着，在 **设置 → 触发器** 里打开，和侧边暂存架的触发方式互不影响。
-
+[下载 Clerestory 1.0.1](https://github.com/Nininunz/OpenYoink/releases/tag/v1.0.1) · [快速上手](#快速上手) · [English](README.en.md)
 
 ## 安装
 
-Download the signed and notarized [Clerestory 1.0.1 DMG](https://github.com/Nininunz/OpenYoink/releases/download/v1.0.1/Clerestory-1.0.1.dmg), open it, and copy the app to Applications. Existing fork users can upgrade through Sparkle.
-Upstream Homebrew packages install the upstream app, not this fork.
-See [release ownership and migration](docs/FORK_RELEASE.md) before switching from an existing installation.
+Clerestory 支持运行 macOS 15 或更新版本的 Apple 芯片和 Intel Mac。打开已签名并通过 Apple 公证的 [Clerestory 1.0.1 DMG](https://github.com/Nininunz/OpenYoink/releases/download/v1.0.1/Clerestory-1.0.1.dmg)，将应用拖入「应用程序」。
+
+使用 Nininunz 分支的用户，可以从菜单栏图标选择 **检查更新…**，将本分支的 OpenYoink 1.0.0 原位升级到 Clerestory。从上游 OpenYoink 切换时，Clerestory 会使用自己的暂存架和偏好设置，上游数据仍保留在原应用中。详见[发行说明](docs/FORK_RELEASE.md)。
 
 ## 快速上手
 
-| 想做什么         | 怎么做                                                   |
-| ---------------- | -------------------------------------------------------- |
-| 显示 / 隐藏面板 | 按 `⌘⇧Space` 或使用菜单栏图标。在 **设置 → 面板** 中配置鼠标触发方式。 |
-| 放东西进来 | 将文件或选中的文本拖向屏幕顶部中央，再放入暂存架。 |
-| 移入（不留原件） | 按住 `⌘` 再拖进来，原文件会进废纸篓，[先看这里](#文件安全与生命周期) |
-| 暂存当前剪贴板   | 连按两下 `⌘⇧Space`                                       |
-| 剪贴板历史       | `⌘⇧V`（可以在设置里改或关掉）                            |
-| 搜索 / 撤销移除  | `⌘F` / `⌘Z`（只能撤销你手动移除的卡片）                  |
-| 预览             | 选中后按空格，或双击                                     |
-| 多选             | 按住 `⌘` 点选，或在空白处拖出选框                        |
-| 移除             | 鼠标悬停点 `×`、按 `Delete`，或右键                      |
+| 操作 | 方法 |
+| --- | --- |
+| 打开面板 | 将指针移到屏幕顶部中央，点击触发区域，按 `⌘⇧Space`，或使用菜单栏图标。 |
+| 添加内容 | 将文件或选中的文本拖向屏幕顶部中央，再放入暂存架。 |
+| 移入文件 | 按住 `⌘` 后放下文件。请先阅读[文件安全与生命周期](#文件安全与生命周期)。 |
+| 暂存剪贴板 | 启用双按暂存剪贴板后，连按两次 `⌘⇧Space`。 |
+| 搜索 | 点击暂存架的搜索框，或在暂存架获得键盘焦点后按 `⌘F`。 |
+| 预览 | 点击选中后按空格，或双击条目。 |
+| 多选 | 点击「选择」，或按住 `⌘` 逐个切换选中状态。 |
+| 移除 | 悬停后点击 **×**、按 Delete，或使用右键菜单。按 `⌘Z` 可撤销手动移除。 |
 
+1.0.1 默认开启悬停、点击和拖拽唤出。可以在 **设置 → 面板** 中调整悬停延迟或关闭各项触发方式。拖拽唤出有独立开关。点击面板的图钉可让面板在指针移开后继续保持打开。
+
+## 面板、刘海与模块
+
+- **面板**在触发它的显示器上打开，关闭前会留在该显示器。可在 **设置 → 面板 → 快捷入口位置** 或 **快捷设置** 中排列模块快捷入口。
+- **刘海**是配有实体刘海的内置屏幕上的可选入口。在 **设置 → 刘海** 中调整开关、模块顺序和循环快捷键。按住 Shift 再使用循环快捷键可反向切换。
+- 默认可使用**暂存架**和**快捷设置**。其他模块可在 **设置 → 模块** 中打开**实验性模块**后按需启用，包括传输、计时器、电池、正在播放、系统状态、快速访问、剪贴板和 AI 用量。
 
 ## 文件安全与生命周期
 
-直接拖进来的文件，OpenYoink 只记住它在哪，不会移动它。移除卡片、或者打开"拖出后移除"，都不会删掉原文件。拖到 Finder 时只是请求复制一份，收不收由目标应用决定。
+直接拖进来的文件，Clerestory 只记住它在哪，不会移动它。移除卡片、或者打开"拖出后移除"，都不会删掉原文件。拖到 Finder 时只是请求复制一份，收不收由目标应用决定。
 
 > [!WARNING]
 > 按住 `⌘` 拖进来是"移入"：先把文件复制到应用自己的沙箱里，确认副本完好后，再把原文件挪进废纸篓。中途出错就保留原文件，按普通方式暂存。清空废纸篓之前，原文件都还能找回来。
@@ -135,7 +45,7 @@ See [release ownership and migration](docs/FORK_RELEASE.md) before switching fro
 <details>
 <summary>各类内容存在哪、什么时候清理</summary>
 
-| 内容                   | OpenYoink 怎么存                                        |
+| 内容                   | Clerestory 怎么存                                        |
 | ---------------------- | ------------------------------------------------------- |
 | 文件、文件夹           | 记住原文件的位置和访问授权（sandbox bookmark），不复制  |
 | 纯文本、链接           | 直接存在暂存架的数据里                                  |
@@ -161,7 +71,7 @@ See [release ownership and migration](docs/FORK_RELEASE.md) before switching fro
 
 ### 剪贴板历史
 
-默认不记录。没打开时，只有你连按两下快捷键暂存剪贴板的那一刻才会读一次。打开之后，只记新复制的文本、HTTP(S) 链接和 PNG/TIFF 图片，不会回头翻以前的内容，也不记复制的文件。
+剪贴板默认不记录。需要使用时，请在 **设置 → 模块** 中启用实验性的剪贴板模块，再在该模块的设置中开启记录。没打开时，只有你连按两下快捷键暂存剪贴板的那一刻才会读一次。打开之后，只记新复制的文本、HTTP(S) 链接和 PNG/TIFF 图片，不会回头翻以前的内容，也不记复制的文件。
 
 历史以明文存在本机，不上传、不同步。普通条目可以留 30、100 或 300 条（默认 30），保留 1、7 或 30 天（默认 7 天）；另外最多收藏 30 条，不会过期。所有内容加起来上限 20 MiB。关掉记录不会删已有的历史，点"清空"才会删。
 
@@ -195,11 +105,11 @@ xcodebuild \
 
 ## 参与进来
 
-用着不顺手、遇到 bug 或者有想法，欢迎开 [Issue](https://github.com/Nininunz/OpenYoink/issues)。报 bug 时附上 macOS 版本、OpenYoink 版本和复现步骤会很有帮助；截图前留意别带上私人文件或剪贴板内容。
+用着不顺手、遇到 bug 或者有想法，欢迎开 [Issue](https://github.com/Nininunz/OpenYoink/issues)。报 bug 时附上 macOS 版本、Clerestory 版本和复现步骤会很有帮助；截图前留意别带上私人文件或剪贴板内容。
 
 PR 也欢迎。改动比较大的话，先开个 Issue 聊聊；提交前请跑一遍完整的单元测试。
 
-## Star History
+## 上游项目的 Star 历史
 
 <a href="https://www.star-history.com/?repos=MuQY1818%2FOpenYoink&amp;type=date">
   <picture>
@@ -211,7 +121,7 @@ PR 也欢迎。改动比较大的话，先开个 Issue 聊聊；提交前请跑�
 
 ## 致谢与许可
 
-OpenYoink 以 [MIT License](LICENSE) 开源。它是个独立项目，和商业应用 Yoink 及其开发者没有关系。
+Clerestory 基于 weijue 和贡献者开发的 [OpenYoink](https://github.com/MuQY1818/OpenYoink)，采用 [MIT 许可证](LICENSE) 开源。
 
 自动更新靠 [Sparkle](https://sparkle-project.org/)，Star 趋势图来自 [Star History](https://www.star-history.com/)。用到的第三方组件和许可证见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。
 
