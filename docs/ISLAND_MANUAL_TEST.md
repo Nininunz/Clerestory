@@ -1,6 +1,6 @@
 # OpenYoink Island 真机验收
 
-当前统一面板的验收矩阵与验证记录见 [Unified Island panel](previews/unified-panel/README.md)。以下版本条目保留为历史记录；旧的侧边暂存架、无刘海胶囊和双布局说明不代表当前实现。
+当前实现见 [Panel and Notch architecture](PANEL_ARCHITECTURE.md)。最新预览可通过[模块预览生成器](../Scripts/README-previews.md)生成。以下版本条目保留为历史记录；旧的侧边暂存架、无刘海胶囊和双布局说明不代表当前实现。
 
 本清单只用于人工验收。自动验证限定为 `xcodebuild build` 和
 `xcodebuild test ... -only-testing:OpenYoinkTests`，不运行 UI 自动化。
