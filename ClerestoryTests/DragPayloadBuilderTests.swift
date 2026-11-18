@@ -4,16 +4,17 @@ import UniformTypeIdentifiers
 import XCTest
 @testable import OpenYoink
 
-/// DragPayloadBuilder 的策略映射 / stack 展开 / 各 kind 的表示集合断言。
+/// Strategy mapping / stack expansion / assertion of representations for each kind in DragPayloadBuilder.
 ///
-/// 表示集合经 `NSPasteboard.writeObjects` 写入真实（测试私有）pasteboard 后
-/// 断言其声明类型（advertised types）—— 与拖拽时 AppKit 走的路径一致，
-/// 即拖放目标实际看到的类型集合。拖拽会话本身（`beginDraggingSession`）需要
-/// 真实窗口与鼠标事件，列入手动回归清单。
+/// After the representation collection is written to the real (test private) pasteboard via
+/// `NSPasteboard.writeObjects`, assert its declared types (advertised types) — consistent with the path
+/// AppKit takes during dragging, i.e., the type collection actually seen by the drop target. The dragging
+/// session itself (`beginDraggingSession`) requires a real window and mouse event, to be included in
+/// manual regression checklist.
 ///
-/// 注：macOS 26 SDK 起 `NSItemProvider` 不具备 `NSPasteboardWriting` 一致性，
-/// 不能作为 drag writer；因此断言对象为 pasteboard advertised types 而非
-/// `registeredTypeIdentifiers`。
+/// Note: Starting with macOS 26 SDK, `NSItemProvider` does not have `NSPasteboardWriting` consistency, and
+/// cannot be used as a drag writer; therefore, the assertion object should be for pasteboard advertised
+/// types rather than `registeredTypeIdentifiers`.
 @MainActor
 final class DragPayloadBuilderTests: XCTestCase {
     private let bookmarkService = BookmarkService()
@@ -35,22 +36,22 @@ final class DragPayloadBuilderTests: XCTestCase {
         }
     }
 
-    /// 把 writer 写入测试 pasteboard，返回其声明的类型集合。
+    /// Write the writer to a test pasteboard and return the set of declared types.
     private func advertisedTypes(of writer: NSPasteboardWriting) -> [String] {
         let pasteboard = NSPasteboard(name: NSPasteboard.Name("OpenYoinkTests-\(UUID().uuidString)"))
         guard pasteboard.writeObjects([writer]) else { return [] }
         return pasteboard.types?.map(\.rawValue) ?? []
     }
 
-    /// 把 writer 写入测试 pasteboard 并返回该 pasteboard（供读回数据断言，
-    /// 与拖放目标的读取路径一致）。
+    /// Write the drag writer to a test pasteboard and return it so assertions can read the payload through
+    /// the same path as a drop target.
     private func writtenPasteboard(for writer: NSPasteboardWriting) -> NSPasteboard {
         let pasteboard = NSPasteboard(name: NSPasteboard.Name("OpenYoinkTests-\(UUID().uuidString)"))
         precondition(pasteboard.writeObjects([writer]), "writer 必须能写入 pasteboard")
         return pasteboard
     }
 
-    // MARK: - 纯函数：策略映射
+    // MARK: - Pure function: strategy mapping
 
     func testStrategy_kindMapping() {
         XCTAssertEqual(DragPayloadBuilder.strategy(for: makeItem(kind: .file)), .fileBacked)
@@ -77,7 +78,7 @@ final class DragPayloadBuilderTests: XCTestCase {
         ))
     }
 
-    // MARK: - 纯函数：stack 展开
+    // MARK: - Pure function: stack unwinding
 
     func testFlattenedItems_expandsStacksPreservingOrder() {
         let a = ShelfItem(kind: .file, path: "/tmp/a.txt", displayName: "a.txt")
@@ -98,19 +99,21 @@ final class DragPayloadBuilderTests: XCTestCase {
         let outer = ShelfItem(kind: .stack, displayName: "outer", children: [inner])
         let empty = ShelfItem(kind: .stack, displayName: "empty", children: [])
 
-        // 嵌套 stack 递归展开；空 stack 原样保留（交由 writer 构造判 nil 丢弃）。
+        // Unwind nested stack recursively; retain empty stack as-is (to be handled by writer construction
+        // to discard nil).
         let flat = DragPayloadBuilder.flattenedItems([outer, empty])
         XCTAssertEqual(flat.map(\.displayName), ["leaf.txt", "empty"])
     }
 
-    // MARK: - 纯函数：promisedFileType
+    // MARK: - Pure function: promisedFileType
 
     func testPromisedFileType_folderExtensionFallback() {
         let folder = ShelfItem(kind: .folder, path: "/tmp/docs", displayName: "docs")
         XCTAssertEqual(DragPayloadBuilder.promisedFileType(for: folder), UTType.folder.identifier)
 
-        // 与系统声明表对齐比较（macOS 26 起部分规范 UTI 如 public.pdf 已不再
-        // 声明，声明表可能返回 com.adobe.pdf 等其他已声明标识符）。
+        // Compare with the system declaration table (starting with macOS 26, some UTIs like public.pdf are
+        // no longer declared; the declaration table may return other declared identifiers like
+        // com.adobe.pdf).
         let text = ShelfItem(kind: .file, path: "/tmp/notes.txt", displayName: "notes.txt")
         XCTAssertEqual(DragPayloadBuilder.promisedFileType(for: text),
                        UTType(filenameExtension: "txt")?.identifier)
@@ -130,8 +133,8 @@ final class DragPayloadBuilderTests: XCTestCase {
         XCTAssertEqual(DragPayloadBuilder.promisedFileType(for: noPath), UTType.data.identifier)
     }
 
-    /// NSFilePromiseProvider 对非法 fileType 抛 NSException（不可捕获）——
-    /// promisedFileType 的输出必须符合 kUTTypeData/kUTTypeDirectory。
+    /// NSFilePromiseProvider throws an NSException for invalid fileType (non-catchable) — the output of
+    /// promisedFileType must conform to kUTTypeData/kUTTypeDirectory.
     func testPromisedFileType_alwaysConformsToDataOrDirectory() {
         let samples = [
             ShelfItem(kind: .file, path: "/tmp/a.txt", displayName: "a.txt"),
@@ -150,7 +153,7 @@ final class DragPayloadBuilderTests: XCTestCase {
         }
     }
 
-    // MARK: - 普通文件项：直接文件表示
+    // MARK: - Regular file item: direct file representation
 
     func testUnresolvableBookmarkDoesNotAdvertiseTheSavedPath() throws {
         let directory = FileManager.default.temporaryDirectory
@@ -255,14 +258,15 @@ final class DragPayloadBuilderTests: XCTestCase {
                       "图片项应声明 public.tiff 位图回退")
     }
 
-    // MARK: - 文本项
+    // MARK: - Text item
 
     func testTextItem_advertisesPlainText() throws {
         let item = ShelfItem(kind: .text, displayName: "note", text: "hello shelf")
         let writer = try XCTUnwrap(DragPayloadBuilder.makePasteboardWriter(for: item, bookmarkService: bookmarkService))
 
-        // NSPasteboardItem 只能写入一个 pasteboard（写第二次会抛异常）——
-        // 一次写入，同板断言声明类型与读回数据（读回路径与目标应用一致）。
+        // NSPasteboardItem can only be written to one pasteboard (writing a second time will throw an
+        // exception) — write once, assert declared types on the same board with read-back data (read-back
+        // path consistent with the target application).
         let pasteboard = writtenPasteboard(for: writer)
         let advertised = pasteboard.types?.map(\.rawValue) ?? []
         XCTAssertTrue(advertised.contains(UTType.utf8PlainText.identifier),
@@ -271,7 +275,7 @@ final class DragPayloadBuilderTests: XCTestCase {
         XCTAssertEqual(pasteboard.string(forType: .string), "hello shelf")
     }
 
-    // MARK: - URL 项
+    // MARK: - URL item
 
     func testURLItem_advertisesURLAndText_butNotFileURL() throws {
         let item = ShelfItem(kind: .url, displayName: "Apple", urlString: "https://www.apple.com")
@@ -283,14 +287,14 @@ final class DragPayloadBuilderTests: XCTestCase {
         XCTAssertTrue(advertised.contains(UTType.utf8PlainText.identifier))
         XCTAssertFalse(advertised.contains(UTType.fileURL.identifier),
                        "web URL 不得连带声明 public.file-url（错误表示）")
-        // 读回路径与目标应用一致（NSURL 读取 + 文本回退）。
+        // Read-back path consistent with the target application (NSURL reading + text fallback).
         XCTAssertEqual(pasteboard.string(forType: PasteboardTypes.url), "https://www.apple.com")
         XCTAssertEqual(pasteboard.string(forType: .string), "https://www.apple.com")
         let urls = try XCTUnwrap(pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL])
         XCTAssertEqual(urls, [URL(string: "https://www.apple.com")!])
     }
 
-    // MARK: - F-05 剪切项：只广告 promise 类型
+    // MARK: - F-05 Cut item: advertise only promise types
 
     func testCutItem_writerAdvertisesPromiseOnly_noFileURL() throws {
         var item = ShelfItem(kind: .file, path: "/tmp/report.pdf", displayName: "report.pdf")
@@ -308,7 +312,8 @@ final class DragPayloadBuilderTests: XCTestCase {
         let promiseTypes = NSFilePromiseReceiver.readableDraggedTypes
         XCTAssertTrue(advertised.contains { promiseTypes.contains($0) },
                       "剪切项必须保留 promise 类型（一切目的地必经 promise 写入）：\(advertised)")
-        // fileURL 表示不产出数据（双重防线：未声明，且请求也返回 nil）。
+        // fileURL representation does not produce data (double defense: not declared, and request also
+        // returns nil).
         XCTAssertNil(writer.pasteboardPropertyList(forType: .fileURL))
     }
 
@@ -345,7 +350,8 @@ final class DragPayloadBuilderTests: XCTestCase {
                        token)
     }
 
-    /// 交付确认挂接：剪切项 writer 的 promise 写入完成后经 sink 上报 item id。
+    /// Delivery confirmation attachment: After the promise of the writer is written, the item id is
+    /// reported by the sink.
     func testCutItem_deliverySink_reportsItemID() throws {
         let bookmarkService = BookmarkService()
         defer { bookmarkService.stopAccessingAll() }
@@ -386,27 +392,27 @@ final class DragPayloadBuilderTests: XCTestCase {
         XCTAssertEqual(try String(contentsOf: destination, encoding: .utf8), "cut content")
     }
 
-    // MARK: - 无法构造的项目
+    // MARK: - Unconstructable item
 
     func testInvalidItems_returnNilWriter() {
         XCTAssertNil(DragPayloadBuilder.makePasteboardWriter(
-            for: ShelfItem(kind: .text, displayName: "empty"), // 无 text
+            for: ShelfItem(kind: .text, displayName: "empty"), // No text
             bookmarkService: bookmarkService))
         XCTAssertNil(DragPayloadBuilder.makePasteboardWriter(
-            for: ShelfItem(kind: .url, displayName: "no url"), // 无 urlString
+            for: ShelfItem(kind: .url, displayName: "no url"), // No urlString
             bookmarkService: bookmarkService))
         XCTAssertNil(DragPayloadBuilder.makePasteboardWriter(
-            for: ShelfItem(kind: .url, displayName: "bad", urlString: "ht tp://bad url"), // 非法 URL
+            for: ShelfItem(kind: .url, displayName: "bad", urlString: "ht tp://bad url"), // Invalid URL
             bookmarkService: bookmarkService))
         XCTAssertNil(DragPayloadBuilder.makePasteboardWriter(
-            for: ShelfItem(kind: .file, displayName: "ghost"), // 无 path
+            for: ShelfItem(kind: .file, displayName: "ghost"), // No path
             bookmarkService: bookmarkService))
         XCTAssertNil(DragPayloadBuilder.makePasteboardWriter(
-            for: makeItem(kind: .stack), // stack 未展开
+            for: makeItem(kind: .stack), // Stack not expanded
             bookmarkService: bookmarkService))
     }
 
-    // MARK: - NSDraggingItem 组装（多选 / stack）
+    // MARK: - NSDraggingItem assembly (multiple selection / stack)
 
     func testMakeDraggingItems_multiSelection_producesOnePerItem() {
         let items = [
@@ -440,7 +446,7 @@ final class DragPayloadBuilderTests: XCTestCase {
     func testMakeDraggingItems_skipsUnbuildableItems() {
         let items = [
             ShelfItem(kind: .file, path: "/tmp/a.txt", displayName: "a.txt"),
-            ShelfItem(kind: .text, displayName: "empty"), // 无 text → nil writer
+            ShelfItem(kind: .text, displayName: "empty"), // No text → nil writer
         ]
         let draggingItems = DragPayloadBuilder.makeDraggingItems(
             for: items, frame: NSRect(x: 0, y: 0, width: 88, height: 100), bookmarkService: bookmarkService)

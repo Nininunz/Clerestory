@@ -1,11 +1,12 @@
 import XCTest
 @testable import OpenYoink
 
-/// C6: 拖入鼠标位置 → 网格插入下标的行列映射（DropInsertionLocator 纯逻辑）。
+/// C6: Drag into mouse position → grid insertion index row-column mapping (DropInsertionLocator pure
+/// logic).
 ///
-/// 测试网格：3 列自适应，卡片 100×64、间距 12 ——
-/// 行 0：indices 0/1/2，x = 0/112/224，y 0...64
-/// 行 1：indices 3/4，  x = 0/112，    y 76...140
+/// Test grid: 3 columns adaptive, card 100×64, spacing 12 ——
+/// Row 0: indices 0/1/2, x = 0/112/224, y 0...64
+/// Row 1: indices 3/4, x = 0/112, y 76...140
 final class DropInsertionLocatorTests: XCTestCase {
     @MainActor
     func testApproachZoneExitDoesNotClearExpandedDestinationHighlight() {
@@ -63,19 +64,20 @@ final class DropInsertionLocatorTests: XCTestCase {
                                                            frames: [], itemCount: 0), 0)
     }
 
-    /// 几何尚未上报（首帧布局前）回退追加末尾 —— S4 的既有行为。
+    /// Geometry not reported yet (before first frame layout) fallback append to end —— S4's existing
+    /// behavior.
     func testMissingFramesFallsBackToAppend() {
         XCTAssertEqual(DropInsertionLocator.insertionIndex(for: CGPoint(x: 10, y: 10),
                                                            frames: [], itemCount: 5), 5)
     }
 
     func testPointLeftOfFirstCardInsertsAtZero() {
-        // 点 (30, 32)：卡 0 中线 x=50 在右侧 → 插到卡 0 前。
+        // Point (30, 32): card 0's center x=50 on the right → insert before card 0.
         XCTAssertEqual(locate(30, 32), 0)
     }
 
     func testPointBetweenCardsInsertsAtNextCard() {
-        // 点 (105, 32)：越过卡 0 中线 (50)，未过卡 1 中线 (162) → 下标 1。
+        // Point (105, 32): crossed card 0's center (50), not crossed card 1's center (162) → index 1.
         XCTAssertEqual(locate(105, 32), 1)
     }
 
@@ -119,7 +121,8 @@ final class DropInsertionLocatorTests: XCTestCase {
     }
 
     func testPointRightOfRowEndInsertsAfterRow() {
-        // 点 (300, 32)：行 0 末卡 (index 2) 右侧 → 下标 3（下一行首卡位置）。
+        // Point (300, 32): right of last card in row 0 (index 2) → index 3 (first card position of next
+        // row).
         XCTAssertEqual(locate(300, 32), 3)
     }
 
@@ -152,28 +155,29 @@ final class DropInsertionLocatorTests: XCTestCase {
         XCTAssertEqual(trailing, 3)
     }
 
-    /// 末行末卡右侧 → itemCount（追加到末尾）。
+    /// Right of last card in last row → itemCount (append to end).
     func testLastRowEndAppends() {
         XCTAssertEqual(locate(300, 100), 5)
     }
 
-    /// 网格下方空白区不命中任何行 → 追加到末尾（Yoink 语义）。
+    /// Blank area below grid doesn't hit any row → append to end (Yoink semantics).
     func testBelowGridAppends() {
         XCTAssertEqual(locate(160, 300), 5)
     }
 
-    /// 首行之上（如标题栏区域）同样追加，不插到队首。
+    /// Above first row (e.g. title bar area) also append, not insert at front.
     func testAboveFirstRowAppends() {
         XCTAssertEqual(locate(160, -100), 5)
     }
 
-    /// 行间空隙归上一行（rowGapSlack 6pt）。
+    /// Row gap slack belongs to the upper row (rowGapSlack 6pt).
     func testRowGapBelongsToUpperRow() {
-        XCTAssertEqual(locate(30, 70), 0)   // 行 0 领地下缘 64+6=70，含边界
-        XCTAssertEqual(locate(30, 71), 3)   // 进入行 1 领地 (76-6=70 起)
+        XCTAssertEqual(locate(30, 70), 0)   // Bottom edge of row 0's territory 64+6=70, including boundary
+        XCTAssertEqual(locate(30, 71), 3)   // Enter row 1's territory (starting at 76-6=70)
     }
 
-    /// 部分卡片几何缺失（未上报）时按已有几何近似，不崩溃。
+    /// When partial card geometry is missing (not reported), approximate using existing geometry without
+    /// crashing.
     func testPartialFramesDegradeGracefully() {
         let partial = [(index: 3, frame: frame(0, 76)), (index: 4, frame: frame(112, 76))]
         XCTAssertEqual(DropInsertionLocator.insertionIndex(for: CGPoint(x: 30, y: 100),

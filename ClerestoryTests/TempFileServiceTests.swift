@@ -2,8 +2,9 @@ import Foundation
 import XCTest
 @testable import OpenYoink
 
-/// TempFileService 的按龄 staging 清理（评审 P1：promise 共享 staging 不在
-/// 回调中清理，由启动时按龄兜底）。
+/// Age-based staging cleanup of TempFileService (review P1: promise shared staging is not cleaned in
+/// callbacks,
+/// handled by age-based cleanup at startup).
 final class TempFileServiceTests: XCTestCase {
     private func makeTempDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
@@ -12,7 +13,7 @@ final class TempFileServiceTests: XCTestCase {
         return url
     }
 
-    /// 旧的 PromiseStaging 目录被删除，新建的与无关条目保留。
+    /// The old PromiseStaging directory is deleted, and new ones unrelated entries are retained.
     func testCleanupStaleStagingDirectories_removesOnlyOldStaging() throws {
         let directory = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -23,7 +24,7 @@ final class TempFileServiceTests: XCTestCase {
         let newStaging = try service.createPromiseStagingDirectory()
         let materializedFile = directory.appendingPathComponent("\(UUID().uuidString)-photo.png")
         try "x".write(to: materializedFile, atomically: true, encoding: .utf8)
-        // 把 oldStaging 的修改时间拨到两小时前。
+        // Set the modification time of oldStaging to two hours ago.
         let twoHoursAgo = Date().addingTimeInterval(-7200)
         try fileManager.setAttributes([.modificationDate: twoHoursAgo], ofItemAtPath: oldStaging.path)
 
@@ -34,7 +35,8 @@ final class TempFileServiceTests: XCTestCase {
         XCTAssertTrue(fileManager.fileExists(atPath: materializedFile.path), "非 staging 条目不受影响")
     }
 
-    /// 清理的删除范围不越出托管目录语义：非 PromiseStaging 前缀的目录一律不动。
+    /// The cleanup deletion scope does not exceed the hosted directory semantics: directories without the
+    /// PromiseStaging prefix are left untouched.
     func testCleanupStaleStagingDirectories_ignoresNonStagingDirectories() throws {
         let directory = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -82,8 +84,8 @@ final class TempFileServiceTests: XCTestCase {
         XCTAssertTrue(isDirectory.boolValue)
     }
 
-    /// 常规 orphan 清理必须跳过仍可能有异步写入的 staging；过期回收只由
-    /// cleanupStaleStagingDirectories 负责。
+    /// Regular orphan cleanup must skip staging directories that may still have asynchronous writes; stale
+    /// recovery is only handled by cleanupStaleStagingDirectories.
     func testCleanupOrphans_preservesPromiseStaging_butRemovesOrdinaryOrphan() throws {
         let directory = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }

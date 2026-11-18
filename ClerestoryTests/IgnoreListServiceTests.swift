@@ -1,8 +1,8 @@
 import XCTest
 @testable import OpenYoink
 
-/// IgnoreListService 纯匹配：命中 / 未命中 / 空列表 / 大小写与空白容错。
-/// （NSWorkspace 前台应用查询依赖运行中的 WindowServer，不在无头单测覆盖。）
+/// IgnoreListService exact match: Hit / Miss / Empty list / Case and whitespace tolerance.
+/// (NSWorkspace foreground app query depends on running WindowServer, not covered in headless unit tests.)
 final class IgnoreListServiceTests: XCTestCase {
     func testExactMatch_isIgnored() {
         XCTAssertTrue(IgnoreListService.isIgnored(bundleID: "com.apple.Safari",

@@ -38,7 +38,7 @@ final class StorageManagementControllerTests: XCTestCase {
         XCTAssertEqual(store.items.map(\.displayName), ["old"])
         XCTAssertEqual(persistence.load().map(\.displayName), ["old"])
         XCTAssertNil(controller.errorMessage)
-        // 恢复前的 current 被 saveNow 反向保存在同一个 backup，可再次撤回。
+        // The current before restoration is savedNow in reverse in the same backup, can be reverted again.
         let undo = try XCTUnwrap(controller.latestRecoverableSnapshot)
         XCTAssertEqual(try persistence.loadRecoverySnapshot(undo).map(\.displayName), ["current"])
     }

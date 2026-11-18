@@ -1,7 +1,7 @@
 import XCTest
 @testable import OpenYoink
 
-/// issue #10：拉环 ↔ 面板形变起点（玻璃面局部坐标，左上原点）。
+/// Issue #10: Pull ring ↔ panel deformation start point (glass face local coordinates, top-left origin).
 final class ShelfRevealGeometryTests: XCTestCase {
     private let visible = CGRect(x: 0, y: 0, width: 1440, height: 900)
     private let inset: CGFloat = 8

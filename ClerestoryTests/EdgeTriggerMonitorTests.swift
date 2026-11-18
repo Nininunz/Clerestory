@@ -2,7 +2,8 @@ import CoreGraphics
 import XCTest
 @testable import OpenYoink
 
-/// 边缘触发纯逻辑：触发带判定（isInsideEdgeBand）与停留跟踪（EdgeDwellTracker）。
+/// Edge trigger pure logic: trigger with condition (isInsideEdgeBand) and dwell tracking
+/// (EdgeDwellTracker).
 final class EdgeTriggerMonitorTests: XCTestCase {
     // MARK: - Current-gesture file drag gate
 
@@ -46,14 +47,14 @@ final class EdgeTriggerMonitorTests: XCTestCase {
     private let frame = CGRect(x: 0, y: 0, width: 1000, height: 800)
 
     func testBand_rightSide_insideAtAndBeyondBoundary() {
-        // 右缘带 [maxX-4, maxX]，边界值本身算在内。
+        // Right edge band [maxX-4, maxX], boundary values are included.
         XCTAssertTrue(EdgeTriggerMonitor.isInsideEdgeBand(CGPoint(x: 999.5, y: 400),
                                                           screenFrame: frame, side: .right, bandWidth: 4))
         XCTAssertTrue(EdgeTriggerMonitor.isInsideEdgeBand(CGPoint(x: 996, y: 400),
                                                           screenFrame: frame, side: .right, bandWidth: 4))
         XCTAssertFalse(EdgeTriggerMonitor.isInsideEdgeBand(CGPoint(x: 995.9, y: 400),
                                                            screenFrame: frame, side: .right, bandWidth: 4))
-        // 左侧不在右缘带内。
+        // Left side is not within the right edge band.
         XCTAssertFalse(EdgeTriggerMonitor.isInsideEdgeBand(CGPoint(x: 0.5, y: 400),
                                                            screenFrame: frame, side: .right, bandWidth: 4))
     }
@@ -75,7 +76,7 @@ final class EdgeTriggerMonitorTests: XCTestCase {
     }
 
     func testBand_customPosition_neverInside() {
-        // S9: custom 位置无贴附缘，屏幕任何点都不命中。
+        // S9: custom position has no attachment edge, no hit on any point of the screen.
         XCTAssertFalse(EdgeTriggerMonitor.isInsideEdgeBand(CGPoint(x: 999.5, y: 400),
                                                            screenFrame: frame, side: .custom, bandWidth: 4))
         XCTAssertFalse(EdgeTriggerMonitor.isInsideEdgeBand(CGPoint(x: 0.5, y: 400),
@@ -83,7 +84,8 @@ final class EdgeTriggerMonitorTests: XCTestCase {
     }
 
     func testBand_nonZeroOriginScreen() {
-        // 副屏（原点非 0）：带判定基于屏幕 frame 而非固定坐标。
+        // Secondary screen (origin is not 0): band condition is based on screen frame rather than fixed
+        // coordinates.
         let secondScreen = CGRect(x: 1000, y: 0, width: 1440, height: 900)
         XCTAssertTrue(EdgeTriggerMonitor.isInsideEdgeBand(CGPoint(x: 2438, y: 100),
                                                           screenFrame: secondScreen, side: .right, bandWidth: 4))
@@ -95,14 +97,14 @@ final class EdgeTriggerMonitorTests: XCTestCase {
 
     func testDwell_firesOnlyAfterThreshold() {
         var tracker = EdgeDwellTracker(dwellTime: 0.5)
-        XCTAssertFalse(tracker.addSample(isInside: true, at: 0.0)) // 进入，开始计时
+        XCTAssertFalse(tracker.addSample(isInside: true, at: 0.0)) // Enter, start timing
         XCTAssertFalse(tracker.addSample(isInside: true, at: 0.2))
         XCTAssertFalse(tracker.addSample(isInside: true, at: 0.49))
         XCTAssertTrue(tracker.addSample(isInside: true, at: 0.5))
     }
 
     func testDwell_exactBoundaryCounts() {
-        // 停留时长恰好等于阈值（>= 判定）即触发。
+        // Stay duration exactly equals the threshold (>= trigger) will activate.
         var tracker = EdgeDwellTracker(dwellTime: 0.5)
         XCTAssertFalse(tracker.addSample(isInside: true, at: 1.0))
         XCTAssertTrue(tracker.addSample(isInside: true, at: 1.5))
@@ -112,8 +114,8 @@ final class EdgeTriggerMonitorTests: XCTestCase {
         var tracker = EdgeDwellTracker(dwellTime: 0.5)
         XCTAssertFalse(tracker.addSample(isInside: true, at: 0.0))
         XCTAssertFalse(tracker.addSample(isInside: true, at: 0.3))
-        XCTAssertFalse(tracker.addSample(isInside: false, at: 0.4)) // 离开：计时清零
-        XCTAssertFalse(tracker.addSample(isInside: true, at: 0.5)) // 重新进入
+        XCTAssertFalse(tracker.addSample(isInside: false, at: 0.4)) // Leave: timing resets
+        XCTAssertFalse(tracker.addSample(isInside: true, at: 0.5)) // Re-enter
         XCTAssertFalse(tracker.addSample(isInside: true, at: 0.9)) // 0.4s < 0.5s
         XCTAssertTrue(tracker.addSample(isInside: true, at: 1.0))
     }
@@ -122,10 +124,11 @@ final class EdgeTriggerMonitorTests: XCTestCase {
         var tracker = EdgeDwellTracker(dwellTime: 0.5)
         XCTAssertFalse(tracker.addSample(isInside: true, at: 0.0))
         XCTAssertTrue(tracker.addSample(isInside: true, at: 0.6))
-        // 停留在带内不重复触发（防止 shelf 被隐藏后光标未动又立刻唤出）。
+        // Stay within the shelf without repeated triggering (prevent shelf from being hidden again if
+        // cursor doesn't move after it's hidden).
         XCTAssertFalse(tracker.addSample(isInside: true, at: 0.7))
         XCTAssertFalse(tracker.addSample(isInside: true, at: 5.0))
-        // 离开后重新进入才可再次触发。
+        // Trigger can only happen again after leaving and re-entering.
         XCTAssertFalse(tracker.addSample(isInside: false, at: 5.1))
         XCTAssertFalse(tracker.addSample(isInside: true, at: 5.2))
         XCTAssertTrue(tracker.addSample(isInside: true, at: 5.8))

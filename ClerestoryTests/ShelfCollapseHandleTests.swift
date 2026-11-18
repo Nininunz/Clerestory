@@ -1,8 +1,9 @@
 import XCTest
 @testable import OpenYoink
 
-/// 任务三：shelf 内缘收起把手的侧判定纯逻辑（`ShelfLayoutEngine.innerEdgeHandleSide`）。
-/// 把手总在 shelf 朝向屏幕中心的内缘；custom 自由位置无贴附缘，不显示把手。
+/// Task three: shelf inner edge handle side logic (ShelfLayoutEngine.innerEdgeHandleSide). The handle is
+/// always on the inner edge of the shelf facing the screen center; custom free position has no attached
+/// edge, and the handle is not displayed.
 final class ShelfCollapseHandleTests: XCTestCase {
     func testHandleSide_rightAnchoredShelf_placesHandleOnLeadingEdge() {
         XCTAssertEqual(ShelfLayoutEngine.innerEdgeHandleSide(for: .right), .leading)
@@ -16,8 +17,9 @@ final class ShelfCollapseHandleTests: XCTestCase {
         XCTAssertNil(ShelfLayoutEngine.innerEdgeHandleSide(for: .custom))
     }
 
-    /// 把手宽度必须 ≤ 面板边距带（外层 8pt + 内容 8pt padding）——它以覆盖层
-    /// 形式放在边距带内，不挤占网格宽度（列数推算与卡片坐标系不受污染的约束）。
+    /// Handle width must be ≤ panel margin band (outer 8pt + content 8pt padding) — it is placed as a
+    /// overlay within the margin band, not taking up grid width (column count calculation and card
+    /// coordinate system are not polluted).
     func testHandleWidth_fitsInsidePanelMarginBand() {
         XCTAssertEqual(ShelfLayoutEngine.innerEdgeHandleWidth, 10)
         XCTAssertLessThanOrEqual(ShelfLayoutEngine.innerEdgeHandleWidth, 16)

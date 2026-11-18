@@ -3,14 +3,14 @@ import Synchronization
 import XCTest
 @testable import OpenYoink
 
-/// FilePromiseProvider 的写入逻辑：用临时目录真实文件直接调 `writeCopy` 与
-/// delegate 方法验证。真实拖拽会话链路（目标应用触发 writePromiseTo）列入
-/// 手动回归清单（Finder / 浏览器上传测试页 / Mail）。
+/// Write logic of FilePromiseProvider: Use temporary directory real files to directly call `writeCopy` and
+/// delegate methods for verification. Real drag-and-drop session chain (target app triggers
+/// writePromiseTo) is listed in manual regression checklist (Finder / browser upload test page / Mail).
 ///
-/// 测试类为 @MainActor（provider/AppKit 对象隔离一致），故不使用
-/// setUp/tearDown（XCTestCase 的这两个 override 是非隔离的，访问 MainActor
-/// 状态会产生告警）——每个用例就地构造 fixtures 并用 defer 清理；
-/// `writeCopy` 本身是非隔离纯函数。
+/// Test class is @MainActor (provider/AppKit objects isolated consistently), so not using setUp/tearDown
+/// (XCTestCase's overrides are non-isolated, accessing MainActor state will trigger warnings) — each test
+/// case constructs fixtures in place and cleans up with defer; `writeCopy` itself is a non-isolated pure
+/// function.
 @MainActor
 final class FilePromiseProviderTests: XCTestCase {
     // MARK: - Helpers
@@ -179,12 +179,12 @@ final class FilePromiseProviderTests: XCTestCase {
         XCTAssertFalse(queue === OperationQueue.main, "promise 写入不得在主队列")
     }
 
-    /// 回归（真机闪退修复）：目标应用请求 promise 内容时，系统经
-    /// `NSFileProviderXPCMessenger` 在**自己的 XPC 队列**同步调 delegate——
-    /// delegate 必须是 nonisolated，否则模块默认 MainActor 隔离会在非主队列
-    /// 触发 `_dispatch_assert_queue_fail`（拖到 QSpace Pro 必现的 SIGTRAP）。
-    /// 用后台队列同步调用两个 delegate 方法复现该场景（GCD `sync` 闭包不
-    /// 逃逸，无 Sendable 约束；若 delegate 带 MainActor 隔离此处必崩）。
+    /// Regression (real device crash fix): When the target app requests promise content, the system
+    /// synchronously calls delegate via `NSFileProviderXPCMessenger` on **its own XPC queue** — delegate
+    /// must be nonisolated, otherwise module default MainActor isolation will trigger
+    /// `_dispatch_assert_queue_fail` (SIGTRAP when dragging to QSpace Pro). Use background queue
+    /// synchronous call to two delegate methods to reproduce this scenario (GCD `sync` closure does not
+    /// escape, no Sendable constraint; if delegate has MainActor isolation, it will crash).
     func testDelegate_methodsCallableFromBackgroundQueue() {
         let provider = FilePromiseProvider(
             payload: makePayload(sourceURL: URL(fileURLWithPath: "/tmp/bg.txt"),
@@ -209,8 +209,8 @@ final class FilePromiseProviderTests: XCTestCase {
         let provider = FilePromiseProvider(payload: makePayload(sourceURL: source),
                                            bookmarkService: bookmarkService)
 
-        // delegate 方法的实现是同步写（真实会话中 AppKit 在写队列上调用它），
-        // 测试中直接同步调用即可断言回调结果。
+        // Delegate method implementation is synchronous write (AppKit calls it on write queue in real
+        // session), directly synchronous call in test to assert callback result.
         let completionError = Mutex<Error??>(nil)
         provider.delegate?.filePromiseProvider(provider, writePromiseTo: destination) { error in
             completionError.withLock { $0 = error }
@@ -247,7 +247,7 @@ final class FilePromiseProviderTests: XCTestCase {
                         "写失败必须上报 onError（预留 UI 订阅）")
     }
 
-    // MARK: - 直接文件 writer / promise-only provider
+    // MARK: - Direct file writer / promise-only provider
 
     func testDirectFileWriter_serializesFileURLAndChromiumFilenameList() {
         let source = URL(fileURLWithPath: "/tmp/OpenYoink 示例.txt")
@@ -298,7 +298,7 @@ final class FilePromiseProviderTests: XCTestCase {
         XCTAssertEqual(requestCount.withLock { $0 }, 1)
     }
 
-    /// F-05: 托管剪切项的 provider 永远只声明 promise 类型。
+    /// F-05: Provider hosting cut items always declares promise type only.
     func testFilePromiseProvider_alwaysAdvertisesPromiseOnly() {
         let provider = FilePromiseProvider(
             payload: makePayload(sourceURL: URL(fileURLWithPath: "/tmp/hello.txt")),
@@ -314,7 +314,7 @@ final class FilePromiseProviderTests: XCTestCase {
         XCTAssertTrue(types.contains { NSFilePromiseReceiver.readableDraggedTypes.contains($0.rawValue) })
     }
 
-    /// F-05: 写入完成回调携带目标 URL（剪切项的交付确认）。
+    /// F-05: Write completion callback carries target URL (cut item delivery confirmation).
     func testDelegate_writePromiseTo_successCallsOnDeliveredWithDestination() throws {
         let bookmarkService = BookmarkService()
         defer { bookmarkService.stopAccessingAll() }
@@ -335,7 +335,7 @@ final class FilePromiseProviderTests: XCTestCase {
         XCTAssertEqual(deliveredURL.withLock { $0 }, destination)
     }
 
-    /// F-05: 写入失败不触发交付确认（只走 onError）。
+    /// F-05: Write failure does not trigger delivery confirmation (only onError).
     func testDelegate_writePromiseTo_failureDoesNotCallOnDelivered() throws {
         let bookmarkService = BookmarkService()
         defer { bookmarkService.stopAccessingAll() }

@@ -1,12 +1,12 @@
 import XCTest
 @testable import OpenYoink
 
-/// SettingsStore 的 S8 面：通用设置持久化往返、可清除的快捷键
-/// （Optional：键缺失 → 默认；持久化 null → 明确清除），以及忽略列表
-/// 编辑 helper（去重/裁剪/移除）。
+/// S8 face of SettingsStore: persistent round-trip for general settings, clearable shortcuts (Optional:
+/// key missing → default; persistent null → clear explicitly), and ignore list editing helper
+/// (deduplicate, trim, remove).
 @MainActor
 final class SettingsStoreTests: XCTestCase {
-    /// 独立 UserDefaults suite，避免污染应用自身的设置。
+    /// Independent UserDefaults suite to avoid polluting the app's own settings.
     private func makeSuite() throws -> (defaults: UserDefaults, name: String) {
         let name = "OpenYoinkTests-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
@@ -463,8 +463,8 @@ final class SettingsStoreTests: XCTestCase {
         let store = SettingsStore(defaults: defaults)
         store.hotKeyShortcut = nil
 
-        // 「清除」必须作为显式状态持久化（编码为 JSON null），而不是
-        // 回退成默认快捷键。
+        // ‘Clear’ must be an explicit state persistence (encoded as JSON null), not fallback to default
+        // shortcuts.
         let reloaded = SettingsStore(defaults: defaults)
         XCTAssertNil(reloaded.hotKeyShortcut)
     }
@@ -492,7 +492,7 @@ final class SettingsStoreTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: name) }
 
         let store = SettingsStore(defaults: defaults)
-        // 默认垂直居中（保持旧版视觉）、拉环默认开。
+        // Default vertical centering (maintain old visual appearance), pull ring default on.
         XCTAssertEqual(store.shelfEdgeOffset, 0.5)
         XCTAssertTrue(store.edgeTabEnabled)
     }
