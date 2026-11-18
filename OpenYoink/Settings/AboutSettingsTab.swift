@@ -8,17 +8,10 @@ struct AboutSettingsTab: View {
     @Environment(SupportController.self) private var support
     @State private var didCopyDiagnostics = false
 
-    private var versionString: String {
-        let info = Bundle.main.infoDictionary
-        let version = info?["CFBundleShortVersionString"] as? String ?? String(localized: "Unknown")
-        let build = info?["CFBundleVersion"] as? String ?? ""
-        return build.isEmpty ? version : "\(version) (\(build))"
-    }
-
     var body: some View {
         SettingsForm {
             Section {
-                LabeledContent("Version", value: versionString)
+                LabeledContent("Version", value: AppBuildInfo.versionString)
                 LabeledContent("License", value: "MIT")
             }
 
