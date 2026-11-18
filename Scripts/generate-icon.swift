@@ -8,7 +8,7 @@ let scriptURL = URL(fileURLWithPath: #filePath).standardizedFileURL
 let repoRoot = scriptURL.deletingLastPathComponent().deletingLastPathComponent()
 let masterURL = repoRoot.appendingPathComponent("Scripts/AppIcon-master.png")
 let iconsetURL = repoRoot
-    .appendingPathComponent("OpenYoink/Resources/Assets.xcassets/AppIcon.appiconset")
+    .appendingPathComponent("Clerestory/Resources/Assets.xcassets/AppIcon.appiconset")
 
 guard FileManager.default.fileExists(atPath: masterURL.path) else {
     fatalError("Master artwork missing: \(masterURL.path)")

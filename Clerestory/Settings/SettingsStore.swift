@@ -1,5 +1,5 @@
 import Foundation
-import OpenYoinkModuleCore
+import ClerestoryModuleCore
 
 /// Side Shelf is parked until its next implementation. Keep its code and
 /// persisted preferences, but expose only the Island in the current app.

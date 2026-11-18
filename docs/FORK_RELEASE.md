@@ -15,7 +15,7 @@ Clerestory is maintained in [Nininunz/Clerestory](https://github.com/Nininunz/Cl
 
 The app uses its own bundle ID and feed path. The signing Keychain account continues to identify the existing Sparkle key. New appcast entries use `Nininunz/Clerestory` release download URLs. The account Pages repo also hosts the legacy Help redirect and feed.
 
-The public Sparkle Ed25519 key lives in [Info.plist](../OpenYoink/App/Info.plist). The matching private key stays in the maintainer’s Keychain. Back it up securely outside the repository. The release script checks the public key against the Keychain account before building and signs the final DMG with that account. Upstream OpenYoink releases use a different key and feed.
+The public Sparkle Ed25519 key lives in [Info.plist](../Clerestory/App/Info.plist). The matching private key stays in the maintainer’s Keychain. Back it up securely outside the repository. The release script checks the public key against the Keychain account before building and signs the final DMG with that account. Upstream OpenYoink releases use a different key and feed.
 
 ## Signing setup
 

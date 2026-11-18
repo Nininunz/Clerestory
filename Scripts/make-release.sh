@@ -115,7 +115,7 @@ fi
 echo "==> sign_update: $SIGN_UPDATE"
 
 # Refuse to publish with a different Keychain key than the one trusted by the app.
-EXPECTED_PUBLIC_KEY="$(/usr/libexec/PlistBuddy -c 'Print SUPublicEDKey' OpenYoink/App/Info.plist)"
+EXPECTED_PUBLIC_KEY="$(/usr/libexec/PlistBuddy -c 'Print SUPublicEDKey' Clerestory/App/Info.plist)"
 ACTUAL_PUBLIC_KEY="$("$SPARKLE_BIN/generate_keys" --account com.nininunz.OpenYoink -p)"
 if [ "$EXPECTED_PUBLIC_KEY" != "$ACTUAL_PUBLIC_KEY" ]; then
     echo "error: Fork Sparkle signing key does not match Info.plist." >&2

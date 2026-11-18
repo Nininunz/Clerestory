@@ -109,7 +109,7 @@ See the [documentation index](docs/README.md) for architecture, testing, preview
 
 Run `python3 Scripts/tree.py` from the repository root to list the source layout, including new files that Git does not ignore. The output omits ignored build artifacts and local configuration.
 
-Use `python3 Scripts/tree.py OpenYoink/Island --depth 2` to show one directory and up to two levels beneath it. Paths in the output stay relative to the repository root.
+Use `python3 Scripts/tree.py Clerestory/Island --depth 2` to show one directory and up to two levels beneath it. Paths in the output stay relative to the repository root.
 
 Run `Scripts/doctor.sh` to check the active Xcode, macOS SDK, and local build and test tools. Add `--release` to also check Developer ID signing, Sparkle tools, and notarization access. The release check contacts Apple without uploading a build or printing credentials.
 
