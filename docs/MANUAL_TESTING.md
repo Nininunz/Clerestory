@@ -37,6 +37,8 @@ With hover reveal off, drag a test file and selected text toward the Panel trigg
 
 Treat file loss, silent overwrites, or unrecoverable failed transfers as release blockers.
 
+Run `Scripts/diagnostics/verify-shelf-volume-availability.sh` to check eject and reconnect with a disposable APFS disk image. It reloads a saved Shelf item in a fresh process and verifies that the volume stays ejected until explicitly reattached. Use a physical removable drive separately when validating hardware behavior.
+
 ## Panel, Notch, and keyboard
 
 - On a built-in notched display with an external screen attached, trigger the Panel from each display using hover, click, keyboard, and drag. Confirm the Notch stays on the built-in display. Verify the Panel stays on the triggering display while open and falls back to a visible location on disconnect. Repeat across different scaling settings, Spaces, full-screen windows, and display reconnect.

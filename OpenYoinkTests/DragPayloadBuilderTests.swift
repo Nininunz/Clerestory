@@ -152,6 +152,62 @@ final class DragPayloadBuilderTests: XCTestCase {
 
     // MARK: - 普通文件项：直接文件表示
 
+    func testUnresolvableBookmarkDoesNotAdvertiseTheSavedPath() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("OpenYoinkTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let replacement = directory.appendingPathComponent("report.txt")
+        try Data("unrelated replacement file".utf8).write(to: replacement)
+        let item = ShelfItem(kind: .file,
+                             path: replacement.path,
+                             bookmark: Data("unresolvable bookmark".utf8),
+                             displayName: replacement.lastPathComponent)
+
+        XCTAssertNil(DragPayloadBuilder.makePasteboardWriter(for: item, bookmarkService: bookmarkService))
+        XCTAssertEqual(try Data(contentsOf: replacement), Data("unrelated replacement file".utf8))
+    }
+
+    func testMixedDragRemovalKeepsTheItemThatCouldNotBeRepresented() throws {
+        let suite = "OpenYoinkTests-SkippedDrag-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer {
+            defaults.removePersistentDomain(forName: suite)
+            try? FileManager.default.removeItem(at: directory)
+        }
+        let source = directory.appendingPathComponent("available.txt")
+        let original = Data("copy only".utf8)
+        try original.write(to: source)
+        let available = ShelfItem(kind: .file, path: source.path, displayName: source.lastPathComponent)
+        let skipped = ShelfItem(kind: .file,
+                                path: directory.appendingPathComponent("offline.txt").path,
+                                bookmark: Data("unresolvable bookmark".utf8),
+                                displayName: "offline.txt")
+        let selected = DragOutContents(items: [available, skipped], topLevelIDs: [available.id, skipped.id])
+        let represented = DragPayloadBuilder.makeDraggingItems(
+            for: selected.items,
+            frame: CGRect(x: 0, y: 0, width: 88, height: 100),
+            bookmarkService: bookmarkService
+        )
+        let settings = SettingsStore(defaults: defaults)
+        settings.dragOutRemovalPolicy = .remove
+        let store = ShelfStore(items: selected.items)
+        let recents = RecentItemsService(directoryURL: directory)
+        let session = DragSessionController(
+            contents: selected.restrictingToRepresentedItems(represented.map(\.item)),
+            store: store,
+            settings: settings,
+            recents: recents
+        )
+        session.completeDrag(operation: .copy)
+
+        XCTAssertEqual(store.items, [skipped])
+        XCTAssertEqual(recents.entries.map(\.path), [source.path])
+        XCTAssertEqual(try Data(contentsOf: source), original)
+    }
+
     func testFileItem_writerAdvertisesFileURLAndChromiumFilenameList() throws {
         let item = ShelfItem(kind: .file, path: "/tmp/report.pdf", displayName: "report.pdf")
         let writer = try XCTUnwrap(DragPayloadBuilder.makePasteboardWriter(for: item, bookmarkService: bookmarkService))
@@ -363,7 +419,7 @@ final class DragPayloadBuilderTests: XCTestCase {
         let draggingItems = DragPayloadBuilder.makeDraggingItems(for: items, frame: frame, bookmarkService: bookmarkService)
 
         XCTAssertEqual(draggingItems.count, 3)
-        for draggingItem in draggingItems {
+        for (_, draggingItem) in draggingItems {
             XCTAssertEqual(draggingItem.draggingFrame, frame)
         }
     }

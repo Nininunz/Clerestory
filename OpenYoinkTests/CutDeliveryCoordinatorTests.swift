@@ -85,11 +85,19 @@ final class DeliveryCoordinatorTests: XCTestCase {
         defer { context.cleanup() }
         let item = try makeCutItem(in: &context)
         context.store.add(item)
-        let destination = FileManager.default.temporaryDirectory.appendingPathComponent("delivered-\(UUID().uuidString).txt")
+        let destination = try XCTUnwrap(context.temporaryURLs.first).appendingPathComponent("delivered.txt")
+        let source = try XCTUnwrap(item.fileURL)
         let sessionID = beginSession(context, items: [item])
 
         context.coordinator.noteSessionEnded(id: sessionID, accepted: true)
         XCTAssertNotNil(context.store.item(withID: item.id), "交付确认前不移除")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
+        try FilePromiseProvider.writeCopy(
+            of: .init(sourceURL: source, bookmark: item.bookmark,
+                      suggestedName: item.displayName, promisedFileType: "public.plain-text"),
+            to: destination,
+            bookmarkService: BookmarkService()
+        )
         context.coordinator.noteDelivered(sessionID: sessionID,
                                           itemID: item.id,
                                           destination: destination)
@@ -97,6 +105,7 @@ final class DeliveryCoordinatorTests: XCTestCase {
         XCTAssertNil(context.store.item(withID: item.id), "交付后 item 必须离架")
         XCTAssertFalse(FileManager.default.fileExists(atPath: item.fileURL!.path),
                        "交付后保管副本必须删除")
+        XCTAssertEqual(try Data(contentsOf: destination), Data("managed content".utf8))
         let entry = try XCTUnwrap(context.recents.entries.first)
         XCTAssertEqual(entry.displayName, item.displayName)
         XCTAssertEqual(entry.path, destination.path, "最近历史记录交付目标路径（保管副本已删）")
@@ -152,10 +161,21 @@ final class DeliveryCoordinatorTests: XCTestCase {
         let sessionID = beginSession(context, items: [item])
 
         context.coordinator.noteSessionEnded(id: sessionID, accepted: true)
+        let source = try XCTUnwrap(item.fileURL)
+        let destination = try XCTUnwrap(context.temporaryURLs.first).appendingPathComponent("already-exists.txt")
+        let existingContents = Data("existing destination contents".utf8)
+        try existingContents.write(to: destination)
+        XCTAssertThrowsError(try FilePromiseProvider.writeCopy(
+            of: .init(sourceURL: source, bookmark: item.bookmark,
+                      suggestedName: item.displayName, promisedFileType: "public.plain-text"),
+            to: destination,
+            bookmarkService: BookmarkService()
+        ))
         context.coordinator.noteFailed(sessionID: sessionID, itemID: item.id)
 
         XCTAssertNotNil(context.store.item(withID: item.id))
-        XCTAssertTrue(FileManager.default.fileExists(atPath: item.fileURL!.path))
+        XCTAssertEqual(try Data(contentsOf: source), Data("managed content".utf8))
+        XCTAssertEqual(try Data(contentsOf: destination), existingContents)
         if case .failed(let failure) = context.transferStore.currentTask?.phase {
             XCTAssertEqual(failure.reason, .deliveryFailed)
             XCTAssertEqual(failure.recoveryAction, .retryByDraggingOut(itemID: item.id))
