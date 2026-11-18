@@ -13,7 +13,7 @@ assert info["SUFeedURL"] == feed_url
 assert len(base64.b64decode(info["SUPublicEDKey"], validate=True)) == 32
 assert info["SUPublicEDKey"] != "fjAcTFLXwbNHK8rgG6ecCzWjZIDZc/BKo0AFAYVW968="
 
-project = (root / "Open-Yoink.xcodeproj/project.pbxproj").read_text()
+project = (root / "Clerestory.xcodeproj/project.pbxproj").read_text()
 identifiers = re.findall(r"PRODUCT_BUNDLE_IDENTIFIER = ([^;]+);", project)
 assert set(identifiers) == {
     "com.nininunz.Clerestory",

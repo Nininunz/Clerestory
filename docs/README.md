@@ -17,3 +17,4 @@
 
 - [First fork release, 1.0.0 (55)](releases/first-fork-release.md) records the original public release.
 - [November 17, 2026 release validation](releases/validation-2026-11-17.md) records the candidate builds, tests, and results from that release cycle.
+- [Clerestory 1.0.5 (60) validation](releases/validation-1.0.5.md) records signing, launch, and Sparkle checks, with clean-account validation pending.
