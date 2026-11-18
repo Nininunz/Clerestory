@@ -35,7 +35,7 @@ def main():
         handled = set()
         try:
             with (output / 'build.log').open('w') as log:
-                process = subprocess.Popen(['xcodebuild', 'test', '-quiet', '-project', 'Open-Yoink.xcodeproj',
+                process = subprocess.Popen(['xcodebuild', 'test', '-quiet', '-project', 'Clerestory.xcodeproj',
                     '-scheme', 'Clerestory', '-destination', 'platform=macOS', '-derivedDataPath', '/tmp/openyoink-derived',
                     '-only-testing:ClerestoryTests/IslandModulePreviewTests', 'CODE_SIGNING_ALLOWED=NO'], cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)
                 while process.poll() is None:

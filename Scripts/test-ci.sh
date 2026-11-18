@@ -20,7 +20,7 @@ swift test --package-path Packages/OpenYoinkModuleCore \
   2>&1 | tee "$output_dir/module-core.log"
 
 common=(
-  -project Open-Yoink.xcodeproj
+  -project Clerestory.xcodeproj
   -scheme Clerestory
   -destination "platform=macOS,arch=$(uname -m)"
   -derivedDataPath "$output_dir/DerivedData"

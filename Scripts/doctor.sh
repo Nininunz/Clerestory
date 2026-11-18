@@ -69,7 +69,7 @@ check_toolchain() {
 }
 
 check_release() {
-    local node_version identities sparkle_bin name
+    local node_version identities sparkle_bin name candidate
     if [[ -f Scripts/release-signing.local ]] && ! source Scripts/release-signing.local >/dev/null 2>&1; then
         fail 'Could not load Scripts/release-signing.local.'
     fi
@@ -103,8 +103,12 @@ check_release() {
 
     sparkle_bin=${SPARKLE_BIN:-}
     if [[ -z "$sparkle_bin" ]]; then
-        set -- "$HOME"/Library/Developer/Xcode/DerivedData/Open-Yoink-*/SourcePackages/artifacts/sparkle/Sparkle/bin
-        sparkle_bin=$1
+        for candidate in "$HOME"/Library/Developer/Xcode/DerivedData/{Clerestory,Open-Yoink}-*/SourcePackages/artifacts/sparkle/Sparkle/bin; do
+            if [[ -x "$candidate/sign_update" ]]; then
+                sparkle_bin=$candidate
+                break
+            fi
+        done
     fi
     if [[ -x "$sparkle_bin/sign_update" ]]; then
         pass 'Sparkle sign_update is available'

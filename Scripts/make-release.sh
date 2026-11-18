@@ -58,7 +58,7 @@ if [ -n "$BUILD_NUMBER" ] && [[ ! "$BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
     exit 1
 fi
 
-PROJECT="Open-Yoink.xcodeproj"
+PROJECT="Clerestory.xcodeproj"
 SCHEME="Clerestory"
 ARCHIVE_PATH="export/Clerestory.xcarchive"
 APP_PATH="export/Clerestory.app"
@@ -102,7 +102,13 @@ fi
 
 # ---- 定位 Sparkle 命令行工具（sign_update）----
 if [ -z "${SPARKLE_BIN:-}" ]; then
-    SPARKLE_BIN="$(ls -d "$HOME"/Library/Developer/Xcode/DerivedData/Open-Yoink-*/SourcePackages/artifacts/sparkle/Sparkle/bin 2>/dev/null | head -1 || true)"
+    SPARKLE_BIN=
+    for candidate in "$HOME"/Library/Developer/Xcode/DerivedData/{Clerestory,Open-Yoink}-*/SourcePackages/artifacts/sparkle/Sparkle/bin; do
+        if [ -x "$candidate/sign_update" ]; then
+            SPARKLE_BIN=$candidate
+            break
+        fi
+    done
 fi
 SIGN_UPDATE="$SPARKLE_BIN/sign_update"
 if [ ! -x "$SIGN_UPDATE" ]; then

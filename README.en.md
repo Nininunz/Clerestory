@@ -86,13 +86,13 @@ git clone https://github.com/Nininunz/Clerestory.git
 cd Clerestory
 
 xcodebuild \
-  -project Open-Yoink.xcodeproj \
+  -project Clerestory.xcodeproj \
   -scheme Clerestory \
   -destination 'platform=macOS' \
   build
 
 xcodebuild \
-  -project Open-Yoink.xcodeproj \
+  -project Clerestory.xcodeproj \
   -scheme Clerestory \
   -destination 'platform=macOS' \
   test \
