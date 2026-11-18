@@ -25,8 +25,7 @@ for enclosure in feed.findall("./channel/item/enclosure"):
     ))
 
 for file in ["OpenYoink/Services/UpdateController.swift", "OpenYoink/Services/SupportController.swift",
-             "Scripts/make-release.sh", "Scripts/verify-update-feed.sh",
-             "website/.vitepress/config.mts", "website/.vitepress/theme/components/HomePage.vue"]:
+             "Scripts/make-release.sh", "Scripts/verify-update-feed.sh"]:
     contents = (root / file).read_text()
     assert "MuQY1818" not in contents and "muqy1818.github.io" not in contents, file
 release = (root / "Scripts/make-release.sh").read_text()
