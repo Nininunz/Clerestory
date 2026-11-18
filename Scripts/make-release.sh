@@ -61,7 +61,7 @@ fi
 PROJECT="Open-Yoink.xcodeproj"
 SCHEME="OpenYoink"
 ARCHIVE_PATH="export/OpenYoink.xcarchive"
-APP_PATH="export/OpenYoink.app"
+APP_PATH="export/Clerestory.app"
 DMG_PATH="export/Clerestory-$VERSION.dmg"
 APPCAST="docs/appcast.xml"
 # Candidate builds keep unpublished update metadata out of the deployable feed.
