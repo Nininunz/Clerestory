@@ -1,5 +1,7 @@
 # Release preparation validation: November 17, 2026
 
+This historical record preserves the state observed during the first release cycle. See the [release and Sparkle guide](../FORK_RELEASE.md) for the current procedure.
+
 Scope: `release-prep`, macOS 27.2.1 on Apple silicon, Xcode 27.2.0.
 Current signed candidate: **1.0.0 (55)**. No release has been published.
 The earlier 1.8.x versions below were unpublished update-test candidates.
