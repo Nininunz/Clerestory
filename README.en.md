@@ -1,138 +1,51 @@
-> Clerestory is maintained by Nininunz and is based on [MuQY1818/OpenYoink](https://github.com/MuQY1818/OpenYoink). Latest release [Clerestory 1.0.1 (56)](https://github.com/Nininunz/OpenYoink/releases/tag/v1.0.1). See [release ownership](docs/FORK_RELEASE.md).
-
-<div align="center">
-
-<img src="OpenYoink/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-128.png" width="96" alt="Clerestory icon">
-
 # Clerestory
 
 **A modular panel for your Mac.**
 
-<br>
+Clerestory puts a file shelf and configurable shortcuts in a panel at the top of your display. Use it on any display. On a Mac with a built-in notch, an optional Notch companion gives you a compact way to open the panel and see module activity.
 
-[![macOS 15+](docs/badges/macos.svg)](https://developer.apple.com/macos/)
-[![MIT license](docs/badges/license.svg)](LICENSE)
-
-[Download](https://github.com/Nininunz/OpenYoink/releases/latest) ·
-[Island](#island-modules) ·
-[中文](README.md)
-
-</div>
-
-<br>
-
-
-Want to send a file from Downloads to a chat? Drag it to Shelf in the Panel, let go, switch to the chat, and drag it back out. No more arranging two windows side by side.
-
-Clerestory lives in the menu bar and stays out of the Dock. The Panel opens near the top of your display, with an optional Notch companion on supported built-in displays.
-
-## What it does
-
-- **Holds almost anything**: files, folders, text, images and links. Mail messages, calendar events and contacts too, when the source app hands them over.
-- **Keeps things findable**: preview with Space, multi-select or drag a selection box, group items into stacks, search, filter by type, and press `⌘Z` when you remove something by accident.
-- **Shows up when you need it**: click the tab on the screen edge, press a shortcut, shake the mouse, or just drag a file toward it. Automatic reveal can be turned off for specific apps.
-- **Clipboard history**: favorites, search, preview, and one-click add to the shelf. It is off until you turn it on.
-- Works across displays, Spaces and full-screen apps. English and Chinese UI, launch at login, automatic updates.
-
-## Island modules
-
-OpenYoink Island sits at the top of the screen. Collapsed, it shows what's playing, a countdown, or transfer progress; click it to open a module. On a notched Mac it merges with the notch. On external and non-notched displays it floats as a small capsule.
-
-These are real screenshots (Chinese UI). Click one to see it full size.
-
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <a href="docs/screenshots/island/now-playing.png"><img src="docs/screenshots/island/now-playing.png" width="100%" alt="OpenYoink Island showing QQ Music artwork, track details, progress and playback controls"></a>
-      <p><strong>Now Playing</strong><br>See the artwork, pause, or skip without switching to the player. Shown here with QQ Music; seeking and the details you get depend on what the player or web page exposes.</p>
-    </td>
-    <td width="50%" valign="top">
-      <a href="docs/screenshots/island/quick-access.png"><img src="docs/screenshots/island/quick-access.png" width="100%" alt="Island Quick Access with saved folders, an add button and a drop area"></a>
-      <p><strong>Quick Access</strong><br>Pin the folders you use most and double-click to open them in your default file manager (Finder, QSpace, and so on). Drop a file onto a folder to copy it there; you'll be asked before anything is overwritten.</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <a href="docs/screenshots/island/shelf.png"><img src="docs/screenshots/island/shelf.png" width="100%" alt="Island shelf with search, type filters and a file drop area"></a>
-      <p><strong>Shelf</strong><br>The same items as the side shelf, with the same drag in/out, search, filters and Quick Look.</p>
-    </td>
-    <td width="50%" valign="top">
-      <a href="docs/screenshots/island/clipboard-history.png"><img src="docs/screenshots/island/clipboard-history.png" width="100%" alt="Island clipboard history with recording toggle, search, filters, favorites and copy actions"></a>
-      <p><strong>Clipboard History</strong><br>Dig up text, links and images you copied earlier, and keep the useful ones as favorites. Recording has its own switch and starts off.</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <a href="docs/screenshots/island/timer.png"><img src="docs/screenshots/island/timer.png" width="100%" alt="Island timer showing focus, short break and long break modes, a goal field and duration choices"></a>
-      <p><strong>Focus Timer</strong><br>Focus, short break, or long break. Jot down what this round is for, pick your own durations, and keep a record of your sessions.</p>
-    </td>
-    <td width="50%" valign="top">
-      <a href="docs/screenshots/island/battery.png"><img src="docs/screenshots/island/battery.png" width="100%" alt="Island battery module with charge, power source, wattage and a two-minute power graph"></a>
-      <p><strong>Battery &amp; Power</strong><br>Charge level, whether you're charging, the current wattage, and a two-minute power graph with the average.</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <a href="docs/screenshots/island/system-status.png"><img src="docs/screenshots/island/system-status.png" width="100%" alt="Island system status with CPU, memory, network, disk, battery, thermal state and top apps"></a>
-      <p><strong>System Status</strong><br>CPU, memory, network speed, free disk space, thermal state, and which apps are using the most. Look only — it never kills processes or deletes files.</p>
-    </td>
-    <td width="50%" valign="top">
-      <a href="docs/screenshots/island/module-library.png"><img src="docs/screenshots/island/module-library.png" width="100%" alt="Island module library for enabling, opening, pinning and reordering modules"></a>
-      <p><strong>Module Library</strong><br>Turn on only what you use, pin up to five to the top, and drag to reorder. Unpinned modules can still be opened from the library.</p>
-    </td>
-  </tr>
-</table>
-
-> [!TIP]
-> The battery module measures power at the battery, not at the wall. Positive means charging, negative means discharging. Seeing about `0 W` while plugged in with a full battery is normal.
-
-There is also a Transfers module that shows the progress and failures of files being delivered in the background.
-
-**AI Usage** (new in 1.8.8, off by default): today's spend and tokens across Claude Code, Codex, Cursor and more, your 7-day, 30-day and all-time totals, and how much of each usage-limit window is used and when it resets. Island nudges you at 80% and 95%, and the collapsed Island can show today's spend. The numbers come from the free, open-source [TokenTracker](https://github.com/xiufengsun/TokenTracker), which needs to be installed and running.
-
-### Setting it up
-
-Island is on by default for new installs (turn it off in **Settings → General**). Expand it, click the gear in the top-left corner to open the module library, turn on the modules you want, pin them, and drag to reorder. Press `Esc`, click outside, or click the top-center area to collapse it.
-
-If you'd rather not pick modules one by one, **Settings → General** has three presets: File Shelf, Files & Clipboard, and Full Toolbox. They only change modules and reveal behavior; your files and history stay put, and clipboard recording stays however you left it.
-
-Now Playing, Quick Access and Clipboard History start off. Expanding Island by dragging a file to the top of the screen is also off by default; turn it on in **Settings → Triggers**. It doesn't affect how the side shelf is revealed.
-
+[Download Clerestory 1.0.1](https://github.com/Nininunz/OpenYoink/releases/tag/v1.0.1) · [Quick start](#quick-start) · [简体中文](README.md)
 
 ## Install
 
-Download the signed and notarized [Clerestory 1.0.1 DMG](https://github.com/Nininunz/OpenYoink/releases/download/v1.0.1/Clerestory-1.0.1.dmg), open it, and copy the app to Applications. Existing fork users can upgrade through Sparkle.
-Upstream Homebrew packages install the upstream app, not this fork.
-See [release ownership and migration](docs/FORK_RELEASE.md) before switching from an existing installation.
+Clerestory supports macOS 15 and later on Apple silicon and Intel. Open the signed and notarized [Clerestory 1.0.1 DMG](https://github.com/Nininunz/OpenYoink/releases/download/v1.0.1/Clerestory-1.0.1.dmg) and drag the app to Applications.
+
+If you already use the Nininunz fork, choose **Check for Updates…** from its menu bar icon. OpenYoink 1.0.0 from this fork upgrades to Clerestory in place. If you're switching from upstream OpenYoink, Clerestory starts with its own Shelf and preferences. Upstream data stays with the upstream app. See [release ownership](docs/FORK_RELEASE.md).
 
 ## Quick start
 
-| To…                      | Do this                                                     |
-| ------------------------ | ----------------------------------------------------------- |
-| Show / hide the Panel | Press `⌘⇧Space` or use the menu bar item. Configure pointer triggers in **Settings → Panel**. |
-| Add something | Drag a file or selected text toward the top center of your display, then drop it into Shelf. |
-| Move in (no original left) | Hold `⌘` while dropping; the original goes to the Trash. [Read this first](#file-safety-and-lifecycle) |
-| Park the clipboard       | Press `⌘⇧Space` twice                                       |
-| Clipboard history        | `⌘⇧V` (change or disable it in Settings)                    |
-| Search / undo remove     | `⌘F` / `⌘Z` (undo only covers cards you removed by hand)    |
-| Preview                  | Select and press Space, or double-click                     |
-| Multi-select             | `⌘`-click, or drag a selection box over empty space         |
-| Remove                   | Hover and click `×`, press `Delete`, or right-click         |
+| To… | Do this |
+| --- | --- |
+| Open the Panel | Move to the top center of your display, click the trigger area, press `⌘⇧Space`, or use the menu bar icon. |
+| Add to Shelf | Drag a file or selected text toward the top center, then drop it into Shelf. |
+| Move a file into Shelf | Hold `⌘` while dropping. Read [File safety and lifecycle](#file-safety-and-lifecycle) first. |
+| Park the clipboard | Press `⌘⇧Space` twice with **Double-press saves clipboard** enabled. |
+| Search Shelf | Click **Search Shelf** or press `⌘F` while Shelf has keyboard focus. |
+| Preview an item | Click it and press Space, or double-click it. |
+| Select multiple items | Click **Select**, or use `⌘`-click to toggle individual items. |
+| Remove an item | Hover and click **×**, press Delete, or use the item's context menu. Use `⌘Z` to undo manual removal. |
 
+Hover, click, and drag-to-open are enabled by default in 1.0.1. Adjust the hover delays or turn off individual triggers in **Settings → Panel**. Drag-to-open has its own switch. Use the panel's pin button to keep it open when you move the pointer away.
+
+## Panel, Notch, and modules
+
+- **Panel.** Opens on the display where you trigger it and stays on that display until dismissed. Use **Settings → Panel → Shortcut Positions** or **Quick Settings** to arrange module shortcuts.
+- **Notch.** An optional companion on the built-in display of a Mac with a physical notch. Use **Settings → Notch** to show it, choose its module order, and configure the cycling shortcut. Hold Shift with that shortcut to cycle backward.
+- **Shelf** and **Quick Settings** are available by default. To use other modules, turn on **Experimental Modules** under **Settings → Modules**, then choose the modules you want. Experimental modules include Transfers, Timer, Battery, Now Playing, System Status, Quick Access, Clipboard, and AI Usage.
 
 ## File safety and lifecycle
 
 A regular drop only remembers where the file is; nothing gets moved. Removing a card, or turning on "remove after drop", never deletes the original. Dropping onto Finder asks for a copy, and the destination decides whether to take it.
 
 > [!WARNING]
-> Holding `⌘` while dropping is a **move**: OpenYoink copies the file into its own sandbox, checks the copy, and then moves the original to the Trash. If anything goes wrong, the original stays where it was and the item is kept as a regular reference. You can get the original back until you empty the Trash.
+> Holding `⌘` while dropping is a **move**: Clerestory copies the file into its own sandbox, checks the copy, and then moves the original to the Trash. If anything goes wrong, the original stays where it was and the item is kept as a regular reference. You can get the original back until you empty the Trash.
 
 A moved item's card and sandbox copy are deleted only after it has been dropped somewhere successfully, regardless of the regular "after drop" setting. If the drop is cancelled or fails, both stay so you can try again.
 
 <details>
 <summary>Where each kind of item is stored, and when it's cleaned up</summary>
 
-| Item                             | How OpenYoink stores it                                   |
+| Item                             | How Clerestory stores it                                   |
 | -------------------------------- | --------------------------------------------------------- |
 | Files and folders                | A sandbox bookmark to the original location; no copy      |
 | Plain text and links             | Directly in the shelf data                                |
@@ -150,7 +63,7 @@ Regular file drags provide both a file URL and a filename Chromium understands. 
 ## Privacy and permissions
 
 - No account, no analytics, no telemetry. Everything stays in the local sandbox under `Application Support/OpenYoink`.
-- App Sandbox is on, so OpenYoink can only touch files you drag in or pick yourself. Everyday use needs neither Accessibility nor Input Monitoring.
+- App Sandbox is on, so Clerestory can only touch files you drag in or pick yourself. Everyday use needs neither Accessibility nor Input Monitoring.
 - The only background network traffic is checking for and downloading updates from GitHub Pages / Releases, and you can turn that off.
 - AI Usage only talks to TokenTracker on your own Mac (`localhost:7680`). It never goes online and doesn't read TokenTracker's files.
 - Now Playing never goes online. It reads playback info through a local helper first, and falls back to AppleScript for Apple Music / Spotify, which may trigger an Automation permission prompt. If the module breaks, the shelf keeps working.
@@ -158,7 +71,7 @@ Regular file drags provide both a file URL and a filename Chromium understands. 
 
 ### Clipboard history
 
-Recording is off by default. Until you turn it on, the clipboard is read only at the moment you double-press the shortcut to park it. Once on, only newly copied text, HTTP(S) links and PNG/TIFF images are recorded — nothing from before, and never copied files.
+Clipboard recording is off by default. To use it, enable the experimental Clipboard module under **Settings → Modules**, then enable recording in its settings. Until you turn it on, the clipboard is read only at the moment you double-press the shortcut to park it. Once on, only newly copied text, HTTP(S) links and PNG/TIFF images are recorded — nothing from before, and never copied files.
 
 History is stored as plain text on this Mac and is never uploaded or synced. Keep 30, 100 or 300 entries (default 30) for 1, 7 or 30 days (default 7), plus up to 30 favorites that never expire, all within 20 MiB. Turning recording off keeps what's already there; clearing it deletes it.
 
@@ -192,11 +105,11 @@ Releases are built with [`Scripts/make-release.sh`](Scripts/make-release.sh), ei
 
 ## Contributing
 
-Something feels off, broke, or could be better? Open an [issue](https://github.com/Nininunz/OpenYoink/issues). For bugs, your macOS version, OpenYoink version and steps to reproduce help a lot — and please keep private files and clipboard contents out of screenshots.
+Something feels off, broke, or could be better? Open an [issue](https://github.com/Nininunz/OpenYoink/issues). For bugs, your macOS version, Clerestory version and steps to reproduce help a lot — and please keep private files and clipboard contents out of screenshots.
 
 Pull requests are welcome. For bigger changes, open an issue first so we can talk it through, and run the full unit test suite before submitting.
 
-## Star history
+## Upstream star history
 
 <a href="https://www.star-history.com/?repos=MuQY1818%2FOpenYoink&amp;type=date">
   <picture>
@@ -208,7 +121,7 @@ Pull requests are welcome. For bigger changes, open an issue first so we can tal
 
 ## Credits and license
 
-OpenYoink is released under the [MIT License](LICENSE). It's an independent project and has nothing to do with the commercial Yoink app or its developers.
+Clerestory is based on [OpenYoink](https://github.com/MuQY1818/OpenYoink) by weijue and contributors and is released under the [MIT License](LICENSE).
 
 Updates are powered by [Sparkle](https://sparkle-project.org/), and the star chart comes from [Star History](https://www.star-history.com/). Third-party components and their licenses are listed in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
