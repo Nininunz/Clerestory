@@ -1,16 +1,17 @@
 import Foundation
 import OSLog
 
-/// 一条「最近拖出」记录：item 摘要 + 时间。
+/// A record of 'recently dragged out': item summary + time.
 struct RecentEntry: Codable, Equatable, Identifiable, Sendable {
-    /// 每条记录独立 id（同一 ShelfItem 可反复拖出，不能复用 item.id）。
+    /// Each record has an independent id (same ShelfItem can be dragged out repeatedly, cannot reuse
+    /// item.id).
     var id: UUID
     var displayName: String
     var kind: ItemKind
-    /// 文件类项目的最后已知路径（S10 菜单可据此「在 Finder 显示」/重新入架）。
+    /// Last known path of file-type items (S10 menu can use this to 'Show in Finder' / re-shelf).
     var path: String?
     var urlString: String?
-    /// 文本项目摘要（前 100 字符）。
+    /// Text item summary (first 100 characters).
     var textPreview: String?
     var draggedOutAt: Date
 
@@ -25,23 +26,24 @@ struct RecentEntry: Codable, Equatable, Identifiable, Sendable {
     }
 }
 
-/// 轻量最近拖出历史（实施计划 §2.2 `RecentItemsService`）：内存数组 + JSON
-/// 持久化（`Application Support/Clerestory/recents.json`，与 shelf.json 并列的
-/// 独立文件），上限 20 条，最新在前。
+/// Lightweight recent dragged-out history (implementation plan §2.2 `RecentItemsService`): in-memory array
+/// + JSON persistence (`Application Support/Clerestory/recents.json`, a standalone file alongside
+/// `shelf.json`), max 20 items, latest first.
 ///
-/// 写盘沿用 PersistenceController 的原子写思路（临时文件 + rename），但不做
-/// 防抖 —— 拖出是低频事件，同步写一个小 JSON 足够。损坏的文件只记日志、
-/// 回退为空历史，绝不崩溃。菜单栏「最近项目」接入在 S10；本步只提供 API。
+/// Disk writing follows the atomic write approach of PersistenceController (temporary file + rename), but
+/// no debouncing —— dragging out is a low-frequency event, synchronous writing of a small JSON is
+/// sufficient. Damaged files are logged, history is rolled back to empty, never crash. The menu bar
+/// 'Recent Items' is integrated in S10; this step only provides the API.
 @MainActor
 @Observable
 final class RecentItemsService {
-    /// 历史上限（条）。
+    /// Historical item limit (number of items).
     static let maxEntryCount = 20
 
-    /// 当前历史，最新在前。
+    /// Current history, latest first.
     private(set) var entries: [RecentEntry] = []
 
-    /// 存储目录；测试中注入临时目录。
+    /// Storage directory; a temporary directory is injected during testing.
     let directoryURL: URL
 
     private let logger = Logger(subsystem: "com.nininunz.Clerestory", category: "RecentItems")
@@ -52,8 +54,8 @@ final class RecentItemsService {
 
     private static let currentSchemaVersion = 1
 
-    /// 与 PersistenceController 相同的日期格式（ISO8601 带毫秒，文件可读）。
-    /// 非隔离：编码/解码闭包在非隔离上下文执行。
+    /// Same date format as PersistenceController (ISO8601 with milliseconds, readable by files).
+    /// Non-isolated: encoding/decoding closures are executed in non-isolated context.
     private nonisolated static func makeDateFormatter() -> ISO8601DateFormatter {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -94,8 +96,8 @@ final class RecentItemsService {
 
     // MARK: - Recording
 
-    /// 记录一批拖出的项目（本批次插到最前，批内保持拖拽顺序），裁剪到上限
-    /// 并立即落盘。空输入忽略。
+    /// Record a batch of dragged-out items (insert this batch at the front, maintain drag order within the
+    /// batch), trim to the limit, and immediately write to disk. Ignore empty input.
     func record(_ items: [ShelfItem], at date: Date = Date()) {
         guard !items.isEmpty else { return }
         entries.insert(contentsOf: items.map { RecentEntry(item: $0, draggedOutAt: date) }, at: 0)
@@ -105,7 +107,7 @@ final class RecentItemsService {
         saveToDiskOrLog()
     }
 
-    /// 清空历史（S10 菜单预留）。
+    /// Clear history (reserved for S10 menu).
     func clear() {
         guard !entries.isEmpty else { return }
         entries.removeAll()
@@ -119,7 +121,8 @@ final class RecentItemsService {
         var entries: [RecentEntry]
     }
 
-    /// 启动时读取；文件缺失或损坏回退为空历史（记日志，不抛出）。
+    /// Read on startup; fallback to empty history if file is missing or damaged (log the error, do not
+    /// throw).
     private func loadEntries() -> [RecentEntry] {
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return [] }
         do {
@@ -143,9 +146,9 @@ final class RecentItemsService {
         }
     }
 
-    /// 原子写：编码到同目录临时文件，再原子替换目标（思路与
-    /// PersistenceController 一致，独立文件不做防抖）。绝不先删旧文件，
-    /// 否则 replace/move 失败会把仍可用的最近历史一并丢掉。
+    /// Atomic write: encode to a temporary file in the same directory, then atomically replace the target
+    /// (same approach as PersistenceController, independent file no debouncing). Never delete the old file
+    /// first, otherwise replace/move failure would lose the still usable recent history.
     private func writeToDisk() throws {
         let fileManager = FileManager.default
         try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)

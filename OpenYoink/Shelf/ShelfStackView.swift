@@ -1,27 +1,30 @@
 import SwiftUI
 
-/// Stack 卡片（实施计划 §3：右上角数量角标）。
+/// Stack card (Implementation Plan §3: top-right count badge).
 ///
-/// 外观复用 `ShelfItemCard`（12pt 圆角、选中态），缩略图取第一个文件类子项的
-/// 真实缩略图，无则显示 stack 占位符号；右上角叠加数量角标。
+/// Reuse appearance `ShelfItemCard` (12pt rounded corners, selected state), thumbnail takes the real
+/// thumbnail of the first file-like child item, or show stack placeholder if none; overlay count badge on
+/// top-right.
 ///
-/// 点击语义：普通点击 = 单选该 Stack 并展开/收起浮层；⌘点击 = 仅切换选中
-/// （多选语义与普通卡片一致，不展开）。展开浮层由 ShelfView 以 overlay 呈现。
+/// Click semantics: regular click = single-select the Stack and expand/collapse the overlay; ⌘ click =
+/// only toggle selection (multi-select semantics same as regular card, no expansion). The expanded overlay
+/// is presented by ShelfView.
 struct ShelfStackView: View {
     @Environment(\.shelfSelectionMode) private var selectionMode
     let item: ShelfItem
     let isSelected: Bool
     var isKeyboardFocused: Bool = false
-    /// 浮层展开中：卡片保持 accent 高亮，提示「再次点击收起」。
+    /// While the overlay is expanded: the card remains accent highlighted, indicating 'click again to
+    /// collapse'.
     let isExpanded: Bool
-    /// additive 为 true 表示 ⌘点击（切换选中），否则单选。
+    /// additive being true indicates ⌘ click (toggle selection), otherwise single-select.
     let onSelect: (_ additive: Bool) -> Void
     let onToggleExpanded: () -> Void
     var onRemove: (() -> Void)?
     var onRecover: (() -> Void)? = nil
     var onCopy: (() -> Void)? = nil
     var transferStatus: TransferItemAccessibilityStatus? = nil
-    /// S5 拖出内容计算（多选整批/stack 语义由 ShelfView 决定）。
+    /// S5 drag-out content calculation (multi-select batch/stack semantics determined by ShelfView).
     var dragContentsProvider: ((ShelfItem) -> DragOutContents)?
 
     var body: some View {
@@ -47,7 +50,7 @@ struct ShelfStackView: View {
         .overlay(alignment: selectionMode ? .topLeading : .topTrailing) { countBadge }
     }
 
-    /// 数量角标（accent 胶囊，右上角）。
+    /// Count badge (accent capsule, top-right).
     private var countBadge: some View {
         Text("\(item.children?.count ?? 0)")
             .font(.caption2.weight(.semibold))
@@ -61,16 +64,18 @@ struct ShelfStackView: View {
     }
 }
 
-/// Stack 展开浮层（§3：.ultraThinMaterial 背景 + 等宽网格排列子项）。
+/// Stack expanded overlay (§3: .ultraThinMaterial background + evenly spaced grid layout of children).
 ///
-/// 由 ShelfView 以全区域 overlay 承载（点击外部遮罩收起）。子项支持多选
-/// （⌘点击切换、普通点击单选），选择存于共享的 `ShelfInteractionState` —— 子项
-/// 不属于顶层 `ShelfStore.items`，故不走 store.selection。
-/// S5：子项卡片可拖出（命中 childSelection 多选时整批拖出）；子项拖出
-/// 不从 stack 移除（移除语义随 S6 的 stack 批量操作一起设计）。
-/// UX4：子项卡片悬停 ✕ 经 `onRemoveChild` 回调从 stack 中移除该子项
-/// （`ShelfStore.removeChild(_:fromStack:)`：剩 1 项自动解散为普通项，
-/// 剩 0 项移除 stack；stack 消失后本浮层由 ShelfView 自动收起）。
+/// Hosted by ShelfView as full area overlay (clicking the external mask collapses it). Children support
+/// multi-select (⌘ click to toggle, regular click to single-select), selections stored in shared
+/// `ShelfInteractionState` — children are not part of the top-level `ShelfStore.items`, so they do not
+/// follow store.selection.
+/// S5: child cards can be dragged out (dragged out in batch when child selection is hit); dragging out a
+/// child does not remove it from the stack (removal semantics designed with S6's stack batch operations).
+/// UX4: child card hover ✕ removed from the stack via `onRemoveChild` callback
+/// (`ShelfStore.removeChild(_:fromStack:)`: if only one item remains, it automatically disbands into a
+/// regular item; if zero items remain, the stack is removed; after the stack disappears, the overlay is
+/// automatically collapsed by ShelfView).
 struct ShelfStackExpandedView: View {
     @Environment(ShelfStore.self) private var store
     @Environment(TransferStore.self) private var transferStore
@@ -80,7 +85,8 @@ struct ShelfStackExpandedView: View {
     let stack: ShelfItem
     let onDismiss: () -> Void
     let interaction: ShelfInteractionState
-    /// UX4: 子项移除回调（参数为子项 id）。nil 时子项卡片不渲染 ✕。
+    /// UX4: Callback for removing a child item (parameter is child item id). nil means the child card is
+    /// not rendered ✕.
     var onRemoveChild: ((UUID) -> Void)?
     /// v1.2: child-specific availability recovery.
     var onRecoverChild: ((ShelfItem) -> Void)? = nil
@@ -148,8 +154,8 @@ struct ShelfStackExpandedView: View {
         }
     }
 
-    /// S5：子项拖出内容 —— 命中多选时整批，否则单子项；topLevelIDs 为空
-    /// （子项不从 stack 移除）。
+    /// S5: Dragging out a child item —— batch if multiple selection is hit, otherwise single item;
+    /// topLevelIDs is empty (child items are not removed from stack).
     private func dragContents(for anchor: ShelfItem) -> DragOutContents {
         let children = stack.children ?? []
         let dragged = interaction.childSelection.contains(anchor.id) && interaction.childSelection.count > 1

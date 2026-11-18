@@ -1,11 +1,11 @@
 import AppKit
 import Foundation
 
-/// 设置页中的数据恢复与托管存储管理。
+/// Data recovery and hosted storage management in the settings page.
 ///
-/// 所有删除都被限制在 OpenYoink 的 Application Support 目录；“清理未使用
-/// 文件”还会同时保护当前 shelf 和可恢复快照引用的物化文件。存在无法解码的
-/// 隔离快照时清理被禁用，因为无法可靠计算它引用了哪些文件。
+/// Limit deletion to the app's Application Support directory. Unused-file cleanup protects files
+/// referenced by the active Shelf and by recoverable snapshots. Disable cleanup if a quarantined snapshot
+/// cannot be decoded because its references are unknown.
 @MainActor
 @Observable
 final class StorageManagementController {
@@ -198,8 +198,9 @@ final class StorageManagementController {
         statusMessage = nil
         errorMessage = nil
         do {
-            // 先完整解码，再同步保存；只有保存成功才替换内存，避免 UI 与磁盘
-            // 分叉。saveNow 会把恢复前的当前状态写成新的 last-known-good，故可撤回。
+            // Decode completely first, then sync save; only replace memory upon successful save to avoid
+            // UI and disk divergence. saveNow writes the current state before recovery as a new
+            // last-known-good, allowing for rollback.
             let decodedItems = try persistence.loadRecoverySnapshot(snapshot)
             let restoredItems = prepareRestoredItems(decodedItems)
             try persistence.saveNow(restoredItems)

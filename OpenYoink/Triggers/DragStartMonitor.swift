@@ -1,23 +1,26 @@
 import AppKit
 
-/// UX1 拖拽开始识别（纯逻辑状态机，与 AppKit 解耦供单测）：
-/// 左键按下记录起点 → 按住移动、与起点的直线位移达到阈值判定「拖拽开始」
-/// （恰好回调一次）→ 左键抬起结束。
+/// UX1 drag start recognition (pure logic state machine, decoupled from AppKit for unit testing):
+/// Left click records the start point → dragging, linear displacement from the start point reaches
+/// threshold to determine 'drag start'
+/// (exactly one callback) → left click up ends.
 ///
-/// 阈值采用「与按下点的位移」而非「路径累计长度」：点击按住不放时手的微颤
-/// 会累计路径长度但几乎不产生位移，位移判据不会把「按住不放」误判为拖拽。
+/// Threshold uses 'displacement from the pressed point' rather than 'accumulated path length': micro
+/// tremors of the hand during a press will accumulate path length but almost no displacement. The
+/// displacement criterion prevents 'holding' from being mistakenly judged as dragging.
 struct DragGestureTracker: Sendable, Equatable {
-    /// 状态机相位。
+    /// State machine phase.
     enum Phase: String, Sendable, Equatable {
-        /// 左键未按下。
+        /// Left mouse button not pressed.
         case idle
-        /// 已按下、尚未确认拖拽（位移未达阈值）。
+        /// Pressed but not yet confirmed as dragging (displacement not reached threshold).
         case pressing
-        /// 已确认拖拽（阈值已跨越、已回调）。
+        /// Confirmed dragging (threshold crossed, callback executed).
         case dragging
     }
 
-    /// 拖拽判定位移阈值（点）。~8pt 与系统拖拽启动阈值同量级。
+    /// Dragging displacement threshold (point). ~8pt, same magnitude as system dragging initiation
+    /// threshold.
     static let defaultThreshold: CGFloat = 8
 
     private(set) var phase: Phase = .idle
@@ -28,14 +31,15 @@ struct DragGestureTracker: Sendable, Equatable {
         self.threshold = threshold
     }
 
-    /// 左键按下：记录起点，进入 pressing。（漏抬起的防护：按下总是重置会话。）
+    /// Left mouse button pressed: record start point, enter pressing. (Protection against missed release:
+    /// pressing always resets the session.)
     mutating func mouseDown(at point: CGPoint) {
         phase = .pressing
         origin = point
     }
 
-    /// 按住移动采样。返回 `true` 恰好一次 —— 位移首次达到阈值的时刻；
-    /// 此后本次拖拽的继续移动恒返回 `false`。
+    /// Dragging movement sampling. Return `true` exactly once — at the moment displacement first reaches
+    /// threshold; subsequent movements during this drag session always return `false`.
     mutating func mouseDragged(to point: CGPoint) -> Bool {
         guard phase == .pressing else { return false }
         guard hypot(point.x - origin.x, point.y - origin.y) >= threshold else { return false }
@@ -43,54 +47,58 @@ struct DragGestureTracker: Sendable, Equatable {
         return true
     }
 
-    /// 左键抬起。返回 `true` 表示本次抬起结束了一个已确认的拖拽；
-    /// 普通点击（未达阈值）返回 `false`。
+    /// Left mouse button released. Return `true` indicates this release ended a confirmed drag; return
+    /// `false` for normal click (displacement not reached threshold).
     mutating func mouseUp() -> Bool {
         defer { phase = .idle }
         return phase == .dragging
     }
 
-    /// 复位（停止监听时调用，丢弃半会话）。
+    /// Reset (called when stopping listening, discard half session).
     mutating func reset() {
         phase = .idle
     }
 }
 
-/// UX1/2: 一次拖拽会话中 shelf 自动显隐的裁决（纯逻辑，与 AppKit 解耦）。
+/// UX1/2: Decision on shelf auto-show/hide during a drag session (pure logic, decoupled from AppKit).
 ///
-/// 语义（用户确认）：
-/// - 拖拽驱动唤出 shelf 时打 `shownAutomatically` 标记（仅当唤出前 shelf
-///   不可见 —— 拖拽前已可见说明是用户手动唤出的，本轮不动它）；
-/// - 本轮拖拽中有内容成功落入 shelf（`DropImportCoordinator.onImportHandled`）
-///   → `noteImport()` 复位「无落入」假设；
-/// - 拖拽结束：未投放则收回；成功投放默认保持展开，可由用户关闭。
-/// - 已进入本地接收区时等待 AppKit 的投放结果，而不是猜测回调延迟。
+/// Semantics (user confirmation):
+/// - When drag triggers shelf appearance, mark as `shownAutomatically` (only if shelf was not visible
+/// before drag — if it was visible before, it was user-initiated, so do not change this session);
+/// - If content successfully drops into shelf during this drag (`DropImportCoordinator.onImportHandled`) →
+/// `noteImport()` resets the 'no drop' assumption;
+/// - Drag ends: if no drop, shelf retracts; if successful drop, shelf remains expanded by default, can be
+/// closed by user.
+/// - Wait for AppKit's drop result when entering local receiving area, rather than guessing callback
+/// delay.
 struct DragAutoShowSession: Sendable, Equatable {
-    /// 本轮是否处于已确认的拖拽会话中（mouseDown 阈值跨越 → mouseUp）。
+    /// Whether this session is in a confirmed drag (mouseDown threshold crossed → mouseUp).
     private(set) var isDragging = false
-    /// 本轮拖拽是否触发了自动唤出（唤出时 shelf 原本不可见）。
+    /// Whether this drag triggered automatic shelf appearance (shelf was originally invisible).
     private(set) var shownAutomatically = false
-    /// 本轮拖拽中是否已有内容成功入架。
+    /// Whether content has successfully dropped into shelf during this drag.
     private(set) var receivedImport = false
     private var destinationSequenceNumber: Int?
     private var destinationDidEnd = false
     private var destinationAccepted = false
     private var keepAfterDrop = true
 
-    /// 拖拽开始（阈值跨越）：开启新会话，清空上一轮的全部标记。
+    /// Drag started (threshold crossed): start new session, clear all previous markers.
     mutating func dragBegan() {
         self = Self()
         isDragging = true
     }
 
-    /// 标记「本次显示为拖拽驱动的自动唤出」。不在拖拽会话中（如快捷键
-    /// 唤出、剪贴板保存唤出）时忽略 —— 那些是显式意图，不参与自动收回。
+    /// Mark 'this display is triggered by drag-driven auto-show'. Ignore when not in a drag session (e.g.,
+    /// triggered by shortcut key, clipboard save trigger) — those are explicit intents and do not
+    /// participate in auto-retract.
     mutating func markShownAutomatically() {
         guard isDragging else { return }
         shownAutomatically = true
     }
 
-    /// 本轮有内容成功入架（同步导入或已派发异步物化）。
+    /// This round has content successfully entered the shelf (synchronous import or already dispatched
+    /// asynchronous materialization).
     mutating func noteImport() {
         receivedImport = true
     }
@@ -135,29 +143,29 @@ struct DragAutoShowSession: Sendable, Equatable {
 /// Global Shelf-content drag monitor. A fresh drag pasteboard change establishes the
 /// session; a common-run-loop poll fills gaps in AppKit mouse event delivery.
 ///
-/// 沙箱合规：`NSEvent.addGlobalMonitorForEvents` 监听
-/// `leftMouseDown/leftMouseDragged/leftMouseUp` 无需 Accessibility 权限
-/// （只读、不消费事件）。global monitor 覆盖其他应用内的拖拽，local
-/// monitor 覆盖从本应用窗口（shelf 卡片拖出等）起始的拖拽。
+/// Sandbox compliance: `NSEvent.addGlobalMonitorForEvents` listens to
+/// `leftMouseDown/leftMouseDragged/leftMouseUp` without Accessibility permissions (read-only, does not
+/// consume events). Global monitor covers drag from other apps, local monitor covers drag starting from
+/// this app's window (shelf card drag out, etc).
 ///
-/// monitor 只存在于 `start` 与
-/// `stop` 之间；`start` 幂等。
+/// Monitor exists only between `start` and `stop`; `start` is idempotent.
 ///
-/// 回调语义：
-/// - `onDragStart`：首次检测到新文件或文本拖拽（忽略列表前台时经 `shouldSuppress` 抑制）；
-/// - `onDragEnd`：已确认拖拽的左键抬起（不被抑制 —— 抑制即无会话，
-///   配合 `DragAutoShowSession` 空转安全）。
+/// Callback semantics:
+/// - `onDragStart`: First detection of new file or text drag (ignores drag if suppressed by
+/// `shouldSuppress` when not in the foreground list);
+/// - `onDragEnd`: Left mouse button lifted after confirmed drag (not suppressed — suppression means no
+/// session, safe for `DragAutoShowSession` to idle).
 ///
-/// EdgeTab: `isDragInProgress` 是可观察的「拖拽进行中」状态（阈值确认即置位，
-/// 不受 `shouldSuppress` 影响 —— 抑制只挡唤出，不改变「正在拖拽」的事实），
-/// 供边缘拉环做投放暗示高亮；抬起或 `stop()` 复位。
+/// EdgeTab: `isDragInProgress` is an observable 'drag in progress' state (set when threshold is confirmed,
+/// not affected by `shouldSuppress` — suppression only blocks show, does not change the fact that dragging
+/// is happening), used for highliting in edge pull ring; reset on lift or `stop()`.
 @MainActor
 @Observable
 final class DragStartMonitor {
     /// Whether the event monitors are currently registered.
     private(set) var isMonitoring = false
 
-    /// EdgeTab: 已确认的拖拽会话进行中（阈值跨越 → 抬起）。
+    /// EdgeTab: Confirmed drag session is in progress (threshold crossed → lift).
     private(set) var isDragInProgress = false
 
     private var gestureTracker = DragGestureTracker()

@@ -65,8 +65,9 @@ struct PanelTriggerSettingsSections: View {
                     }
                 }
 
-                // UX3: 双击保存剪贴板。开启时单击带一个识别窗的延迟 —— 脚注
-                // 说明此取舍；关闭即恢复零延迟单击。
+                // UX3: Double-click to save clipboard. When enabled, a delay is added on single-click with
+                // a recognition window —— footnote
+                // Explain this trade-off; disable to restore zero delay single-click.
                 Toggle("Double-press saves clipboard", isOn: $settings.hotKeyDoublePressSavesClipboard)
                     .disabled(!settings.hotKeyEnabled)
                 Text("When enabled, a single press toggles the shelf after a brief delay (0.3 s) so a double press can be recognized.")
@@ -80,8 +81,10 @@ struct PanelTriggerSettingsSections: View {
                 }
             }
 
-            // UX1/2: 拖拽自动出现（Yoink 核心交互）。三档单控：立即出现 /
-            // 拖到贴边唤出 / 无动作。边缘灵敏度沿用旧边缘触发的三档设置。
+            // UX1/2: Drag auto-appear (Yoink core interaction). Three-level single control: immediate
+            // appear /
+            // Drag to edge to trigger / no action. Edge sensitivity uses the same three-level setting as
+            // the old edge trigger.
             if SideShelfAvailability.isEnabled {
             Section("When Dragging Files") {
                 Picker("When Dragging Files", selection: $settings.dragAutoAppearMode) {
@@ -111,8 +114,9 @@ struct PanelTriggerSettingsSections: View {
         }
     }
 
-    /// UX1/2: 随模式变化的说明文案（immediate 无需贴边；edgeOnly 在 custom
-    /// 位置下不可用）。
+    /// UX1/2: Explanation text that changes with mode (immediate requires no edge; edgeOnly unavailable in
+    /// custom
+    /// position).
     private var dragModeFootnote: String {
         switch settings.dragAutoAppearMode {
         case .immediate:

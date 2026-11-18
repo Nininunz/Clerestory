@@ -1,21 +1,21 @@
 import Foundation
 import Observation
 
-/// 全局应用状态（shelf 可见性等）。
+/// Global app state (shelf visibility, etc).
 ///
-/// SwiftUI 侧后续通过 `@Environment` 注入观察；AppKit 侧由
-/// `ShelfWindowController` 在显示/隐藏面板时同步维护 `isShelfVisible`。
+/// SwiftUI observes this state through `@Environment`. On the AppKit side, `ShelfWindowController` updates
+/// `isShelfVisible` when it shows or hides the panel.
 @MainActor
 @Observable
 final class AppState {
-    /// Shelf 面板当前是否可见。
+    /// Whether the Shelf panel is currently visible.
     private(set) var isShelfVisible = false
 
-    /// EdgeTab: 拉环正被按住拖动（重定位会话进行中），由 EdgeTabController
-    /// 维护。拖拽驱动的触发器（DragStartMonitor 唤出 / EdgeTriggerMonitor
-    /// 贴边）据此抑制 —— 拖动拉环本身不应唤出 shelf。放在这里而非
-    /// EdgeTabController：monitor 的抑制闭包若引用 controller 会造成
-    /// lazy 属性循环引用（edgeTabController ⇄ dragStartMonitor）。
+    /// EdgeTab: The ring is being pressed and dragged (repositioning session in progress), maintained by
+    /// EdgeTabController. Drag-driven triggers (DragStartMonitor invocation / EdgeTriggerMonitor edge) are
+    /// suppressed based on this. Dragging the ring itself should not trigger the shelf. Placed here rather
+    /// than EdgeTabController: monitor's suppression closure referencing the controller would cause a lazy
+    /// property cycle (edgeTabController ⇄ dragStartMonitor).
     private(set) var isEdgeTabBeingDragged = false
 
     func toggleShelf() {
@@ -30,7 +30,7 @@ final class AppState {
         isShelfVisible = false
     }
 
-    /// EdgeTab 重定位会话开始/结束。
+    /// Start/end of EdgeTab repositioning session.
     func setEdgeTabBeingDragged(_ dragged: Bool) {
         isEdgeTabBeingDragged = dragged
     }

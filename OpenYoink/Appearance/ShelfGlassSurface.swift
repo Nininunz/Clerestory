@@ -56,12 +56,12 @@ struct ShelfGlassSurface: View {
 /// the shelf content, the tracking container, or the native glass backdrop.
 struct ShelfInteractiveGlassSurface<Content: View>: View {
     let appearance: ShelfAppearance
-    /// 空白处的点击（清选择/收起 Stack）。命中层独立于高度弹簧动画，
-    /// 见下方 `stableSurfaceBounds`。
+    /// Clicking on the blank area (to clear selection/fold Stack). The hit layer is independent of the
+    /// height spring animation, see below `stableSurfaceBounds`.
     var onBackgroundTap: (() -> Void)?
     private let content: Content
     @State private var pointer = ShelfGlassPointer()
-    /// issue #10：拉环 ↔ 面板形变（nil 时始终展开）。
+    /// issue #10: Handle ↔ Panel deformation (always expanded when nil).
     @Environment(\.shelfRevealState) private var reveal
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency

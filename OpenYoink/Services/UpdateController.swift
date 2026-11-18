@@ -2,34 +2,34 @@ import AppKit
 import OSLog
 import Sparkle
 
-/// Sparkle 2 自动更新封装（SwiftPM 引入的 binary framework；feed 托管在
-/// GitHub Pages，DMG 发布在 GitHub Releases，见 Scripts/make-release.sh）。
+/// Sparkle 2 auto-update packaging (SwiftPM introduced binary framework; feed hosted on GitHub Pages, DMG
+/// published on GitHub Releases, see Scripts/make-release.sh).
 ///
-/// 沙箱配置依据（Info.plist / entitlements 中的注释亦引用了原文）：
-/// - `SUEnableInstallerLauncherService = YES`：Sparkle 沙箱文档
+/// Sandbox configuration basis (comments in Info.plist / entitlements also reference the original text):
+/// - `SUEnableInstallerLauncherService = YES`: Sparkle sandbox documentation
 ///   "The Installer XPC Service is required for Sandboxed applications."
-/// - `com.apple.security.network.client`：更新检查是应用唯一的联网行为；
-///   有了它即不启用 Downloader XPC（同文档："…you should not enable the
-///   Downloader XPC Service."）。
-/// - mach-lookup temporary exception（`-spks` / `-spki`）：同文档
-///   "Communication" 一节，供 Sparkle 与其安装器工具通信。
+/// - `com.apple.security.network.client`: update checks are the application's only networking activity;
+///   having it means the Downloader XPC is not enabled (same documentation: "…you should not enable the
+///   Downloader XPC Service.")
+/// - mach-lookup temporary exception (`-spks` / `-spki`): same documentation
+///   "Communication" section, for Sparkle to communicate with its installer tool.
 ///
-/// 「自动检查」开关的唯一事实源是 `SettingsStore.autoUpdateCheckEnabled`：
-/// start() 时一次性写入 SPUUpdater，运行期变更经 applySettings() 同步
-/// （AppDelegate 的 UserDefaults.didChangeNotification 驱动，与
-/// applyTriggerSettings 同机制）。Sparkle 会把该属性持久化到
-/// SUEnableAutomaticChecks，因此无需再由我们回写。
+/// The only factual source of the 'Auto Check' switch is `SettingsStore.autoUpdateCheckEnabled`: it is
+/// written once to SPUUpdater at start(), and runtime changes are synchronized via applySettings() (driven
+/// by AppDelegate's UserDefaults.didChangeNotification, same mechanism as applyTriggerSettings). Sparkle
+/// persists this property to SUEnableAutomaticChecks, so we don't need to write it back.
 @MainActor
 @Observable
 final class UpdateController: NSObject {
-    /// 自动安装失败时的稳定兜底入口。指向 GitHub 的 latest 页面而非某个固定
-    /// DMG，确保即使 appcast 或附件 URL 出错，用户仍能手动取得当前版本。
+    /// Stable fallback entry when automatic installation fails. Points to the latest page on GitHub
+    /// instead of a specific DMG, ensuring users can manually obtain the current version even if the
+    /// appcast or attachment URL is incorrect.
     static let manualDownloadURL = URL(
         string: "https://github.com/Nininunz/Clerestory/releases/latest"
     )!
 
-    /// 更新检查状态摘要（供日志与将来 UI 展示；更新提示 UI 由 Sparkle
-    /// 标准 user driver 承担）。
+    /// Summary of update check status (for logs and future UI display; the update prompt UI is handled by
+    /// Sparkle's standard user driver).
     enum Status: Equatable {
         case idle
         case checking
@@ -42,11 +42,11 @@ final class UpdateController: NSObject {
     private let settings: SettingsStore
     private let logger = Logger(subsystem: "com.nininunz.Clerestory", category: "Update")
 
-    /// UpdateController 本身由 AppDelegate 懒加载，故 updater controller 可在
-    /// init 直接创建。startingUpdater: false，由 start() 在应用完设置后显式启动。
-    /// SPUUpdater 的 delegate 只能在初始化时传入（弱引用、无公开 setter），
-    /// 故经 DelegateBridge 桥接——桥对象由 self 强持有，满足「调用方负责
-    /// 保持 delegate 存活」的要求。
+    /// UpdateController is lazily loaded by AppDelegate, so the updater controller can be created directly
+    /// in init. startingUpdater: false, which is explicitly started by start() after settings are applied.
+    /// The delegate of SPUUpdater can only be passed in during initialization (weak reference, no public
+    /// setter), hence the use of DelegateBridge—bridge object is strongly held by self, satisfying the
+    /// requirement that 'the caller is responsible for keeping the delegate alive'.
     private let updaterController: SPUStandardUpdaterController
     private let delegateBridge = DelegateBridge()
     private var didStart = false
@@ -62,16 +62,18 @@ final class UpdateController: NSObject {
         delegateBridge.owner = self
     }
 
-    /// 菜单项可用性（Sparkle 建议用于验证 checkForUpdates 时机；KVO 属性，
-    /// 这里只做瞬读，菜单项保持常启用——检查进行中 Sparkle 自己会忽略重复请求）。
+    /// Menu item availability (Sparkle recommends for validating the timing of checkForUpdates; KVO
+    /// property, here only for instantaneous reading, menu items remain always enabled—Sparkle itself
+    /// ignores duplicate requests during an update check).
     var canCheckForUpdates: Bool {
         updaterController.updater.canCheckForUpdates
     }
 
-    /// 启动 updater（幂等）。无论「自动检查」开关与否都启动——手动
-    /// 「检查更新…」同样需要已启动的 updater；开关只控制自动调度。
-    /// start 前把设置一次性应用给 Sparkle（其 header 注释亦要求不要在每次
-    /// 启动时覆盖用户偏好，这里写入的是我们自己设置页的唯一事实源，语义一致）。
+    /// Start the updater (idempotent). Start regardless of whether the 'Auto Check' switch is on—manual
+    /// 'Check for Updates...' also requires an already started updater; the switch only controls automatic
+    /// scheduling. Apply settings to Sparkle once before start (its header comment also requires not to
+    /// overwrite user preferences on every launch, here the written settings are the sole source of truth
+    /// from our settings page, consistent in semantics).
     func start() {
         guard !didStart else { return }
         didStart = true
@@ -86,9 +88,9 @@ final class UpdateController: NSObject {
         }
     }
 
-    /// 设置变更 → 同步 SUAutomaticallyChecksForUpdates。值相同则不写——
-    /// 写会回写 UserDefaults 再次触发 didChange 通知，形成无谓循环
-    /// （与 applyTriggerSettings 的幂等保护同理）。
+    /// Setting change → synchronize SUAutomaticallyChecksForUpdates. Do not write if the value is the
+    /// same—writing would re-write UserDefaults and trigger didChange notification again, causing an
+    /// unnecessary loop (same logic as the idempotent protection in applyTriggerSettings).
     func applySettings() {
         guard didStart else { return }
         let updater = updaterController.updater
@@ -97,7 +99,7 @@ final class UpdateController: NSObject {
         }
     }
 
-    /// 菜单「检查更新…」入口。自动检查关闭时也可手动触发。
+    /// Menu entry 'Check for Updates...'. Can be manually triggered even if auto-check is off.
     func checkForUpdates() {
         start()
         status = .checking
@@ -108,15 +110,15 @@ final class UpdateController: NSObject {
         NSWorkspace.shared.open(Self.manualDownloadURL)
     }
 
-    // MARK: - Delegate callbacks (经 DelegateBridge 从主线程转发)
+    // MARK: - Delegate callbacks forwarded by DelegateBridge
 
     fileprivate func noteUpdateNotFound() {
         status = .upToDate
     }
 
-    /// Sparkle 的「无更新可用」也属于 abort 回调（SUSparkleErrorDomain /
-    /// SUNoUpdateError = 1001，见 Sparkle/SUErrors.h）——这不是错误，
-    /// 归入 upToDate（Sparkle 自己都不记这条日志，SPUUpdater.m:798）。
+    /// Sparkle's 'no update available' also falls under the abort callback (SUSparkleErrorDomain /
+    /// SUNoUpdateError = 1001, see Sparkle/SUErrors.h)—this is not an error, but categorized under
+    /// upToDate (Sparkle itself does not log this, SPUUpdater.m:798).
     private static func isNoUpdateError(_ error: any Error) -> Bool {
         let nsError = error as NSError
         return nsError.domain == SUSparkleErrorDomain && nsError.code == SUError.noUpdateError.rawValue
@@ -131,9 +133,9 @@ final class UpdateController: NSObject {
         logger.error("Sparkle update aborted: \(error.localizedDescription, privacy: .public)")
     }
 
-    /// 检查周期结束（含后台自动检查）。error != nil → 记录错误状态；
-    /// 无错且未找到更新的情况已由 noteUpdateNotFound 覆盖；找到更新
-    /// 时 UI 已交给 Sparkle，这里把 checking 归位为 idle。
+    /// Update check cycle ends (including background auto-check). If error != nil → log error status;
+    /// cases with no error and no update found are already covered by noteUpdateNotFound; if an update is
+    /// found, the UI is already handed over to Sparkle, so set checking back to idle.
     fileprivate func noteUpdateCycleFinished(error: (any Error)?) {
         if let error, !Self.isNoUpdateError(error) {
             status = .error(error.localizedDescription)
@@ -146,10 +148,11 @@ final class UpdateController: NSObject {
     }
 }
 
-/// SPUUpdaterDelegate 桥：Sparkle 只接受初始化时注入的 delegate（弱引用）。
-/// 转发回 UpdateController（weak，随 owner 同生命周期，controller 持桥、
-/// updater 弱持桥，无循环）。Sparkle 在主线程回调；nonisolated + Task
-/// 回 MainActor，沿用项目惯例（AppDelegate.userDefaultsDidChange）。
+/// SPUUpdaterDelegate bridge: Sparkle only accepts delegates injected during initialization (weak
+/// reference). Forward callbacks back to UpdateController (weak, same lifecycle as owner, controller holds
+/// the bridge, updater weakly holds the bridge, no cycles). Sparkle calls back on the main thread;
+/// nonisolated + Task returns to MainActor, following project conventions
+/// (AppDelegate.userDefaultsDidChange).
 private final class DelegateBridge: NSObject, SPUUpdaterDelegate {
     weak var owner: UpdateController?
 

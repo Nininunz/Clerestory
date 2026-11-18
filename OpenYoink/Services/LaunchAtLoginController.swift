@@ -1,7 +1,8 @@
 import Foundation
 import ServiceManagement
 
-/// 与 ServiceManagement 解耦的最小接口，便于在不修改系统登录项的情况下测试。
+/// The minimal interface decoupled from ServiceManagement, making it easier to test without modifying
+/// system login items.
 @MainActor
 protocol LaunchAtLoginServicing: AnyObject {
     var status: LaunchAtLoginController.Status { get }
@@ -10,11 +11,12 @@ protocol LaunchAtLoginServicing: AnyObject {
     func openSystemSettings()
 }
 
-/// “登录时启动”的唯一状态源。
+/// The sole source of the 'launch at login' status.
 ///
-/// 这里不把开关另存到 UserDefaults：系统设置中的登录项可能被用户随时撤销，
-/// 因而 `SMAppService.mainApp.status` 才是实际状态。注册失败时保留系统状态并
-/// 把错误反馈给设置页，避免 UI 显示已开启而系统实际未生效。
+/// Do not save the switch state separately to UserDefaults here: system login items in settings may be
+/// revoked by the user at any time. Therefore, `SMAppService.mainApp.status` is the actual status. When
+/// registration fails, retain the system status and provide error feedback to the settings page to avoid
+/// UI showing enabled while the system is not actually effective.
 @MainActor
 @Observable
 final class LaunchAtLoginController {
@@ -28,8 +30,9 @@ final class LaunchAtLoginController {
     private(set) var status: Status = .notRegistered
     private(set) var errorMessage: String?
 
-    /// `.requiresApproval` 表示请求仍已注册，只是被系统设置阻止；开关保持打开，
-    /// 并另行提示用户批准。这样用户仍可通过关掉开关完成 unregister。
+    /// `.requiresApproval` indicates the request is still registered, but blocked by system settings; the
+    /// switch remains on, and an additional prompt is shown for user approval. This allows the user to
+    /// still unregister by turning off the switch.
     var isRequested: Bool {
         status == .enabled || status == .requiresApproval
     }
@@ -51,8 +54,8 @@ final class LaunchAtLoginController {
     func refresh() {
         let refreshedStatus = service.status
         if refreshedStatus != status {
-            // 用户可能已在系统设置中完成批准/撤销；状态真实变化后，先前一次
-            // 注册操作的错误已经过时，不应继续显示。
+            // The user may have already approved or revoked in system settings; once the state changes
+            // genuinely, the previous registration error is outdated and should not be displayed anymore.
             errorMessage = nil
         }
         status = refreshedStatus
@@ -88,10 +91,10 @@ final class SystemLaunchAtLoginService: LaunchAtLoginServicing {
         Self.map(service.status)
     }
 
-    /// `mainApp` 第一次查询时，Background Task Management 数据库里还没有
-    /// 对应记录，系统可能返回 `.notFound`。这并不代表主应用无法注册；首次
-    /// `register()` 正是用来创建这条记录。因此把它归一化为“尚未注册”，
-    /// 避免 UI 在用户有机会注册之前就错误地禁用开关。
+    /// When `mainApp` is queried for the first time, there is no corresponding record in the Background
+    /// Task Management database, and the system may return `.notFound`. This does not mean the main app
+    /// cannot register; the first `register()` is used to create this record. Therefore, normalize it as
+    /// 'not yet registered' to avoid UI disabling the switch before the user has a chance to register.
     static func map(_ status: SMAppService.Status) -> LaunchAtLoginController.Status {
         switch status {
         case .notRegistered:

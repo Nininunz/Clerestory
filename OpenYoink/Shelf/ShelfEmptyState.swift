@@ -1,14 +1,15 @@
 import SwiftUI
 
-/// 空状态（实施计划 §3）：居中插画位 + 投放提示 + 快捷键提示 + 半透明虚线边框。
+/// Center the illustration, drop instructions, and shortcut hint within a translucent dashed border.
 ///
-/// 虚线边框暗示可投放区域；S4 拖入悬停时由 ShelfView 的落点高亮
-/// （`DropTargetState.isTargeted` 驱动）接管强调态。文案走 Localizable.xcstrings（S10）；
-/// D9: 整体合并为单个可访问性元素，VoiceOver 一次读完提示与快捷键。
+/// Dashed border implies the drop area; when S4 is dragged over, the ShelfView's drop point highlight
+/// (`DropTargetState.isTargeted`) takes over the emphasis state. Text is in Localizable.xcstrings (S10);
+/// D9: merged into a single accessible element, VoiceOver reads the hint and shortcut in one go.
 struct ShelfEmptyState: View {
     var body: some View {
         VStack(spacing: 12) {
-            // 与屏幕边缘拉环同一字形，暗示「收起后就在那里」（issue #10）。
+            // Same font as the screen edge pull ring, implying that it 'stays there after collapsing'
+            // (issue #10).
             Image(systemName: "tray.and.arrow.down")
                 .font(.system(size: 34, weight: .light))
                 .foregroundStyle(.tertiary)
@@ -17,7 +18,8 @@ struct ShelfEmptyState: View {
                 Text("Drop files here")
                     .font(.callout)
                     .foregroundStyle(.secondary)
-                // F-05: 双模式拖入提示（直接拖入 = 引用；⌘ 拖入 = 移入原文件）。
+                // F-05: Dual-mode drag-in hint (direct drag-in = reference; ⌘ drag-in = move into original
+                // file).
                 Text("Hold ⌘ while dropping to move the original here")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
@@ -30,7 +32,8 @@ struct ShelfEmptyState: View {
         .accessibilityIdentifier("shelf.emptyState")
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(16)
-        // issue #10：更轻的连续圆角虚线框 + 极淡底色，融入玻璃而不是压在上面。
+        // issue #10: lighter continuous rounded corner dashed frame + very light background color,
+        // blending into glass rather than sitting on top.
         .background {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color.primary.opacity(0.025))

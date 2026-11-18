@@ -1,61 +1,69 @@
 import Foundation
 
-/// S9: shelf 布局纯逻辑（计划 §2.2）——目标屏判定、边缘吸附 frame、隐藏滑出
-/// 方向、frame 夹取、custom frame 校验与回退。全部与 AppKit 解耦（NSScreen
-/// 先纯值化为 `ScreenGeometry`），供 `ShelfWindowController` 调用、单测直测。
+/// S9: Shelf layout pure logic (planned §2.2) — target screen determination, edge snapping frame, hidden
+/// sliding-out direction, frame grabbing, custom frame validation and fallback. All are decoupled from
+/// AppKit (NSScreen is first purely converted into `ScreenGeometry`), available for
+/// `ShelfWindowController` to call and for direct unit testing.
 ///
-/// 坐标系：全局屏幕坐标（`NSEvent.mouseLocation` / `NSScreen.frame` 同一空间，
-/// 原点在主屏左下角）。
+/// Coordinate system: global screen coordinates (`NSEvent.mouseLocation` / `NSScreen.frame` are in the
+/// same space, origin at the bottom-left corner of the main screen).
 enum ShelfLayoutEngine {
-    /// 屏幕几何快照（NSScreen.frame / visibleFrame 的纯值化）。
+    /// Screen geometry snapshot (pure value of NSScreen.frame / visibleFrame).
     struct ScreenGeometry: Equatable, Sendable {
         var frame: CGRect
         var visibleFrame: CGRect
     }
 
-    /// 屏幕数组为空时的兜底尺寸（正常运行的 macOS 至少一屏，纯防护）。
+    /// Fallback size when the screen array is empty (macOS normally has at least one screen in operation,
+    /// for pure protection).
     static let fallbackSize = CGSize(width: 320, height: 600)
 
-    // MARK: - 紧凑高度常量（UX5）
+    // MARK: - Compact height
 
-    /// 网格列最小宽度与间距 —— 与 `ShelfView.columnWidth` / `.gridSpacing`
-    /// 保持一致（列数推算必须与 SwiftUI adaptive 网格的排布一致）。
+    /// Grid column minimum width and spacing —— consistent with `ShelfView.columnWidth` / `.gridSpacing`
+    /// (column count calculation must align with SwiftUI adaptive grid layout).
     static let gridColumnMinimum: CGFloat = 84
     static let gridSpacing: CGFloat = 12
-    /// 面板内水平/垂直固定边距合计：窗口外层 padding 8×2 + 内容 padding 8×2。
+    /// Horizontal/vertical fixed margins inside panel: window outer padding 8×2 + content padding 8×2.
     static let contentPadding: CGFloat = 32
-    /// 内容区在收起控件侧额外让出的水平宽度。收起按钮已移入标题栏（issue #10：
-    /// 内缘竖条把手打破左右对称），内容两侧边距恢复一致，故为 0。
+    /// Horizontal width given up on content area when the control is collapsed. The collapse button has
+    /// been moved to the title bar (issue #10: inner vertical handle breaks left-right symmetry), content
+    /// side margins are now consistent, so it is 0.
     static let handleContentAllowance: CGFloat = 0
-    /// 标题栏块高度（含 VStack 间距）。
+    /// Title bar block height (including VStack spacing).
     static let headerHeight: CGFloat = 28
-    /// ActivityStrip 自身与 VStack 间距。只在状态可见时预留，避免覆盖卡片。
+    /// ActivityStrip spacing from itself to VStack. Only reserved when the status is visible to avoid
+    /// overlapping cards.
     static let activityStripHeight: CGFloat = 86
     /// Selection action bar (36pt) plus up to 8pt surrounding VStack spacing
     /// (the expanded-stack presentation uses the larger spacing).
     static let quickActionBarHeight: CGFloat = 44
-    /// 两行标题 + 一行可见状态的卡片高度估算。传输完成后 Ready 卡片保持
-    /// 安静；托管副本、进行中和失败状态需要真实文字，不能只靠角标或颜色。
+    /// Estimated height of two lines of title + one visible status card. After transfer, Ready card
+    /// remains quiet; hosted copy, in-progress, and failed states require real text, not just badges or
+    /// colors.
     static let cardRowHeight: CGFloat = 132
-    /// 空架时的紧凑总高度（让 `ShelfEmptyState` 插画居中即可，不撑满）。
+    /// Compact total height when shelf is empty (let `ShelfEmptyState` illustration be centered, do not
+    /// stretch full height).
     static let emptyStateHeight: CGFloat = 200
-    /// 高度上限：屏幕可见高度的 80%（超出部分由网格 ScrollView 滚动）。
+    /// Height limit: 80% of visible screen height (overflow is scrolled by grid ScrollView).
     static let maximumHeightFraction: CGFloat = 0.8
 
-    // MARK: - 目标屏判定
+    // MARK: - Target display selection
 
-    /// 包含鼠标点的屏幕；无命中（鼠标所在屏刚被拔掉、坐标悬空）回退首屏（主屏）。
-    /// 与 `ShelfWindowController.screen(containing:)` 同一规则。空数组返回 nil。
+    /// Screen containing the mouse point; fallback to first screen (main screen) if no hit (mouse screen
+    /// just removed, or coordinates are empty). Same rule as `ShelfWindowController.screen(containing:)`.
+    /// Returns nil for empty array.
     static func targetScreen(mouseLocation: CGPoint, screens: [ScreenGeometry]) -> ScreenGeometry? {
         screens.first { $0.frame.contains(mouseLocation) } ?? screens.first
     }
 
-    // MARK: - 边缘布局
+    // MARK: - Edge layout
 
-    /// UX5: 由面板宽度推算网格列数（与 SwiftUI `adaptive(minimum:spacing:)`
-    /// 的排布规则一致：n 列需 n×min + (n-1)×spacing ≤ 可用宽度）。
-    /// 扣减固定边距外的把手让位（`handleContentAllowance`）——columnCount
-    /// 只服务左/右锚的紧凑高度计算，把手恒定可见；custom 不走此路径。
+    /// UX5: Calculate grid column count from panel width (consistent with SwiftUI
+    /// `adaptive(minimum:spacing:)` layout rules: n columns need n×min + (n-1)×spacing ≤ available width).
+    /// Subtract fixed margin allowances for handle space (`handleContentAllowance`) — columnCount only
+    /// serves compact height calculation for left/right anchors, handles are always visible; custom does
+    /// not follow this path.
     static func columnCount(forPanelWidth width: CGFloat) -> Int {
         let gridWidth = width - contentPadding - handleContentAllowance
         return gridColumnCount(for: gridWidth)
@@ -81,8 +89,9 @@ enum ShelfLayoutEngine {
         return height <= viewport.height
     }
 
-    /// UX5: 内容贴合高度 —— 标题栏 + 内边距 + 行高×行数 + 行间距；
-    /// 上限为可见高度的 80%（超出滚动）；空架给紧凑空态高度。
+    /// UX5: Content fitting height —— title bar + inner padding + line height × line count + line spacing;
+    /// upper limit is 80% of visible height (scroll overflow); empty shelf gives compact empty state
+    /// height.
     static func contentHeight(itemCount: Int,
                               panelWidth: CGFloat,
                               visibleHeight: CGFloat,
@@ -100,10 +109,10 @@ enum ShelfLayoutEngine {
                    cap)
     }
 
-    /// 边缘吸附 frame：贴 position 对应缘。UX5 起高度由内容决定
-    /// （`contentHeight`）；EdgeTab 起垂直位置由 `edgeOffset`（0 = 可见区底缘、
-    /// 1 = 顶缘）决定，默认 0.5 即旧版的垂直居中。custom 无贴附缘概念，
-    /// 返回 nil（走 `validatedCustomFrame` 路径）。
+    /// Edge adhesion frame: stick to the position corresponding edge. UX5 onwards height is determined by
+    /// content (`contentHeight`); EdgeTab vertical position is determined by `edgeOffset` (0 = bottom of
+    /// visible area, 1 = top), default 0.5 is the old vertical center. Custom has no concept of adhesion
+    /// edge, returns nil (follows `validatedCustomFrame` path).
     static func edgeAttachedFrame(position: SettingsStore.ShelfPosition,
                                   width: CGFloat,
                                   height: CGFloat,
@@ -124,8 +133,9 @@ enum ShelfLayoutEngine {
         }
     }
 
-    /// 隐藏态 frame：左/右向贴附缘外侧平移一个面板宽度（滑出方向随位置反转）；
-    /// custom 无滑向，原位返回（显示/隐藏只剩透明度动画）。
+    /// Hidden state frame: shift one panel width outside the left/right adhesion edge (slide out direction
+    /// reverses with position); custom has no sliding direction, returns original position (show/hide only
+    /// has transparency animation).
     static func hiddenFrame(for frame: CGRect, position: SettingsStore.ShelfPosition) -> CGRect {
         switch position {
         case .right: return frame.offsetBy(dx: frame.width, dy: 0)
@@ -134,18 +144,20 @@ enum ShelfLayoutEngine {
         }
     }
 
-    // MARK: - 把手 ↔ 面板形变（issue #10）
+    // MARK: - Transition between the handle and panel
 
-    /// 形变时把手矩形向屏幕外侧多延伸的宽度：让收拢态玻璃的外侧圆角落在
-    /// 窗口之外被裁掉，与拉环「外侧圆角藏在屏幕边缘外」的外观一致。
+    /// Deformation width extending the handle rectangle beyond the screen edge: allows the outer corner of
+    /// the folded glass to be cropped outside the window, matching the appearance of the pull tab with the
+    /// outer corner hidden outside the screen edge.
     static let revealEdgeBleed: CGFloat = 12
 
-    /// 展开/收起形变的起止矩形：拉环在 shelf **玻璃面**局部坐标系（左上原点，
-    /// 与 SwiftUI 一致）中的位置。
-    /// - surfaceFrame: 玻璃面的屏幕 frame（面板窗口 frame 内缩 `windowInset`）。
-    /// - tabFrame: 拉环的屏幕 frame（`edgeTabFrame`）。
-    /// 竖直方向夹取进玻璃面（拉环偏移与面板不同高时从最近处长出），水平方向
-    /// 贴住屏幕缘并向外延伸 `revealEdgeBleed`。custom 无贴附缘 → nil（只淡入淡出）。
+    /// Start and end rectangles for expansion/collapse deformation: the position of the pull tab in the
+    /// shelf's glass surface local coordinate system (top-left origin, consistent with SwiftUI).
+    /// - surfaceFrame: the screen frame of the glass surface (window frame inset by `windowInset`).
+    /// - tabFrame: the screen frame of the pull tab (`edgeTabFrame`).
+    /// Vertically, it clamps into the glass surface (extending from the nearest side if the pull tab
+    /// offset is not aligned with the panel). Horizontally, it adheres to the screen edge and extends
+    /// outward by `revealEdgeBleed`. custom without edge attachment → nil (only fade in/out).
     static func revealOriginRect(surfaceFrame: CGRect,
                                  tabFrame: CGRect,
                                  position: SettingsStore.ShelfPosition,
@@ -167,11 +179,11 @@ enum ShelfLayoutEngine {
         }
     }
 
-    // MARK: - EdgeTab 布局（屏幕边缘常驻拉环）
+    // MARK: - EdgeTab layout
 
-    /// 拉环常态露出宽度（贴缘方向的横向尺寸）。
+    /// Normal exposure width of the pull tab (lateral dimension along the edge side).
     static let edgeTabWidth: CGFloat = 14
-    /// 拉环高度（沿边方向的纵向尺寸）。
+    /// Height of the pull tab (longitudinal dimension along the edge direction).
     static let edgeTabHeight: CGFloat = 84
 
     /// Keep at least 2pt around the glyph, independently of the tab's hit area.
@@ -181,18 +193,22 @@ enum ShelfLayoutEngine {
         return CGRect(x: bounds.midX - side / 2, y: bounds.midY - side / 2,
                       width: side, height: side)
     }
-    /// 强调态（拖拽投放暗示 / 投放悬停）的加宽加高：贴缘与中心 y 不变。
+    /// Emphasized state (widen and heighten for drag-and-drop hint / hover): edge side and center y remain
+    /// unchanged.
     static let edgeTabEmphasizedWidth: CGFloat = 18
     static let edgeTabEmphasizedHeight: CGFloat = 92
-    /// 换边判定带：拖动拉环时光标越过屏幕中线后，距对面边缘小于该值即换边。
+    /// Edge switch detection band: when dragging the pull tab, if the cursor crosses the screen center
+    /// line and is within this value of the opposite edge, it switches to the opposite side.
     static let edgeTabFlipDistance: CGFloat = 120
 
-    /// 拉环常态 frame：贴 position 对应缘（与 shelf 同用 visibleFrame，避开
-    /// Dock/menu bar 遮挡区）；`offset`（0 = 拉环中心贴可见区底缘、1 = 顶缘）
-    /// 映射垂直位置并夹取。custom 无贴附缘，返回 nil（调用方不显示拉环）。
+    /// Normal frame of the pull tab: adheres to the corresponding edge (same visibleFrame as shelf,
+    /// avoiding Dock/menu bar occlusion area); `offset` (0 = center of pull tab adheres to bottom edge of
+    /// visible area, 1 = top edge) maps vertical position and clamps. custom without edge attachment → nil
+    /// (caller does not display the pull tab).
     ///
-    /// offset 映射以拉环**中心**为准（而非底缘），与 `edgeTabOffset(forCenterY:)`
-    /// 互为精确反函数 —— 拖动结束持久化 offset 后重建 frame 不跳位。
+    /// The offset mapping is based on the center of the pull tab (not the bottom edge), and is the exact
+    /// inverse function of `edgeTabOffset(forCenterY:)` — dragging ends and persisting the offset allows
+    /// frame reconstruction without jumping.
     static func edgeTabFrame(position: SettingsStore.ShelfPosition,
                              offset: CGFloat,
                              visibleFrame: CGRect) -> CGRect? {
@@ -210,8 +226,9 @@ enum ShelfLayoutEngine {
                       width: edgeTabWidth, height: height)
     }
 
-    /// 拉环中心 y（拖动时由光标驱动）→ offset（0 = 底缘、1 = 顶缘），
-    /// 夹取进 [0,1]。可见高度不大于拉环高度时无垂直行程，回退 0.5。
+    /// Center y of the pull tab (driven by cursor during dragging) → offset (0 = bottom edge, 1 = top
+    /// edge), clamped into [0,1]. If visible height is less than pull tab height, no vertical movement,
+    /// revert to 0.5.
     static func edgeTabOffset(forCenterY centerY: CGFloat, visibleFrame: CGRect) -> CGFloat {
         let height = min(edgeTabHeight, visibleFrame.height)
         let travel = visibleFrame.height - height
@@ -220,8 +237,9 @@ enum ShelfLayoutEngine {
         return min(max(raw, 0), 1)
     }
 
-    /// 强调态 frame（拖拽暗示的轻微放大）：贴缘侧与中心 y 不变，宽度向屏内
-    /// 加宽、高度对称加高，结果夹取进 visibleFrame。custom 无拉环，原样返回。
+    /// Emphasized state frame (slight enlargement for drag hint): edge side and center y remain unchanged,
+    /// width expands inward, height symmetrically increases, and result is clamped into visibleFrame.
+    /// custom without pull tab, return as is.
     static func edgeTabEmphasisFrame(from base: CGRect,
                                      position: SettingsStore.ShelfPosition,
                                      visibleFrame: CGRect) -> CGRect {
@@ -237,9 +255,10 @@ enum ShelfLayoutEngine {
         return clamped(frame, into: visibleFrame)
     }
 
-    /// 拖动拉环的换边判定：光标越过屏幕中线、且进入距对面边缘
-    /// `flipDistance` 的带状区 → 应换到对侧。只逼近对缘但未过中线不换
-    /// （窄屏防护：带与中线可能交叠）。custom 无贴附缘，永不换边。
+    /// Edge switch detection during dragging: if the cursor crosses the screen center line and enters the
+    /// band area within `flipDistance` of the opposite edge → switch to the opposite side. Only approach
+    /// the opposite edge but not cross the center line → no switch (narrow screen protection: band may
+    /// overlap with center line). custom without edge attachment, never switch.
     static func shouldFlipSide(position: SettingsStore.ShelfPosition,
                                cursorLocation: CGPoint,
                                screenFrame: CGRect,
@@ -256,24 +275,28 @@ enum ShelfLayoutEngine {
         }
     }
 
-    // MARK: - 内缘收起把手（任务三）
+    // MARK: - Inner-edge collapse handle
 
-    /// 把手宽度（点）。10pt，贴在形状贴缘侧；配合 `handleContentAllowance`
-    /// （内容区从形状缘 12pt 起排）与第一列卡片无交叠——此前 14pt 无让位
-    /// 会与首列卡片水平重叠 6pt（真机验收发现）。
+    /// Handle width (points). 10pt, attached to the shape edge side; paired with `handleContentAllowance`
+    /// (content area starts from 12pt away from shape edge) to avoid overlap with the first column card —
+    /// previously 14pt without spacing would overlap horizontally with the first column card by 6pt
+    /// (discovered during real device testing).
     static let innerEdgeHandleWidth: CGFloat = 10
 
-    /// 内缘收起把手的贴附侧。
+    /// Attachment side of the inner edge fold handle.
     enum InnerEdgeHandleSide: Sendable, Equatable {
-        /// 把手在面板左缘（右锚 shelf：把手朝屏幕中心，chevron 指向右缘）。
+        /// Handle on the panel left edge (right anchor shelf: handle faces the screen center, chevron
+        /// points to the right edge).
         case leading
-        /// 把手在面板右缘（左锚 shelf）。
+        /// Handle is on the right edge of the panel (left anchor shelf).
         case trailing
     }
 
-    /// 把手侧判定（纯函数）：把手总在 shelf 朝向屏幕中心的内缘 ——
-    /// 右锚 → 面板左缘（leading）；左锚 → 右缘（trailing）。
-    /// custom 自由位置无贴附缘 → nil（不显示把手，标题栏拖动把手已覆盖）。
+    /// Handle side determination (pure function): The handle is always on the inner edge of the shelf
+    /// facing the screen center ——
+    /// Right anchor → left edge of the panel (leading); Left anchor → right edge (trailing).
+    /// Custom free position without attached edge → nil (no handle displayed, title bar drag handle
+    /// already covers).
     static func innerEdgeHandleSide(for position: SettingsStore.ShelfPosition) -> InnerEdgeHandleSide? {
         switch position {
         case .right: return .leading
@@ -282,10 +305,11 @@ enum ShelfLayoutEngine {
         }
     }
 
-    // MARK: - 夹取与校验
+    // MARK: - Grabbing and Validation
 
-    /// 把任意 frame 夹取进 visibleFrame：先按可用区域收缩超出尺寸，
-    /// 再把原点移到最近的可用位置（最小位移）。已在区域内时返回自身。
+    /// Grab any frame into visibleFrame: First shrink the frame to fit within the available area,
+    /// Then move the origin to the nearest available position (minimum displacement). Return itself if
+    /// already within the area.
     static func clamped(_ frame: CGRect, into visibleFrame: CGRect) -> CGRect {
         let size = CGSize(width: min(frame.width, visibleFrame.width),
                           height: min(frame.height, visibleFrame.height))
@@ -294,9 +318,11 @@ enum ShelfLayoutEngine {
         return CGRect(origin: CGPoint(x: x, y: y), size: size)
     }
 
-    /// 与 frame 交集面积最大的屏幕。按屏幕 frame（而非 visibleFrame）判定相交：
-    /// 用户拖到 menu bar / Dock 遮挡区仍认该屏，夹取时再收进 visibleFrame。
-    /// 与所有屏幕零面积相交（含空数组）返回 nil。
+    /// Screen with the largest intersection area with the frame. Determine intersection based on screen
+    /// frame (not visibleFrame):
+    /// User dragging to menu bar / Dock obscured area still considers the screen, and the frame is
+    /// adjusted into visibleFrame during grabbing.
+    /// Return nil if zero intersection area with all screens (including empty array).
     static func bestIntersectingScreen(for frame: CGRect, screens: [ScreenGeometry]) -> ScreenGeometry? {
         var best: ScreenGeometry?
         var bestArea: CGFloat = 0
@@ -311,9 +337,12 @@ enum ShelfLayoutEngine {
         return best
     }
 
-    /// 校验持久化 custom frame：宽度以设置为准（custom 模式下宽度设置仍生效），
-    /// 高度与位置取持久化值，夹取进交集最大屏的 visibleFrame。
-    /// 完全落出所有屏幕（所在屏已拔掉）返回 nil，由调用方回退默认位置。
+    /// Validate persistent custom frame: Width is set as specified (width setting still applies in custom
+    /// mode),
+    /// Height and position take persistent values, and the frame is adjusted into the visibleFrame of the
+    /// screen with the largest intersection.
+    /// Return nil if completely outside all screens (screen has been removed), to be reverted by the
+    /// caller to default position.
     static func validatedCustomFrame(_ persisted: CGRect,
                                      width: CGFloat,
                                      screens: [ScreenGeometry]) -> CGRect? {
@@ -322,27 +351,35 @@ enum ShelfLayoutEngine {
         return clamped(sized, into: screen.visibleFrame)
     }
 
-    /// Space 切换后的在位校正：frame 仍与某屏相交 → 夹取回该屏 visibleFrame
-    /// （正常情况下夹取结果是自身，即 no-op）；完全落出所有屏幕或屏幕数组为空
-    /// 返回 nil，由调用方按 `targetFrame` 全量重算。
+    /// Correction after Space switch: If the frame still intersects with a screen → grab back into that
+    /// screen's visibleFrame
+    /// (Normally, the grabbing result is itself, i.e., no-op); Return nil if completely outside all
+    /// screens or screen array is empty,
+    /// Caller will recalculate the targetFrame from scratch.
     ///
-    /// 只校正、不按鼠标重新跟随 —— canJoinAllSpaces + stationary 让面板留在原
-    /// 全局坐标出现在每个 Space，跟随鼠标反而会造成跨屏漂移。
+    /// Only correct, not reposition by mouse —— canJoinAllSpaces + stationary keeps the panel in its
+    /// original
+    /// global coordinates appearing on each Space, following the mouse would cause cross-screen drift.
     static func onscreenCorrection(for frame: CGRect, screens: [ScreenGeometry]) -> CGRect? {
         guard let screen = bestIntersectingScreen(for: frame, screens: screens) else { return nil }
         return clamped(frame, into: screen.visibleFrame)
     }
 
-    // MARK: - 完整目标 frame 决策
+    // MARK: - Full Target Frame Decision
 
-    /// show / 屏幕参数变化 / 设置变更 / 项目增删共用的目标 frame 决策：
-    /// - 左/右：目标屏（鼠标所在屏，被拔掉回退主屏）visibleFrame 边缘吸附，
-    ///   UX5 起高度贴合内容（`itemCount` → 行数 → 紧凑高度，上限 80% 屏高），
-    ///   EdgeTab 起垂直位置按 `edgeOffset`（默认 0.5 = 垂直居中）；
-    /// - custom：持久化 frame 校验后使用（高度取持久化值，不随内容变化）；
-    ///   无持久化（首次选 custom）或持久化已落出所有屏幕（屏幕被拔掉）→
-    ///   目标屏右缘默认 frame 起步；
-    /// - 屏幕数组为空（防护）：原点兜底 frame。
+    /// Target frame decision shared by show / screen parameter changes / setting changes / item
+    /// additions/removals:
+    /// - Left/Right: Target screen (mouse screen, fallback to main screen if removed) visibleFrame edge
+    /// adhesion,
+    ///   UX5 and above height aligns with content (itemCount → row count → compact height, max 80% screen
+    /// height),
+    ///   EdgeTab and above vertical position based on edgeOffset (default 0.5 = vertical center);
+    /// - Custom: Use persistent frame after validation (height takes persistent value, not
+    /// content-dependent);
+    ///   No persistent (first time selecting custom) or persistent frame outside all screens (screen
+    /// removed) →
+    ///   Target screen right edge default frame starting;
+    /// - Screen array is empty (protection): Fallback to origin frame.
     static func targetFrame(position: SettingsStore.ShelfPosition,
                             width: CGFloat,
                             itemCount: Int,
@@ -364,7 +401,8 @@ enum ShelfLayoutEngine {
                                        hasActivity: hasActivity,
                                        hasQuickActions: hasQuickActions,
                                        hasSearchControls: hasSearchControls)
-            // left/right 必有 edge frame（nil 仅 custom 返回），兜底同防护分支。
+            // Left/right must have edge frame (nil only returned for custom), fallback same as protection
+            // branch.
             return edgeAttachedFrame(position: position, width: width, height: height,
                                      visibleFrame: screen.visibleFrame, edgeOffset: edgeOffset)
                 ?? CGRect(origin: .zero, size: fallbackSize)
@@ -373,7 +411,7 @@ enum ShelfLayoutEngine {
                let valid = validatedCustomFrame(persistedCustomFrame, width: width, screens: screens) {
                 return valid
             }
-            // 首次 custom / 持久化所在屏已拔掉：右缘默认 frame 起步。
+            // First time custom / persistent screen removed: Right edge default frame starting.
             return CGRect(x: screen.visibleFrame.maxX - width,
                           y: screen.visibleFrame.minY,
                           width: width,
