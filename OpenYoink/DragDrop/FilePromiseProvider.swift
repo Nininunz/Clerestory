@@ -150,7 +150,7 @@ nonisolated final class FilePromiseDelegate: NSObject, NSFilePromiseProviderDele
     private let onDelivered: (@Sendable (URL) -> Void)?
     private let onError: (@Sendable (Error) -> Void)?
     private let writeQueue: OperationQueue
-    private let logger = Logger(subsystem: "com.nininunz.OpenYoink", category: "FilePromiseProvider")
+    private let logger = Logger(subsystem: "com.nininunz.Clerestory", category: "FilePromiseProvider")
 
     init(payload: FilePromiseProvider.Payload,
          bookmarkService: BookmarkService,
@@ -163,7 +163,7 @@ nonisolated final class FilePromiseDelegate: NSObject, NSFilePromiseProviderDele
         self.onDelivered = onDelivered
         self.onError = onError
         let queue = OperationQueue()
-        queue.name = "com.nininunz.OpenYoink.FilePromiseWrite"
+        queue.name = "com.nininunz.Clerestory.FilePromiseWrite"
         queue.qualityOfService = .userInitiated
         self.writeQueue = queue
         super.init()

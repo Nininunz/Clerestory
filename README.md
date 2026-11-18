@@ -10,7 +10,7 @@ Clerestory 将暂存架和可配置的快捷入口集中在屏幕顶部的面板
 
 Clerestory 支持运行 macOS 15 或更新版本的 Apple 芯片和 Intel Mac。打开已签名并通过 Apple 公证的 [Clerestory 1.0.4 DMG](https://github.com/Nininunz/Clerestory/releases/download/v1.0.4/Clerestory-1.0.4.dmg)，将应用拖入「应用程序」。
 
-使用 Nininunz 分支的用户，可以从菜单栏图标选择 **检查更新…**，将本分支的 OpenYoink 1.0.0 原位升级到 Clerestory。从上游 OpenYoink 切换时，Clerestory 会使用自己的暂存架和偏好设置，上游数据仍保留在原应用中。详见[发行说明](docs/FORK_RELEASE.md)。
+从旧版 OpenYoink 切换时，请使用 DMG 安装 Clerestory。Clerestory 使用独立的暂存架和偏好设置。已安装使用 Clerestory 应用标识符的版本后，可从菜单栏图标选择 **检查更新…**。详见[发行指南](docs/FORK_RELEASE.md)。
 
 ## 快速上手
 
@@ -62,7 +62,7 @@ Clerestory 支持运行 macOS 15 或更新版本的 Apple 芯片和 Intel Mac。
 
 ## 隐私与权限
 
-- 不用注册账号，不收集统计数据。东西都存在本机沙箱里的 `Application Support/OpenYoink`。
+- 不用注册账号，不收集统计数据。东西都存在本机沙箱里的 `Application Support/Clerestory`。
 - 开启了 App Sandbox，只能碰你自己拖进来或选中的文件。日常使用不需要辅助功能或输入监控权限。
 - 唯一的后台联网是检查和下载更新（访问 GitHub Pages / Releases），可以在设置里关掉。
 - 正在播放模块不联网。它优先用本地 helper 读取播放信息，退而用 AppleScript 控制 Apple Music / Spotify，这时系统可能会问你要"自动化"权限。这个模块出问题不会影响暂存架。
@@ -87,16 +87,16 @@ cd Clerestory
 
 xcodebuild \
   -project Open-Yoink.xcodeproj \
-  -scheme OpenYoink \
+  -scheme Clerestory \
   -destination 'platform=macOS' \
   build
 
 xcodebuild \
   -project Open-Yoink.xcodeproj \
-  -scheme OpenYoink \
+  -scheme Clerestory \
   -destination 'platform=macOS' \
   test \
-  -only-testing:OpenYoinkTests
+  -only-testing:ClerestoryTests
 ```
 
 用 Swift 6、SwiftUI 和 AppKit 写的。本地构建不需要设置 `DEVELOPMENT_TEAM`；上面的测试命令只跑单元测试，不跑 UI 自动化。

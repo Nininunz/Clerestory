@@ -4,9 +4,9 @@ For automated PR builds and unit tests, see the [macOS CI guide](CI.md). This na
 
 See the [manual testing guide](../MANUAL_TESTING.md) for Finder and browser workflows, hardware checks, and file recovery.
 
-Run `Scripts/test-ui.sh` from a logged-in macOS desktop. XCTest launches the real app and interacts with its native controls. Quit other OpenYoink builds first and avoid using the mouse or keyboard during the run. The suite fails its preflight if a different build is running, because overlapping Islands can intercept clicks and drops. It never quits your normal app automatically.
+Run `Scripts/test-ui.sh` from a logged-in macOS desktop. XCTest launches the real app and interacts with its native controls. Quit other Clerestory and OpenYoink builds first and avoid using the mouse or keyboard during the run. The suite fails its preflight if a different build is running, because overlapping Islands can intercept clicks and drops. It never quits your normal app automatically.
 
-The script uses local ad-hoc signing, verifies the app, runner, and drag helper signatures, then runs `OpenYoinkUITests` serially. Do not use `CODE_SIGNING_ALLOWED=NO` for this suite: Xcode repackages its runner, and leaving that bundle unsigned can produce macOS's “damaged and can't be opened” alert before tests begin. No signing account is required. During test execution, `caffeinate` keeps the display/system awake and XCTest enforces a 60-second default test budget (90-second maximum); neither changes saved power settings.
+The script uses local ad-hoc signing, verifies the app, runner, and drag helper signatures, then runs `ClerestoryUITests` serially. Do not use `CODE_SIGNING_ALLOWED=NO` for this suite: Xcode repackages its runner, and leaving that bundle unsigned can produce macOS's “damaged and can't be opened” alert before tests begin. No signing account is required. During test execution, `caffeinate` keeps the display/system awake and XCTest enforces a 60-second default test budget (90-second maximum); neither changes saved power settings.
 
 By default, each invocation creates a temporary DerivedData directory and prints its path. To reuse a successful build directory:
 
@@ -24,7 +24,7 @@ Results, screenshots, failure hierarchies, and screen recordings are in that dir
 - `--ui-testing-open-settings` opens General settings.
 - `--ui-testing-hover` starts collapsed with hover reveal enabled in the isolated preferences.
 - `--ui-testing-shelf-files` seeds two synthetic text files for keyboard and Quick Look coverage (Debug only).
-- `--ui-testing-drag-source` enables the production drag monitor (Debug only). The tests launch the separate `OpenYoinkUITestDragSource` helper app, which creates disposable file/text payloads and starts native mouse drag sessions. Drops use the production receiver, import pipeline, and duplicate handling; internal-drag rejection stays unchanged. The helper is a UI-test target dependency with `SKIP_INSTALL=YES`, not part of the shipped app.
+- `--ui-testing-drag-source` enables the production drag monitor (Debug only). The tests launch the separate `ClerestoryUITestDragSource` helper app, which creates disposable file/text payloads and starts native mouse drag sessions. Drops use the production receiver, import pipeline, and duplicate handling; internal-drag rejection stays unchanged. The helper is a UI-test target dependency with `SKIP_INSTALL=YES`, not part of the shipped app.
 - `--ui-testing-hide-compact` suppresses the optional companion in the isolated preferences.
 - `-OpenYoinkSimulateNoNotch YES` overrides notch detection for that process through the argument domain, without changing the saved debug preference.
 

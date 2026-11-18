@@ -3,7 +3,7 @@ import OSLog
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private static let uiTestingDefaultsSuite = "com.nininunz.OpenYoink.UITests"
+    private static let uiTestingDefaultsSuite = "com.nininunz.Clerestory.UITests"
     private static var isUITestingEnvironment: Bool {
         ProcessInfo.processInfo.environment["OPENYOINK_UI_TESTING"] == "1"
     }
@@ -21,7 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private static func makeStartupSettings() -> (settings: SettingsStore, hadLegacyInstall: Bool) {
         let defaults = makeSettingsDefaults()
         let domain = isUITestingEnvironment ? uiTestingDefaultsSuite
-            : (Bundle.main.bundleIdentifier ?? "com.nininunz.OpenYoink")
+            : (Bundle.main.bundleIdentifier ?? "com.nininunz.Clerestory")
         let evidence = OnboardingLaunchPolicy.hasExistingInstallation(
             preferences: defaults.persistentDomain(forName: domain) ?? [:],
             supportEntries: (try? FileManager.default.contentsOfDirectory(
@@ -50,7 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let shelfNotice = ShelfNoticeModel()
     /// Share the active tutorial item token without coupling the lazy Shelf and onboarding objects.
     private let onboardingDragContext = OnboardingDragContext()
-    private let logger = Logger(subsystem: "com.nininunz.OpenYoink", category: "App")
+    private let logger = Logger(subsystem: "com.nininunz.Clerestory", category: "App")
     private var isUITesting: Bool {
         Self.isUITestingEnvironment
     }

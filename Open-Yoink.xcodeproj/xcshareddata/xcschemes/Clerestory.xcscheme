@@ -16,8 +16,8 @@
                   <BuildableReference
                      BuildableIdentifier = "primary"
                      BlueprintIdentifier = "0E00000000000000000001"
-                     BuildableName = "OpenYoink.app"
-                     BlueprintName = "OpenYoink"
+                     BuildableName = "Clerestory.app"
+                     BlueprintName = "Clerestory"
                      ReferencedContainer = "container:Open-Yoink.xcodeproj">
                   </BuildableReference>
                </EnvironmentBuildable>
@@ -34,8 +34,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "0E00000000000000000001"
-               BuildableName = "OpenYoink.app"
-               BlueprintName = "OpenYoink"
+               BuildableName = "Clerestory.app"
+               BlueprintName = "Clerestory"
                ReferencedContainer = "container:Open-Yoink.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -54,8 +54,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "0E00000000000000000002"
-               BuildableName = "OpenYoinkTests.xctest"
-               BlueprintName = "OpenYoinkTests"
+               BuildableName = "ClerestoryTests.xctest"
+               BlueprintName = "ClerestoryTests"
                ReferencedContainer = "container:Open-Yoink.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -65,8 +65,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "0E00000000000000000003"
-               BuildableName = "OpenYoinkUITests.xctest"
-               BlueprintName = "OpenYoinkUITests"
+               BuildableName = "ClerestoryUITests.xctest"
+               BlueprintName = "ClerestoryUITests"
                ReferencedContainer = "container:Open-Yoink.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -86,8 +86,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "0E00000000000000000001"
-            BuildableName = "OpenYoink.app"
-            BlueprintName = "OpenYoink"
+            BuildableName = "Clerestory.app"
+            BlueprintName = "Clerestory"
             ReferencedContainer = "container:Open-Yoink.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -102,8 +102,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "0E00000000000000000001"
-            BuildableName = "OpenYoink.app"
-            BlueprintName = "OpenYoink"
+            BuildableName = "Clerestory.app"
+            BlueprintName = "Clerestory"
             ReferencedContainer = "container:Open-Yoink.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

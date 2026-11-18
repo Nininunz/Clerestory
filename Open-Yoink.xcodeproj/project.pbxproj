@@ -12,16 +12,16 @@
 			containerPortal = 0D00000000000000000001 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 0E00000000000000000001;
-			remoteInfo = OpenYoink;
+			remoteInfo = Clerestory;
 		};
 		0C00000000000000000002 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 0D00000000000000000001 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 0E00000000000000000001;
-			remoteInfo = OpenYoink;
+			remoteInfo = Clerestory;
 		};
-		A10000000000000000000001 = {isa = PBXContainerItemProxy; containerPortal = 0D00000000000000000001; proxyType = 1; remoteGlobalIDString = A10000000000000000000002; remoteInfo = OpenYoinkUITestDragSource; };
+		A10000000000000000000001 = {isa = PBXContainerItemProxy; containerPortal = 0D00000000000000000001; proxyType = 1; remoteGlobalIDString = A10000000000000000000002; remoteInfo = ClerestoryUITestDragSource; };
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXBuildFile section */
@@ -31,19 +31,19 @@
 
 /* Begin PBXFileReference section */
 		0F00000000000000000004 /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
-		0F00000000000000000001 /* OpenYoink.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenYoink.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		0F00000000000000000002 /* OpenYoinkTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenYoinkTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		0F00000000000000000003 /* OpenYoinkUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenYoinkUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		A10000000000000000000003 = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenYoinkUITestDragSource.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0F00000000000000000001 /* Clerestory.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Clerestory.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0F00000000000000000002 /* ClerestoryTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ClerestoryTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0F00000000000000000003 /* ClerestoryUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ClerestoryUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000003 = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClerestoryUITestDragSource.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		1A00000000000000000001 /* Exceptions for "OpenYoink" folder in "OpenYoink" target */ = {
+		1A00000000000000000001 /* Exceptions for "OpenYoink" folder in "Clerestory" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				App/Info.plist,
 			);
-			target = 0E00000000000000000001 /* OpenYoink */;
+			target = 0E00000000000000000001 /* Clerestory */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -51,7 +51,7 @@
 		110000000000000000002 /* OpenYoink */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				1A00000000000000000001 /* Exceptions for "OpenYoink" folder in "OpenYoink" target */,
+				1A00000000000000000001 /* Exceptions for "OpenYoink" folder in "Clerestory" target */,
 			);
 			path = OpenYoink;
 			sourceTree = "<group>";
@@ -112,10 +112,10 @@
 		110000000000000000004 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				0F00000000000000000001 /* OpenYoink.app */,
-				0F00000000000000000002 /* OpenYoinkTests.xctest */,
-				0F00000000000000000003 /* OpenYoinkUITests.xctest */,
-				A10000000000000000000003 /* OpenYoinkUITestDragSource.app */,
+				0F00000000000000000001 /* Clerestory.app */,
+				0F00000000000000000002 /* ClerestoryTests.xctest */,
+				0F00000000000000000003 /* ClerestoryUITests.xctest */,
+				A10000000000000000000003 /* ClerestoryUITestDragSource.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -123,9 +123,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		0E00000000000000000001 /* OpenYoink */ = {
+		0E00000000000000000001 /* Clerestory */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 120000000000000000001 /* Build configuration list for PBXNativeTarget "OpenYoink" */;
+			buildConfigurationList = 120000000000000000001 /* Build configuration list for PBXNativeTarget "Clerestory" */;
 			buildPhases = (
 				130000000000000000001 /* Sources */,
 				100000000000000000001 /* Frameworks */,
@@ -139,18 +139,18 @@
 			fileSystemSynchronizedGroups = (
 				110000000000000000002 /* OpenYoink */,
 			);
-			name = OpenYoink;
+			name = Clerestory;
 			packageProductDependencies = (
 				2B00000000000000000001 /* Sparkle */,
 				3B00000000000000000001 /* OpenYoinkModuleCore */,
 			);
-			productName = OpenYoink;
-			productReference = 0F00000000000000000001 /* OpenYoink.app */;
+			productName = Clerestory;
+			productReference = 0F00000000000000000001 /* Clerestory.app */;
 			productType = "com.apple.product-type.application";
 		};
-		0E00000000000000000002 /* OpenYoinkTests */ = {
+		0E00000000000000000002 /* ClerestoryTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 120000000000000000002 /* Build configuration list for PBXNativeTarget "OpenYoinkTests" */;
+			buildConfigurationList = 120000000000000000002 /* Build configuration list for PBXNativeTarget "ClerestoryTests" */;
 			buildPhases = (
 				130000000000000000002 /* Sources */,
 				100000000000000000002 /* Frameworks */,
@@ -164,14 +164,14 @@
 			fileSystemSynchronizedGroups = (
 				110000000000000000003 /* OpenYoinkTests */,
 			);
-			name = OpenYoinkTests;
-			productName = OpenYoinkTests;
-			productReference = 0F00000000000000000002 /* OpenYoinkTests.xctest */;
+			name = ClerestoryTests;
+			productName = ClerestoryTests;
+			productReference = 0F00000000000000000002 /* ClerestoryTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		0E00000000000000000003 /* OpenYoinkUITests */ = {
+		0E00000000000000000003 /* ClerestoryUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 120000000000000000004 /* Build configuration list for PBXNativeTarget "OpenYoinkUITests" */;
+			buildConfigurationList = 120000000000000000004 /* Build configuration list for PBXNativeTarget "ClerestoryUITests" */;
 			buildPhases = (
 				130000000000000000003 /* Sources */,
 				100000000000000000003 /* Frameworks */,
@@ -186,20 +186,20 @@
 			fileSystemSynchronizedGroups = (
 				110000000000000000005 /* OpenYoinkUITests */,
 			);
-			name = OpenYoinkUITests;
+			name = ClerestoryUITests;
 			packageProductDependencies = (
 			);
-			productName = OpenYoinkUITests;
-			productReference = 0F00000000000000000003 /* OpenYoinkUITests.xctest */;
+			productName = ClerestoryUITests;
+			productReference = 0F00000000000000000003 /* ClerestoryUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
-		A10000000000000000000002 /* OpenYoinkUITestDragSource */ = {
+		A10000000000000000000002 /* ClerestoryUITestDragSource */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A10000000000000000000009;
 			buildPhases = (A10000000000000000000006, A10000000000000000000005, A10000000000000000000007);
 			buildRules = (); dependencies = ();
 			fileSystemSynchronizedGroups = (A10000000000000000000004);
-			name = OpenYoinkUITestDragSource; productName = OpenYoinkUITestDragSource;
+			name = ClerestoryUITestDragSource; productName = ClerestoryUITestDragSource;
 			productReference = A10000000000000000000003;
 			productType = "com.apple.product-type.application";
 		};
@@ -240,10 +240,10 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				0E00000000000000000001 /* OpenYoink */,
-				0E00000000000000000002 /* OpenYoinkTests */,
-				0E00000000000000000003 /* OpenYoinkUITests */,
-				A10000000000000000000002 /* OpenYoinkUITestDragSource */,
+				0E00000000000000000001 /* Clerestory */,
+				0E00000000000000000002 /* ClerestoryTests */,
+				0E00000000000000000003 /* ClerestoryUITests */,
+				A10000000000000000000002 /* ClerestoryUITestDragSource */,
 			);
 		};
 /* End PBXProject section */
@@ -315,12 +315,12 @@
 /* Begin PBXTargetDependency section */
 		150000000000000000001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 0E00000000000000000001 /* OpenYoink */;
+			target = 0E00000000000000000001 /* Clerestory */;
 			targetProxy = 0C00000000000000000001 /* PBXContainerItemProxy */;
 		};
 		150000000000000000002 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 0E00000000000000000001 /* OpenYoink */;
+			target = 0E00000000000000000001 /* Clerestory */;
 			targetProxy = 0C00000000000000000002 /* PBXContainerItemProxy */;
 		};
 		A10000000000000000000008 = {isa = PBXTargetDependency; target = A10000000000000000000002; targetProxy = A10000000000000000000001; };
@@ -467,9 +467,10 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.nininunz.OpenYoink;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nininunz.Clerestory;
 				PRODUCT_BUNDLE_PACKAGE_TYPE = APPL;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = OpenYoink;
+				PRODUCT_NAME = Clerestory;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
 			};
@@ -496,9 +497,10 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.nininunz.OpenYoink;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nininunz.Clerestory;
 				PRODUCT_BUNDLE_PACKAGE_TYPE = APPL;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = OpenYoink;
+				PRODUCT_NAME = Clerestory;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
 			};
@@ -512,12 +514,12 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = com.nininunz.OpenYoinkTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nininunz.ClerestoryTests;
 				PRODUCT_BUNDLE_PACKAGE_TYPE = BNDL;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 6.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OpenYoink.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OpenYoink";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Clerestory.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Clerestory";
 			};
 			name = Debug;
 		};
@@ -529,12 +531,12 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = com.nininunz.OpenYoinkTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nininunz.ClerestoryTests;
 				PRODUCT_BUNDLE_PACKAGE_TYPE = BNDL;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 6.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OpenYoink.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OpenYoink";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Clerestory.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Clerestory";
 			};
 			name = Release;
 		};
@@ -546,12 +548,12 @@
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.nininunz.OpenYoinkUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nininunz.ClerestoryUITests;
 				PRODUCT_BUNDLE_PACKAGE_TYPE = BNDL;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 6.0;
-				TEST_TARGET_NAME = OpenYoink;
+				TEST_TARGET_NAME = Clerestory;
 			};
 			name = Debug;
 		};
@@ -563,12 +565,12 @@
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.nininunz.OpenYoinkUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nininunz.ClerestoryUITests;
 				PRODUCT_BUNDLE_PACKAGE_TYPE = BNDL;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 6.0;
-				TEST_TARGET_NAME = OpenYoink;
+				TEST_TARGET_NAME = Clerestory;
 			};
 			name = Release;
 		};
@@ -577,7 +579,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES; MACOSX_DEPLOYMENT_TARGET = 15.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.nininunz.OpenYoinkUITestDragSource;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nininunz.ClerestoryUITestDragSource;
 				PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 6.0;
 				SKIP_INSTALL = YES;
 			};
@@ -588,7 +590,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES; MACOSX_DEPLOYMENT_TARGET = 15.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.nininunz.OpenYoinkUITestDragSource;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nininunz.ClerestoryUITestDragSource;
 				PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 6.0;
 				SKIP_INSTALL = YES;
 			};
@@ -606,7 +608,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		120000000000000000001 /* Build configuration list for PBXNativeTarget "OpenYoink" */ = {
+		120000000000000000001 /* Build configuration list for PBXNativeTarget "Clerestory" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				160000000000000000003 /* Debug */,
@@ -615,7 +617,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		120000000000000000002 /* Build configuration list for PBXNativeTarget "OpenYoinkTests" */ = {
+		120000000000000000002 /* Build configuration list for PBXNativeTarget "ClerestoryTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				160000000000000000005 /* Debug */,
@@ -624,7 +626,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		120000000000000000004 /* Build configuration list for PBXNativeTarget "OpenYoinkUITests" */ = {
+		120000000000000000004 /* Build configuration list for PBXNativeTarget "ClerestoryUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				160000000000000000007 /* Debug */,

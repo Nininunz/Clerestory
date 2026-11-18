@@ -507,7 +507,7 @@ final class DeliveryCoordinator {
     private let recents: RecentItemsService
     private let tempFileService: TempFileService
     private let transferStore: TransferStore
-    private let logger = Logger(subsystem: "com.nininunz.OpenYoink", category: "Delivery")
+    private let logger = Logger(subsystem: "com.nininunz.Clerestory", category: "Delivery")
 
     init(store: ShelfStore,
          recents: RecentItemsService,

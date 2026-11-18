@@ -3,7 +3,7 @@
     <!-- Stable releases signed with this fork's update key. -->
     <channel>
         <title>Clerestory Updates</title>
-        <link>https://nininunz.github.io/OpenYoink/appcast.xml</link>
+        <link>https://nininunz.github.io/Clerestory/appcast.xml</link>
         <description>Updates for Clerestory, based on OpenYoink.</description>
         <language>en</language>
         <item>

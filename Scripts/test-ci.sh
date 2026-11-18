@@ -21,7 +21,7 @@ swift test --package-path Packages/OpenYoinkModuleCore \
 
 common=(
   -project Open-Yoink.xcodeproj
-  -scheme OpenYoink
+  -scheme Clerestory
   -destination "platform=macOS,arch=$(uname -m)"
   -derivedDataPath "$output_dir/DerivedData"
   CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES
@@ -33,8 +33,8 @@ xcodebuild build "${common[@]}" -configuration Release \
 # App-hosted unit tests only. The native UI suite requires an interactive
 # desktop; the preview catalog is an explicit artifact-export task.
 xcodebuild test "${common[@]}" -configuration Debug \
-  -only-testing:OpenYoinkTests \
-  -skip-testing:OpenYoinkTests/IslandModulePreviewTests \
+  -only-testing:ClerestoryTests \
+  -skip-testing:ClerestoryTests/IslandModulePreviewTests \
   -parallel-testing-enabled NO \
   -test-timeouts-enabled YES \
   -default-test-execution-time-allowance 60 \

@@ -6,7 +6,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SOURCE="${1:-https://nininunz.github.io/OpenYoink/appcast.xml}"
+SOURCE="${1:-https://nininunz.github.io/Clerestory/appcast.xml}"
 EXPECTED_VERSION="${2:-}"
 WORK_DIR="$(mktemp -d /tmp/openyoink-feed-verify.XXXXXX)"
 MOUNT_DIR="$WORK_DIR/mount"

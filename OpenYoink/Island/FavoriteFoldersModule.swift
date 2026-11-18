@@ -72,7 +72,7 @@ final class FavoriteFoldersPersistenceController {
     private var pendingItems: [FavoriteFolder]?
     private var saveTask: Task<Void, Never>?
     private let logger = Logger(
-        subsystem: "com.nininunz.OpenYoink",
+        subsystem: "com.nininunz.Clerestory",
         category: "FavoriteFoldersPersistence"
     )
 

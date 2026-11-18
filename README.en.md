@@ -10,7 +10,7 @@ Clerestory puts a file shelf and configurable shortcuts in a panel at the top of
 
 Clerestory supports macOS 15 and later on Apple silicon and Intel. Open the signed and notarized [Clerestory 1.0.4 DMG](https://github.com/Nininunz/Clerestory/releases/download/v1.0.4/Clerestory-1.0.4.dmg) and drag the app to Applications.
 
-If you already use the Nininunz fork, choose **Check for Updates…** from its menu bar icon. OpenYoink 1.0.0 from this fork upgrades to Clerestory in place. If you're switching from upstream OpenYoink, Clerestory starts with its own Shelf and preferences. Upstream data stays with the upstream app. See [release ownership](docs/FORK_RELEASE.md).
+Install Clerestory from its DMG when switching from an earlier OpenYoink build. Clerestory starts with its own Shelf and preferences. To update a build that uses the Clerestory app identity, choose **Check for Updates…** from the menu bar icon. See the [release guide](docs/FORK_RELEASE.md).
 
 ## Quick start
 
@@ -62,7 +62,7 @@ Regular file drags provide both a file URL and a filename Chromium understands. 
 
 ## Privacy and permissions
 
-- No account, no analytics, no telemetry. Everything stays in the local sandbox under `Application Support/OpenYoink`.
+- No account, no analytics, no telemetry. Everything stays in the local sandbox under `Application Support/Clerestory`.
 - App Sandbox is on, so Clerestory can only touch files you drag in or pick yourself. Everyday use needs neither Accessibility nor Input Monitoring.
 - The only background network traffic is checking for and downloading updates from GitHub Pages / Releases, and you can turn that off.
 - AI Usage only talks to TokenTracker on your own Mac (`localhost:7680`). It never goes online and doesn't read TokenTracker's files.
@@ -87,16 +87,16 @@ cd Clerestory
 
 xcodebuild \
   -project Open-Yoink.xcodeproj \
-  -scheme OpenYoink \
+  -scheme Clerestory \
   -destination 'platform=macOS' \
   build
 
 xcodebuild \
   -project Open-Yoink.xcodeproj \
-  -scheme OpenYoink \
+  -scheme Clerestory \
   -destination 'platform=macOS' \
   test \
-  -only-testing:OpenYoinkTests
+  -only-testing:ClerestoryTests
 ```
 
 Written in Swift 6 with SwiftUI and AppKit. Local builds don't need a `DEVELOPMENT_TEAM`, and the test command above runs unit tests only, not UI automation.

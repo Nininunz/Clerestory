@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# make-release.sh — 构建 OpenYoink 发布产物并更新 Sparkle appcast。
+# make-release.sh — 构建 Clerestory 发布产物并更新 Sparkle appcast。
 #
 # 用法：./Scripts/make-release.sh <VERSION> [BUILD] [--adhoc]
 #   VERSION   市场版本号（写入 MARKETING_VERSION，如 1.0.2）。
@@ -59,8 +59,8 @@ if [ -n "$BUILD_NUMBER" ] && [[ ! "$BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
 fi
 
 PROJECT="Open-Yoink.xcodeproj"
-SCHEME="OpenYoink"
-ARCHIVE_PATH="export/OpenYoink.xcarchive"
+SCHEME="Clerestory"
+ARCHIVE_PATH="export/Clerestory.xcarchive"
 APP_PATH="export/Clerestory.app"
 DMG_PATH="export/Clerestory-$VERSION.dmg"
 APPCAST="docs/appcast.xml"
@@ -191,7 +191,7 @@ xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration Release \
 # ---- 2. 导出并验证 Xcode 已签名的 app ----
 echo "==> 导出 $APP_PATH"
 rm -rf "$APP_PATH"
-ditto "$ARCHIVE_PATH/Products/Applications/OpenYoink.app" "$APP_PATH"
+ditto "$ARCHIVE_PATH/Products/Applications/Clerestory.app" "$APP_PATH"
 
 # Sign every nested component explicitly for the selected release mode.
 # ad hoc 模式统一把主程序与 Sparkle 嵌套组件改为临时签名，避免无 Team ID 的主程序

@@ -113,8 +113,8 @@ enum IslandScreenCatalog {
     static func geometry(for screen: NSScreen)
         -> IslandGeometryResolver.ScreenGeometry {
         // Lets a notched Mac exercise the floating (no-notch) Island:
-        // `open OpenYoink.app --args -OpenYoinkSimulateNoNotch YES`
-        // or `defaults write com.nininunz.OpenYoink OpenYoinkSimulateNoNotch -bool YES`.
+        // `open Clerestory.app --args -OpenYoinkSimulateNoNotch YES`
+        // or `defaults write com.nininunz.Clerestory OpenYoinkSimulateNoNotch -bool YES`.
         if IslandDebugMode.simulatesNoNotch {
             return IslandGeometryResolver.ScreenGeometry(
                 frame: screen.frame,

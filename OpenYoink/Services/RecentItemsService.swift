@@ -26,7 +26,7 @@ struct RecentEntry: Codable, Equatable, Identifiable, Sendable {
 }
 
 /// 轻量最近拖出历史（实施计划 §2.2 `RecentItemsService`）：内存数组 + JSON
-/// 持久化（`Application Support/OpenYoink/recents.json`，与 shelf.json 并列的
+/// 持久化（`Application Support/Clerestory/recents.json`，与 shelf.json 并列的
 /// 独立文件），上限 20 条，最新在前。
 ///
 /// 写盘沿用 PersistenceController 的原子写思路（临时文件 + rename），但不做
@@ -44,7 +44,7 @@ final class RecentItemsService {
     /// 存储目录；测试中注入临时目录。
     let directoryURL: URL
 
-    private let logger = Logger(subsystem: "com.nininunz.OpenYoink", category: "RecentItems")
+    private let logger = Logger(subsystem: "com.nininunz.Clerestory", category: "RecentItems")
 
     private var fileURL: URL {
         directoryURL.appendingPathComponent("recents.json")

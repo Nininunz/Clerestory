@@ -8,14 +8,19 @@ import xml.etree.ElementTree as ET
 
 root = pathlib.Path(__file__).resolve().parent.parent
 info = plistlib.loads((root / "OpenYoink/App/Info.plist").read_bytes())
-feed_url = "https://nininunz.github.io/OpenYoink/appcast.xml"
+feed_url = "https://nininunz.github.io/Clerestory/appcast.xml"
 assert info["SUFeedURL"] == feed_url
 assert len(base64.b64decode(info["SUPublicEDKey"], validate=True)) == 32
 assert info["SUPublicEDKey"] != "fjAcTFLXwbNHK8rgG6ecCzWjZIDZc/BKo0AFAYVW968="
 
 project = (root / "Open-Yoink.xcodeproj/project.pbxproj").read_text()
 identifiers = re.findall(r"PRODUCT_BUNDLE_IDENTIFIER = ([^;]+);", project)
-assert identifiers and all(value.startswith("com.nininunz.OpenYoink") for value in identifiers)
+assert set(identifiers) == {
+    "com.nininunz.Clerestory",
+    "com.nininunz.ClerestoryTests",
+    "com.nininunz.ClerestoryUITests",
+    "com.nininunz.ClerestoryUITestDragSource",
+}
 feed = ET.parse(root / "docs/appcast.xml")
 assert feed.findtext("./channel/link") == feed_url
 for enclosure in feed.findall("./channel/item/enclosure"):
