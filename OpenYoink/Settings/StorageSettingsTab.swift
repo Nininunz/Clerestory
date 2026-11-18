@@ -72,7 +72,7 @@ struct StorageSettingsTab: View {
                         }
                     }
 
-                    Text("These files are retained in OpenYoink's managed storage until you retry or delete them.")
+                    Text("These files are retained in Clerestory's managed storage until you retry or delete them.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -149,7 +149,7 @@ struct StorageSettingsTab: View {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) { storage.discardAllRecoveryData() }
         } message: {
-            Text("This removes OpenYoink's recovery snapshots. Files currently on the shelf are not deleted.")
+            Text("This removes Clerestory's recovery snapshots. Files currently on the shelf are not deleted.")
         }
         .alert("Delete Pending Import?", isPresented: Binding(
             get: { pendingImportToDiscard != nil },
@@ -163,7 +163,7 @@ struct StorageSettingsTab: View {
                 pendingImportToDiscard = nil
             }
         } message: {
-            Text("This permanently deletes OpenYoink's retained copy. The source application may no longer be able to provide it again.")
+            Text("This permanently deletes Clerestory's retained copy. The source application may no longer be able to provide it again.")
         }
     }
 }

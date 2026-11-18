@@ -64,8 +64,8 @@ if [[ ! "$DECLARED_LENGTH" =~ ^[0-9]+$ ]]; then
     exit 1
 fi
 
-DMG_PATH="$WORK_DIR/OpenYoink-$FEED_VERSION.dmg"
-echo "==> 下载 OpenYoink $FEED_VERSION ($FEED_BUILD)"
+DMG_PATH="$WORK_DIR/Clerestory-$FEED_VERSION.dmg"
+echo "==> 下载 $FEED_VERSION ($FEED_BUILD)"
 curl --fail --location --silent --show-error "$ENCLOSURE_URL" --output "$DMG_PATH"
 ACTUAL_LENGTH="$(stat -f '%z' "$DMG_PATH")"
 if [ "$ACTUAL_LENGTH" != "$DECLARED_LENGTH" ]; then

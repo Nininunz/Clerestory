@@ -92,7 +92,7 @@ final class MenuBarController: NSObject {
         // SF Symbol template 渲染：isTemplate 让系统按菜单栏状态自动反色，
         // 深浅色菜单栏与选中高亮下均正确（S10 确认保持符号方案）。
         let image = NSImage(systemSymbolName: "tray.and.arrow.down.fill",
-                            accessibilityDescription: "OpenYoink")
+                            accessibilityDescription: "Clerestory")
         image?.isTemplate = true
         button.image = image
         button.imageScaling = .scaleProportionallyDown
@@ -162,7 +162,7 @@ final class MenuBarController: NSObject {
 
         menu.addItem(.separator())
 
-        let quitItem = NSMenuItem(title: String(localized: "Quit OpenYoink"),
+        let quitItem = NSMenuItem(title: String(localized: "Quit Clerestory"),
                                   action: #selector(NSApplication.terminate(_:)),
                                   keyEquivalent: "q")
         menu.addItem(quitItem)

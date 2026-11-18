@@ -2,9 +2,9 @@
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
     <!-- Stable releases signed with this fork's update key. -->
     <channel>
-        <title>OpenYoink (Nininunz) Updates</title>
+        <title>Clerestory Updates</title>
         <link>https://nininunz.github.io/OpenYoink/appcast.xml</link>
-        <description>Updates for the Nininunz fork of OpenYoink.</description>
+        <description>Updates for Clerestory, based on OpenYoink.</description>
         <language>en</language>
         <item>
             <title>Version 1.0.0</title>

@@ -595,7 +595,7 @@ final class IslandActivityCoordinator {
         }
         selectedModule = .shelf
         publish(.init(id: "drag", moduleID: .shelf, priority: .userDrag,
-                      title: String(localized: "Drop into OpenYoink"), detail: nil,
+                      title: String(localized: "Drop into Clerestory"), detail: nil,
                       systemImage: "arrow.down.to.line", expiresAt: nil))
         setSurfaceState(.expanded)
     }

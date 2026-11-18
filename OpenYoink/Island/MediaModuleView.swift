@@ -40,7 +40,7 @@ struct IslandNowPlayingView: View {
                 } else {
                     IslandEmptyState(
                         title: "Now Playing unavailable",
-                        message: "OpenYoink could not read the current player. Other Island features still work normally.",
+                        message: "Clerestory could not read the current player. Other Island features still work normally.",
                         systemImage: "play.slash"
                     )
                 }

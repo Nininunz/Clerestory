@@ -209,7 +209,7 @@ final class IslandModuleContainer {
             ContentUnavailableView(
                 String(localized: "Module unavailable"),
                 systemImage: "puzzlepiece.extension",
-                description: Text("This module is not available in this version of OpenYoink.")
+                description: Text("This module is not available in this version of Clerestory.")
             )
         )
     }

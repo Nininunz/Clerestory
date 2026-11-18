@@ -1,3 +1,5 @@
+> Archived upstream website source. Clerestory does not deploy this site. GitHub Pages serves the Sparkle feed and a redirect for older help links.
+
 # OpenYoink 官网与使用文档
 
 本目录使用 VitePress 1.6 构建，包含：

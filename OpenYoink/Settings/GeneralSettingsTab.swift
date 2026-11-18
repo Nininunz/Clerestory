@@ -11,7 +11,7 @@ struct GeneralSettingsTab: View {
         @Bindable var settings = settings
         SettingsForm {
             Section("Startup") {
-                Toggle("Launch OpenYoink at login", isOn: Binding(
+                Toggle("Launch Clerestory at login", isOn: Binding(
                     get: { launchAtLoginController.isRequested },
                     set: { launchAtLoginController.setRequested($0) }
                 ))
@@ -40,7 +40,7 @@ struct GeneralSettingsTab: View {
             }
 
             Section("Menu Bar") {
-                Toggle("Show OpenYoink in menu bar", isOn: $settings.menuBarIconEnabled)
+                Toggle("Show Clerestory in menu bar", isOn: $settings.menuBarIconEnabled)
                 Text("The icon stays visible whenever the panel cannot be opened directly, so Settings remains accessible.")
                     .font(.caption)
                     .foregroundStyle(.secondary)

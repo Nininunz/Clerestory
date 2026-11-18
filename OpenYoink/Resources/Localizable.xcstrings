@@ -17,7 +17,7 @@
     "Notch modules" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Notch modules"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "刘海模块"}}}},
     "Panel shortcuts" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Panel shortcuts"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "面板快捷入口"}}}},
     "Cycle notch modules" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Cycle notch modules"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "切换刘海模块"}}}},
-    "OpenYoink Notch" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "OpenYoink Notch"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "OpenYoink 刘海"}}}},
+    "Clerestory Notch" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Clerestory Notch"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "Clerestory 刘海"}}}},
 
     "Panel" : {
       "localizations" : {
@@ -2660,10 +2660,10 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "热状态" } }
       }
     },
-    "This module is not available in this version of OpenYoink." : {
+    "This module is not available in this version of Clerestory." : {
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "This module is not available in this version of OpenYoink." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前版本的 OpenYoink 不提供此模块。" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "This module is not available in this version of Clerestory." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前版本的 Clerestory 不提供此模块。" } }
       }
     },
     "Unknown App" : {
@@ -2756,16 +2756,16 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "操作完成" } }
       }
     },
-    "OpenYoink Quick Start" : {
+    "Clerestory Quick Start" : {
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "OpenYoink Quick Start" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "OpenYoink 快速上手" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory Quick Start" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory 快速上手" } }
       }
     },
-    "OpenYoink practice file. Drag to the shelf." : {
+    "Clerestory practice file. Drag to the shelf." : {
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "OpenYoink practice file. Drag to the shelf." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "OpenYoink 练习文件。拖到暂存架。" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory practice file. Drag to the shelf." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory 练习文件。拖到暂存架。" } }
       }
     },
     "Practice drop target" : {
@@ -2840,16 +2840,16 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "切换窗口、桌面空间或全屏应用后，操作方式也完全相同。" } }
       }
     },
-    "This file was created by OpenYoink. It won't read, move, or upload your files." : {
+    "This file was created by Clerestory. It won't read, move, or upload your files." : {
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "This file was created by OpenYoink. It won't read, move, or upload your files." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "这个文件由 OpenYoink 创建，不会读取、移动或上传你的文件。" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "This file was created by Clerestory. It won't read, move, or upload your files." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "这个文件由 Clerestory 创建，不会读取、移动或上传你的文件。" } }
       }
     },
-    "This practice file was created by OpenYoink. You can delete it safely." : {
+    "This practice file was created by Clerestory. You can delete it safely." : {
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "This practice file was created by OpenYoink. You can delete it safely." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "这是 OpenYoink 创建的练习文件，可以放心删除。" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "This practice file was created by Clerestory. You can delete it safely." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "这是 Clerestory 创建的练习文件，可以放心删除。" } }
       }
     },
     "Two simple steps" : {
@@ -2858,10 +2858,10 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "只需两步" } }
       }
     },
-    "You're ready. OpenYoink will appear when you start dragging, and ⌘⇧Space shows or hides it anytime." : {
+    "You're ready. Clerestory will appear when you start dragging, and ⌘⇧Space shows or hides it anytime." : {
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "You're ready. OpenYoink will appear when you start dragging, and ⌘⇧Space shows or hides it anytime." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已经学会了。开始拖拽时 OpenYoink 会自动出现，按 ⌘⇧Space 可随时显示或隐藏。" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "You're ready. Clerestory will appear when you start dragging, and ⌘⇧Space shows or hides it anytime." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已经学会了。开始拖拽时 Clerestory 会自动出现，按 ⌘⇧Space 可随时显示或隐藏。" } }
       }
     },
     "%lld items" : {
@@ -3329,11 +3329,11 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "打开" } }
       }
     },
-    "Open-Yoink is an independent clean-room implementation crafted for macOS. Bundled third-party components are Sparkle (MIT) for updates and mediaremote-adapter (BSD 3-Clause) for the opt-in experimental Now Playing module. A complete attribution record is available in THIRD_PARTY_NOTICES.md in the source repository." : {
+    "Clerestory is based on OpenYoink by weijue and contributors. Bundled third-party components are Sparkle (MIT) for updates and mediaremote-adapter (BSD 3-Clause) for the opt-in experimental Now Playing module. A complete attribution record is available in THIRD_PARTY_NOTICES.md in the source repository." : {
       "extractionState" : "manual",
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open-Yoink is an independent clean-room implementation crafted for macOS. Bundled third-party components are Sparkle (MIT) for updates and mediaremote-adapter (BSD 3-Clause) for the opt-in experimental Now Playing module. A complete attribution record is available in THIRD_PARTY_NOTICES.md in the source repository." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Open-Yoink 是面向 macOS 的独立净室实现。随应用捆绑的第三方组件包括用于更新的 Sparkle（MIT）以及仅供用户主动启用实验性“正在播放”模块使用的 mediaremote-adapter（BSD 3-Clause）。完整归属记录见源码仓库的 THIRD_PARTY_NOTICES.md。" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory is based on OpenYoink by weijue and contributors. Bundled third-party components are Sparkle (MIT) for updates and mediaremote-adapter (BSD 3-Clause) for the opt-in experimental Now Playing module. A complete attribution record is available in THIRD_PARTY_NOTICES.md in the source repository." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory 基于 weijue 和贡献者开发的 OpenYoink。随应用捆绑的第三方组件包括用于更新的 Sparkle（MIT）以及仅供用户主动启用实验性“正在播放”模块使用的 mediaremote-adapter（BSD 3-Clause）。完整归属记录见源码仓库的 THIRD_PARTY_NOTICES.md。" } }
       }
     },
     "Position" : {
@@ -3357,11 +3357,11 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "快速查看" } }
       }
     },
-    "Quit OpenYoink" : {
+    "Quit Clerestory" : {
       "extractionState" : "manual",
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Quit OpenYoink" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "退出 OpenYoink" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Quit Clerestory" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "退出 Clerestory" } }
       }
     },
     "Recent Items" : {
@@ -3666,11 +3666,11 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "启动" } }
       }
     },
-    "Launch OpenYoink at login" : {
+    "Launch Clerestory at login" : {
       "extractionState" : "manual",
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Launch OpenYoink at login" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "登录时启动 OpenYoink" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Launch Clerestory at login" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "登录时启动 Clerestory" } }
       }
     },
     "Approval is required in System Settings." : {
@@ -3708,11 +3708,11 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "设置分类" } }
       }
     },
-    "OpenYoink Settings" : {
+    "Clerestory Settings" : {
       "extractionState" : "manual",
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "OpenYoink Settings" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "OpenYoink 设置" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory Settings" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory 设置" } }
       }
     },
     "Storage" : {
@@ -3827,11 +3827,11 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删除所有恢复数据？" } }
       }
     },
-    "This removes OpenYoink's recovery snapshots. Files currently on the shelf are not deleted." : {
+    "This removes Clerestory's recovery snapshots. Files currently on the shelf are not deleted." : {
       "extractionState" : "manual",
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "This removes OpenYoink's recovery snapshots. Files currently on the shelf are not deleted." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "这会删除 OpenYoink 的恢复快照，但不会删除当前暂存架中的文件。" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "This removes Clerestory's recovery snapshots. Files currently on the shelf are not deleted." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "这会删除 Clerestory 的恢复快照，但不会删除当前暂存架中的文件。" } }
       }
     },
     "Shelf data was restored successfully." : {
@@ -3911,11 +3911,11 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "部分托管移动的恢复数据需要处理，已停用自动清理。" } }
       }
     },
-    "The selected recovery file is not managed by OpenYoink." : {
+    "The selected recovery file is not managed by Clerestory." : {
       "extractionState" : "manual",
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "The selected recovery file is not managed by OpenYoink." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "所选恢复文件不属于 OpenYoink 的托管范围。" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The selected recovery file is not managed by Clerestory." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "所选恢复文件不属于 Clerestory 的托管范围。" } }
       }
     },
     "This recovery file is damaged and cannot be restored automatically." : {
@@ -4611,11 +4611,11 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "文件已导入，恢复记录稍后会自动清理。" } }
       }
     },
-    "The pending import points outside OpenYoink's managed storage." : {
+    "The pending import points outside Clerestory's managed storage." : {
       "extractionState" : "manual",
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "The pending import points outside OpenYoink's managed storage." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "待完成导入指向了 OpenYoink 托管存储之外的位置。" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The pending import points outside Clerestory's managed storage." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "待完成导入指向了 Clerestory 托管存储之外的位置。" } }
       }
     },
     "The pending import recovery record is missing." : {
@@ -4653,11 +4653,11 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "保留的文件不存在，无法自动完成导入。" } }
       }
     },
-    "These files are retained in OpenYoink's managed storage until you retry or delete them." : {
+    "These files are retained in Clerestory's managed storage until you retry or delete them." : {
       "extractionState" : "manual",
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "These files are retained in OpenYoink's managed storage until you retry or delete them." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "这些文件会保留在 OpenYoink 托管存储中，直到你重试或删除。" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "These files are retained in Clerestory's managed storage until you retry or delete them." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "这些文件会保留在 Clerestory 托管存储中，直到你重试或删除。" } }
       }
     },
     "This file was already imported. Its recovery record was cleared." : {
@@ -4667,11 +4667,11 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "这个文件已导入，其恢复记录已清除。" } }
       }
     },
-    "This permanently deletes OpenYoink's retained copy. The source application may no longer be able to provide it again." : {
+    "This permanently deletes Clerestory's retained copy. The source application may no longer be able to provide it again." : {
       "extractionState" : "manual",
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "This permanently deletes OpenYoink's retained copy. The source application may no longer be able to provide it again." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "这会永久删除 OpenYoink 保留的副本，来源应用可能无法再次提供该文件。" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "This permanently deletes Clerestory's retained copy. The source application may no longer be able to provide it again." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "这会永久删除 Clerestory 保留的副本，来源应用可能无法再次提供该文件。" } }
       }
     },
     "Share" : {
@@ -4879,10 +4879,10 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "自定义：%lld 分钟" } }
       }
     },
-    "Drop into OpenYoink" : {
+    "Drop into Clerestory" : {
       "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Drop into OpenYoink" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "拖入 OpenYoink" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Drop into Clerestory" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "拖入 Clerestory" } }
       }
     },
     "Enable Experimental Now Playing?" : {
@@ -4993,22 +4993,22 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法获取正在播放内容" } }
       }
     },
-    "Open OpenYoink Island" : {
+    "Open Clerestory Panel" : {
       "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open OpenYoink Island" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "打开 OpenYoink 灵动岛" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open Clerestory Panel" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "打开 Clerestory 面板" } }
       }
     },
-    "OpenYoink Island" : {
+    "Clerestory Panel" : {
       "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "OpenYoink Island" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "OpenYoink 灵动岛" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory Panel" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory 面板" } }
       }
     },
-    "OpenYoink Island, %lld shelf items" : {
+    "Clerestory Panel, %lld shelf items" : {
       "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "OpenYoink Island, %lld shelf items" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "OpenYoink 灵动岛，暂存架中有 %lld 项" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory Panel, %lld shelf items" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory 面板，暂存架中有 %lld 项" } }
       }
     },
     "Pause" : {
@@ -5251,10 +5251,10 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已关闭" } }
       }
     },
-    "OpenYoink could not read the current player. Other Island features still work normally." : {
+    "Clerestory could not read the current player. Other Island features still work normally." : {
       "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "OpenYoink could not read the current player. Other Island features still work normally." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "OpenYoink 暂时无法读取当前播放器，其他灵动岛功能仍可正常使用。" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory could not read the current player. Other Island features still work normally." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory 暂时无法读取当前播放器，其他灵动岛功能仍可正常使用。" } }
       }
     },
     "Playing" : {
@@ -5275,10 +5275,10 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "显示当前播放器的封面和控制，处理均在本机完成；macOS 更新后兼容性可能发生变化。" } }
       }
     },
-    "Open-Yoink is an independent clean-room implementation crafted for macOS. Bundled third-party components are Sparkle (MIT) for updates and mediaremote-adapter (BSD 3-Clause) for the optional local Now Playing module. A complete attribution record is available in THIRD_PARTY_NOTICES.md in the source repository." : {
+    "Clerestory is based on OpenYoink by weijue and contributors. Bundled third-party components are Sparkle (MIT) for updates and mediaremote-adapter (BSD 3-Clause) for the optional local Now Playing module. A complete attribution record is available in THIRD_PARTY_NOTICES.md in the source repository." : {
       "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open-Yoink is an independent clean-room implementation crafted for macOS. Bundled third-party components are Sparkle (MIT) for updates and mediaremote-adapter (BSD 3-Clause) for the optional local Now Playing module. A complete attribution record is available in THIRD_PARTY_NOTICES.md in the source repository." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Open-Yoink 是面向 macOS 的独立洁净室实现。内置第三方组件包括用于更新的 Sparkle（MIT），以及用于可选本地“正在播放”模块的 mediaremote-adapter（BSD 3-Clause）。完整署名记录见源码仓库中的 THIRD_PARTY_NOTICES.md。" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory is based on OpenYoink by weijue and contributors. Bundled third-party components are Sparkle (MIT) for updates and mediaremote-adapter (BSD 3-Clause) for the optional local Now Playing module. A complete attribution record is available in THIRD_PARTY_NOTICES.md in the source repository." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory 基于 weijue 和贡献者开发的 OpenYoink。内置第三方组件包括用于更新的 Sparkle（MIT），以及用于可选本地“正在播放”模块的 mediaremote-adapter（BSD 3-Clause）。完整署名记录见源码仓库中的 THIRD_PARTY_NOTICES.md。" } }
       }
     },
     "Side Shelf" : {
@@ -5323,10 +5323,10 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "成功拖入后，接收内容的暂存架会保持展开，方便你继续将项目拖到目的地。" } }
       }
     },
-    "Enable OpenYoink Island" : {
+    "Enable Clerestory Panel" : {
       "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Enable OpenYoink Island" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "启用 OpenYoink 灵动岛" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Enable Clerestory Panel" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "启用 Clerestory 面板" } }
       }
     },
     "Click is always available. Hover waits briefly before expanding." : {

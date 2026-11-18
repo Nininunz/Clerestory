@@ -4,7 +4,7 @@
 #
 # 用法：./Scripts/make-dmg.sh [路径到 OpenYoink.app]
 #   默认 app：export/OpenYoink.app（先跑过 archive 导出；见 README「构建」）。
-# 产物：export/OpenYoink-<版本>.dmg
+# 产物：export/Clerestory-<版本>.dmg
 #
 # 流程：staging（app + Applications 符号链接 + 背景图）→ 读写 DMG →
 # Finder AppleScript 设置窗口布局（图标位置/大小/背景）→ 压缩为 UDZO。
@@ -21,7 +21,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP_PATH="${1:-$REPO_ROOT/export/OpenYoink.app}"
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$APP_PATH/Contents/Info.plist" 2>/dev/null || echo 1.0)"
-DMG_NAME="OpenYoink-$VERSION"
+DMG_NAME="Clerestory-$VERSION"
 STAGE="$REPO_ROOT/export/dmg-stage"
 RW_DMG="$REPO_ROOT/export/$DMG_NAME-rw.dmg"
 FINAL_DMG="$REPO_ROOT/export/$DMG_NAME.dmg"
@@ -56,7 +56,7 @@ cp "$BACKGROUND_SRC" "$STAGE/.background/background.png"
 if [ -n "${DMG_LAYOUT_TEMPLATE:-}" ]; then
     echo "==> 复用安装包布局"
     cp "$DMG_LAYOUT_TEMPLATE" "$STAGE/.DS_Store"
-    hdiutil create -srcfolder "$STAGE" -volname "OpenYoink" -fs HFS+ \
+    hdiutil create -srcfolder "$STAGE" -volname "Clerestory" -fs HFS+ \
         -format UDZO -imagekey zlib-level=9 -ov "$FINAL_DMG" >/dev/null
     rm -rf "$STAGE"
     echo "==> 完成：$FINAL_DMG"
@@ -65,7 +65,7 @@ fi
 
 echo "==> 创建读写 DMG"
 rm -f "$RW_DMG" "$FINAL_DMG"
-hdiutil create -srcfolder "$STAGE" -volname "OpenYoink" -fs HFS+ \
+hdiutil create -srcfolder "$STAGE" -volname "Clerestory" -fs HFS+ \
     -format UDRW -ov "$RW_DMG" >/dev/null
 
 echo "==> 挂载"
@@ -80,7 +80,7 @@ layout_ok=0
 for attempt in 1 2; do
     if osascript <<EOF 2>/dev/null
 tell application "Finder"
-    tell disk "OpenYoink"
+    tell disk "Clerestory"
         open
         set current view of container window to icon view
         set toolbar visible of container window to false

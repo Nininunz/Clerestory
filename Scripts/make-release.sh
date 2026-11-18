@@ -15,7 +15,7 @@
 # 最终 DMG → Sparkle sign_update 计算 EdDSA 签名 → 更新 appcast。
 #
 # 本脚本不执行 gh release create——构建完成后由人工/主代理把
-# export/OpenYoink-<VERSION>.dmg 上传到 GitHub Releases（tag v<VERSION>），
+# export/Clerestory-<VERSION>.dmg 上传到 GitHub Releases（tag v<VERSION>），
 # enclosure URL 才可达。
 #
 # 环境变量：
@@ -62,7 +62,7 @@ PROJECT="Open-Yoink.xcodeproj"
 SCHEME="OpenYoink"
 ARCHIVE_PATH="export/OpenYoink.xcarchive"
 APP_PATH="export/OpenYoink.app"
-DMG_PATH="export/OpenYoink-$VERSION.dmg"
+DMG_PATH="export/Clerestory-$VERSION.dmg"
 APPCAST="docs/appcast.xml"
 # Candidate builds keep unpublished update metadata out of the deployable feed.
 if [ "${OPENYOINK_RELEASE_CANDIDATE:-0}" = "1" ]; then
@@ -70,7 +70,7 @@ if [ "${OPENYOINK_RELEASE_CANDIDATE:-0}" = "1" ]; then
     cp "$APPCAST" export/appcast-candidate.xml
     APPCAST="export/appcast-candidate.xml"
 fi
-RELEASE_URL="https://github.com/Nininunz/OpenYoink/releases/download/v$VERSION/OpenYoink-$VERSION.dmg"
+RELEASE_URL="https://github.com/Nininunz/OpenYoink/releases/download/v$VERSION/Clerestory-$VERSION.dmg"
 
 if ! command -v node >/dev/null 2>&1; then
     echo "error: README 徽章刷新需要 Node.js 18+。请先安装 Node.js。" >&2
