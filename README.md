@@ -1,4 +1,4 @@
-> Clerestory is maintained by Nininunz and is based on [MuQY1818/OpenYoink](https://github.com/MuQY1818/OpenYoink). The current download still carries the OpenYoink name: [1.0.0 (55)](https://github.com/Nininunz/OpenYoink/releases/tag/v1.0.0). See [release ownership](docs/FORK_RELEASE.md).
+> Clerestory is maintained by Nininunz and is based on [MuQY1818/OpenYoink](https://github.com/MuQY1818/OpenYoink). Latest release [Clerestory 1.0.1 (56)](https://github.com/Nininunz/OpenYoink/releases/tag/v1.0.1). See [release ownership](docs/FORK_RELEASE.md).
 
 <div align="center">
 
@@ -104,7 +104,7 @@ OpenYoink Island 待在屏幕顶部。平时收成一条，显示正在播放的
 
 ## 安装
 
-Download the signed and notarized [1.0.0 DMG](https://github.com/Nininunz/OpenYoink/releases/download/v1.0.0/OpenYoink-1.0.0.dmg), open it, and copy OpenYoink to Applications. Quit other OpenYoink copies before launching.
+Download the signed and notarized [Clerestory 1.0.1 DMG](https://github.com/Nininunz/OpenYoink/releases/download/v1.0.1/Clerestory-1.0.1.dmg), open it, and copy the app to Applications. Existing fork users can upgrade through Sparkle.
 Upstream Homebrew packages install the upstream app, not this fork.
 See [release ownership and migration](docs/FORK_RELEASE.md) before switching from an existing installation.
 
