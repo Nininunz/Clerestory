@@ -7,7 +7,7 @@ import re
 import xml.etree.ElementTree as ET
 
 root = pathlib.Path(__file__).resolve().parent.parent
-info = plistlib.loads((root / "OpenYoink/App/Info.plist").read_bytes())
+info = plistlib.loads((root / "Clerestory/App/Info.plist").read_bytes())
 feed_url = "https://nininunz.github.io/Clerestory/appcast.xml"
 assert info["SUFeedURL"] == feed_url
 assert len(base64.b64decode(info["SUPublicEDKey"], validate=True)) == 32
@@ -29,12 +29,12 @@ for enclosure in feed.findall("./channel/item/enclosure"):
         "https://github.com/Nininunz/Clerestory/releases/download/",
     ))
 
-for file in ["OpenYoink/Services/UpdateController.swift", "OpenYoink/Services/SupportController.swift",
+for file in ["Clerestory/Services/UpdateController.swift", "Clerestory/Services/SupportController.swift",
              "Scripts/make-release.sh", "Scripts/verify-update-feed.sh"]:
     contents = (root / file).read_text()
     assert "MuQY1818" not in contents and "muqy1818.github.io" not in contents, file
 release = (root / "Scripts/make-release.sh").read_text()
 assert '"$SIGN_UPDATE" --account com.nininunz.OpenYoink' in release
 assert '"$SPARKLE_BIN/generate_keys" --account com.nininunz.OpenYoink -p' in release
-assert (root / "OpenYoink/Resources/OpenYoink-LICENSE.txt").read_bytes() == (root / "LICENSE").read_bytes()
+assert (root / "Clerestory/Resources/OpenYoink-LICENSE.txt").read_bytes() == (root / "LICENSE").read_bytes()
 print("Fork identity, signing-account selection, and update ownership checks passed.")

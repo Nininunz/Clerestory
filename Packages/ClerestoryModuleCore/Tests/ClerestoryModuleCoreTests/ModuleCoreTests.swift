@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import OpenYoinkModuleCore
+@testable import ClerestoryModuleCore
 
 @Suite("Island module configuration")
 struct ModuleCoreTests {

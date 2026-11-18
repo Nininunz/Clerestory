@@ -28,17 +28,17 @@ The default `window` capture briefly displays each preview window and captures i
 
 Each run defaults to a new `/tmp/openyoink-previews-*` directory with `index.html`, paginated per-module contact sheets, named scenario PNGs, `manifest.json`, and `build.log`. Explicit output directories can retain older files; the manifest/gallery identify this run's results. One runner may execute at a time. The runner removes its temporary request configuration on exit.
 
-Add Shelf cases to `OpenYoinkTests/TestKit/Shelf/ShelfScenario.swift` using real state/store inputs. Other modules still use the compatibility adapter in `IslandModulePreviewTests.swift`. Enabled cases automatically appear in listing, filtering, the manifest, and the gallery. Shelf includes empty, populated, selected, search-empty, importing, duplicate-drop, file-drag, long-name, large-grid, and keyboard-focus samples.
+Add Shelf cases to `ClerestoryTests/TestKit/Shelf/ShelfScenario.swift` using real state/store inputs. Other modules still use the compatibility adapter in `IslandModulePreviewTests.swift`. Enabled cases automatically appear in listing, filtering, the manifest, and the gallery. Shelf includes empty, populated, selected, search-empty, importing, duplicate-drop, file-drag, long-name, large-grid, and keyboard-focus samples.
 
 ## Test kit structure
 
-- `OpenYoinkTests/TestKit/ModuleScenario.swift`: lazy view factories, stable scenario IDs, and isolated preference lifetime.
-- `OpenYoinkTests/TestKit/ModulePreviewRenderer.swift`: shared Island outer layout, captures, contact sheets, filtering, and manifest generation.
-- `OpenYoinkTests/TestKit/Shelf/ShelfSampleFiles.swift`: reproducible synthetic document/artwork generator.
-- `OpenYoinkTests/TestKit/Shelf/ShelfFixtures.swift`: fresh reusable sample data with no dependency on user files.
-- `OpenYoinkTests/TestKit/Shelf/ShelfScenario.swift`: typed scenario catalog and inspectable store/interaction state.
-- `OpenYoinkTests/TestKit/Shelf/ShelfScenarioTests.swift`: behavioral checks using the same fixtures.
-- `OpenYoinkTests/Island/IslandModulePreviewTests.swift`: export orchestration and remaining module catalogs.
+- `ClerestoryTests/TestKit/ModuleScenario.swift`: lazy view factories, stable scenario IDs, and isolated preference lifetime.
+- `ClerestoryTests/TestKit/ModulePreviewRenderer.swift`: shared Island outer layout, captures, contact sheets, filtering, and manifest generation.
+- `ClerestoryTests/TestKit/Shelf/ShelfSampleFiles.swift`: reproducible synthetic document/artwork generator.
+- `ClerestoryTests/TestKit/Shelf/ShelfFixtures.swift`: fresh reusable sample data with no dependency on user files.
+- `ClerestoryTests/TestKit/Shelf/ShelfScenario.swift`: typed scenario catalog and inspectable store/interaction state.
+- `ClerestoryTests/TestKit/Shelf/ShelfScenarioTests.swift`: behavioral checks using the same fixtures.
+- `ClerestoryTests/Island/IslandModulePreviewTests.swift`: export orchestration and remaining module catalogs.
 - `Scripts/render-module-previews.py`: CLI and external macOS screenshot worker.
 
 To add a Shelf scenario, give its enum case an explicit stable ID, add a label, and prepare its state in `ShelfScenarioFixture`. Keep data generation in `ShelfFixtures`. The catalog uses `ShelfScenario.previewCases`; stack cases are retained but excluded while stacks are disabled. View creation happens after filtering, once per captured Shelf scenario. Add behavioral assertions separately when the scenario exercises a rule, rather than asserting only that a screenshot exists.

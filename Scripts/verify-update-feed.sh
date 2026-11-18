@@ -75,7 +75,7 @@ fi
 
 # Wrap Sparkle's raw 32-byte Ed25519 public key in SPKI DER so OpenSSL can
 # verify the appcast enclosure signature.
-TRUSTED_KEY="$(/usr/libexec/PlistBuddy -c 'Print SUPublicEDKey' "$REPO_ROOT/OpenYoink/App/Info.plist")"
+TRUSTED_KEY="$(/usr/libexec/PlistBuddy -c 'Print SUPublicEDKey' "$REPO_ROOT/Clerestory/App/Info.plist")"
 printf '302a300506032b6570032100' | xxd -r -p >"$WORK_DIR/public.der"
 printf '%s' "$TRUSTED_KEY" | base64 -D >>"$WORK_DIR/public.der"
 printf '%s' "$ED_SIGNATURE" | base64 -D >"$WORK_DIR/signature.bin"

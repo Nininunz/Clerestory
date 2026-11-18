@@ -21,11 +21,11 @@ Panel shortcuts use a single left-to-right layout with up to eight positions. Vi
 
 | Component | Responsibility |
 | --- | --- |
-| [IslandPresentationController](../OpenYoink/Island/IslandPresentationController.swift) | Display selection, native window coordination, hover behavior, and shortcut swipes. |
-| [IslandWindowControllers](../OpenYoink/Island/IslandWindowControllers.swift) | Separate native windows for Panel and Notch. |
-| [IslandExpandedView](../OpenYoink/Island/IslandModuleViews.swift) and [IslandNotchView](../OpenYoink/Island/IslandNotchView.swift) | Render Panel content and the Notch companion. |
-| [IslandSurfaceAnimationHost](../OpenYoink/Island/IslandSurfaceAnimationHost.swift) | Drives surface reveal and keeps content mounted until closing completes. Reopening invalidates a pending close. |
-| [ShelfWindowController](../OpenYoink/Shelf/ShelfWindowController.swift) | Shelf imports, keyboard and Quick Look routing, and the shared drag-host factory. |
+| [IslandPresentationController](../Clerestory/Island/IslandPresentationController.swift) | Display selection, native window coordination, hover behavior, and shortcut swipes. |
+| [IslandWindowControllers](../Clerestory/Island/IslandWindowControllers.swift) | Separate native windows for Panel and Notch. |
+| [IslandExpandedView](../Clerestory/Island/IslandModuleViews.swift) and [IslandNotchView](../Clerestory/Island/IslandNotchView.swift) | Render Panel content and the Notch companion. |
+| [IslandSurfaceAnimationHost](../Clerestory/Island/IslandSurfaceAnimationHost.swift) | Drives surface reveal and keeps content mounted until closing completes. Reopening invalidates a pending close. |
+| [ShelfWindowController](../Clerestory/Shelf/ShelfWindowController.swift) | Shelf imports, keyboard and Quick Look routing, and the shared drag-host factory. |
 
 The visible Panel surface defines the hit area. Native hit testing and the drag outline use the same rounded geometry as the surface. Shadow margins stay transparent to clicks and file drops. File drags show a complete blue outline, and duplicate drags show a red one. Detached Shelf notices anchor to the visible surface, below its bottom edge.
 

@@ -26,7 +26,7 @@
 
 /* Begin PBXBuildFile section */
 		2C00000000000000000001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 2B00000000000000000001 /* Sparkle */; };
-		3C00000000000000000001 /* OpenYoinkModuleCore in Frameworks */ = {isa = PBXBuildFile; productRef = 3B00000000000000000001 /* OpenYoinkModuleCore */; };
+		3C00000000000000000001 /* ClerestoryModuleCore in Frameworks */ = {isa = PBXBuildFile; productRef = 3B00000000000000000001 /* ClerestoryModuleCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -38,7 +38,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		1A00000000000000000001 /* Exceptions for "OpenYoink" folder in "Clerestory" target */ = {
+		1A00000000000000000001 /* Exceptions for "Clerestory" folder in "Clerestory" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				App/Info.plist,
@@ -48,25 +48,25 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		110000000000000000002 /* OpenYoink */ = {
+		110000000000000000002 /* Clerestory */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				1A00000000000000000001 /* Exceptions for "OpenYoink" folder in "Clerestory" target */,
+				1A00000000000000000001 /* Exceptions for "Clerestory" folder in "Clerestory" target */,
 			);
-			path = OpenYoink;
+			path = Clerestory;
 			sourceTree = "<group>";
 		};
-		110000000000000000003 /* OpenYoinkTests */ = {
+		110000000000000000003 /* ClerestoryTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = OpenYoinkTests;
+			path = ClerestoryTests;
 			sourceTree = "<group>";
 		};
-		110000000000000000005 /* OpenYoinkUITests */ = {
+		110000000000000000005 /* ClerestoryUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = OpenYoinkUITests;
+			path = ClerestoryUITests;
 			sourceTree = "<group>";
 		};
-		A10000000000000000000004 = {isa = PBXFileSystemSynchronizedRootGroup; path = OpenYoinkUITestDragSource; sourceTree = "<group>"; };
+		A10000000000000000000004 = {isa = PBXFileSystemSynchronizedRootGroup; path = ClerestoryUITestDragSource; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -75,7 +75,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2C00000000000000000001 /* Sparkle in Frameworks */,
-				3C00000000000000000001 /* OpenYoinkModuleCore in Frameworks */,
+				3C00000000000000000001 /* ClerestoryModuleCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -100,10 +100,10 @@
 		110000000000000000001 = {
 			isa = PBXGroup;
 			children = (
-				110000000000000000002 /* OpenYoink */,
-				110000000000000000003 /* OpenYoinkTests */,
-				110000000000000000005 /* OpenYoinkUITests */,
-				A10000000000000000000004 /* OpenYoinkUITestDragSource */,
+				110000000000000000002 /* Clerestory */,
+				110000000000000000003 /* ClerestoryTests */,
+				110000000000000000005 /* ClerestoryUITests */,
+				A10000000000000000000004 /* ClerestoryUITestDragSource */,
 				0F00000000000000000004 /* Version.xcconfig */,
 				110000000000000000004 /* Products */,
 			);
@@ -137,12 +137,12 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				110000000000000000002 /* OpenYoink */,
+				110000000000000000002 /* Clerestory */,
 			);
 			name = Clerestory;
 			packageProductDependencies = (
 				2B00000000000000000001 /* Sparkle */,
-				3B00000000000000000001 /* OpenYoinkModuleCore */,
+				3B00000000000000000001 /* ClerestoryModuleCore */,
 			);
 			productName = Clerestory;
 			productReference = 0F00000000000000000001 /* Clerestory.app */;
@@ -162,7 +162,7 @@
 				150000000000000000001 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				110000000000000000003 /* OpenYoinkTests */,
+				110000000000000000003 /* ClerestoryTests */,
 			);
 			name = ClerestoryTests;
 			productName = ClerestoryTests;
@@ -184,7 +184,7 @@
 				A10000000000000000000008 /* UI drag source */,
 			);
 			fileSystemSynchronizedGroups = (
-				110000000000000000005 /* OpenYoinkUITests */,
+				110000000000000000005 /* ClerestoryUITests */,
 			);
 			name = ClerestoryUITests;
 			packageProductDependencies = (
@@ -234,7 +234,7 @@
 			mainGroup = 110000000000000000001;
 			packageReferences = (
 				2A00000000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */,
-				3A00000000000000000001 /* XCLocalSwiftPackageReference "OpenYoinkModuleCore" */,
+				3A00000000000000000001 /* XCLocalSwiftPackageReference "ClerestoryModuleCore" */,
 			);
 			productRefGroup = 110000000000000000004 /* Products */;
 			projectDirPath = "";
@@ -453,14 +453,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = OpenYoink/Resources/OpenYoink.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Clerestory/Resources/OpenYoink.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEBUG_COMMIT_OUTPUT_DIR = "$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)";
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = OpenYoink/App/Info.plist;
+				INFOPLIST_FILE = Clerestory/App/Info.plist;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 weijue. MIT License.";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -482,7 +482,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = OpenYoink/Resources/OpenYoink.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Clerestory/Resources/OpenYoink.entitlements;
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -490,7 +490,7 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = OpenYoink/App/Info.plist;
+				INFOPLIST_FILE = Clerestory/App/Info.plist;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 weijue. MIT License.";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -650,9 +650,9 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		3A00000000000000000001 /* XCLocalSwiftPackageReference "OpenYoinkModuleCore" */ = {
+		3A00000000000000000001 /* XCLocalSwiftPackageReference "ClerestoryModuleCore" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = Packages/OpenYoinkModuleCore;
+			relativePath = Packages/ClerestoryModuleCore;
 		};
 /* End XCLocalSwiftPackageReference section */
 
@@ -662,10 +662,10 @@
 			package = 2A00000000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
 		};
-		3B00000000000000000001 /* OpenYoinkModuleCore */ = {
+		3B00000000000000000001 /* ClerestoryModuleCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 3A00000000000000000001 /* XCLocalSwiftPackageReference "OpenYoinkModuleCore" */;
-			productName = OpenYoinkModuleCore;
+			package = 3A00000000000000000001 /* XCLocalSwiftPackageReference "ClerestoryModuleCore" */;
+			productName = ClerestoryModuleCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

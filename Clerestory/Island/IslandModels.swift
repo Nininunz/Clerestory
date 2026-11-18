@@ -1,6 +1,6 @@
 import Foundation
 import Observation
-@_exported import OpenYoinkModuleCore
+@_exported import ClerestoryModuleCore
 
 /// One page per horizontal trackpad gesture; vertical gestures stay with content.
 struct IslandShortcutSwipe {

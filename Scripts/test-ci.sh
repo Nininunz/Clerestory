@@ -15,7 +15,7 @@ echo "CI logs and results: $output_dir"
   swift --version
 } 2>&1 | tee "$output_dir/toolchain.log"
 
-swift test --package-path Packages/OpenYoinkModuleCore \
+swift test --package-path Packages/ClerestoryModuleCore \
   --scratch-path "$output_dir/module-core" \
   2>&1 | tee "$output_dir/module-core.log"
 
