@@ -19,10 +19,37 @@ struct IslandShelfModuleView: View {
                 title: "Shelf",
                 subtitle: subtitle,
                 systemImage: "tray.full"
-            )
+            ) {
+                contentFilterMenu
+            }
             ShelfView(presentationStyle: .island)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var contentFilterMenu: some View {
+        @Bindable var shelfStore = shelfStore
+        let isFiltered = shelfStore.contentFilter != .all
+        return Menu {
+            Picker("Content Type", selection: $shelfStore.contentFilter) {
+                ForEach(ShelfContentFilter.allCases) { Text($0.title).tag($0) }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            Image(systemName: "line.3.horizontal.decrease")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(isFiltered ? Color.accentColor : IslandVisualStyle.primaryText)
+                .frame(width: 28, height: 28)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .frame(width: 28, height: 28)
+        .background(Circle().fill(isFiltered ? Color.accentColor.opacity(0.18) : Color.white.opacity(0.08)))
+        .help("Content Type")
+        .accessibilityLabel("Content Type")
+        .accessibilityValue(Text(shelfStore.contentFilter.title))
+        .accessibilityIdentifier("shelf.contentFilter")
     }
 }
 struct IslandTransfersView: View {

@@ -326,6 +326,48 @@ final class OpenYoinkSmokeUITests: XCTestCase {
         XCTAssertTrue(element("shelf.quickLook", in: app).waitForExistence(timeout: 5))
     }
 
+    func testShelfSearchKeepsPanelAndControlsInPlace() throws {
+        let app = launch(surface: "--ui-testing-show-shelf", fixtures: ["--ui-testing-shelf-files"])
+        let panel = expandedPanel(in: app)
+        let search = element("shelf.search", in: panel)
+        let filter = element("shelf.contentFilter", in: panel)
+        let select = element("shelf.selection.toggle", in: panel)
+        let first = element("shelf.item.00000000-0000-0000-0000-000000000001", in: panel)
+        let second = element("shelf.item.00000000-0000-0000-0000-000000000002", in: panel)
+        XCTAssertTrue(first.waitForExistence(timeout: 5))
+        XCTAssertTrue(search.exists)
+        XCTAssertTrue(filter.exists)
+        XCTAssertLessThan(filter.frame.maxY, search.frame.minY)
+
+        let controls = [panel, search, filter, select]
+        let initialFrames = controls.map(\.frame)
+        let searchCenter = search.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        searchCenter.hover()
+        searchCenter.click()
+        app.typeText("Northline")
+        XCTAssertTrue(second.waitForNonExistence(timeout: 3))
+        XCTAssertTrue(first.exists)
+        XCTAssertEqual(controls.map(\.frame), initialFrames)
+
+        app.typeText(" no-match")
+        XCTAssertTrue(panel.staticTexts["No Results"].waitForExistence(timeout: 3))
+        XCTAssertEqual(controls.map(\.frame), initialFrames)
+
+        panel.buttons["Clear Search"].click()
+        XCTAssertTrue(second.waitForExistence(timeout: 3))
+        XCTAssertEqual(controls.map(\.frame), initialFrames)
+
+        filter.click()
+        let images = app.menuItems["Images"]
+        XCTAssertTrue(images.waitForExistence(timeout: 3))
+        images.click()
+        let clearFilters = panel.buttons["Clear Search and Filters"]
+        XCTAssertTrue(clearFilters.waitForExistence(timeout: 3))
+        XCTAssertEqual(controls.map(\.frame), initialFrames)
+        clearFilters.click()
+        XCTAssertTrue(second.waitForExistence(timeout: 3))
+    }
+
     func testQuickLookKeyboardNavigationAndFocusReturn() throws {
         let app = launch(surface: "--ui-testing-show-shelf", fixtures: ["--ui-testing-shelf-files"])
         let panel = expandedPanel(in: app)
