@@ -1,9 +1,9 @@
 #!/bin/bash
 #
-# make-dmg.sh — 构建 OpenYoink 分发 DMG（拖应用到 Applications 的经典安装界面）。
+# make-dmg.sh — 构建 Clerestory 分发 DMG（拖应用到 Applications 的经典安装界面）。
 #
 # 用法：./Scripts/make-dmg.sh [路径到 OpenYoink.app]
-#   默认 app：export/OpenYoink.app（先跑过 archive 导出；见 README「构建」）。
+#   默认 app：export/Clerestory.app（先跑过 archive 导出；见 README「构建」）。
 # 产物：export/Clerestory-<版本>.dmg
 #
 # 流程：staging（app + Applications 符号链接 + 背景图）→ 读写 DMG →
@@ -14,12 +14,12 @@
 # 签名/公证：本脚本不改 app 签名。正式发布由 make-release.sh 在 Xcode
 # Developer ID 归档后调用本脚本，再对最终 DMG 签名、公证和装订。
 # DMG_LAYOUT_TEMPLATE：已有安装包的 .DS_Store；设置后复用其窗口布局，
-# 直接生成压缩 DMG，打包过程中不操作 Finder。
+# 模板中的应用图标布局应使用 Clerestory.app。直接生成压缩 DMG，打包过程中不操作 Finder。
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-APP_PATH="${1:-$REPO_ROOT/export/OpenYoink.app}"
+APP_PATH="${1:-$REPO_ROOT/export/Clerestory.app}"
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$APP_PATH/Contents/Info.plist" 2>/dev/null || echo 1.0)"
 DMG_NAME="Clerestory-$VERSION"
 STAGE="$REPO_ROOT/export/dmg-stage"
@@ -49,7 +49,7 @@ fi
 echo "==> 准备 staging"
 rm -rf "$STAGE"
 mkdir -p "$STAGE/.background"
-cp -R "$APP_PATH" "$STAGE/OpenYoink.app"
+cp -R "$APP_PATH" "$STAGE/Clerestory.app"
 ln -s /Applications "$STAGE/Applications"
 cp "$BACKGROUND_SRC" "$STAGE/.background/background.png"
 
@@ -91,7 +91,7 @@ tell application "Finder"
         set arrangement of viewOptions to not arranged
         set icon size of viewOptions to $ICON_SIZE
         set background picture of viewOptions to file ".background:background.png"
-        set position of item "OpenYoink.app" of container window to {$APP_X, $APP_Y}
+        set position of item "Clerestory.app" of container window to {$APP_X, $APP_Y}
         set position of item "Applications" of container window to {$ALIAS_X, $ALIAS_Y}
         close
         open

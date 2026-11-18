@@ -6,8 +6,11 @@ contributor attribution remain intact. The fork is branded Clerestory. The first
 
 ## Identity and updates
 
-- Branded downloads use `Clerestory-<VERSION>.dmg`. The app bundle filename,
-  executable, and storage paths retain their established names for continuity.
+- Downloads use `Clerestory-<VERSION>.dmg` and contain `Clerestory.app`.
+  The executable and storage paths retain their established names. Sparkle
+  installs updates at the existing app path, so an upgraded copy may still
+  be named `OpenYoink.app`. To rename that copy, quit the app and rename the
+  existing bundle in Finder.
 - App bundle ID: `com.nininunz.OpenYoink` (test targets use the same namespace).
 - Feed: `https://nininunz.github.io/OpenYoink/appcast.xml`.
 - Downloads and bug reports go to Nininunz/OpenYoink.

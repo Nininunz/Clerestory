@@ -89,9 +89,13 @@ fi
 mkdir "$MOUNT_DIR"
 hdiutil attach "$DMG_PATH" -nobrowse -readonly -mountpoint "$MOUNT_DIR" -quiet
 MOUNTED=1
-APP_PATH="$(find "$MOUNT_DIR" -maxdepth 1 -type d -name 'OpenYoink.app' -print -quit)"
-if [ -z "$APP_PATH" ]; then
-    echo "error: DMG 中没有 OpenYoink.app。" >&2
+APP_PATH="$MOUNT_DIR/Clerestory.app"
+if [ ! -d "$APP_PATH" ]; then
+    # Published builds up to 1.0.2 still contain the old bundle filename.
+    APP_PATH="$MOUNT_DIR/OpenYoink.app"
+fi
+if [ ! -d "$APP_PATH" ]; then
+    echo "error: DMG does not contain Clerestory.app or OpenYoink.app." >&2
     exit 1
 fi
 
