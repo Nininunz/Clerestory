@@ -7,6 +7,7 @@
 ## Open a pull request
 
 - Branch from `main` and keep the PR focused on one change. Use an imperative title such as “Keep Shelf search controls fixed.”
+- Write new code comments and internal developer documentation in English.
 - Explain the change and why it matters. Use `Closes #123` if the PR fully resolves an issue or `Refs #123` if work remains.
 - List the checks you ran and their results. Add screenshots or a recording for visible changes when helpful. For display and drag-and-drop changes, record what you verified on physical hardware or in simulation.
 

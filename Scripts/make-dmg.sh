@@ -33,19 +33,19 @@ ALIAS_X=460; ALIAS_Y=165
 ICON_SIZE=128
 
 if [ ! -d "$APP_PATH" ]; then
-    echo "error: app not found at ${APP_PATH}（先 archive 导出或传入路径）" >&2
+    echo "error: App not found at ${APP_PATH}. Export an archive first or pass the app path." >&2
     exit 1
 fi
 if [ ! -f "$BACKGROUND_SRC" ]; then
-    echo "生成背景图…"
+    echo "Generate the background image..."
     swift "$REPO_ROOT/Scripts/generate-dmg-background.swift"
 fi
 if [ -n "${DMG_LAYOUT_TEMPLATE:-}" ] && [ ! -f "$DMG_LAYOUT_TEMPLATE" ]; then
-    echo "error: 安装包布局模板不存在：$DMG_LAYOUT_TEMPLATE" >&2
+    echo "error: DMG layout template not found: $DMG_LAYOUT_TEMPLATE" >&2
     exit 1
 fi
 
-echo "==> 准备 staging"
+echo "==> Stage the installer contents"
 rm -rf "$STAGE"
 mkdir -p "$STAGE/.background"
 cp -R "$APP_PATH" "$STAGE/Clerestory.app"
@@ -53,27 +53,27 @@ ln -s /Applications "$STAGE/Applications"
 cp "$BACKGROUND_SRC" "$STAGE/.background/background.png"
 
 if [ -n "${DMG_LAYOUT_TEMPLATE:-}" ]; then
-    echo "==> 复用安装包布局"
+    echo "==> Reuse the installer layout"
     cp "$DMG_LAYOUT_TEMPLATE" "$STAGE/.DS_Store"
     hdiutil create -srcfolder "$STAGE" -volname "Clerestory" -fs HFS+ \
         -format UDZO -imagekey zlib-level=9 -ov "$FINAL_DMG" >/dev/null
     rm -rf "$STAGE"
-    echo "==> 完成：$FINAL_DMG"
+    echo "==> Done: $FINAL_DMG"
     exit 0
 fi
 
-echo "==> 创建读写 DMG"
+echo "==> Create a writable DMG"
 rm -f "$RW_DMG" "$FINAL_DMG"
 hdiutil create -srcfolder "$STAGE" -volname "Clerestory" -fs HFS+ \
     -format UDRW -ov "$RW_DMG" >/dev/null
 
-echo "==> 挂载"
+echo "==> Mount the DMG"
 MOUNT_DIR="$(hdiutil attach -readwrite -noverify "$RW_DMG" | tail -1 | sed -E 's/.*(\/Volumes\/.*)$/\1/')"
 echo "    mounted at $MOUNT_DIR"
 
 # Retry Finder layout once to recover from transient errors such as -1712.
 # Abort if the retry fails to avoid releasing an unstyled installer.
-echo "==> 设置窗口布局（可能弹「自动化」授权）"
+echo "==> Apply the Finder window layout. macOS may request Automation permission."
 layout_ok=0
 for attempt in 1 2; do
     if osascript <<EOF 2>/dev/null
@@ -100,22 +100,22 @@ end tell
 EOF
     then
         layout_ok=1
-        echo "    布局完成"
+        echo "    Finder layout applied"
         break
     fi
-    [ "$attempt" -eq 1 ] && { echo "    布局失败，5s 后重试…" >&2; sleep 5; }
+    [ "$attempt" -eq 1 ] && { echo "    Finder layout failed. Retrying in 5 seconds..." >&2; sleep 5; }
 done
 if [ "$layout_ok" -ne 1 ]; then
-    echo "error: Finder 布局连续失败，已中止（检查「自动化」授权或手动重跑）" >&2
+    echo "error: Finder layout failed twice. Check Automation permission or rerun the script manually." >&2
     hdiutil detach "$MOUNT_DIR" -quiet || true
     exit 1
 fi
 
-echo "==> 卸载并压缩"
+echo "==> Unmount and compress the DMG"
 hdiutil detach "$MOUNT_DIR" -quiet || hdiutil detach "$MOUNT_DIR" -force -quiet
 hdiutil convert "$RW_DMG" -format UDZO -imagekey zlib-level=9 -o "$FINAL_DMG" >/dev/null
 rm -f "$RW_DMG"
 rm -rf "$STAGE"
 
-echo "==> 完成：$FINAL_DMG"
+echo "==> Done: $FINAL_DMG"
 hdiutil imageinfo "$FINAL_DMG" | grep -E 'Format:|Compressed Size' || true

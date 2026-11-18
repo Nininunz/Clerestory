@@ -19,11 +19,11 @@ fi
 
 ARTIFACT_PATH="${1:-}"
 if [ -z "$ARTIFACT_PATH" ] || [ ! -e "$ARTIFACT_PATH" ]; then
-    echo "error: 用法：$0 <已签名的 .dmg|.app|.pkg>" >&2
+    echo "error: Usage: $0 <signed .dmg|.app|.pkg>" >&2
     exit 1
 fi
 if [ -z "${NOTARY_PROFILE:-}" ]; then
-    echo "error: 缺少 NOTARY_PROFILE（先用 notarytool store-credentials 保存凭据）。" >&2
+    echo "error: NOTARY_PROFILE is missing. Store credentials with notarytool store-credentials first." >&2
     exit 1
 fi
 
@@ -39,7 +39,7 @@ case "$ARTIFACT_PATH" in
         ;;
     *.dmg|*.pkg) ;;
     *)
-        echo "error: 仅支持 .dmg、.app 或 .pkg。" >&2
+        echo "error: Only .dmg, .app, and .pkg files are supported." >&2
         exit 1
         ;;
 esac
@@ -52,7 +52,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "==> 提交 Apple 公证：$SUBMISSION_PATH"
+echo "==> Submit to Apple for notarization: $SUBMISSION_PATH"
 xcrun notarytool submit "$SUBMISSION_PATH" \
     --keychain-profile "$NOTARY_PROFILE" \
     --wait --output-format json > "$NOTARY_RESULT"
@@ -65,7 +65,7 @@ if [ "$NOTARY_STATUS" != "Accepted" ]; then
     exit 1
 fi
 
-echo "==> 装订并验证票据：$ARTIFACT_PATH"
+echo "==> Staple and validate the ticket: $ARTIFACT_PATH"
 xcrun stapler staple "$ARTIFACT_PATH"
 xcrun stapler validate "$ARTIFACT_PATH"
 
@@ -75,4 +75,4 @@ case "$ARTIFACT_PATH" in
     *.pkg) spctl --assess --type install -vv "$ARTIFACT_PATH" ;;
 esac
 
-echo "公证完成：$ARTIFACT_PATH"
+echo "Notarization complete: $ARTIFACT_PATH"

@@ -22,7 +22,7 @@ trap cleanup EXIT
 
 APPCAST_PATH="$WORK_DIR/appcast.xml"
 if [[ "$SOURCE" == http://* || "$SOURCE" == https://* ]]; then
-    echo "==> 下载 appcast：$SOURCE"
+    echo "==> Download appcast: $SOURCE"
     curl --fail --location --silent --show-error "$SOURCE" --output "$APPCAST_PATH"
 else
     cp "$SOURCE" "$APPCAST_PATH"
@@ -38,12 +38,12 @@ ns = {"sparkle": "http://www.andymatuschak.org/xml-namespaces/sparkle"}
 root = ET.parse(sys.argv[1]).getroot()
 item = root.find("./channel/item")
 if item is None:
-    raise SystemExit("appcast 没有 item")
+    raise SystemExit("The appcast contains no release entries.")
 version = item.findtext("sparkle:shortVersionString", namespaces=ns) or ""
 build = item.findtext("sparkle:version", namespaces=ns) or ""
 enclosure = item.find("enclosure")
 if enclosure is None:
-    raise SystemExit("最新 item 没有 enclosure")
+    raise SystemExit("The latest appcast entry has no enclosure.")
 signature = enclosure.get(f"{{{ns['sparkle']}}}edSignature", "")
 print("\t".join([version, build, enclosure.get("url", ""), signature,
                  enclosure.get("length", "")]))
@@ -52,24 +52,24 @@ PYEOF
 
 if [ -z "$FEED_VERSION" ] || [ -z "$FEED_BUILD" ] || [ -z "$ENCLOSURE_URL" ] \
     || [ -z "$ED_SIGNATURE" ] || [ -z "$DECLARED_LENGTH" ]; then
-    echo "error: 最新 appcast item 缺少版本、URL、签名或长度。" >&2
+    echo "error: The latest appcast entry is missing the version, URL, signature, or length." >&2
     exit 1
 fi
 if [ -n "$EXPECTED_VERSION" ] && [ "$FEED_VERSION" != "$EXPECTED_VERSION" ]; then
-    echo "error: feed 最新版本为 ${FEED_VERSION}，期望 ${EXPECTED_VERSION}。" >&2
+    echo "error: Expected feed version ${EXPECTED_VERSION}, found ${FEED_VERSION}." >&2
     exit 1
 fi
 if [[ ! "$DECLARED_LENGTH" =~ ^[0-9]+$ ]]; then
-    echo "error: enclosure length 不是数字。" >&2
+    echo "error: The enclosure length must be numeric." >&2
     exit 1
 fi
 
 DMG_PATH="$WORK_DIR/Clerestory-$FEED_VERSION.dmg"
-echo "==> 下载 $FEED_VERSION ($FEED_BUILD)"
+echo "==> Download $FEED_VERSION ($FEED_BUILD)"
 curl --fail --location --silent --show-error "$ENCLOSURE_URL" --output "$DMG_PATH"
 ACTUAL_LENGTH="$(stat -f '%z' "$DMG_PATH")"
 if [ "$ACTUAL_LENGTH" != "$DECLARED_LENGTH" ]; then
-    echo "error: DMG 长度不一致，feed=${DECLARED_LENGTH}，实际=${ACTUAL_LENGTH}。" >&2
+    echo "error: DMG length mismatch. Feed: ${DECLARED_LENGTH}. Actual: ${ACTUAL_LENGTH}." >&2
     exit 1
 fi
 
@@ -82,7 +82,7 @@ printf '%s' "$ED_SIGNATURE" | base64 -D >"$WORK_DIR/signature.bin"
 if ! openssl pkeyutl -verify -pubin -keyform DER \
     -inkey "$WORK_DIR/public.der" -rawin -in "$DMG_PATH" \
     -sigfile "$WORK_DIR/signature.bin" >/dev/null; then
-    echo "error: Sparkle Ed25519 签名验证失败。" >&2
+    echo "error: Sparkle Ed25519 signature verification failed." >&2
     exit 1
 fi
 
@@ -101,7 +101,7 @@ fi
 
 DOWNLOADED_KEY="$(/usr/libexec/PlistBuddy -c 'Print SUPublicEDKey' "$APP_PATH/Contents/Info.plist")"
 if [ "$DOWNLOADED_KEY" != "$TRUSTED_KEY" ]; then
-    echo "error: DMG 内 app 的 Sparkle 公钥与仓库信任根不一致。" >&2
+    echo "error: The app in the DMG uses a different Sparkle public key from the repository." >&2
     exit 1
 fi
 
@@ -113,4 +113,4 @@ fi
 "$REPO_ROOT/Scripts/verify-distribution.sh" \
     "$APP_PATH" "$MODE" "$FEED_VERSION" "$FEED_BUILD"
 
-echo "端到端更新链路验证通过：$FEED_VERSION ($FEED_BUILD)，$ACTUAL_LENGTH bytes"
+echo "Verified the update feed end to end: $FEED_VERSION ($FEED_BUILD), $ACTUAL_LENGTH bytes"
