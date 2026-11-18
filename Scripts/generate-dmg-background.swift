@@ -34,7 +34,7 @@ let big = makeRep(W * SS, H * SS)
 NSGraphicsContext.saveGraphicsState()
 NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: big)
 let ctx = NSGraphicsContext.current!.cgContext
-ctx.scaleBy(x: SS, y: SS)  // 之后一律用 1x 坐标书写（原点左下）
+ctx.scaleBy(x: SS, y: SS)  // Draw in 1x coordinates with the origin at the lower left.
 
 // Draw a subtle background gradient from white on top to light gray below.
 let bg = NSGradient(colors: [
@@ -46,8 +46,8 @@ bg.draw(in: NSRect(x: 0, y: 0, width: W, height: H), angle: -90)
 // Draw the gray-blue dotted guide and solid arrowhead 165 points from the top,
 // 15 points above the original position.
 let arrowY: CGFloat = H - 165
-let startX: CGFloat = 228   // app 图标右缘 204 → 留 24pt
-let endX: CGFloat = 372     // Applications 左缘 396 → 留 24pt
+let startX: CGFloat = 228   // Leave 24 points after the app icon's right edge at 204.
+let endX: CGFloat = 372     // Leave 24 points before the Applications icon's left edge at 396.
 let dotColor = NSColor(srgbRed: 0.4, green: 0.52, blue: 0.76, alpha: 0.95)
 
 dotColor.setFill()

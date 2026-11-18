@@ -34,7 +34,7 @@ if [ -f "$REPO_ROOT/Scripts/release-signing.local" ]; then
 fi
 
 if [ $# -lt 1 ] || [ $# -gt 3 ]; then
-    echo "用法：$0 <VERSION> [BUILD] [--adhoc]" >&2
+    echo "Usage: $0 <VERSION> [BUILD] [--adhoc]" >&2
     exit 1
 fi
 VERSION="$1"
@@ -43,15 +43,15 @@ RELEASE_MODE="developer-id"
 if [ "${3:-}" = "--adhoc" ]; then
     RELEASE_MODE="adhoc"
 elif [ -n "${3:-}" ]; then
-    echo "error: 未知参数 ${3}；第三个参数只支持 --adhoc。" >&2
+    echo "error: Unknown argument ${3}. The third argument can only be --adhoc." >&2
     exit 1
 fi
 if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo "error: VERSION 必须是三段数字版本号（例如 1.0.2）。" >&2
+    echo "error: VERSION must have three numeric components, such as 1.0.2." >&2
     exit 1
 fi
 if [ -n "$BUILD_NUMBER" ] && [[ ! "$BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
-    echo "error: BUILD 必须是正整数。" >&2
+    echo "error: BUILD must be a positive integer." >&2
     exit 1
 fi
 
@@ -70,31 +70,31 @@ fi
 RELEASE_URL="https://github.com/Nininunz/Clerestory/releases/download/v$VERSION/Clerestory-$VERSION.dmg"
 
 if ! command -v node >/dev/null 2>&1; then
-    echo "error: README 徽章刷新需要 Node.js 18+。请先安装 Node.js。" >&2
+    echo "error: Refreshing README badges requires Node.js 18 or later. Install Node.js first." >&2
     exit 1
 fi
 
 if [ "$RELEASE_MODE" = "developer-id" ]; then
     for required_name in DEVELOPER_ID_APPLICATION DEVELOPMENT_TEAM_ID NOTARY_PROFILE; do
         if [ -z "${!required_name:-}" ]; then
-            echo "error: 缺少环境变量 ${required_name}。没有 Apple 证书时请显式使用：$0 $VERSION ${BUILD_NUMBER:-<BUILD>} --adhoc" >&2
+            echo "error: Missing environment variable ${required_name}. Without an Apple certificate, explicitly use: $0 $VERSION ${BUILD_NUMBER:-<BUILD>} --adhoc" >&2
             exit 1
         fi
     done
     if [[ ! "$DEVELOPMENT_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]; then
-        echo "error: DEVELOPMENT_TEAM_ID 必须是 10 位大写字母/数字。" >&2
+        echo "error: DEVELOPMENT_TEAM_ID must contain 10 uppercase letters or digits." >&2
         exit 1
     fi
     CODE_SIGN_IDENTITIES="$(security find-identity -v -p codesigning)"
     case "$CODE_SIGN_IDENTITIES" in
         *"$DEVELOPER_ID_APPLICATION"*) ;;
         *)
-            echo "error: 钥匙串中未找到指定的 Developer ID Application 身份。" >&2
+            echo "error: The configured Developer ID Application signing identity was not found in Keychain." >&2
             exit 1
             ;;
     esac
 else
-    echo "==> 发布模式：ad hoc（免费、未公证；首次下载会触发 Gatekeeper 提示）"
+    echo "==> Release mode: ad hoc (free and unnotarized). Gatekeeper may warn on first launch."
 fi
 
 # Locate Sparkle's command-line tools.
@@ -109,7 +109,7 @@ if [ -z "${SPARKLE_BIN:-}" ]; then
 fi
 SIGN_UPDATE="$SPARKLE_BIN/sign_update"
 if [ ! -x "$SIGN_UPDATE" ]; then
-    echo "error: 未找到 sign_update（试过 SPARKLE_BIN=${SPARKLE_BIN}）。先跑 xcodebuild -resolvePackageDependencies，或设 SPARKLE_BIN。" >&2
+    echo "error: sign_update was not found (tried SPARKLE_BIN=${SPARKLE_BIN}). Run xcodebuild -resolvePackageDependencies or set SPARKLE_BIN." >&2
     exit 1
 fi
 echo "==> sign_update: $SIGN_UPDATE"
@@ -149,16 +149,16 @@ PYEOF
 if [ -z "${BUILD_NUMBER}" ]; then
     if [ -n "$EXISTING_VERSION_BUILD" ]; then
         BUILD_NUMBER="$EXISTING_VERSION_BUILD"
-        echo "==> 重建现有 ${VERSION} item：沿用 build ${BUILD_NUMBER}"
+        echo "==> Rebuild existing ${VERSION} release using build ${BUILD_NUMBER}"
     else
         BUILD_NUMBER=$((MAX_BUILD + 1))
-        echo "==> 自动 build number：${BUILD_NUMBER}（appcast 最大 ${MAX_BUILD} + 1）"
+        echo "==> Automatic build number: ${BUILD_NUMBER} (highest appcast build ${MAX_BUILD} + 1)"
     fi
 elif [ "${BUILD_NUMBER}" -le "${MAX_BUILD}" ] && [ "$BUILD_NUMBER" != "$EXISTING_VERSION_BUILD" ]; then
-    echo "error: BUILD=${BUILD_NUMBER} 不大于 appcast 最大 sparkle:version ${MAX_BUILD} —— 老用户将收不到更新。请传更大值，或省略第二个参数自动递增。" >&2
+    echo "error: BUILD=${BUILD_NUMBER} must exceed the highest Sparkle build ${MAX_BUILD} for existing users to receive the update. Pass a higher number or omit BUILD to increment automatically." >&2
     exit 1
 elif [ "$BUILD_NUMBER" = "$EXISTING_VERSION_BUILD" ]; then
-    echo "==> 重建现有 ${VERSION} item：沿用 build ${BUILD_NUMBER}"
+    echo "==> Rebuild existing ${VERSION} release using build ${BUILD_NUMBER}"
 fi
 
 # ---- 1. Archive ----
@@ -183,7 +183,7 @@ else
         ENABLE_HARDENED_RUNTIME=NO
     )
 fi
-echo "==> archive（Release, ${VERSION} (${BUILD_NUMBER})）"
+echo "==> Archive (Release, ${VERSION} (${BUILD_NUMBER}))"
 rm -rf "$ARCHIVE_PATH"
 xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration Release \
     -destination 'platform=macOS' \
@@ -192,7 +192,7 @@ xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration Release \
     archive
 
 # Export and verify the Xcode-signed app.
-echo "==> 导出 $APP_PATH"
+echo "==> Export $APP_PATH"
 rm -rf "$APP_PATH"
 ditto "$ARCHIVE_PATH/Products/Applications/Clerestory.app" "$APP_PATH"
 
@@ -246,7 +246,7 @@ SHORT_VERSION="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "
 BUNDLE_VERSION="$(/usr/libexec/PlistBuddy -c 'Print CFBundleVersion' "$APP_PATH/Contents/Info.plist")"
 echo "    shortVersionString=$SHORT_VERSION  bundleVersion=$BUNDLE_VERSION"
 if [ "$SHORT_VERSION" != "$VERSION" ] || [ "$BUNDLE_VERSION" != "$BUILD_NUMBER" ]; then
-    echo "error: 归档内版本与请求不一致（期望 $VERSION ($BUILD_NUMBER)），拒绝发布。" >&2
+    echo "error: Archive version does not match the requested $VERSION ($BUILD_NUMBER). Stopping the release." >&2
     exit 1
 fi
 
@@ -255,26 +255,26 @@ fi
 if [ "$RELEASE_MODE" = "developer-id" ]; then
     APP_SIGN_INFO="$(codesign -dvvv "$APP_PATH" 2>&1)"
     if ! printf '%s\n' "$APP_SIGN_INFO" | grep -Eq 'flags=.*runtime'; then
-        echo "error: 导出的 app 未启用 Hardened Runtime，拒绝 Developer ID 发布。" >&2
+        echo "error: The exported app must enable Hardened Runtime for Developer ID distribution." >&2
         exit 1
     fi
     if ! printf '%s\n' "$APP_SIGN_INFO" | grep -Fq "TeamIdentifier=$DEVELOPMENT_TEAM_ID"; then
-        echo "error: app 的 TeamIdentifier 与 DEVELOPMENT_TEAM_ID 不一致。" >&2
+        echo "error: The app TeamIdentifier does not match DEVELOPMENT_TEAM_ID." >&2
         exit 1
     fi
 fi
 
 # ---- 3. DMG ----
-echo "==> 打 DMG"
+echo "==> Build the DMG"
 ./Scripts/make-dmg.sh "$APP_PATH"
 
 # Sign, notarize, and staple the DMG for Developer ID distribution.
 if [ "$RELEASE_MODE" = "developer-id" ]; then
-    echo "==> Developer ID 签名 DMG"
+    echo "==> Sign the DMG with Developer ID"
     codesign --force --sign "$DEVELOPER_ID_APPLICATION" --timestamp "$DMG_PATH"
     NOTARY_PROFILE="$NOTARY_PROFILE" ./Scripts/notarize.sh "$DMG_PATH"
 else
-    echo "==> 跳过 Apple 公证（ad hoc 模式）"
+    echo "==> Skip Apple notarization in ad hoc mode"
 fi
 
 # Create the EdDSA signature after notarization and stapling finalize the DMG bytes.
@@ -285,7 +285,7 @@ echo "    $SIGN_OUTPUT"
 ED_SIGNATURE="$(printf '%s' "$SIGN_OUTPUT" | sed -n 's/.*sparkle:edSignature="\([^"]*\)".*/\1/p')"
 DMG_LENGTH="$(printf '%s' "$SIGN_OUTPUT" | sed -n 's/.*length="\([^"]*\)".*/\1/p')"
 if [ -z "$ED_SIGNATURE" ] || [ -z "$DMG_LENGTH" ]; then
-    echo "error: 无法从 sign_update 输出解析签名/长度" >&2
+    echo "error: Could not read the signature and length from sign_update output." >&2
     exit 1
 fi
 
@@ -294,7 +294,7 @@ PUB_DATE="$(LC_TIME=C date '+%a, %d %b %Y %H:%M:%S %z')"
 # Update the appcast, replacing any existing entry with the same marketing version.
 # Leave sparkle:channel off the item. The app uses the default channel, which
 # filters out explicitly tagged entries. This prevented update discovery in 1.0.1.
-echo "==> 更新 $APPCAST"
+echo "==> Update $APPCAST"
 python3 - "$APPCAST" "$VERSION" "$SHORT_VERSION" "$BUNDLE_VERSION" "$RELEASE_URL" "$ED_SIGNATURE" "$DMG_LENGTH" "$PUB_DATE" <<'PYEOF'
 import sys
 import xml.etree.ElementTree as ET
@@ -313,7 +313,7 @@ for item in list(channel.findall("item")):
     svs = item.find(f"{{{SPARKLE}}}shortVersionString")
     if svs is not None and svs.text == short_version:
         channel.remove(item)
-        print(f"    替换已存在的 {short_version} item")
+        print(f"    Replace the existing {short_version} entry")
 
 item = ET.Element("item")
 ET.SubElement(item, "title").text = f"Version {short_version}"
@@ -339,11 +339,11 @@ channel.insert(insert_at, item)
 
 ET.indent(tree, space="    ")
 tree.write(appcast_path, encoding="utf-8", xml_declaration=True)
-print(f"    appcast 已更新：{short_version} ({bundle_version})")
+print(f"    Appcast updated: {short_version} ({bundle_version})")
 PYEOF
 
 # Refresh the local README badge snapshots.
-echo "==> 更新 README 徽章"
+echo "==> Update README badges"
 if [ "${OPENYOINK_RELEASE_CANDIDATE:-0}" != "1" ]; then
     node "$REPO_ROOT/Scripts/update-readme-badges.mjs" --version "$SHORT_VERSION"
 else
@@ -355,10 +355,10 @@ fi
 # and therefore the digest.
 DMG_SHA="$(shasum -a 256 "$DMG_PATH" | cut -d' ' -f1)"
 echo "==> Homebrew cask：version=$SHORT_VERSION  sha256=$DMG_SHA"
-echo "    GitHub Release 上传成功后，用以上两个值更新 homebrew-tap。"
+echo "    After uploading the GitHub release, use these two values to update homebrew-tap."
 
 echo ""
-echo "==> 完成"
+echo "==> Done"
 echo "    DMG:     $DMG_PATH"
 echo "    appcast: $APPCAST"
 echo "    mode:    $RELEASE_MODE"
