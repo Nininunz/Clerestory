@@ -30,6 +30,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0F00000000000000000004 /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
 		0F00000000000000000001 /* OpenYoink.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenYoink.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0F00000000000000000002 /* OpenYoinkTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenYoinkTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0F00000000000000000003 /* OpenYoinkUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenYoinkUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -103,6 +104,7 @@
 				110000000000000000003 /* OpenYoinkTests */,
 				110000000000000000005 /* OpenYoinkUITests */,
 				A10000000000000000000004 /* OpenYoinkUITestDragSource */,
+				0F00000000000000000004 /* Version.xcconfig */,
 				110000000000000000004 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -128,6 +130,7 @@
 				130000000000000000001 /* Sources */,
 				100000000000000000001 /* Frameworks */,
 				140000000000000000001 /* Resources */,
+				170000000000000000001 /* Stamp Debug commit */,
 			);
 			buildRules = (
 			);
@@ -269,6 +272,20 @@
 		};
 		A10000000000000000000007 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		170000000000000000001 /* Stamp Debug commit */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			inputPaths = ("$(DERIVED_FILE_DIR)/SourceCommit.txt");
+			name = "Stamp Debug commit";
+			outputPaths = ("$(DEBUG_COMMIT_OUTPUT_DIR)/DebugCommit.txt");
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ -f \"$SCRIPT_INPUT_FILE_0\" ]; then\n    /bin/cat \"$SCRIPT_INPUT_FILE_0\"\nfi > \"$SCRIPT_OUTPUT_FILE_0\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		130000000000000000001 /* Sources */ = {
@@ -432,13 +449,14 @@
 		};
 		160000000000000000003 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0F00000000000000000004 /* Version.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = OpenYoink/Resources/OpenYoink.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 59;
+				DEBUG_COMMIT_OUTPUT_DIR = "$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)";
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -449,7 +467,6 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.nininunz.OpenYoink;
 				PRODUCT_BUNDLE_PACKAGE_TYPE = APPL;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -460,6 +477,7 @@
 		};
 		160000000000000000004 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0F00000000000000000004 /* Version.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -467,7 +485,7 @@
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 59;
+				DEBUG_COMMIT_OUTPUT_DIR = "$(DERIVED_FILE_DIR)";
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -478,7 +496,6 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.nininunz.OpenYoink;
 				PRODUCT_BUNDLE_PACKAGE_TYPE = APPL;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -489,13 +506,12 @@
 		};
 		160000000000000000005 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0F00000000000000000004 /* Version.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 59;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.nininunz.OpenYoinkTests;
 				PRODUCT_BUNDLE_PACKAGE_TYPE = BNDL;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -507,13 +523,12 @@
 		};
 		160000000000000000006 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0F00000000000000000004 /* Version.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 59;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.nininunz.OpenYoinkTests;
 				PRODUCT_BUNDLE_PACKAGE_TYPE = BNDL;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -525,13 +540,12 @@
 		};
 		160000000000000000007 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0F00000000000000000004 /* Version.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 59;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.nininunz.OpenYoinkUITests;
 				PRODUCT_BUNDLE_PACKAGE_TYPE = BNDL;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -543,13 +557,12 @@
 		};
 		160000000000000000008 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0F00000000000000000004 /* Version.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 59;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.nininunz.OpenYoinkUITests;
 				PRODUCT_BUNDLE_PACKAGE_TYPE = BNDL;
 				PRODUCT_NAME = "$(TARGET_NAME)";

@@ -26,6 +26,8 @@ Run `Scripts/doctor.sh --release` to check tool availability, Developer ID signi
 
 Choose a release version and a build number higher than the latest public build. In the commands below, set `version` and `build` to those values.
 
+Update [Version.xcconfig](../Version.xcconfig) when preparing a release. It sets the default version and build for local builds, while the packaging script passes the requested values directly to Xcode.
+
 1. Build a local candidate with `OPENYOINK_RELEASE_CANDIDATE=1 Scripts/make-release.sh "$version" "$build"`. This signs and notarizes the artifact and writes unpublished metadata to `export/appcast-candidate.xml`. The DMG lands under `export/`. Choose a higher build when testing an update from an already installed candidate.
 2. Run the build and test checks in the [CI guide](development/CI.md) and the relevant [manual smoke checks](MANUAL_TESTING.md). Test installing the signed DMG and launching the app in an appropriate test account. Check code signing, notarization stapling, and both architectures. Use supported Intel hardware to verify execution there when available.
 3. Build the public package with `Scripts/make-release.sh "$version" "$build"`. Use the Developer ID build for public distribution. The script produces the signed DMG and writes its Sparkle signature and length to `docs/appcast.xml`. Publish the exact DMG referenced by the appcast to the matching GitHub release. Merge the signed appcast entry into `main`.

@@ -518,7 +518,7 @@ struct IslandModuleLibraryView: View {
                 .accessibilityLabel(Text("Settings"))
                 Spacer()
                 #if DEBUG
-                Text(verbatim: AppBuildInfo.versionString)
+                Text(verbatim: AppBuildInfo.debugVersionString)
                     .monospacedDigit()
                     .foregroundStyle(IslandVisualStyle.tertiaryText)
                     .lineLimit(1)
