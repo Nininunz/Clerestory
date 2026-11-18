@@ -13,7 +13,7 @@ description: 通过 Homebrew 或 GitHub Release 安装 OpenYoink，并处理首�
 ## Fork release status
 
 This is the Nininunz fork of [OpenYoink](https://github.com/MuQY1818/OpenYoink).
-No fork release has been published yet. Build from [source](https://github.com/Nininunz/OpenYoink) for development.
+Download the signed and notarized [1.0.0 DMG](https://github.com/Nininunz/OpenYoink/releases/download/v1.0.0/OpenYoink-1.0.0.dmg). Open it and copy OpenYoink to Applications. Quit other OpenYoink copies before launching.
 Upstream Homebrew packages install the upstream app, not this fork.
 
 The fork has a separate bundle identity and update-signing key. Existing upstream

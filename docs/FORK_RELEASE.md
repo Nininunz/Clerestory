@@ -16,14 +16,15 @@ contributor attribution remain intact. The app name remains OpenYoink.
 - `make-release.sh` checks the public key before building and explicitly uses
   this Keychain account when signing the final DMG.
 
-The feed starts empty. Upstream releases use another signing key and must not
-be advertised as fork updates. The first fork build defaults to 52, above the
-inherited development build 51. Choose the public version before publishing.
+The first public fork release is 1.0.0 (55), with independent semantic versioning
+and strictly increasing build numbers. Upstream releases use another signing
+key and must not be advertised as fork updates. Builds 52–54 were unpublished
+candidates.
 
 For a local signed/notarized candidate without changing the public feed or badges:
 
 ```sh
-OPENYOINK_RELEASE_CANDIDATE=1 Scripts/make-release.sh 1.8.11 52
+OPENYOINK_RELEASE_CANDIDATE=1 Scripts/make-release.sh 1.0.0 55
 ```
 
 Candidate metadata is written to `export/appcast-candidate.xml`; the DMG remains
@@ -69,8 +70,7 @@ Automatic migration is not implemented by this identity change.
 
 The Developer ID certificate is installed in the maintainer's login Keychain
 (expires December 17, 2027), and the notarization profile has been validated
-with Apple. Pages hosting is configured. No public release or feed deployment
-has been performed. Local candidate `1.8.11 (52)` passed Apple notarization,
+with Apple. Pages hosting is configured. The 1.0.0 (55) release is published with its matching stable feed. Local candidate `1.8.11 (52)` passed Apple notarization,
 DMG ticket stapling, Gatekeeper checks for both the DMG and mounted app, and
 Sparkle signature verification. The candidate is universal (arm64 and x86_64).
 
