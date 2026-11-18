@@ -1,0 +1,48 @@
+name: Bug report
+description: Report something that went wrong in Clerestory.
+body:
+  - type: input
+    id: app-version
+    attributes:
+      label: Clerestory version and build
+      description: Find these in Settings → About. For a development build, include the commit if you know it.
+    validations:
+      required: true
+  - type: input
+    id: macos-version
+    attributes:
+      label: macOS version
+      description: Include the full version shown in Apple menu → About This Mac.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Include any relevant settings and say how often the problem occurs.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: Describe what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Describe what happened, including any error message.
+    validations:
+      required: true
+  - type: input
+    id: display-setup
+    attributes:
+      label: Display setup
+      description: For Panel or Notch bugs, include the Mac model and which display was involved. Include scaling if it matters.
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Attach screenshots, recordings, or relevant logs if helpful. Remove private filenames, paths, and content before sharing.

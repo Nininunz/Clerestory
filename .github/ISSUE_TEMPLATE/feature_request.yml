@@ -1,0 +1,22 @@
+name: Feature request
+description: Suggest an improvement to Clerestory.
+body:
+  - type: textarea
+    id: workflow
+    attributes:
+      label: What are you trying to do?
+      description: Describe your workflow and where you run into friction today.
+    validations:
+      required: true
+  - type: textarea
+    id: desired-behavior
+    attributes:
+      label: What should Clerestory do?
+      description: Describe the behavior you want and how it would help.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives or examples
+      description: Share any workarounds, sketches, or examples that help explain the request.
