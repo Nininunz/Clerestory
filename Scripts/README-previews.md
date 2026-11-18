@@ -63,9 +63,9 @@ Notice wording is shared with the app, and count-based messages use the runtime 
 
 Large catalogs are split into contact sheets of at most 12 captures: `shelf.png`, `shelf-2.png`, and so on. The HTML gallery links every page, and the manifest retains every individual scenario image.
 
-## Unified panel review
+## Panel and Notch
 
-The current architecture, validation results, live acceptance matrix, and representative captures are in [Unified Island panel](../docs/previews/unified-panel/README.md). To refresh the complete Shelf and Quick Settings gallery, run:
+See [Panel and Notch architecture](../docs/PANEL_ARCHITECTURE.md) for the display and window behavior. Generate the Shelf and Quick Settings gallery from the current checkout:
 
 ```sh
 Scripts/render-module-previews.sh --module shelf --module quick-settings \
