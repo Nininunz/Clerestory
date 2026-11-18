@@ -1,7 +1,7 @@
 import Darwin
 import Foundation
 
-// Read-only process profiling. Usage: swift Scripts/profile-idle.swift PID [seconds]
+// Read-only process profiling. Usage: swift Scripts/diagnostics/profile-idle.swift PID [seconds]
 guard CommandLine.arguments.count >= 2, let pid = Int32(CommandLine.arguments[1]) else {
     fputs("Usage: profile-idle.swift PID [seconds]\n", stderr)
     exit(2)

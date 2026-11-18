@@ -1,5 +1,7 @@
 // Run from the repository root in a logged-in macOS desktop session:
-// xcrun swiftc -parse-as-library OpenYoink/Appearance/ShelfAppearance.swift OpenYoink/Appearance/ShelfGlassSurface.swift Scripts/verify-transparent-shelf.swift -o /tmp/openyoink-hit-region
+// xcrun swiftc -parse-as-library OpenYoink/Appearance/ShelfAppearance.swift \
+//   OpenYoink/Appearance/ShelfGlassSurface.swift OpenYoink/Shelf/ShelfRevealState.swift \
+//   Scripts/diagnostics/verify-transparent-shelf.swift -o /tmp/openyoink-hit-region
 // /tmp/openyoink-hit-region
 // This briefly displays two owned windows without moving the pointer or
 // changing app preferences. A view-only hitTest cannot detect this regression:
