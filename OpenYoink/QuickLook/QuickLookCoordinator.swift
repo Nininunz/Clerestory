@@ -204,7 +204,7 @@ final class QuickLookCoordinator: NSObject, @MainActor QLPreviewPanelDataSource,
     private let store: ShelfStore
     private let bookmarkService: BookmarkService
     private let tempFileService: TempFileService
-    private let logger = Logger(subsystem: "com.nininunz.OpenYoink", category: "QuickLook")
+    private let logger = Logger(subsystem: "com.nininunz.Clerestory", category: "QuickLook")
 
     /// Centralizes access to Quick Look's shared process-wide panel, which the SDK declares optional.
     private var sharedPanel: QLPreviewPanel? { QLPreviewPanel.shared() }

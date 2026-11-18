@@ -6,7 +6,7 @@ enum AppDirectories {
     private static let uiTestDirectory = FileManager.default.temporaryDirectory
         .appendingPathComponent("OpenYoinkUITests-" + UUID().uuidString, isDirectory: true)
 
-    /// `Application Support/OpenYoink` inside the sandbox container.
+    /// `Application Support/Clerestory` inside the sandbox container.
     static func applicationSupport() -> URL {
         // Allocate before any service can load state. Clearing a shared test
         // directory in applicationWillFinishLaunching is too late for stores
@@ -16,7 +16,7 @@ enum AppDirectories {
         }
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
-        return base.appendingPathComponent("OpenYoink", isDirectory: true)
+        return base.appendingPathComponent("Clerestory", isDirectory: true)
     }
 }
 
@@ -36,7 +36,7 @@ private struct ShelfSnapshot: Codable, Sendable {
 
 /// JSON persistence for the shelf's items.
 ///
-/// Storage is a single `shelf.json` in `Application Support/OpenYoink` (inside
+/// Storage is a single `shelf.json` in `Application Support/Clerestory` (inside
 /// the sandbox container). Writes are atomic (temporary file + rename) and
 /// debounced: rapid `scheduleSave(_:)` calls coalesce into one disk write.
 @MainActor
@@ -61,7 +61,7 @@ final class PersistenceController {
     private static let removalSnapshotPrefix = "shelf.json.corrupt-removed-"
     private var pendingItems: [ShelfItem]?
     private var saveTask: Task<Void, Never>?
-    private let logger = Logger(subsystem: "com.nininunz.OpenYoink", category: "Persistence")
+    private let logger = Logger(subsystem: "com.nininunz.Clerestory", category: "Persistence")
 
     private let encoder: JSONEncoder = {
         let encoder = JSONEncoder()

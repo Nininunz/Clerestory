@@ -85,7 +85,7 @@ final class OnboardingViewModel {
 }
 
 /// 一次真实「拖入 → 拖出」练习的编排器。所有教程状态和文件都限制在
-/// Application Support/OpenYoink/Tutorial，且运行时只通过随机 token 识别。
+/// Application Support/Clerestory/Tutorial，且运行时只通过随机 token 识别。
 @MainActor
 final class OnboardingController: NSObject, NSWindowDelegate {
     static let currentVersion = 1

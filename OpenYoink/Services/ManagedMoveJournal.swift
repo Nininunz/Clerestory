@@ -83,7 +83,7 @@ final class ManagedMoveJournal: @unchecked Sendable {
     private var backupURL: URL { directoryURL.appendingPathComponent("managed-moves.json.backup") }
 
     private let lock = NSLock()
-    private let logger = Logger(subsystem: "com.nininunz.OpenYoink", category: "ManagedMoveJournal")
+    private let logger = Logger(subsystem: "com.nininunz.Clerestory", category: "ManagedMoveJournal")
 
     private let encoder: JSONEncoder = {
         let encoder = JSONEncoder()

@@ -1,11 +1,11 @@
 #!/bin/bash
-# 验证 OpenYoink 发布 app 的版本、签名与 Sparkle helper 权限边界。
-# 用法：verify-distribution.sh <OpenYoink.app> <adhoc|developer-id> [VERSION] [BUILD]
+# 验证 Clerestory 发布 app 的版本、签名与 Sparkle helper 权限边界。
+# 用法：verify-distribution.sh <Clerestory.app> <adhoc|developer-id> [VERSION] [BUILD]
 
 set -euo pipefail
 
 if [ $# -lt 2 ] || [ $# -gt 4 ]; then
-    echo "用法：$0 <OpenYoink.app> <adhoc|developer-id> [VERSION] [BUILD]" >&2
+    echo "用法：$0 <Clerestory.app> <adhoc|developer-id> [VERSION] [BUILD]" >&2
     exit 1
 fi
 
@@ -18,6 +18,7 @@ if [ ! -d "$APP_PATH" ]; then
     echo "error: app 不存在：$APP_PATH" >&2
     exit 1
 fi
+APP_BUNDLE_IDENTIFIER="$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$APP_PATH/Contents/Info.plist")"
 if [ "$RELEASE_MODE" != "adhoc" ] && [ "$RELEASE_MODE" != "developer-id" ]; then
     echo "error: 签名模式必须是 adhoc 或 developer-id。" >&2
     exit 1
@@ -86,8 +87,8 @@ for helper in "$SPARKLE_ROOT/XPCServices/Installer.xpc" "$SPARKLE_ROOT/Updater.a
         echo "error: Sparkle helper 错误继承了主 app sandbox：$helper" >&2
         exit 1
     fi
-    if grep -Fq 'com.nininunz.OpenYoink' "$file"; then
-        echo "error: Sparkle helper 错误继承了 OpenYoink application identifier：$helper" >&2
+    if grep -Fq "$APP_BUNDLE_IDENTIFIER" "$file"; then
+        echo "error: Sparkle helper 错误继承了主 app 的 application identifier：$helper" >&2
         exit 1
     fi
 done
@@ -109,4 +110,4 @@ if [ -n "$EXPECTED_BUILD" ] && [ "$BUNDLE_VERSION" != "$EXPECTED_BUILD" ]; then
     exit 1
 fi
 
-echo "验证通过：OpenYoink $SHORT_VERSION ($BUNDLE_VERSION)，模式 $RELEASE_MODE"
+echo "验证通过：Clerestory $SHORT_VERSION ($BUNDLE_VERSION)，模式 $RELEASE_MODE"

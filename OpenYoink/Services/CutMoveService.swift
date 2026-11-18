@@ -57,7 +57,7 @@ final class CutMoveService: Sendable {
     /// 原文件进废纸篓；测试注入 mock 验证编排与失败分支。
     let trashOriginal: @Sendable (URL) throws -> URL?
 
-    private let logger = Logger(subsystem: "com.nininunz.OpenYoink", category: "CutMove")
+    private let logger = Logger(subsystem: "com.nininunz.Clerestory", category: "CutMove")
 
     init(tempFileService: TempFileService,
          bookmarkService: BookmarkService,
@@ -72,7 +72,7 @@ final class CutMoveService: Sendable {
         // 容器 Data 根 = `~/Library/Containers/<id>/Data`；非沙箱（测试宿主）
         // 下回退为用户 Library 的父目录语义不可靠，故测试必须注入。
         self.containerURL = containerURL
-            ?? AppDirectories.applicationSupport()  // <Data>/Library/Application Support/OpenYoink
+            ?? AppDirectories.applicationSupport()  // <Data>/Library/Application Support/Clerestory
                 .deletingLastPathComponent()        // <Data>/Library/Application Support
                 .deletingLastPathComponent()        // <Data>/Library
                 .deletingLastPathComponent()        // <Data>

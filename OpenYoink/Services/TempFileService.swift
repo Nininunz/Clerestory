@@ -2,7 +2,7 @@ import Foundation
 import OSLog
 
 /// Manages the directory where dragged-in file promises and raw data are
-/// materialized (`Application Support/OpenYoink/Materialized` in the sandbox
+/// materialized (`Application Support/Clerestory/Materialized` in the sandbox
 /// container).
 ///
 /// Everything inside the directory is owned by the app: safe to create, move
@@ -26,7 +26,7 @@ final class TempFileService: Sendable {
     /// 必须共用它，否则目录会永远清不到，或在文件仍写入时被提前删除。
     private static let promiseStagingPrefix = "PromiseStaging-"
 
-    private let logger = Logger(subsystem: "com.nininunz.OpenYoink", category: "TempFileService")
+    private let logger = Logger(subsystem: "com.nininunz.Clerestory", category: "TempFileService")
 
     init(directoryURL: URL? = nil) {
         self.directoryURL = directoryURL

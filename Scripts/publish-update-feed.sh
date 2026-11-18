@@ -5,14 +5,20 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$repo_root"
 
-pages_file="repos/Nininunz/nininunz.github.io/contents/OpenYoink/appcast.xml"
-feed_url="https://nininunz.github.io/OpenYoink/appcast.xml"
+pages_file="repos/Nininunz/nininunz.github.io/contents/Clerestory/appcast.xml"
+feed_url="https://nininunz.github.io/Clerestory/appcast.xml"
 work_dir="$(mktemp -d)"
 trap 'rm -rf "$work_dir"' EXIT
 
 git fetch origin main
 git show FETCH_HEAD:docs/appcast.xml > "$work_dir/appcast.xml"
-gh api "$pages_file?ref=main" > "$work_dir/remote.json"
+if ! gh api "$pages_file?ref=main" > "$work_dir/remote.json" 2> "$work_dir/remote-error.log"; then
+    if ! grep -Fq '(HTTP 404)' "$work_dir/remote-error.log"; then
+        cat "$work_dir/remote-error.log" >&2
+        exit 1
+    fi
+    printf 'null\n' > "$work_dir/remote.json"
+fi
 
 python3 - "$work_dir" <<'PY'
 from pathlib import Path
@@ -23,7 +29,7 @@ import xml.etree.ElementTree as ET
 
 work = Path(sys.argv[1])
 remote = json.loads((work / "remote.json").read_text())
-previous = base64.b64decode(remote["content"])
+previous = base64.b64decode(remote["content"]) if remote is not None else None
 candidate = (work / "appcast.xml").read_bytes()
 if previous == candidate:
     print("The account Pages repository already has this appcast.")
@@ -35,15 +41,16 @@ def latest_build(data):
     return int(root.findtext("./channel/item/sparkle:version", namespaces=namespaces))
 
 build = latest_build(candidate)
-if build <= latest_build(previous):
+if previous is not None and build <= latest_build(previous):
     raise SystemExit("Refusing to replace the published appcast with an older or equal build.")
 
 payload = {
     "message": f"Publish Clerestory update build {build}",
     "content": base64.b64encode(candidate).decode("ascii"),
-    "sha": remote["sha"],
     "branch": "main",
 }
+if remote is not None:
+    payload["sha"] = remote["sha"]
 (work / "payload.json").write_text(json.dumps(payload))
 PY
 

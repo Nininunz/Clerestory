@@ -36,8 +36,8 @@ def main():
         try:
             with (output / 'build.log').open('w') as log:
                 process = subprocess.Popen(['xcodebuild', 'test', '-quiet', '-project', 'Open-Yoink.xcodeproj',
-                    '-scheme', 'OpenYoink', '-destination', 'platform=macOS', '-derivedDataPath', '/tmp/openyoink-derived',
-                    '-only-testing:OpenYoinkTests/IslandModulePreviewTests', 'CODE_SIGNING_ALLOWED=NO'], cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)
+                    '-scheme', 'Clerestory', '-destination', 'platform=macOS', '-derivedDataPath', '/tmp/openyoink-derived',
+                    '-only-testing:ClerestoryTests/IslandModulePreviewTests', 'CODE_SIGNING_ALLOWED=NO'], cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)
                 while process.poll() is None:
                     for request in output.glob('capture-*.json'):
                         if request in handled:

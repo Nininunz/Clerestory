@@ -2,7 +2,7 @@
 #
 # make-dmg.sh — 构建 Clerestory 分发 DMG（拖应用到 Applications 的经典安装界面）。
 #
-# 用法：./Scripts/make-dmg.sh [路径到 OpenYoink.app]
+# 用法：./Scripts/make-dmg.sh [路径到 Clerestory.app]
 #   默认 app：export/Clerestory.app（先跑过 archive 导出；见 README「构建」）。
 # 产物：export/Clerestory-<版本>.dmg
 #

@@ -18,7 +18,7 @@ final class IslandPresentationController: NSObject {
     private let islandModuleContainer: IslandModuleContainer
     private let notices: () -> ShelfNoticePanelController?
     private let collapse: (Bool) -> Void
-    private let islandLogger = Logger(subsystem: "com.nininunz.OpenYoink", category: "IslandPresentation")
+    private let islandLogger = Logger(subsystem: "com.nininunz.Clerestory", category: "IslandPresentation")
     let expanded: IslandExpandedWindowController
     let notch: IslandNotchWindowController
     private var islandPanel: ShelfPanel { expanded.panel }

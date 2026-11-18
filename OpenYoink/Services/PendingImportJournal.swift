@@ -71,7 +71,7 @@ final class PendingImportJournal: @unchecked Sendable {
     private var backupURL: URL { directoryURL.appendingPathComponent("pending-imports.json.backup") }
 
     private let lock = NSLock()
-    private let logger = Logger(subsystem: "com.nininunz.OpenYoink", category: "PendingImportJournal")
+    private let logger = Logger(subsystem: "com.nininunz.Clerestory", category: "PendingImportJournal")
     private let encoder: JSONEncoder = {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]

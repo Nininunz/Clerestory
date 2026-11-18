@@ -8,11 +8,11 @@ final class OpenYoinkSmokeUITests: XCTestCase {
         // Both fork and upstream builds can intercept the test's drops.
         // Refuse to run over a normal session; never terminate it automatically.
         let testAppURL = Bundle.main.bundleURL.deletingLastPathComponent()
-            .appendingPathComponent("OpenYoink.app").resolvingSymlinksInPath()
-        let otherBuilds = ["com.nininunz.OpenYoink", "com.weijue.OpenYoink"]
+            .appendingPathComponent("Clerestory.app").resolvingSymlinksInPath()
+        let otherBuilds = ["com.nininunz.Clerestory", "com.nininunz.OpenYoink", "com.weijue.OpenYoink"]
             .flatMap { NSRunningApplication.runningApplications(withBundleIdentifier: $0) }
             .filter { $0.bundleURL?.resolvingSymlinksInPath() != testAppURL }
-        XCTAssertTrue(otherBuilds.isEmpty, "Quit other OpenYoink builds before running UI tests: \(otherBuilds.compactMap { $0.bundleURL?.path })")
+        XCTAssertTrue(otherBuilds.isEmpty, "Quit other Clerestory or OpenYoink builds before running UI tests: \(otherBuilds.compactMap { $0.bundleURL?.path })")
     }
 
     func testFreshLaunchShowsOnboardingAndSkipClosesIt() throws {
@@ -309,7 +309,7 @@ final class OpenYoinkSmokeUITests: XCTestCase {
         let target = first.frame
         let helper = launchDragSource()
         XCTAssertTrue(element("uitest.drag.file", in: helper).waitForExistence(timeout: 5))
-        XCTAssertEqual(NSWorkspace.shared.frontmostApplication?.bundleIdentifier, "com.nininunz.OpenYoinkUITestDragSource")
+        XCTAssertEqual(NSWorkspace.shared.frontmostApplication?.bundleIdentifier, "com.nininunz.ClerestoryUITestDragSource")
         // Anchor to the foreground helper so XCTest cannot activate OpenYoink
         // before the click and conceal a broken cross-application focus handoff.
         let source = element("uitest.drag.file", in: helper)
@@ -318,7 +318,7 @@ final class OpenYoinkSmokeUITests: XCTestCase {
         origin.withOffset(CGVector(dx: target.midX - helperFrame.minX,
                                    dy: target.midY - helperFrame.minY)).click()
         let focused = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            NSWorkspace.shared.frontmostApplication?.bundleIdentifier == "com.nininunz.OpenYoink"
+            NSWorkspace.shared.frontmostApplication?.bundleIdentifier == "com.nininunz.Clerestory"
         }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [focused], timeout: 3), .completed,
                        "Clicking a Shelf file must transfer keyboard ownership from the previous app")
@@ -524,7 +524,7 @@ final class OpenYoinkSmokeUITests: XCTestCase {
     }
 
     private func launchDragSource() -> XCUIApplication {
-        let url = Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent("OpenYoinkUITestDragSource.app")
+        let url = Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent("ClerestoryUITestDragSource.app")
         let helper = XCUIApplication(url: url)
         addTeardownBlock { @MainActor in helper.terminate() }
         helper.launch()
