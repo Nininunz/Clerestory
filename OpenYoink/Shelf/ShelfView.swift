@@ -87,22 +87,23 @@ private struct ShelfIconButtonStyle: ButtonStyle {
     }
 }
 
-/// Shelf 根视图（S3：真实内容渲染）。
+/// Shelf root view (S3: real content rendering).
 ///
-/// 视觉规范（实施计划 §3）：vibrancy 底（.hudWindow 材质）+ 16pt 圆角 +
-/// 1pt 内描边（白 8%）；等宽网格（列宽 ~88pt、间距 12pt）纵向滚动；
-/// 顶部极简标题栏（名称 + 项目计数）；空时显示 `ShelfEmptyState`。
-/// 投影仍由窗口层（`ShelfPanel.hasShadow`）承担，此处不重画。
+/// Visual guidelines (implementation plan §3): vibrancy bottom (.hudWindow material) + 16pt corner radius
+/// + 1pt inner stroke (white 8%); equal width grid (column width ~88pt, spacing 12pt) with vertical
+/// scrolling; top minimal title bar (name + item count); show `ShelfEmptyState` when empty. Projection is
+/// still handled by the window layer (`ShelfPanel.hasShadow`), no redraw here.
 ///
-/// 交互：普通点击单选、⌘点击切换多选、空白处点击清除选择并收起 Stack；
-/// 点击 Stack 卡片展开浮层（同时只展开一个），点击外部或再次点击收起。
+/// Interactions: single tap for single selection, ⌘ tap to toggle multiple selection, click on empty area
+/// to clear selection and collapse Stack; click on Stack card to expand overlay (only one expanded at a
+/// time), click outside or tap again to collapse.
 ///
-/// S4：`isDropTargeted` / `dropInsertionIndex` 两个预留状态已收敛为
-/// `@Environment(DropTargetState.self)`（DragContainerView 驱动高亮与插入指示线）；
-/// 卡片弹入动画修饰器（spring, response 0.35, damping 0.7）已就位。
-/// C6: 卡片 frame 经 `ShelfGridGeometry` 上报（窗口 .global 坐标），
-/// DragContainerView 据此把拖入鼠标位置映射为行列插入下标。
-/// D10: 拖入/物化失败的内联提示（`ShelfNoticeModel`）渲染在标题栏下方。
+/// S4: The two reserved states `isDropTargeted` / `dropInsertionIndex` have been consolidated into
+/// `@Environment(DropTargetState.self)` (DragContainerView drives the highlight and insertion indicator
+/// line); the card insertion animation modifier (spring, response 0.35, damping 0.7) is in place. C6: Card
+/// frame is reported via `ShelfGridGeometry` (window .global coordinates), DragContainerView maps the
+/// mouse position to row/column insertion index. D10: Inline prompt for failed drag-in/materialization
+/// (`ShelfNoticeModel`) is rendered below the title bar.
 struct ShelfView: View {
     let presentationStyle: ShelfPresentationStyle
 
@@ -112,17 +113,17 @@ struct ShelfView: View {
 
     @Environment(ShelfStore.self) private var store
 
-    /// S4: 拖入悬停高亮与插入指示线位置，由 DragContainerView
-    /// （NSDraggingDestination 桥接）驱动。
+    /// S4: Drag-in hover highlight and insertion indicator line position is driven by DragContainerView
+    /// (NSDraggingDestination bridging).
     @Environment(DropTargetState.self) private var dropTargetState
-    /// S9: custom 位置模式判定 + 拖动结束后的 frame 持久化（customShelfFrame）。
+    /// S9: Custom position mode determination + frame persistence after dragging ends (customShelfFrame).
     @Environment(SettingsStore.self) private var settings
-    /// S6: Quick Look 会话；选中变化时同步已打开的预览（nil 时为 no-op）。
+    /// S6: Quick Look session; synchronize open preview when selection changes (nil is no-op).
     @Environment(\.quickLookCoordinator) private var quickLookCoordinator
     @Environment(\.bookmarkService) private var bookmarkService
-    /// C5/C6: 卡片网格几何（frame 上报 + 框选命中 + 拖入插入定位共用）。
+    /// C5/C6: Card grid geometry (frame reporting + selection hit + drag-in insertion positioning shared).
     @Environment(ShelfGridGeometry.self) private var gridGeometry
-    /// D10: 拖入/物化失败内联提示。
+    /// D10: Inline prompt for failed drag-in/materialization.
     @Environment(ShelfNoticeModel.self) private var notices
     @Environment(\.shelfRevealState) private var reveal
     /// v1.2: runtime-only asynchronous batch status.
@@ -133,7 +134,8 @@ struct ShelfView: View {
     @Environment(\.itemRecoveryController) private var itemRecoveryController
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var systemColorScheme
-    /// 任务三：内缘收起把手的收起动作（ShelfWindowController 注入；Preview 为 nil 空操作）。
+    /// Task three: The action of folding the edge handle (ShelfWindowController injection; Preview is nil
+    /// no-op).
     @Environment(\.shelfHideAction) private var shelfHideAction
     @Environment(\.shelfFocusAction) private var shelfFocusAction
     @Environment(\.shelfUserRemovalAction) private var shelfUserRemovalAction
@@ -141,12 +143,12 @@ struct ShelfView: View {
     @State private var duplicateHighlightIDs: Set<UUID> = []
     @FocusState private var searchFocused: Bool
 
-    /// 卡片弹入/让位动画（§3：spring, response 0.35, damping 0.7）。
+    /// Card insertion/waymaking animation (§3: spring, response 0.35, damping 0.7).
     static let cardAnimation = Animation.spring(response: 0.35, dampingFraction: 0.7)
     static let cornerRadius: CGFloat = 16
     static let gridSpacing: CGFloat = 12
-    /// 网格列宽基准（配合把手让位收窄为 84：把手 10pt + 2pt 间隙不再与
-    /// 首列卡片交叠；`ShelfLayoutEngine.gridColumnMinimum` 同步）。
+    /// Grid column width baseline (adjusted to narrow when handle folds to 84: handle 10pt + 2pt gap no
+    /// longer overlaps with first column card; `ShelfLayoutEngine.gridColumnMinimum` synchronized).
     static let columnWidth: CGFloat = 84
 
     var body: some View {
@@ -201,9 +203,10 @@ struct ShelfView: View {
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.2),
                        value: dropTargetState.mode)
             .padding(8)
-            // 外缘隐形收起热区挂在 padding **之后**（窗口内容坐标系）：拉环
-            // 原位置是面板贴缘的 14pt —— 挂在 padding 前会被形状内缩 8pt
-            // 带偏（真机验证点击落空），必须贴着面板真正的贴缘边。
+            // The invisible fold handle area is attached after padding (in window content coordinate
+            // system): the original position of the handle is 14pt from the panel edge —— attaching before
+            // padding would be inset by 8pt, causing misalignment (real device click misses), must be
+            // attached to the actual panel edge.
             .overlay(alignment: outerCollapseStripAlignment == .trailing ? .topTrailing : .topLeading) {
                 outerCollapseStrip
             }
@@ -261,8 +264,9 @@ struct ShelfView: View {
         }
         .padding(presentationStyle == .classic ? 8 : 0)
         .background {
-            // 空白处点击清除选择并收起 Stack；卡片点击由卡片自己的事件层处理。
-            // 经典模式改由玻璃面命中层处理（几何不跟随高度弹簧动画）。
+            // Clicking the blank area clears the selection and collapses the Stack; card clicks are
+            // handled by the card's own event layer. Classic mode is now handled by the glass surface hit
+            // layer (geometry does not follow the height spring animation).
             if presentationStyle != .classic {
                 Color.clear
                     .contentShape(Rectangle())
@@ -351,9 +355,10 @@ struct ShelfView: View {
         }
     }
 
-    /// 顶部极简标题栏：shelf 名称 + 项目计数（有多选时显示「选中/总数」）。
-    /// S9: custom 位置模式下整栏覆盖 WindowDragHandle（拖动把手），标题前
-    /// 加抓握符号提示可拖；拖动结束的最终 frame 持久化到 customShelfFrame。
+    /// Top minimal title bar: shelf name + item count (displays 'Selected/Total' when multiple items are
+    /// selected). S9: in custom position mode, the entire title bar covers the WindowDragHandle (drag
+    /// handle), with a grip symbol added before the title to indicate drag capability; the final frame
+    /// after dragging is persisted to customShelfFrame.
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
             if isCustomPosition {
@@ -362,7 +367,8 @@ struct ShelfView: View {
                     .foregroundStyle(.tertiary)
                     .accessibilityLabel(Text("Drag to move"))
             }
-            // 左贴边：按钮放在标题前（屏幕缘一侧），箭头与位置同向。
+            // Left edge alignment: buttons are placed before the title (on the side of the screen), with
+            // the arrow and position aligned in the same direction.
             if collapseHandleSide == .trailing {
                 collapseButton(side: .trailing)
                     .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 5 }
@@ -735,17 +741,20 @@ struct ShelfView: View {
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
             }
-            // C5/C6: 上报卡片在窗口 .global 坐标系中的 frame（含滚动偏移），
-            // 供框选命中与拖入插入定位使用；cell 离屏/移除时清除，避免陈旧几何。
+            // C5/C6: report the frame of the card in the window's .global coordinate system (including
+            // scroll offset), for use in selection and drag-and-insert positioning; clear when the cell is
+            // off-screen or removed to avoid outdated geometry.
             .modifier(ShelfCardGeometryReporter(itemID: item.id))
-            // S4: 插入指示线 —— insertionIndex 命中时画在卡片前缘。
+            // S4: insertion indicator line — drawn on the front edge of the card when insertionIndex is
+            // hit.
             .overlay(alignment: .leading) {
                 if dropTargetState.insertionIndex != nil, dropTargetState.insertionIndex == index {
                     insertionIndicator
                         .padding(.leading, -(Self.gridSpacing / 2 + 3))
                 }
             }
-            // S4: 插入位置指向末尾时画在末卡片后缘。
+            // S4: insertion indicator line — drawn on the back edge of the last card when the insertion
+            // position is at the end.
             .overlay(alignment: .trailing) {
                 if dropTargetState.insertionIndex == store.items.count, index == store.items.count - 1 {
                     insertionIndicator
@@ -801,14 +810,15 @@ struct ShelfView: View {
         }
     }
 
-    /// S5：顶层卡片拖出内容 —— 被拖卡片在当前多选中时整批拖出（stack 由
-    /// DragPayloadBuilder 展开为子项），否则仅拖该卡片。
+    /// S5: dragging a top card out of content — if the dragged card is part of the current
+    /// multi-selection, the entire batch is dragged out (stack is expanded into sub-items by
+    /// DragPayloadBuilder), otherwise only the individual card is dragged.
     private func dragContents(for anchor: ShelfItem) -> DragOutContents {
         let dragged = store.selection.contains(anchor.id) ? store.selectedItems : [anchor]
         return DragOutContents(items: dragged, topLevelIDs: Set(dragged.map(\.id)))
     }
 
-    /// S4: 拖入插入指示线（accent 竖条）。
+    /// S4: drag-and-insert indicator line (accent vertical bar).
     private var insertionIndicator: some View {
         Capsule()
             .fill(Color.accentColor)
@@ -817,11 +827,12 @@ struct ShelfView: View {
             .allowsHitTesting(false)
     }
 
-    // MARK: - Drop highlight (S4 预留)
+    // MARK: - Drop highlight (S4 reserved)
 
-    /// S4: DragContainerView 拖入悬停时 `dropTargetState.isTargeted == true`，
-    /// 整面板描边 + 浅填充提示可投放。F-05: 色调随拖入模式切换 —— 复制引用
-    /// 用 accent，⌘ 剪切移入用橙色（与卡片剪刀角标同色，语义一致）。
+    /// S4: when DragContainerView is hovered over during drag-in, `dropTargetState.isTargeted == true`,
+    /// the entire panel is outlined with a light fill to indicate the drop area. F-05: the accent color
+    /// changes based on the drag-in mode — copy and reference use accent, ⌘ cut and move use orange (same
+    /// color as the card's scissors badge, consistent in semantics).
     @ViewBuilder
     private var dropTargetHighlight: some View {
         if dropTargetState.isTargeted, !dropTargetState.isReordering {
@@ -835,13 +846,13 @@ struct ShelfView: View {
         }
     }
 
-    /// F-05: 拖入模式的强调色。
+    /// F-05: accent color for drag-in mode.
     private var dropModeTint: Color {
         dropTargetState.mode == .move ? .orange : .accentColor
     }
 
-    /// F-05: 悬停期间的模式提示（面板底部胶囊；notice 横幅在顶部，互不遮挡）。
-    /// Only show a hint for reordering or moving the original file.
+    /// F-05: mode hint during hover (capsule at the bottom of the panel; notice banner at the top, not
+    /// overlapping). Only show a hint for reordering or moving the original file.
     @ViewBuilder
     private var dropModeHint: some View {
         if dropTargetState.isTargeted && (dropTargetState.isReordering || dropTargetState.mode == .move) {
@@ -858,18 +869,19 @@ struct ShelfView: View {
         }
     }
 
-    // MARK: - 收起按钮（issue #10）
+    // MARK: - Collapse button (issue #10)
 
-    /// 收起方向（纯逻辑在 `ShelfLayoutEngine.innerEdgeHandleSide`）；
-    /// custom 自由位置模式为 nil —— 不显示收起按钮。
+    /// Collapse direction (pure logic in `ShelfLayoutEngine.innerEdgeHandleSide`); custom free position
+    /// mode is nil — collapse button is not displayed.
     private var collapseHandleSide: ShelfLayoutEngine.InnerEdgeHandleSide? {
         guard presentationStyle == .classic else { return nil }
         return ShelfLayoutEngine.innerEdgeHandleSide(for: settings.shelfPosition)
     }
 
-    /// 标题栏收起按钮。此前是贴在面板内缘的整条 chevron 竖列，单侧加宽的
-    /// 边距和孤立的箭头破坏了面板左右对称（issue #10）；现在与下方「⋯」
-    /// 管理按钮同列同风格，chevron 指向贴附的屏幕缘（收回拉环的方向）。
+    /// Title bar collapse button. Previously, it was a full chevron column attached to the panel's inner
+    /// edge, with single-side widened margins and isolated arrows breaking the panel's left-right symmetry
+    /// (issue #10); now it is aligned with the '⋯' management button below, in the same column and style,
+    /// with the chevron pointing toward the attached screen edge (the direction of the pull handle).
     private func collapseButton(side: ShelfLayoutEngine.InnerEdgeHandleSide) -> some View {
         Button {
             shelfHideAction?()
@@ -880,8 +892,9 @@ struct ShelfView: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(ShelfIconButtonStyle())
-        // 抵消标题栏 8pt 水平内边距：右贴边时与「⋯」按钮（28pt 宽、贴内容
-        // 右缘）同列；左贴边时贴内容左缘，与下方「全部」筛选对齐。
+        // Offset the title bar's 8pt horizontal padding: when right-aligned, it aligns with the '⋯' button
+        // (28pt wide, attached to the right content edge); when left-aligned, it aligns with the left
+        // content edge, matching the 'All' filter below.
         .padding(side == .leading ? .trailing : .leading, -8)
         .padding(.vertical, -3)
         .help(Text("Hide Shelf"))
@@ -889,12 +902,15 @@ struct ShelfView: View {
         .accessibilityIdentifier("shelf.hide.handle")
     }
 
-    // MARK: - 外缘隐形收起热区（互斥模型）
+    // MARK: - Invisible edge area (exclusive model)
 
-    /// 热区贴附侧 = 面板**贴屏幕缘一侧**（与内缘把手相对）：右锚 → trailing、
-    /// 左锚 → leading；custom 为 nil（不显示）。这就是拉环原来在的位置 ——
-    /// 拉环只在 shelf 隐藏时出现，shelf 展开后用户在同一点位再点即收起
-    /// （真机验收：「点拉环展开后，同位置再点缩不回去」）。
+    /// Hot zone attached to the side = panel**attached to the screen edge side** (opposite to the inner
+    /// edge handle): right anchor → trailing, left anchor → leading; custom is nil (not displayed). This
+    /// is where the handle originally was —
+    /// the handle appears only when the shelf is hidden, and when the user taps the same point after the
+    /// shelf is expanded, it collapses
+    /// (Real device verification: 'After tapping the handle to expand, tapping the same location again
+    /// does not collapse it').
     private var outerCollapseStripSide: ShelfLayoutEngine.InnerEdgeHandleSide? {
         switch collapseHandleSide {
         case .leading: return .trailing
@@ -907,10 +923,11 @@ struct ShelfView: View {
         outerCollapseStripSide == .trailing ? .trailing : .leading
     }
 
-    /// 完全隐形的热区（用户明确不要多余视觉元素），保留 tooltip 与
-    /// VoiceOver 标签；宽度与把手一致（≤ 面板边距带 16pt），不占网格宽度。
-    /// 注意：标签用 0.001 白而非 `Color.clear` —— 实测 clear 在该上下文
-    /// 不接收命中（内缘把手能工作是因为它有真实字形内容）。
+    /// Fully invisible hot zone (user explicitly does not want extra visual elements), retains tooltip and
+    /// VoiceOver label; width matches the handle (≤ panel margin band 16pt), does not occupy grid width.
+    /// Note: Use 0.001 white instead of `Color.clear` —— in practice, clear does not receive hit in this
+    /// context
+    /// (the inner edge handle works because it has real glyph content).
     @ViewBuilder
     private var outerCollapseStrip: some View {
         if outerCollapseStripSide != nil {
@@ -921,7 +938,8 @@ struct ShelfView: View {
             }
             .buttonStyle(.plain)
             .frame(width: ShelfLayoutEngine.innerEdgeHandleWidth)
-            // 窗口可能比玻璃面高（底部透明），热区只覆盖玻璃面那一段。
+            // The window may be taller than the glass surface (bottom transparent), the hot zone only
+            // covers the glass surface portion.
             .frame(maxHeight: reveal?.surfaceHeight.map { $0 + 16 } ?? .infinity)
             .contentShape(Rectangle())
             .accessibilityLabel(Text("Hide Shelf"))
@@ -938,7 +956,7 @@ struct ShelfView: View {
            let stackID = interaction.expandedStackID,
            let stack = store.item(withID: stackID),
            stack.kind == .stack {
-            // 半透明遮罩：点击外部收起。
+            // Semi-transparent overlay: click outside to collapse.
             Color.black.opacity(0.12)
                 .contentShape(Rectangle())
                 .onTapGesture(perform: collapseStack)
@@ -947,8 +965,9 @@ struct ShelfView: View {
                         stack: stack,
                         onDismiss: collapseStack,
                         interaction: interaction,
-                        // UX4: 子项 ✕ 从 stack 移除；stack 解散/消失后本浮层
-                        // 因 item(withID:) 返回 nil 自动收起。
+                        // UX4: Child item ✕ removed from stack; after the stack is dissolved/disappears,
+                        // this overlay
+                        // automatically collapses because item(withID:) returns nil.
                         onRemoveChild: { childID in
                             store.removeChildrenForUser(ids: [childID], fromStack: stackID)
                         },
@@ -1009,7 +1028,8 @@ struct ShelfView: View {
         shelfFocusAction?()
         interaction.clickSelection(id, in: store.visibleItems, additive: additive,
                                    extending: NSEvent.modifierFlags.contains(.shift), store: store)
-        // S6: Quick Look 面板打开期间，预览跟随选中变化（含 ⌘点击增减多选）。
+        // S6: Quick Look panel open, preview follows selection changes (including ⌘ click to add/remove
+        // multiple selections).
         quickLookCoordinator?.refreshPreview(contextItem: store.item(withID: id))
     }
 
@@ -1090,9 +1110,9 @@ struct ShelfView: View {
 
 // MARK: - Preview fixtures
 
-/// SwiftUI Preview mock 数据：覆盖 file/folder/image/text/url/stale 各形态。
-/// 路径指向系统自带文件，保证 NSWorkspace 图标在预览中可解析；缩略图走与
-/// 运行时相同的 QL → 图标回退链路。
+/// SwiftUI Preview mock data: covers file/folder/image/text/url/stale various forms.
+/// Path points to system-provided files, ensuring NSWorkspace icons are parseable in preview; thumbnails
+/// follow the same QL → icon fallback chain as runtime.
 enum ShelfPreviewFixtures {
     @MainActor
     static func makeStore() -> ShelfStore {

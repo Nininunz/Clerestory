@@ -53,8 +53,9 @@ struct GeneralSettingsTab: View {
                     Text("中文").tag(SettingsStore.LanguagePreference.chinese)
                 }
                 .accessibilityIdentifier("settings.language")
-                // S10: AppleLanguages 覆盖在启动最早期应用（AppDelegate.
-                // applicationWillFinishLaunching），运行期切换故需重启生效。
+                // S10: AppleLanguages override is applied as early as possible during launch
+                // (AppDelegate.applicationWillFinishLaunching), so runtime changes require a restart to
+                // take effect.
                 Text("Takes effect after relaunch.")
                     .font(.caption)
                     .foregroundStyle(.secondary)

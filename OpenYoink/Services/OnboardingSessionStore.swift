@@ -1,7 +1,8 @@
 import Foundation
 
-/// 快速上手练习的独立、可恢复状态。这里只保存随机令牌、阶段和练习卡 id；
-/// 文件路径始终由 `Tutorial/<session-id>/` 推导，永不信任磁盘 JSON 提供路径。
+/// An independent, recoverable state for quick start exercises. Here, only a random token, stage, and
+/// exercise card id are saved; the file path is always derived from `Tutorial/<session-id>/`, and the disk
+/// JSON path is never trusted.
 final class OnboardingSessionStore {
     struct Record: Codable, Equatable, Sendable {
         enum Phase: String, Codable, Sendable {
@@ -49,8 +50,9 @@ final class OnboardingSessionStore {
         return record
     }
 
-    /// 返回结构和路径均有效的未完成 session。损坏记录只返回 nil；调用方可
-    /// 用 `discardAll()` 清掉完全位于 Tutorial 根目录内的残留后重新开始。
+    /// Return an incomplete session with valid structure and path. Damaged records return nil; the caller
+    /// can use `discardAll()` to clear residual files entirely within the Tutorial root directory and
+    /// restart.
     func load() -> Record? {
         guard let data = try? Data(contentsOf: recordURL),
               let record = try? JSONDecoder().decode(Record.self, from: data),
@@ -76,8 +78,8 @@ final class OnboardingSessionStore {
             .appendingPathComponent(Self.tutorialFileName, isDirectory: false)
     }
 
-    /// 删除单个 session。删除前严格验证目录是 Tutorial 根目录的 UUID 直属
-    /// 子目录；任何外部路径都不会被接受。
+    /// Delete a single session. Before deletion, strictly verify that the directory is a direct UUID
+    /// subdirectory of the Tutorial root directory; any external path will be rejected.
     func discard(_ record: Record) throws {
         let directory = try sessionDirectory(for: record.sessionID)
         if fileManager.fileExists(atPath: directory.path) {
@@ -88,8 +90,9 @@ final class OnboardingSessionStore {
         }
     }
 
-    /// 清理全部教程残留。目标是构造时固定的 Tutorial 根目录本身，不从
-    /// 持久化数据读取，因此不会扩大到 Application Support 或用户目录。
+    /// Clean up all tutorial remnants. The target is the fixed Tutorial root directory at construction
+    /// time, not read from persistent data, so it will not expand to Application Support or user
+    /// directories.
     func discardAll() throws {
         if fileManager.fileExists(atPath: rootURL.path) {
             try fileManager.removeItem(at: rootURL)

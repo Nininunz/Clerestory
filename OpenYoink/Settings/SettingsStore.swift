@@ -569,21 +569,24 @@ final class SettingsStore {
         didSet { defaults.set(language.rawValue, forKey: Keys.language) }
     }
 
-    /// Sparkle 自动检查更新（唯一联网行为）。Default: true。
-    /// 由 UpdateController 应用到 SPUUpdater.automaticallyChecksForUpdates
-    /// （启动时一次性 + UserDefaults 变更时同步）。
+    /// Sparkle automatically checks for updates (the only network behavior). Default: true.
+    /// Applied to SPUUpdater.automaticallyChecksForUpdates by UpdateController
+    /// (once at launch + sync on UserDefaults change).
     var autoUpdateCheckEnabled: Bool {
         didSet { defaults.set(autoUpdateCheckEnabled, forKey: Keys.autoUpdateCheckEnabled) }
     }
 
-    /// 已完成/跳过的快速上手版本。0 表示尚未完成；新增流程时递增该值，
-    /// 不需要修改 shelf 持久化 schema。
+    /// Completed/skipped Quick Look version. 0 means not completed; increment this value when adding new
+    /// flows,
+    /// no need to modify shelf persistence schema.
     var onboardingVersion: Int {
         didSet { defaults.set(onboardingVersion, forKey: Keys.onboardingVersion) }
     }
 
-    /// 启动时该键是否真实存在于持久化偏好中。它刻意不进入
-    /// `register(defaults:)`，从而能区分「全新安装」与「已经明确处理过引导」。
+    /// Whether this key actually exists in the persistent preferences at launch. It is deliberately not
+    /// included
+    /// in `register(defaults:)`, allowing to distinguish between 'fresh install' and 'explicitly handled
+    /// onboarding'.
     let hadPersistedOnboardingVersion: Bool
 
     /// EdgeTab: vertical placement of the shelf (and its edge tab) along the
@@ -808,13 +811,15 @@ final class SettingsStore {
         // builds may only have the versioned configuration blob.
         let hadPersistedAppSettings = hadPersistedOnboardingVersion
             || persistedModuleConfigurationData != nil
-        // UX1 迁移必须在注册默认值之前读取：注册域会让「从未设置」与
-        // 「显式存过 immediate」无法区分（且 NSRegistrationDomain 进程内
-        // 共享，跨 UserDefaults 实例可见）。旧版布尔 edgeTriggerEnabled（悬停
-        // 触发开关）为开且从未持久化过 dragAutoAppearMode → 迁移为
-        // .edgeOnly（最接近旧意图的贴边唤出），并立即落盘让 UI 反映。
-        // 注意：dragAutoAppearMode 因此刻意不进 register(defaults:) ——
-        // 一旦注册，nil 判定即失效，迁移会永远不会发生。
+        // UX1 migration must be read before registering defaults: registering a domain would make 'never
+        // set' and
+        // 'explicitly set immediate' indistinguishable (and NSRegistrationDomain is shared within process,
+        // visible across UserDefaults instances). Old boolean edgeTriggerEnabled (hover trigger switch)
+        // was on and
+        // never persisted dragAutoAppearMode → migrated to .edgeOnly (closest to old intent edge trigger),
+        // and immediately persisted to reflect UI.
+        // Note: dragAutoAppearMode is deliberately not included in register(defaults:) ——
+        // Once registered, nil judgment becomes invalid, and migration will never happen.
         let legacyEdgeTriggerEnabled = defaults.bool(forKey: Keys.edgeTriggerEnabled)
         let persistedDragMode = defaults.string(forKey: Keys.dragAutoAppearMode)
         // Preserve settings written by an earlier development build of the
@@ -1066,7 +1071,8 @@ final class SettingsStore {
         autoUpdateCheckEnabled = defaults.bool(forKey: Keys.autoUpdateCheckEnabled)
         onboardingVersion = defaults.object(forKey: Keys.onboardingVersion) as? Int ?? 0
         if let data = defaults.data(forKey: Keys.customShelfFrame) {
-            // 解码失败视为无自定义位置（下次选 custom 从右缘默认起步）。
+            // Decoding failure is treated as no custom position (next time selecting custom starts from
+            // the right edge by default).
             customShelfFrame = try? JSONDecoder().decode(CGRect.self, from: data)
         } else {
             customShelfFrame = nil
@@ -1077,7 +1083,7 @@ final class SettingsStore {
         if let persistedDragMode {
             dragAutoAppearMode = DragAutoAppearMode(rawValue: persistedDragMode) ?? .edgeOnly
         } else if legacyEdgeTriggerEnabled {
-            // 迁移：旧版悬停边缘触发开启 → 拖拽贴边唤出。
+            // Migration: old hover edge trigger on → drag edge trigger.
             dragAutoAppearMode = .edgeOnly
             defaults.set(DragAutoAppearMode.edgeOnly.rawValue, forKey: Keys.dragAutoAppearMode)
         } else {
@@ -1087,9 +1093,9 @@ final class SettingsStore {
             rawValue: defaults.string(forKey: Keys.edgeTriggerSensitivity) ?? ""
         ) ?? .medium
         if let data = defaults.data(forKey: Keys.hotKeyShortcut) {
-            // 显式 do/catch 而非 `try? … ?? .default`：try? 会把
-            // 「解码成功为 nil」（JSON null = 明确清除）与「解码失败」
-            // 扁平化成同一个 nil（SE-0230），清除态会被吞掉。
+            // Explicit do/catch instead of `try? … ?? .default`: try? would flatten
+            // 'decoding success as nil' (JSON null = explicit clear) and 'decoding failure'
+            // into the same nil (SE-0230), and the cleared state would be swallowed.
             do {
                 hotKeyShortcut = try JSONDecoder().decode(HotKeyShortcut?.self, from: data)
             } catch {

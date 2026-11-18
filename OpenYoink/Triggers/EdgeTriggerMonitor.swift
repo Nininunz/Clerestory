@@ -111,9 +111,9 @@ struct DragPasteboardSnapshot: Sendable {
 /// shelf. Browser tabs, web URLs, text and in-memory image payloads do not arm
 /// the trigger.
 ///
-/// UX2 设计变更（用户确认）：纯悬停（未按左键的 mouseMoved）不再触发；
-/// 只监听 `leftMouseDragged`。拖拽中的停留时间与带宽比原悬停版更短/更宽
-/// （见 `TriggerSensitivity.edgeDwellTime` / `.edgeBandWidth`）。
+/// UX2 design change (user confirmation): Pure hover (mouseMoved without left click) no longer triggers;
+/// only listens to `leftMouseDragged`. Drag dwell time and bandwidth are shorter/wider than original hover
+/// version (see `TriggerSensitivity.edgeDwellTime` / `.edgeBandWidth`).
 ///
 /// The screen under the cursor is resolved with
 /// `ShelfWindowController.screen(containing:)` — the same rule the shelf
@@ -238,11 +238,10 @@ final class EdgeTriggerMonitor {
         onTrigger()
     }
 
-    /// Pure band test: full-height strip of `bandWidth` points along the
-    /// given side of `screenFrame`. Points outside the screen never count.
-    /// Coordinates live in the global screen space of `NSEvent.mouseLocation`.
-    /// S9: `.custom` 无贴附缘，永不命中（AppDelegate 在 custom 模式下也不
-    /// 启动本监听；此分支仅保证纯函数对全枚举有定义）。
+    /// Pure band test: full-height strip of `bandWidth` points along the given side of `screenFrame`.
+    /// Points outside the screen never count. Coordinates live in the global screen space of
+    /// `NSEvent.mouseLocation`. S9: `.custom` has no edge, never hits (AppDelegate does not start this
+    /// monitor in custom mode; this branch ensures pure function has definition for all enumerations).
     nonisolated static func isInsideEdgeBand(_ point: CGPoint,
                                              screenFrame: CGRect,
                                              side: SettingsStore.ShelfPosition,

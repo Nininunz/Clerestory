@@ -2,82 +2,95 @@ import AppKit
 import OSLog
 import UniformTypeIdentifiers
 
-/// 一次拖入的分派结果：同步产出的项目 + 仍在后台物化的数量。
+/// Drag-in dispatch result: synchronously generated items + the number of items still materialized in the
+/// background.
 struct DropImportResult: Equatable, Sendable {
-    /// 已可直接入架的项目（fileURL / URL / 文本路径同步产出）。
+    /// Projects that can be directly added to the shelf (fileURL / URL / text path are synchronized and
+    /// generated).
     var items: [ShelfItem]
-    /// 已派发到后台、稍后经 `onAsyncItemReady` 回调产出的物化任务数
-    /// （file promise 与图片数据路径）。
+    /// Number of materialized tasks dispatched to the backend and generated later via the
+    /// `onAsyncItemReady` callback (file promise and image data path).
     var pendingMaterializations: Int
 
-    /// 是否有任何内容被处理（决定 `performDragOperation` 的返回值）。
+    /// Whether any content has been processed (determines the return value of `performDragOperation`).
     var handled: Bool { !items.isEmpty || pendingMaterializations > 0 }
 
     static let unhandled = DropImportResult(items: [], pendingMaterializations: 0)
 }
 
-/// 拖入模式（F-05 双模式）：直接拖入 = 复制引用（现状语义）；⌘+拖入 =
-/// 剪切移入（原文件进废纸篓，保管副本入架）。⌘ 只对 file/folder 的 fileURL
-/// 拖入生效 —— file promise / 文本 / URL / 纯图片数据没有「原文件」概念。
+/// Drag mode (F-05 dual mode): direct drag = copy reference (current semantic); ⌘+drag = cut and move
+/// (original file moved to trash, preserved copy added to shelf). ⌘ only affects file/folder drag-in via
+/// fileURL — file promise / text / URL / pure image data do not have the concept of an 'original file'.
 enum DropInMode: String, Equatable, Sendable {
-    /// 直接拖入：保存原文件引用，原文件不动（默认）。
+    /// Direct drag and drop: preserves original file reference, original file remains untouched (default).
     case copy
-    /// ⌘+拖入：原文件移入保管目录（原位置进废纸篓），拖出时交付并离架。
+    /// A Command-drop stores a managed copy and moves the original to Trash. Dragging the item out
+    /// delivers the managed copy and removes it from Shelf.
     case move
 }
 
-/// 把 `NSPasteboard`（来自 `NSDraggingInfo`）转成 `[ShelfItem]` 的纯逻辑层。
+/// Convert `NSPasteboard` (from `NSDraggingInfo`) into a pure logic layer of `[ShelfItem]`.
 ///
-/// 与 AppKit 拖放协议解耦：输入是 pasteboard，输出是同步 items + 异步物化
-/// 回调，便于单测（测试中可直接构造 `NSPasteboard(name:)` 实例喂数据）。
+/// Decouple from AppKit drag and drop protocol: input is pasteboard, output is synchronous items +
+/// asynchronous materialization callback, facilitating unit testing (can directly construct
+/// `NSPasteboard(name:)` instance in tests to feed data).
 ///
-/// 处理顺序严格遵循调研报告 F-03 与实施计划 §2.3：
-/// **file promise → fileURL → 图片数据 → URL → 文本**。高优先级类别声明了
-/// 类型但实际读不到内容时（极少数来源的怪异行为），按顺序回退到下一类别，
-/// 不会直接丢弃整个拖放。
+/// Processing order strictly follows the research report F-03 and implementation plan §2.3:
+/// **file promise → fileURL → image data → URL → text**. High priority categories declare types but may
+/// not actually read content (a rare source behavior), so it falls back to the next category in order,
+/// without discarding the entire drag and drop.
 ///
-/// 任务一「万能拖入」：主链全部零产出时进入兜底链（`fallbackImport`），
-/// 逐 pasteboard item 独立处理（混合多 item 各自寻找最佳出口）：
-/// a. `text/uri-list` → URL 项；b. 仅 HTML/RTF（无 plain text）→ 物化
-/// .html/.rtf 文件项；c. 通用数据物化（最佳类型挑选见
-/// `PasteboardTypes.materializationCandidates`）；d. 任何类型读出非空
-/// 字符串 → 文本项；e. 逐项日志，整次零产出 → notice 提示 + 不接收拖放。
+/// Task one 'Universal Drag and Drop': if the main chain produces nothing, enter the fallback chain
+/// (`fallbackImport`), and process each pasteboard item independently (mixing multiple items, each finds
+/// its best export):
+/// a. `text/uri-list` → URL item;
+/// b. Only HTML/RTF (no plain text) → materialize `.html/.rtf` file item;
+/// c. General data materialization (best type selection see `PasteboardTypes.materializationCandidates`);
+/// d. Any type that reads non-empty string → text item;
+/// e. Log per item, if the entire drag and drop produces nothing → show notice + do not accept drag and
+/// drop.
 ///
-/// 已知限制：
-/// - 来源应用：跨应用拖拽时 `NSDraggingInfo.draggingSource` 为 nil，本层
-///   只看到 pasteboard，v1 统一留 `sourceApp = nil`。
-/// - 目录拖入按单项目处理（`kind = .folder`），不展开递归。
-/// - 主链保持「整板优先类别胜出」语义（fileURL+text 混合拖放只取 fileURL，
-///   见既有单测 `testImport_fileURLAndText_fileURLWins`）；逐 item 独立处理
-///   仅在兜底链内进行。
+/// Known limitations:
+/// - Source application: when dragging across apps, `NSDraggingInfo.draggingSource` is nil, this layer
+/// only sees the pasteboard, v1 uniformly leaves `sourceApp = nil`.
+/// - Folder drag and drop is processed as single item (`kind = .folder`), no recursive expansion.
+/// - Main chain maintains the semantics of 'priority category wins overall' (fileURL + text mixed drag and
+/// drop only takes fileURL, see existing unit test `testImport_fileURLAndText_fileURLWins`); item-by-item
+/// independent processing only occurs within the fallback chain.
 @MainActor
 final class DropImportCoordinator {
-    /// 物化图片项目的默认显示名（落盘文件名带 UUID 前缀，显示名保持干净）。
-    /// S10: 用户可见，走 catalog 本地化；保持计算属性以兼容既有引用（含单测）。
+    /// Default display name for materialized image projects (saved file name includes UUID prefix, display
+    /// name remains clean).
+    /// S10: User visible, goes through catalog localization; keep computed property for compatibility with
+    /// existing references (including unit tests).
     nonisolated static var materializedImageDisplayName: String {
         String(localized: "Dropped Image.png")
     }
 
-    /// UX1: 成功导入回调（拖入与 UX3 剪贴板保存共用此入口）。`importItems`
-    /// 返回 `handled` 时在 MainActor 上同步触发 —— AppDelegate 据此标记
-    /// 拖拽自动唤出会话「本轮已有内容落入」，拖结束时不再自动收回。
+    /// UX1: Successful import callback (drag and drop and UX3 clipboard save share this entry).
+    /// `importItems`
+    /// Trigger synchronously on MainActor when returning `handled` —— AppDelegate uses this to mark
+    /// Drag and drop automatically triggers a session if content has already been dropped in this round,
+    /// and no longer automatically retracts upon drag end.
     var onImportHandled: (@MainActor () -> Void)?
 
-    /// 快速上手的运行时令牌验证与导入回调。只有当前 session 的随机令牌
-    /// 才能让本应用内部拖拽穿过 shelf 的「拒绝自身回落」防线。
+    /// Runtime token verification and import callback for quick onboarding. Only the random token of the
+    /// current session
+    /// Can allow this app's internal drag to pass through the shelf's 'reject self fall back' defense.
     var isActiveTutorialToken: (@MainActor (String) -> Bool)?
     var onTutorialItemsImported: (@MainActor (String, [ShelfItem]) -> Void)?
 
-    /// 共享的书签服务（ShelfWindowController 把它注入 SwiftUI 环境，
-    /// 供卡片缩略图/打开操作经 bookmark 解析文件访问权）。
+    /// Shared bookmark service (ShelfWindowController injects it into SwiftUI environment,
+    /// For card thumbnails/open operations to resolve file access rights via bookmark parsing).
     let bookmarkService: BookmarkService
-    /// D10: 拖入/物化失败的内联提示中心（ShelfWindowController 注入 SwiftUI 环境，
-    /// ShelfView 渲染标题栏下方的瞬态胶囊）。
+    /// D10: Inline prompt center for failed drag and drop/materialization (ShelfWindowController injects
+    /// it into SwiftUI environment,
+    /// ShelfView renders the transient capsule below the title bar).
     let noticeCenter: ShelfNoticeModel
-    /// F-05: ⌘+拖入（剪切模式）的搬运编排（copy → 校验 → trash → isCut item）。
+    /// F-05: ⌘+drag (cut mode) transfer orchestration (copy → validation → trash → isCut item).
     let cutMoveService: CutMoveService
-    /// v1.2: 托管移动恢复事务。只有 managed item 已同步写入 shelf snapshot
-    /// 后才由 `markManagedMoveCommitted` 删除对应记录。
+    /// Record recovery transactions for managed moves. Only call `markManagedMoveCommitted` to remove a
+    /// record after the managed item has been saved to the Shelf snapshot synchronously.
     let managedMoveJournal: ManagedMoveJournal
     /// v1.2: promised files are journaled before leaving staging and remain
     /// retryable until their ShelfItem is synchronously persisted.
@@ -131,9 +144,10 @@ final class DropImportCoordinator {
 
     // MARK: - Entry point
 
-    /// F-05: 修饰键 → 拖入模式（纯函数，单测直断）。⌘ 且拖放含 fileURL
-    /// 时为剪切（.move）；其余一律 .copy —— 非文件类内容没有「原文件」可移。
-    /// `modifiers` 由调用方读 `NSEvent.modifierFlags`（拖拽会话期间的实时状态）。
+    /// This pure function selects the drop mode and can be unit-tested directly. Holding Command for a
+    /// drop containing a file URL selects .move. All other drops use .copy because non-file content has no
+    /// original file to move. The caller reads the current modifiers from `NSEvent.modifierFlags` during
+    /// the drag session.
     nonisolated static func dropMode(for pasteboard: NSPasteboard,
                                      modifiers: NSEvent.ModifierFlags) -> DropInMode {
         guard modifiers.contains(.command),
@@ -143,10 +157,12 @@ final class DropImportCoordinator {
         return .move
     }
 
-    /// 分派一次拖入。同步可产出的项目放进返回值；file promise 与图片数据
-    /// 在后台物化，完成后经 `onAsyncItemReady`（MainActor 上调用）逐个产出。
-    /// UX1: 结果被 `handled` 时同步触发 `onImportHandled`。
-    /// F-05: `mode == .move`（⌘+拖入）时 fileURL 分支改走 cut 搬运。
+    /// Dispatch a drag. Synchronously produce items that can be imported and put them in the return value;
+    /// file promise and image data
+    /// Are materialized in the background, and then produced one by one via `onAsyncItemReady` (called on
+    /// MainActor).
+    /// UX1: Results are triggered synchronously via `onImportHandled` when `handled`.
+    /// F-05: When `mode == .move` (⌘+drag), the fileURL branch switches to cut transfer.
     @discardableResult
     func importItems(from pasteboard: NSPasteboard,
                      mode: DropInMode = .copy,
@@ -183,14 +199,17 @@ final class DropImportCoordinator {
         return result
     }
 
-    /// `NSDraggingDestination` 用于判定同进程来源是否是当前练习，而不是普通
-    /// shelf 卡片回落。令牌不匹配时严格拒绝。
+    /// `NSDraggingDestination` is used to determine whether the same-process source is the current
+    /// exercise, not a regular
+    /// shelf card fall back. Strictly reject when token mismatch.
     func acceptsInternalTutorialDrag(_ pasteboard: NSPasteboard) -> Bool {
         activeTutorialToken(in: pasteboard) != nil
     }
 
-    /// 同步 file URL 项由调用方先放进 ShelfStore，再调用本方法推进引导，
-    /// 保证面板切到第二步时练习卡已经真实存在于 shelf。
+    /// Synchronously file URL items are first put into ShelfStore by the caller, then this method is
+    /// called to proceed with the guide,
+    /// Ensuring that the exercise card already exists in the shelf when the panel switches to the second
+    /// step.
     func noteSynchronousTutorialImport(from pasteboard: NSPasteboard,
                                        items: [ShelfItem]) {
         guard !items.isEmpty, let token = activeTutorialToken(in: pasteboard) else { return }
@@ -206,7 +225,8 @@ final class DropImportCoordinator {
         return token
     }
 
-    /// 实际的分派逻辑（`importItems` 的薄包装之下，便于统一触发导入回调）。
+    /// Actual dispatch logic (under the thin wrapper of `importItems`, for uniform triggering of import
+    /// callbacks).
     private func dispatchImport(from pasteboard: NSPasteboard,
                                 batchID: UUID,
                                 mode: DropInMode,
@@ -215,7 +235,8 @@ final class DropImportCoordinator {
                                 onAsyncItemReady: @escaping @MainActor (ShelfItem) -> Void) -> DropImportResult {
         let types = pasteboard.types ?? []
 
-        // 1. file promise 优先（高质量表示；F-03 明确建议先尝试 promise）。
+        // 1. File promise takes priority (high-quality representation; F-03 clearly recommends trying
+        // promise first).
         if PasteboardTypes.supports(.filePromise, types: types) {
             let pending = promiseReceiver.receivePromises(from: pasteboard,
                                                            taskID: batchID,
@@ -223,10 +244,10 @@ final class DropImportCoordinator {
             if pending > 0 {
                 return DropImportResult(items: [], pendingMaterializations: pending)
             }
-            // 声明了 promise 类型但 readObjects 拿不到 receiver：继续回退。
+            // Declared promise type but readObjects can't get receiver: continue to fallback.
         }
 
-        // 2. fileURL（Finder 文件/文件夹，及其他应用的文件表示）。
+        // 2. fileURL (Finder file/folder, and other app's file representation).
         if PasteboardTypes.supports(.fileURL, types: types) {
             if mode == .move {
                 // v1.2: copy/trash can be expensive. Capture bookmarks while
@@ -249,7 +270,7 @@ final class DropImportCoordinator {
             }
         }
 
-        // 3. 图片数据（无文件 URL 的位图）：物化 PNG 到 TempFileService 目录。
+        // 3. Image data (bitmaps without file URL): Materialize PNG to TempFileService directory.
         if let imageType = PasteboardTypes.preferredImageType(in: types) {
             let pending = scheduleImageMaterialization(from: pasteboard,
                                                        taskID: batchID,
@@ -268,7 +289,7 @@ final class DropImportCoordinator {
             }
         }
 
-        // 5. 文本族（v1 只取 plain text，见类型注释）。
+        // 5. Text family (v1 only takes plain text, see type comment).
         if PasteboardTypes.supports(.text, types: types) {
             let items = textItems(from: pasteboard)
             if !items.isEmpty {
@@ -276,7 +297,8 @@ final class DropImportCoordinator {
             }
         }
 
-        // 6. 兜底链（任务一）：主链零产出时逐 item 处理，尽可能物化出内容。
+        // 6. Fallback chain (task one): Process each item sequentially when the main chain produces
+        // nothing, trying to materialize content as much as possible.
         let fallback = fallbackImport(from: pasteboard,
                                       taskID: batchID,
                                       onAsyncItemReady: onAsyncItemReady)
@@ -297,11 +319,14 @@ final class DropImportCoordinator {
         return DropImportResult(items: fallback.items, pendingMaterializations: fallback.pending)
     }
 
-    // MARK: - Fallback chain (任务一「万能拖入」)
+    // MARK: - Drop fallback chain
 
-    /// 兜底链：主链（promise→fileURL→image→url→text）全部零产出时调用。
-    /// 逐 pasteboard item 独立走 a→b→c→d 分支；同步产出的项目直接返回，
-    /// 通用数据物化（payload 可能很大）走后台写盘、计入 pending。
+    /// Fallback chain: When the main chain (promise→fileURL→image→url→text) produces nothing, call this
+    /// chain.
+    /// Process each pasteboard item independently through a→b→c→d branches; items produced synchronously
+    /// are returned directly,
+    /// Materialize general data (payload may be large) by writing to disk in the background and counting
+    /// as pending.
     private func fallbackImport(from pasteboard: NSPasteboard,
                                 taskID: UUID,
                                 onAsyncItemReady: @escaping @MainActor (ShelfItem) -> Void)
@@ -309,48 +334,55 @@ final class DropImportCoordinator {
         var items: [ShelfItem] = []
         var pending = 0
 
-        // a. URL 变体：text/uri-list。探针结论：该 flavor 在 item 级被桥接为
-        //    dyn.* 动态类型（item.string(forType: "text/uri-list") 读不到），
-        //    只能在 pasteboard 级按原始 flavor 字符串读取，故本分支是整板级的；
-        //    每行一个 URI（# 开头为注释行），逐行产出 URL 项。
+        // a. URL variants: text/uri-list. Probe conclusion: This flavor is bridged at the item level as
+        //    dyn.* dynamic types (item.string(forType: "text/uri-List") cannot read it),
+        //    and can only be read at the pasteboard level using the original flavor string, so this branch
+        // is at the pasteboard level;
+        //    each line is a URI (# starts a comment line), and each line produces a URL item.
         let urlListItems = urlListVariantItems(from: pasteboard)
         items.append(contentsOf: urlListItems)
 
         for pasteboardItem in pasteboard.pasteboardItems ?? [] {
-            // uri-list 已产出 URL 项时，跳过「全是 dyn.* 桥接类型」的 item ——
-            // 它就是 uri-list 在 item 级的投影（探针 A），再走 b/c/d 会用同一份
-            // 内容重复产出 .dat/文本项。
+            // When URI-list has already produced URL items, skip the item that is "all dyn.* bridged
+            // types" —
+            // It is the projection of uri-list at the item level (probe A), and going through b/c/d will
+            // produce the same content again as .dat/text items.
             if !urlListItems.isEmpty,
                pasteboardItem.types.allSatisfy({ $0.rawValue.hasPrefix("dyn.") }) {
                 continue
             }
-            // b. 仅 HTML/RTF（无 plain text 才会到达兜底链）：物化富文本文件项，
-            //    拖出到 Pages/浏览器仍是富文本。payload 为文本级大小，同步落盘。
+            // b. Only HTML/RTF (items without plain text will reach the fallback chain): Materialize rich
+            // text file items,
+            //    dragging to Pages/browser remains rich text. Payload is text-level size, and is written
+            // to disk synchronously.
             if let richItem = richTextFileItem(from: pasteboardItem) {
                 items.append(richItem)
                 continue
             }
-            // c. 通用数据物化：最佳类型挑选（tier 排序见
-            //    `PasteboardTypes.materializationCandidates`），后台写盘。
+            // c. Materialize general data: Best type selection (tier sorting see
+            //    `PasteboardTypes.materializationCandidates`), write to disk in the background.
             if scheduleDataMaterialization(from: pasteboardItem,
                                            taskID: taskID,
                                            onItemReady: onAsyncItemReady) {
                 pending += 1
                 continue
             }
-            // d. 字符串兜底：任何类型能 string(forType:) 出非空内容 → 文本项。
+            // d. String fallback: Any type that can string(forType:) produce non-empty content → text
+            // item.
             if let textItem = fallbackTextItem(from: pasteboardItem) {
                 items.append(textItem)
                 continue
             }
-            // e. 逐项失败日志（不静默）。
+            // e. Per-item failure log (not silent).
             logger.info("Fallback import skipped an item; declared types: \(pasteboardItem.types.map(\.rawValue), privacy: .public)")
         }
         return (items, pending)
     }
 
-    /// 分支 a：text/uri-list → URL 项（每行一个 URI，# 注释行跳过；首个无效行
-    /// 不影响其余行）。粘贴板级读取（桥接原因见 `fallbackImport` 注释）。
+    /// Branch a: text/uri-list → URL item (each line is a URI, # comment lines are skipped; the first
+    /// invalid line
+    /// does not affect the rest). Read at the pasteboard level (bridging reason see `fallbackImport`
+    /// comment).
     private func urlListVariantItems(from pasteboard: NSPasteboard) -> [ShelfItem] {
         guard (pasteboard.types ?? []).contains(PasteboardTypes.uriList),
               let payload = pasteboard.string(forType: PasteboardTypes.uriList),
@@ -369,10 +401,12 @@ final class DropImportCoordinator {
         }
     }
 
-    /// 分支 b：仅 HTML/RTF 的 item → 物化为 .html/.rtf 文件项（kind=.file，
-    /// 拖出仍是富文本）。displayName 用 NSAttributedString 提取的纯文本首行
-    /// 截断；提取为空时用本地化兜底名。HTML 解析必须在主线程（本类即在
-    /// MainActor 上运行），勿移入后台任务。
+    /// Branch b: Only HTML/RTF items → materialize as .html/.rtf file items (kind=.file,
+    /// dragging out remains rich text). displayName uses the first line of plain text extracted by
+    /// NSAttributedString
+    /// truncated; if extraction is empty, use a localized fallback name. HTML parsing must be done on the
+    /// main thread (this class runs
+    /// on MainActor), do not move to background tasks.
     private func richTextFileItem(from pasteboardItem: NSPasteboardItem) -> ShelfItem? {
         if pasteboardItem.types.contains(PasteboardTypes.html),
            let data = pasteboardItem.data(forType: PasteboardTypes.html), !data.isEmpty {
@@ -393,13 +427,16 @@ final class DropImportCoordinator {
         return nil
     }
 
-    /// 富文本物化落盘（b 分支共用）。写盘失败不静默：日志 + notice，返回 nil
-    /// 让调用方继续尝试后续分支（字符串兜底仍可能产出文本项）。
+    /// Materializing rich text to disk (shared by branch b). Failures are not silent: log + notice, return
+    /// nil
+    /// so the caller can continue trying subsequent branches (string fallback may still produce text
+    /// items).
     private func writeRichTextFile(data: Data, fileExtension: String,
                                    plainText: String, fallbackBaseName: String) -> ShelfItem? {
-        // 提取的纯文本为空时用兜底名。探针结论：仅含 <img> 等嵌入对象的 HTML
-        // 提取结果是 U+FFFC（object replacement character），先剥掉再判空；
-        // 非空复用文本项命名规则（首行截断）。
+        // Use fallback name when extracted plain text is empty. Probe conclusion: HTML containing only
+        // <img> and other embedded objects
+        // extracts U+FFFC (object replacement character), remove it first before checking for emptiness;
+        // reuse the text item naming rule (first line truncated) for non-empty content.
         let stripped = plainText.replacingOccurrences(of: "\u{FFFC}", with: "")
         let hasText = !stripped.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         let baseName = hasText ? Self.displayName(forText: stripped) : fallbackBaseName
@@ -419,18 +456,19 @@ final class DropImportCoordinator {
         }
     }
 
-    /// 分支 c：通用数据物化。按 `materializationCandidates` 的 tier 顺序取第一个
-    /// 能读出非空 data 的类型，后台写盘（payload 可能很大，与图片物化同模式），
-    /// kind 按 UTI 推断（image→.image，其余 .file）。返回是否已派发。
+    /// Branch c: General data materialization. Take the first type that can read non-empty data in the
+    /// order of `materializationCandidates` tier. Write to disk in the background (payload may be large,
+    /// same pattern as image materialization). Kind is inferred by UTI (image → .image, others → .file).
+    /// Return whether it was dispatched.
     private func scheduleDataMaterialization(from pasteboardItem: NSPasteboardItem,
                                              taskID: UUID,
                                              onItemReady: @escaping @MainActor (ShelfItem) -> Void) -> Bool {
         for candidate in PasteboardTypes.materializationCandidates(in: pasteboardItem.types) {
-            // tier3（动态/桥接/泛型）且能读出「有意义的文本」→ 文本项比 .dat
-            // 更有用，让给 d 分支（如 utf8-external-plain-text 这类 UTType
-            // 解析为 nil 的文本 flavor；探针：string(forType:) 对它们有效）。
-            // 注意必须有意义门槛：string(forType:) 对二进制数据也会做有损解码
-            // （探针：[1,2,3] → "\u{1}\u{2}\u{3}"），无门槛会把二进制变成乱码文本。
+            // tier3 (dynamic/bridge/generic) and able to read "meaningful text" → text item is more useful
+            // than .dat. Let it go to branch d (text flavors like utf8-external-plain-text that NSUTType
+            // parses to nil; probe: string(forType:) works for them). Note that there must be a meaningful
+            // threshold: string(forType:) will also do lossy decoding for binary data (probe: [1,2,3] →
+            // "\u{1}\u{2}\u{3}"), without the threshold, binary data will be turned into gibberish text.
             if candidate.tier == 3,
                let text = pasteboardItem.string(forType: candidate.type),
                Self.isMeaningfulText(text) {
@@ -477,9 +515,9 @@ final class DropImportCoordinator {
         return false
     }
 
-    /// 分支 d：字符串兜底 —— item 的任何类型能读出「有意义的文本」即产出文本项
-    /// （按声明顺序取首个）。`string(forType:)` 对非字符串类类型返回 nil，
-    /// 对二进制数据做有损解码 —— 由 `isMeaningfulText` 挡掉乱码。
+    /// Branch d: String fallback —— if any type of item can read "meaningful text", produce a text item
+    /// (take the first in declaration order). `string(forType:)` returns nil for non-string types, and
+    /// does lossy decoding for binary data —— `isMeaningfulText` filters out gibberish.
     private func fallbackTextItem(from pasteboardItem: NSPasteboardItem) -> ShelfItem? {
         for type in pasteboardItem.types {
             guard let text = pasteboardItem.string(forType: type),
@@ -489,18 +527,18 @@ final class DropImportCoordinator {
         return nil
     }
 
-    /// 字符串兜底的「有意义文本」门槛：非空且不含控制字符（空白/换行/制表除外）。
-    /// 探针结论：`string(forType:)` 对任意二进制数据可能做有损解码
-    /// （[0x01,0x02,0x03] → "\u{1}\u{2}\u{3}"），无此门槛二进制 payload 会被
-    /// 误判为乱码文本项而不是物化为 .dat。
+    /// Fallback for "meaningful text" in string fallback: non-empty and contains no control characters
+    /// (whitespace/line breaks/tab excluded). Probe conclusion: `string(forType:)` may do lossy decoding
+    /// for any binary data (e.g., [0x01,0x02,0x03] → "\u{1}\u{2}\u{3}"), without this threshold, binary
+    /// payload will be misclassified as gibber, and not materialized as .dat.
     nonisolated static func isMeaningfulText(_ string: String) -> Bool {
         guard !string.isEmpty else { return false }
         let controls = CharacterSet.controlCharacters.subtracting(.whitespacesAndNewlines)
         return string.rangeOfCharacter(from: controls) == nil
     }
 
-    /// 物化文件名单元清洗：去掉路径分隔符（显示名首行可能含 "/"，
-    /// `TempFileService` 的 lastPathComponent 清洗会把整名前段吃掉）。
+    /// Cleaning up materialized file names: remove path separators (display name first line may contain
+    /// "/", `TempFileService`'s lastPathComponent cleaning will eat the entire name prefix).
     nonisolated static func sanitizedFileNameComponent(_ name: String) -> String {
         let sanitized = name.replacingOccurrences(of: "/", with: "-")
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -519,12 +557,13 @@ final class DropImportCoordinator {
         return urls.map { Self.makeFileBackedItem(for: $0, displayName: $0.lastPathComponent, bookmarkService: bookmarkService, logger: logger) }
     }
 
-    // MARK: - fileURL（F-05 剪切模式）
+    // MARK: - File URL drops in cut mode
 
-    /// ⌘+拖入：在拖放会话内同步捕获 URL + bookmark，随后把 copy → journal
-    /// → trash 搬运放到后台串行执行。串行避免一次多选拖入同时争抢磁盘 IO，
-    /// 同时保持来源顺序。成功的 managed item 走专用回调，调用方必须先同步
-    /// 持久化再删除 journal；失败回退项走普通异步回调。
+    /// ⌘+drag-in: During drag-and-drop session, synchronize capturing URL + bookmark, then move copy →
+    /// journal → trash to background serial execution. Serial execution avoids multiple drag-ins competing
+    /// for disk IO at once, and maintains source order. Successful managed items go through dedicated
+    /// callbacks, and the caller must first synchronize persistence before deleting journal; failed
+    /// fallback items go through normal async callbacks.
     private func scheduleCutMovedItems(
         from pasteboard: NSPasteboard,
         taskID: UUID,
@@ -618,8 +657,9 @@ final class DropImportCoordinator {
 
     // MARK: - Image data
 
-    /// 提取各 pasteboard item 的图片 Data 后派发到后台物化。NSPasteboardItem
-    /// 非 Sendable，Data 必须在本层（MainActor）就地取出，不跨 actor 传递原 item。
+    /// Extract image Data from each pasteboard item and dispatch to background materialization.
+    /// NSPasteboardItem is not Sendable, Data must be extracted on this layer (MainActor) locally, not
+    /// passed across actors with original item.
     private func scheduleImageMaterialization(from pasteboard: NSPasteboard,
                                               taskID: UUID,
                                               preferredType: NSPasteboard.PasteboardType,
@@ -664,7 +704,8 @@ final class DropImportCoordinator {
                                                        logger: logger)
                     await reportSuccess(item)
                 } catch {
-                    // 失败不崩溃、不静默：日志记录 + D10 内联提示，拖放本身仍视为已处理。
+                    // Fail without crashing or being silent: log + D10 inline prompt, drag-and-drop is
+                    // still considered as handled.
                     logger.error("Failed to materialize dropped image data: \(error.localizedDescription, privacy: .public)")
                     await reportFailure()
                 }
@@ -673,8 +714,9 @@ final class DropImportCoordinator {
         return payloads.count
     }
 
-    /// PNG 数据直接使用；TIFF / 通用 image 经 NSBitmapImageRep 转码为 PNG。
-    /// 非隔离：转码在后台任务内就地完成，非 Sendable 的 NSBitmapImageRep 不跨 actor。
+    /// Use PNG data directly; TIFF / general image is transcoded to PNG via NSBitmapImageRep.
+    /// Non-isolated: transcoding is done in background task locally, NSBitmapImageRep (non-Sendable) is
+    /// not passed across actors.
     private nonisolated static func pngData(from data: Data, type: NSPasteboard.PasteboardType) -> Data? {
         if type == PasteboardTypes.png {
             return data
@@ -705,7 +747,7 @@ final class DropImportCoordinator {
             guard let text = item.string(forType: .string), !text.isEmpty else { return nil }
             return ShelfItem(kind: .text, displayName: Self.displayName(forText: text), text: text)
         }
-        // 少数来源只在整体 pasteboard 上提供 string（逐项读取为空）。
+        // Few sources only provide string on the overall pasteboard (per-item reading is empty).
         if items.isEmpty,
            let text = pasteboard.string(forType: .string), !text.isEmpty {
             return [ShelfItem(kind: .text, displayName: Self.displayName(forText: text), text: text)]
@@ -713,7 +755,8 @@ final class DropImportCoordinator {
         return items
     }
 
-    /// 文本项目显示名：首行截断（60 字符），空白文本回退为本地化「Text」。
+    /// Text item display name: truncate first line (60 characters), fallback to localized "Text" for blank
+    /// text.
     nonisolated static func displayName(forText text: String) -> String {
         let firstLine = text.components(separatedBy: .newlines)
             .first?
@@ -724,9 +767,10 @@ final class DropImportCoordinator {
 
     // MARK: - Shared file-backed item construction
 
-    /// file/folder/image 统一的构造入口：推断 kind + 立即创建安全书签。
-    /// 非隔离，`FilePromiseReceiver` 的后台物化回调与图片物化任务也走这里。
-    /// 书签创建失败不丢弃项目（仍有路径可作显示与回退提示），但记录日志。
+    /// Create file, folder, and image items by inferring the kind and creating a security-scoped bookmark
+    /// immediately. This nonisolated entry point is also used by the background materialization callback
+    /// in `FilePromiseReceiver` and by image materialization tasks. If bookmark creation fails, log the
+    /// failure and keep the item so its path remains available for display and recovery.
     nonisolated static func makeFileBackedItem(for url: URL,
                                                displayName: String,
                                                forcedKind: ItemKind? = nil,
@@ -744,12 +788,15 @@ final class DropImportCoordinator {
         return ShelfItem(kind: kind, path: url.path, bookmark: bookmark, displayName: displayName)
     }
 
-    /// kind 推断以实际物化结果为准：folder（目录且非 package）→ 可识别扩展名
-    /// （image / file）→ 单一明确的 promise UTI 兜底 → file。
+    /// Kind inference is based on the actual materialization result: folder (directory and not a package)
+    /// → recognizable extension name
+    /// (image / file) → single, clear promise UTI as a fallback → file.
     ///
-    /// 一个 NSFilePromiseReceiver 可以交付多个、甚至不同类型的文件；其
-    /// `fileTypes` 是 receiver 级集合，不能把集合中的任意 image 类型套到每个
-    /// 回调文件上，否则同批的 txt 会被误标成 image。
+    /// A single NSFilePromiseReceiver can deliver multiple, even different types of files; its
+    /// `fileTypes` is a receiver-level collection, and you cannot apply any image type from the collection
+    /// to each
+    /// individual file callback, otherwise text files in the same batch will be incorrectly labeled as
+    /// images.
     nonisolated static func inferFileKind(for url: URL, promisedTypeIdentifiers: [String] = []) -> ItemKind {
         let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .isPackageKey])
         if values?.isDirectory == true, values?.isPackage != true {
@@ -769,9 +816,9 @@ final class DropImportCoordinator {
     }
 }
 
-/// 拖入物化错误。
+/// Materialization error on drag-in.
 enum DropImportError: LocalizedError {
-    /// 拖入的位图数据无法转成 PNG。
+    /// The dragged-in bitmap data cannot be converted into a PNG.
     case imageConversionFailed
 
     var errorDescription: String? {

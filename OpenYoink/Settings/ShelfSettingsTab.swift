@@ -26,8 +26,9 @@ struct ShelfSettingsSections: View {
             }
 
             if settings.classicShelfEnabled && settings.shelfPosition == .custom {
-                // S9: custom 模式 —— 面板可拖动，拖动结束持久化 frame；
-                // 首次选中从右缘默认位置起步。边缘触发在无贴附缘时暂停。
+                // S9: custom mode —— panel is draggable, and the frame is persisted after dragging ends;
+                // the first selection starts from the default position on the right edge. Edge triggering
+                // pauses when there is no attached edge.
                 Text("Drag the shelf by its title bar to place it anywhere. The edge trigger is unavailable in custom mode.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -50,12 +51,14 @@ struct ShelfSettingsSections: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                // UX6: 非空→空迁移时自动收回（手动唤出的空架不受影响）。
+                // UX6: When transitioning from non-empty to empty, it automatically retracts (manually
+                // summoned empty frames are unaffected).
                 Toggle("Hide automatically when empty", isOn: $settings.autoHideWhenEmpty)
 
-                // EdgeTab: 拉环只在 shelf 隐藏时贴屏幕边缘显示（互斥模型；
-                // shelf 展开后由面板外缘隐形热区承担同点位收起）。
-                // custom 模式无贴附缘，开关不生效（说明文案覆盖）。
+                // EdgeTab: The handle only displays along the screen edge when the shelf is hidden
+                // (mutually exclusive model; when the shelf is expanded, the panel's outer edge takes over
+                // the same position for collapsing). In custom mode, there is no attached edge, so the
+                // switch has no effect (explanation text overrides).
                 Toggle("Show edge tab while shelf is hidden", isOn: $settings.edgeTabEnabled)
                 Text("Click the tab to show the shelf, drag it along the edge to reposition, or drop files onto it. Not shown in custom position mode.")
                     .font(.caption)
@@ -79,7 +82,7 @@ struct ShelfSettingsSections: View {
             }
             .accessibilityIdentifier("settings.dragOutRemovalPolicy")
 
-            // F-05: 双模式拖入说明（静态文案）。
+            // F-05: Dual Mode Drag-and-Drop Instructions (Static Text).
             Text("Dropping files keeps a reference. Hold ⌘ while dropping to move the original into the shelf — the original goes to the Trash, so it can be restored.")
                 .font(.caption)
                 .foregroundStyle(.secondary)

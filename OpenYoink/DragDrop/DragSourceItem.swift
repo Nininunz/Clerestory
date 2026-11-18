@@ -2,14 +2,17 @@ import AppKit
 import OSLog
 import SwiftUI
 
-/// 一次拖出的内容集合，由卡片事件层（ShelfView / Stack 浮层）计算。
+/// A collection of items dragged out at once, calculated by the card event layer (ShelfView / Stack
+/// overlay).
 struct DragOutContents: Equatable, Sendable {
-    /// 实际拖出的项目（顶层选择集合或浮层子项集合；stack 由
-    /// `DragPayloadBuilder.flattenedItems` 展开为子项）。
+    /// The actual items dragged out (top-level selection set or overlay child items; stack is expanded
+    /// into child items by `DragPayloadBuilder.flattenedItems`).
     var items: [ShelfItem]
-    /// 涉及的顶层项目 id：drop 成功且策略为移除时从 store 删除。
-    /// Stack 浮层子项拖出传空集 —— 子项的移除语义（unstack 局部移除）
-    /// 随 S6 的 stack 批量操作一起设计，本步不移除子项。
+    /// The ID of the top-level item involved: removed from the store if the drop is successful and the
+    /// strategy is remove.
+    /// Stack overlay child items dragged out pass an empty set —— the removal semantics of child items
+    /// (unstack local removal)
+    /// are designed with S6's stack batch operations, so child items are not removed in this step.
     var topLevelIDs: Set<UUID>
 
     /// Only items with a writer participate in the session. A stack can be
@@ -24,7 +27,8 @@ struct DragOutContents: Equatable, Sendable {
     }
 }
 
-/// Tutorial 卡与普通多选拖拽之间的隔离规则（纯函数，避免练习 token 搭便车）。
+/// Isolation rules between Tutorial cards and regular multi-select drag-and-drop (pure function, to avoid
+/// tutorial token freeloading).
 enum TutorialDragScope {
     static func effectiveContents(_ contents: DragOutContents,
                                   originatingItemID: UUID,
@@ -43,10 +47,10 @@ enum TutorialDragScope {
     }
 }
 
-/// 拖出总控（MainActor）：把卡片 mouseDragged 转成 AppKit 拖拽会话。
+/// Drag controller (MainActor): converts the card's mouseDragged into an AppKit drag session.
 ///
-/// 经 SwiftUI 环境（`\.dragOutController`）注入卡片；Preview/测试中环境缺省
-/// 为 nil，卡片拖拽静默关闭、点击不受影响。
+/// Cards are injected via SwiftUI environment (`\.dragOutController`); in Preview/testing, the environment
+/// defaults to nil, so card dragging is silently disabled and clicks are unaffected.
 @MainActor
 final class DragOutController {
     private let store: ShelfStore
@@ -56,13 +60,14 @@ final class DragOutController {
     /// Long-lived delivery state survives the AppKit drag session because file
     /// promise callbacks may arrive before or after `endedAt`.
     private let deliveryCoordinator: DeliveryCoordinator
-    /// 活动练习卡的运行时令牌。令牌只随该卡本次拖出写入 pasteboard；普通
-    /// 项目返回 nil。闭包避免把 tutorial 状态写进 ShelfItem schema。
+    /// Runtime token for an active tutorial card. The token is only written to the pasteboard for this
+    /// card's drag; regular items return nil. The closure avoids writing tutorial state into the ShelfItem
+    /// schema.
     private let tutorialTokenForItem: @MainActor (UUID) -> String?
 
-    /// S8: 拖出成功（`operation` 非空）后的回调，由 ShelfWindowController
-    /// 在 init 完成后接线以实现 autoHide（init 期无法捕获未完成的 self）。
-    /// 为 nil 时不做任何事（Preview/测试）。
+    /// S8: Callback after a successful drag (`operation` is non-nil), connected by ShelfWindowController
+    /// after init to implement autoHide (init phase cannot capture incomplete self).
+    /// Does nothing if nil (Preview/testing).
     var onSuccessfulDrop: (@MainActor () -> Void)?
 
     init(store: ShelfStore,
@@ -79,16 +84,17 @@ final class DragOutController {
         self.tutorialTokenForItem = tutorialTokenForItem
     }
 
-    /// 拖拽启动入口：`CardDragSourceAnchorView` 在 mouseDragged 超阈值时经卡片
-    /// 回调调用。必须在主线程、且 `event` 为当前手势的 mouseDown/mouseDragged
-    /// 事件（`beginDraggingSession` 的硬性要求）。
+    /// Drag initiation entry point: `CardDragSourceAnchorView` calls the card's callback when mouseDragged
+    /// exceeds the threshold. Must be on the main thread, and `event` must be the current gesture's
+    /// mouseDown/mouseDragged event (`beginDraggingSession` hard requirement).
     func beginDrag(contents: DragOutContents,
                    originatingItemID: UUID,
                    from sourceView: NSView,
                    event: NSEvent) {
-        // 练习 token 绝不能搭便车混进普通多选拖拽：从练习卡起拖时只拖
-        // 练习卡；从普通卡起拖时剔除可能被选中的练习卡。这样教程目标接受
-        // token 时不会连带触发其他用户卡片的移除/最近项目策略。
+        // Tutorial token must never be mixed into regular multi-select drag-and-drop: drag only the
+        // tutorial card from a tutorial card; remove any potentially selected tutorial cards when dragging
+        // from a regular card. This ensures that the tutorial target accepts the token without
+        // inadvertently triggering the removal of other user cards or recent project strategies.
         let tutorialIDs = Set(contents.items.compactMap { item in
             tutorialTokenForItem(item.id) == nil ? nil : item.id
         })
@@ -144,7 +150,8 @@ final class DragOutController {
         let draggingItems = represented.map(\.draggingItem)
         let representedContents = effectiveContents.restrictingToRepresentedItems(represented.map(\.item))
         deliveryCoordinator.noteSessionBegan(id: sessionID, contents: representedContents)
-        // 每次会话独立的 NSDraggingSource：无复用状态，结果处理只依赖本次 contents。
+        // Independent NSDraggingSource per session: no reuse state, result handling depends only on the
+        // current contents.
         let source = DragSessionController(contents: representedContents,
                                            sessionID: sessionID,
                                            store: store,
@@ -281,7 +288,7 @@ final class DragOutController {
     }
 }
 
-/// 单次拖出会话的 `NSDraggingSource`（每会话一个实例，无跨会话状态）。
+/// NSDraggingSource for a single drag session (one instance per session, no cross-session state).
 @MainActor
 final class DragSessionController: NSObject, NSDraggingSource {
     private let contents: DragOutContents
@@ -299,8 +306,8 @@ final class DragSessionController: NSObject, NSDraggingSource {
     private let settings: SettingsStore
     private let recents: RecentItemsService
     private let delivery: DeliveryCoordinator?
-    /// Tutorial 项由 OnboardingController 在真实目标确认后清理，不受用户的
-    /// 常规拖出策略影响，也绝不能进入「最近项目」。
+    /// Tutorial items are cleaned up by OnboardingController after the real target is confirmed, and are
+    /// unaffected by the user's regular drag-out strategy. They are never added to Recent Items.
     private let policyExcludedItemIDs: Set<UUID>
     private let onSuccessfulDrop: (@MainActor () -> Void)?
     private let anchorOffset: CGSize
@@ -329,26 +336,28 @@ final class DragSessionController: NSObject, NSDraggingSource {
         super.init()
     }
 
-    /// 操作掩码：只声明 `.copy`，永不声明 `.move`。
+    /// Operation mask: Only declare `.copy`, never declare `.move`.
     ///
-    /// 若声明 .move，Finder 目标在默认或修饰键组合下会执行「移动」—— 复制到
-    /// 目标后删除原位置文件，违背「任何情况下都不删除用户原文件」（计划 §1.2；
-    /// 调研报告 7.2 风险 C：最终语义由源掩码、目标返回值与修饰键共同决定，
-    /// 源侧收窄是最可靠的边界）。只给 .copy 后拖到 Finder 永远是复制，
-    /// ⌥/⌘ 不能把它升级为移动。
+    /// If `.move` is declared, Finder targets will perform 'move' operations under default or modifier key
+    /// combinations — copying to the target and deleting the original file, which violates the principle
+    /// of 'never deleting user original files' (Plan §1.2; Survey Report 7.2 Risk C: Final semantics are
+    /// determined by the source mask, target return value, and modifier keys together; source-side
+    /// narrowing is the most reliable boundary). Only giving `.copy` and dragging to Finder is always a
+    /// copy, ⌥/⌘ cannot upgrade it to a move.
     func draggingSession(_ session: NSDraggingSession,
                          sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
         .copy
     }
 
-    /// 会话结束处理：仅当实际 drop 发生（`operation` 非空；取消/目标拒绝为空）
-    /// 才按设置策略处理 —— 移除顶层项目并记入最近历史、原样保留，或（.ask）
-    /// 弹确认框。成功 drop 后先回调 onSuccessfulDrop（autoHide 接线处）。
+    /// Session end handling: Only process according to the set strategy when an actual drop occurs
+    /// (`operation` is non-empty; cancel/reject is empty) — remove top-level items and record in recent
+    /// history, retain as-is, or (`.ask`) show a confirmation dialog. After a successful drop, first call
+    /// `onSuccessfulDrop` (autoHide connection point).
     ///
-    /// F-05: 剪切（isCut）项不参与上述策略 —— 剪切语义即移走，交付确认
-    /// （promise 写入完成）后由 `DeliveryCoordinator` 移出 shelf 并删除
-    /// 保管副本，不受 dragOutRemovalPolicy 影响。会话取消（operation == []）
-    /// 时 cut 项与保管文件原样保留。
+    /// F-05: The `isCut` item does not participate in the above strategy — the cut semantics imply
+    /// removal. After delivery confirmation (promise write completion), `DeliveryCoordinator` removes the
+    /// item from the shelf and deletes the custody copy, and it is not affected by `dragOutRemovalPolicy`.
+    /// When the session is canceled (`operation == []`), the cut item and custody file are retained as-is.
     func draggingSession(_ session: NSDraggingSession,
                          endedAt screenPoint: NSPoint,
                          operation: NSDragOperation) {
@@ -387,9 +396,9 @@ final class DragSessionController: NSObject, NSDraggingSource {
         acceptedByShelfReorder = true
     }
 
-    /// F-05: 剔除剪切项后的顶层 id 集合（策略移除/询问只作用于非剪切项）。
-    /// 若不剔除，.remove 会在交付确认到达前就把待交付的 cut 项移架，保管
-    /// 文件成孤儿（下次启动被 cleanupOrphans 删除），移动中的数据丢失。
+    /// These top-level IDs exclude cut items. The remove and ask policies apply only to non-cut items.
+    /// Applying .remove before delivery confirmation can orphan the managed copy, which cleanupOrphans
+    /// would then delete on the next launch.
     private var nonCutTopLevelIDs: Set<UUID> {
         contents.topLevelIDs.filter { id in
             !policyExcludedItemIDs.contains(id)
@@ -397,16 +406,17 @@ final class DragSessionController: NSObject, NSDraggingSource {
         }
     }
 
-    /// F-05: 剔除剪切项后的展开项目集合（最近历史只记非剪切项；剪切项在
-    /// 交付确认时由 DeliveryCoordinator 单独记录）。
+    /// F-05: The set of expanded items after removing the cut item (recent history only records non-cut
+    /// items; cut items are separately recorded by `DeliveryCoordinator` upon delivery confirmation).
     private var nonCutFlattenedItems: [ShelfItem] {
         DragPayloadBuilder.flattenedItems(contents.items).filter {
             !$0.isCut && !policyExcludedItemIDs.contains($0.id)
         }
     }
 
-    /// 移除顶层项目并记入最近历史（.remove 策略与 .ask 确认移除共用）。
-    /// 浮层子项拖出 topLevelIDs 为空、不从 shelf 移除，但同样记入历史。
+    /// Remove top-level items and record in recent history (`.remove` strategy and `.ask` confirmation
+    /// removal share the same logic). Floating sub-items dragged out with `topLevelIDs` empty, not removed
+    /// from the shelf, but still recorded in history.
     private func removeDraggedItems() {
         let ids = nonCutTopLevelIDs
         if !ids.isEmpty {
@@ -415,15 +425,16 @@ final class DragSessionController: NSObject, NSDraggingSource {
         recents.record(nonCutFlattenedItems)
     }
 
-    /// S8: .ask 策略 —— 成功拖出后询问是否从 shelf 移除；勾选
-    /// 「Don't ask again」则把本次选择写回为 keep/remove 策略。
-    /// F-05: 只问非剪切项（剪切项交付后自动离架，无需询问）。
+    /// S8: `.ask` strategy — after a successful drag-out, ask whether to remove from the shelf; if 'Don't
+    /// ask again' is checked, the current selection is written back as the keep/remove strategy. F-05:
+    /// Only ask for non-cut items (cut items are automatically removed from the shelf after delivery, no
+    /// need to ask).
     ///
-    /// LSUIElement 注意点：应用无 Dock 且平时处于非活跃状态，弹 NSAlert
-    /// 前必须 `NSApp.activate(ignoringOtherApps:)` 把应用提到前台，否则
-    /// 对话框会落在其他应用窗口之后、看起来「什么都没发生」。
-    /// runModal 是应用级模态：拖出会话此时已结束，阻塞主线程等待回答是
-    /// 可接受的，也是「每次询问」语义本身所需。
+    /// LSUIElement notes: The app has no Dock and is usually inactive. Before showing `NSAlert`, it must
+    /// call `NSApp.activate(ignoringOtherApps:)` to bring the app to the foreground, otherwise the dialog
+    /// will appear behind other app windows and look like 'nothing happened'. `runModal` is app-level
+    /// modal: the drag-out session is now ended, and blocking the main thread to wait for a response is
+    /// acceptable, and it is also required for the 'ask each time' semantics.
     private func askWhetherToRemove() {
         let itemCount = nonCutTopLevelIDs.isEmpty
             ? nonCutFlattenedItems.count
@@ -455,13 +466,15 @@ final class DragSessionController: NSObject, NSDraggingSource {
     }
 }
 
-/// S8: .ask 策略确认框的裁决（纯逻辑，单测覆盖；NSAlert 交互本身无法
-/// 无头测试）。「不再询问」勾选时把本次选择固化为后续策略。
+/// S8: Decision on the `.ask` strategy confirmation dialog (pure logic, covered by unit tests; NSAlert
+/// interaction itself cannot be headless tested). When 'Don't ask again' is checked, the current selection
+/// is solidified as the subsequent strategy.
 enum DragOutRemovalDecision {
     struct Verdict: Equatable, Sendable {
-        /// 本次是否从 shelf 移除。
+        /// Whether to remove from the shelf this time.
         var shouldRemove: Bool
-        /// 需要写回 SettingsStore 的固化策略；未勾选「不再询问」为 nil。
+        /// Need to write back the solidified strategy to SettingsStore; if 'Don't ask again' is not
+        /// checked, it is nil.
         var policyToPersist: SettingsStore.DragOutRemovalPolicy?
     }
 
@@ -473,9 +486,10 @@ enum DragOutRemovalDecision {
 
 // MARK: - Delivery coordination
 
-/// 统一记录直接拖出与托管剪切交付：普通项目由 AppKit 会话结果确认；托管
-/// 剪切项目必须同时满足「目标接受会话」与「file promise 已写入」才会离架。
-/// 会话快照也用于失败恢复和运行期文件租约。
+/// Uniformly record direct drag-out and managed cut delivery: ordinary items are confirmed by AppKit
+/// session results; managed cut items must also satisfy both 'target accepts session' and 'file promise
+/// has been written' to be removed from the shelf. Session snapshots are also used for failure recovery
+/// and runtime file leases.
 @MainActor
 final class DeliveryCoordinator {
     private enum PromiseState {
@@ -772,12 +786,12 @@ final class DeliveryCoordinator {
 // MARK: - SwiftUI environment
 
 private struct DragOutControllerEnvironmentKey: EnvironmentKey {
-    // nil 缺省：Preview 与单测中拖拽关闭（点击仍工作）。
+    // The default of nil disables dragging in previews and unit tests. Clicking still works.
     static var defaultValue: DragOutController? { nil }
 }
 
 extension EnvironmentValues {
-    /// 拖出总控；由 ShelfWindowController 在面板内容根上注入。
+    /// Drag out the main control; injected by ShelfWindowController on the root of panel content.
     var dragOutController: DragOutController? {
         get { self[DragOutControllerEnvironmentKey.self] }
         set { self[DragOutControllerEnvironmentKey.self] = newValue }

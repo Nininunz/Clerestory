@@ -1,12 +1,14 @@
 import AppKit
 import SwiftUI
 
-/// 自管理设置窗口（SettingsView 的承载窗口）。
+/// Self-managed settings window (the host window for SettingsView).
 ///
-/// 为什么不用 SwiftUI `Settings` scene 的 `showSettingsWindow:`：LSUIElement
-/// 后台 agent 下该 action 依赖响应链上由 scene 动态安装的处理者，实测静默
-/// 失败（菜单点了没反应）。自管理 NSWindowController 完全可控：创建一次、
-/// 重复打开只做前置 + 激活。
+/// Why not use SwiftUI `Settings` scene's `showSettingsWindow:`: In LSUIElement background agent,
+/// this action depends on handlers dynamically installed by the scene in the responder chain, and it's
+/// tested
+/// as silently failing (menu clicked but no response). Self-managed NSWindowController is fully
+/// controllable:
+/// create once, repeat open only does prep + activate.
 @MainActor
 final class SettingsWindowController {
     private let settings: SettingsStore
@@ -37,8 +39,9 @@ final class SettingsWindowController {
         self.clipboardHistoryStore = clipboardHistoryStore
     }
 
-    /// 显示设置窗口并激活应用（LSUIElement：窗口前置与键盘焦点都依赖显式
-    /// activate；重复调用幂等——窗口已存在则只做前置）。
+    /// Show the settings window and activate the app (LSUIElement: window fronting and keyboard focus both
+    /// depend on explicit
+    /// activate; repeated calls are idempotent — if window exists, only front it).
     func show(pane: SettingsPane? = nil) {
         if let pane {
             navigation.open(pane)
@@ -64,8 +67,9 @@ final class SettingsWindowController {
             let window = NSWindow(contentViewController: hostingController)
             window.title = String(localized: "Clerestory Settings")
             window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
-            // 侧边栏需要稳定的最小宽度；允许继续放大，长文案和辅助功能字号
-            // 会自然获得更多空间，而不是和顶部导航挤在一起。
+            // Sidebar needs a stable minimum width; allow continued expansion, long text and accessibility
+            // font sizes
+            // will naturally take more space, rather than being cramped with the top navigation.
             window.contentMinSize = NSSize(width: 680, height: 480)
             window.setContentSize(NSSize(width: 720, height: 520))
             window.isReleasedWhenClosed = false

@@ -1,51 +1,55 @@
 import AppKit
 import UniformTypeIdentifiers
 
-/// 托管剪切项的 file-promise 生命周期通道。回调可能早于或晚于 AppKit
-/// 会话结果，并且会来自 provider 后台队列；接收方负责切回自己的 actor。
+/// Lifecycle channel for file-promise of managed cut items. Callbacks may occur before or after AppKit
+/// session results and may come from the provider's background queue; the receiver is responsible for
+/// switching back to their own actor.
 struct DeliverySink: Sendable {
     /// The destination selected the promised-file representation.
     var promiseRequested: @Sendable (UUID) -> Void
-    /// 写入完成：参数为 item id 与交付目标 URL。
+    /// Write completed: parameters are item id and delivery target URL.
     var delivered: @Sendable (UUID, URL) -> Void
-    /// 写入失败：参数为 item id（item 保留在 shelf，可重试）。
+    /// Write failed: parameters are item id (item remains in shelf, can be retried).
     var failed: @Sendable (UUID) -> Void
 }
 
-/// 拖出 payload 组装：ShelfItem → pasteboard writer 多表示 / `[NSDraggingItem]`
-/// （实施计划 §2.3「拖出」、调研报告 F-04）。
+/// Drag-out payload assembly: ShelfItem → pasteboard writer multiple representations / `[NSDraggingItem]`
+/// (Implementation plan §2.3 "Drag-out", Research Report F-04).
 ///
-/// ## 文件载荷技术路线
+/// ## File Payload Technical Route
 ///
-/// 一个拖出项目 = 一个 `NSDraggingItem` = 一个 pasteboard writer：
-/// - 普通文件/文件夹：`DirectFilePasteboardWriter`，提供 `public.file-url` 与
-///   `NSFilenamesPboardType`；后者用于 Chromium 的 macOS 上传路径。
-/// - 普通图片：再附加惰性的 `public.tiff` 位图回退。
-/// - 托管剪切项：promise-only `FilePromiseProvider`；目标确认写入后才离架。
-/// - tutorial 文件：直接 writer 额外携带私有会话 token。
+/// A drag-out item = an `NSDraggingItem` = a pasteboard writer:
+/// - Regular file/folder: `DirectFilePasteboardWriter`, providing `public.file-url` and
+///   `NSFilenamesPboardType`; the latter is used for macOS upload paths in Chromium.
+/// - Regular image: also adds lazy `public.tiff` bitmap fallback.
+/// - Hosted cut item: promise-only `FilePromiseProvider`; it is discarded only after the target confirms
+/// the write.
+/// - Tutorial file: the direct writer also carries a private session token.
 ///
-/// 不能把这些表示追加到 `NSFilePromiseProvider` 子类：私有 pasteboard
-/// `writeObjects` 虽会显示追加类型，但真实 `NSDraggingSession` 会只保留系统
-/// promise 类型，导致 Chromium、图片回退与 tutorial token 实际不可用。
+/// Cannot append these representations to `NSFilePromiseProvider` subclasses: private pasteboard
+/// `writeObjects` may show appended types, but the real `NSDraggingSession` will only retain system
+/// promise types, making Chromium, image fallback, and tutorial token actually unavailable.
 ///
-/// ## 纯函数部分
-/// `strategy(for:)` / `flattenedItems(_:)` / `promisedFileType(for:)` 不构造
-/// AppKit 对象，单测直接断言策略与展开语义。
+/// ## Pure Function Part
+/// `strategy(for:)` / `flattenedItems(_:)` / `promisedFileType(for:)` do not construct
+/// AppKit objects; unit tests directly assert the strategy and flattening semantics.
 enum DragPayloadBuilder {
-    /// 各 kind 的表示策略。
+    /// Representation strategies for each kind.
     enum Strategy: Equatable, Sendable {
-        /// 文件/文件夹：普通项走直接文件表示，托管剪切项走 file promise。
+        /// File/folder: regular items use direct file representation, hosted cut items use file promise.
         case fileBacked
-        /// 图片：fileBacked + `public.tiff` 位图回退（计划 §2.3）。
+        /// Image: fileBacked + `public.tiff` bitmap fallback (planned in §2.3).
         case fileBackedImage
-        /// 纯文本：`public.utf8-plain-text`（当前模型只存 plain；拖入侧 v1
-        /// 未保留 HTML/RTF 原文，故此处无富文本表示可注册）。
+        /// Plain text: `public.utf8-plain-text` (the current model only stores plain; the drag-in side v1
+        /// does not retain HTML/RTF original content, so there is no rich text representation to
+        /// register).
         case plainText
         /// Web URL：`public.url` + plain text。
         case webURL
     }
 
-    /// stack 不整体拖出（由 `flattenedItems` 展开为子项），故返回 nil。
+    /// Stack does not drag out as a whole (it is expanded into child items by `flattenedItems`), so
+    /// returns nil.
     static func strategy(for item: ShelfItem) -> Strategy? {
         switch item.kind {
         case .file, .folder: .fileBacked
@@ -73,8 +77,10 @@ enum DragPayloadBuilder {
         }
     }
 
-    /// 展开 stack 为全部子项（递归，防御嵌套 stack），非 stack 项目原样保留、
-    /// 顺序不变。语义：stack 卡片拖出 = 拖出其全部子项（计划 §2.3）。
+    /// Expand stack into all child items (recursively, defend against nested stacks), non-stack items are
+    /// retained as-is,
+    /// order remains unchanged. Semantics: dragging out a stack card = dragging out all its child items
+    /// (planned in §2.3).
     static func flattenedItems(_ items: [ShelfItem]) -> [ShelfItem] {
         items.flatMap { item -> [ShelfItem] in
             guard item.kind == .stack, let children = item.children, !children.isEmpty else {
@@ -84,15 +90,18 @@ enum DragPayloadBuilder {
         }
     }
 
-    /// promise 声明的内容 UTI：文件夹 → `public.folder`；其余按扩展名经系统
-    /// 声明表推断；无/未知扩展名回退 `public.data`。
+    /// UTI of the content declared by promise: folder → `public.folder`; others are inferred via the
+    /// system
+    /// declaration table based on the extension; if no/unknown extension, fallback to `public.data`.
     ///
-    /// 防御说明（macOS 26 实测）：`NSFilePromiseProvider.init(fileType:)` 对不
-    /// 符合 kUTTypeData/kUTTypeDirectory 的 fileType 抛 NSException（Swift 无法
-    /// 捕获，直接崩进程），且部分规范 UTI（如 `public.pdf`）在 macOS 26 已不
-    /// 再声明（`UTType("public.pdf") == nil`）。因此只接受
-    /// `UTType(filenameExtension:)` 返回的、已验证 conforms(to: .data/.directory)
-    /// 的类型；`UTType` 静态成员（如 `UTType.pdf`）的 identifier 不可直接用。
+    /// Defensive note (tested on macOS 26): `NSFilePromiseProvider.init(fileType:)` throws NSException for
+    /// fileType that does not conform to kUTTypeData/kUTTypeDirectory (Swift cannot catch, leading to
+    /// process crash),
+    /// and some standard UTIs (like `public.pdf`) are no longer declared on macOS 26
+    /// (`UTType("public.pdf") == nil`).
+    /// Therefore, only accept types returned by `UTType(filenameExtension:)` that have been verified to
+    /// conform to .data/.directory;
+    /// static members of `UTType` (like `UTType.pdf`) cannot be used directly.
     static func promisedFileType(for item: ShelfItem) -> String {
         if item.kind == .folder {
             return UTType.folder.identifier
@@ -126,9 +135,10 @@ enum DragPayloadBuilder {
         return BookmarkAccessLease(accessedURLs: accessedURLs, service: bookmarkService)
     }
 
-    /// 单个项目的 pasteboard writer。无法构造（text 无内容、url 无地址、
-    /// file 无路径、stack 未展开）时返回 nil。
-    /// `delivery` 只观察托管剪切项的 file promise；普通文件由会话结果确认。
+    /// Single item pasteboard writer. Returns nil when unable to construct (text has no content, url has
+    /// no address, file has no path, stack not expanded).
+    /// `delivery` only observes the file promise of hosted drag items; regular files are confirmed by
+    /// session results.
     @MainActor
     static func makePasteboardWriter(for item: ShelfItem,
                                      bookmarkService: BookmarkService,
@@ -186,10 +196,12 @@ enum DragPayloadBuilder {
         }
     }
 
-    /// 拖拽图像（S10/C7）：优先用卡片已加载的真实缩略图（`DragImageCache`，
-    /// 拖拽启动是同步路径，只能取缓存）；未命中回退 `NSWorkspace.icon(forFile:)`
-    /// （同步、不需要文件读权限），文本/URL 用与卡片占位一致的 SF Symbol。
-    /// 统一 64pt。
+    /// Drag image (S10/C7): Prefer the real thumbnail already loaded by the card (`DragImageCache`),
+    /// Drag initiation is a synchronous path, so only cache can be used; fallback to
+    /// `NSWorkspace.icon(forFile:)`
+    /// (synchronous, no need for file read permissions), text/URL use SF Symbol consistent with card
+    /// placeholder.
+    /// Uniform 64pt.
     @MainActor
     static func dragImage(for item: ShelfItem) -> NSImage {
         let size = NSSize(width: 64, height: 64)
@@ -213,15 +225,15 @@ enum DragPayloadBuilder {
 
     // MARK: - File/folder/image
 
-    /// 已存在的普通文件使用直接 writer：fileURL + Chromium 兼容文件名列表，
-    /// 图片再附加 public.tiff，教程项附加私有 token。真实拖拽中 AppKit 会
-    /// 原样保留这些类型；`NSFilePromiseProvider` 子类的附加类型则会被系统
-    /// 丢弃，因此不能承担普通文件的多表示载荷。
+    /// Existing regular files use direct writer: fileURL + Chromium-compatible filename list,
+    /// images add public.tiff, tutorial items add private token. In real drag, AppKit
+    /// preserves these types as-is; additional types from `NSFilePromiseProvider` subclasses
+    /// will be discarded by the system, so cannot carry multi-representation payloads for regular files.
     ///
-    /// F-05 剪切项分支（`item.isCut`）：**只广告 promise 类型** —— 不广告
-    /// `public.file-url`（否则 Finder 会走 fileURL 直读路径、绕过 promise，
-    /// 拿不到交付确认，移动语义无法闭环），也不挂 tiff 位图回退（位图目标
-    /// 同样无法确认交付）。交付请求、成功与失败经 `delivery` 上报。
+    /// Cut items (`item.isCut`) advertise only file-promise types. Advertising `public.file-url` lets
+    /// Finder bypass the promise, so the app cannot confirm delivery before completing the move. TIFF
+    /// fallback has the same problem. Delivery requests, successes, and failures are reported through
+    /// `delivery`.
     @MainActor
     private static func makeFileBackedWriter(for item: ShelfItem,
                                              bookmarkService: BookmarkService,
@@ -233,7 +245,7 @@ enum DragPayloadBuilder {
         let includeImageFallback = strategy(for: item) == .fileBackedImage && !item.isCut
         let tiffDataProvider: (@Sendable () -> Data?)?
         if includeImageFallback {
-            // 惰性：目标请求 public.tiff 时才读文件。
+            // Lazy: Read the file only when the target requests public.tiff.
             tiffDataProvider = { tiffData(sourceURL: sourceURL, bookmark: bookmark, bookmarkService: bookmarkService) }
         } else {
             tiffDataProvider = nil
@@ -246,7 +258,8 @@ enum DragPayloadBuilder {
             )
         }
         let itemID = item.id
-        // 显式类型局部变量（三元 + 闭包字面量会让类型推断器无法产出诊断）。
+        // Explicit type local variables (ternary + closure literals make the type inference unable to
+        // produce diagnostics).
         let onPromiseRequested: @Sendable () -> Void = {
             delivery?.promiseRequested(itemID)
         }
@@ -270,8 +283,9 @@ enum DragPayloadBuilder {
         )
     }
 
-    /// 图片位图回退：在安全作用域内读图并导出 TIFF 数据。NSImage 非 Sendable，
-    /// 就地创建就地提取 Data（Sendable），不跨 actor。
+    /// Image bitmap fallback: Read the image within a safe scope and export TIFF data. NSImage is not
+    /// Sendable,
+    /// create and extract Data (Sendable) in place, no cross-actor.
     nonisolated static func tiffData(sourceURL: URL, bookmark: Data?, bookmarkService: BookmarkService) -> Data? {
         guard let url = try? bookmarkService.resolveFileURL(sourceURL, bookmark: bookmark) else { return nil }
         return bookmarkService.withSecurityScopedAccess(to: url) {
@@ -281,7 +295,7 @@ enum DragPayloadBuilder {
 
     // MARK: - Text
 
-    /// 纯文本：`public.utf8-plain-text`（NSPasteboardItem 直接写类型）。
+    /// Plain text: `public.utf8-plain-text` (NSPasteboardItem directly writes the type).
     @MainActor
     private static func makeTextItem(for item: ShelfItem) -> NSPasteboardItem? {
         guard let text = item.text, !text.isEmpty else { return nil }
@@ -292,9 +306,9 @@ enum DragPayloadBuilder {
 
     // MARK: - URL
 
-    /// Web URL：`public.url`（URL 字符串）+ plain text 回退（文本框/地址栏）。
-    /// 不写 `public.file-url`：对 http(s) URL 那是错误表示，可能误导 Finder
-    /// 类目标。
+    /// Web URL: `public.url` (URL string) + plain text fallback (text box/address bar).
+    /// Do not write `public.file-url`: this is an incorrect representation for http(s) URLs, which may
+    /// mislead Finder class targets.
     @MainActor
     private static func makeURLItem(for item: ShelfItem) -> NSPasteboardItem? {
         guard let urlString = item.urlString, URL(string: urlString) != nil else { return nil }

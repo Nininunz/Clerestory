@@ -80,8 +80,9 @@ enum ShortcutRecorderLogic {
 /// valid combination is saved. All keyDowns are consumed while recording so
 /// nothing leaks into the settings window's other controls.
 ///
-/// 本地监听足够且必须：录制时设置窗口是 key window，keyDown 必达本应用；
-/// 全局监听无法消费事件，按键会漏到其他应用。
+/// Local listening is sufficient and mandatory: when recording, the window must be the key window, and
+/// keyDown must reach this application;
+/// Global listening cannot consume events, and key presses will be passed to other applications.
 @MainActor
 @Observable
 final class ShortcutRecorderController {

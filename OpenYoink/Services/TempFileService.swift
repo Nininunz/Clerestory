@@ -22,8 +22,9 @@ final class TempFileService: Sendable {
     /// The managed materialization directory; inject a custom one in tests.
     let directoryURL: URL
 
-    /// Promise 接收临时目录的唯一命名约定。创建、常规孤儿清理与按龄清理
-    /// 必须共用它，否则目录会永远清不到，或在文件仍写入时被提前删除。
+    /// Promise receives the only naming convention for temporary directories. Creation, regular orphan
+    /// cleanup, and age-based cleanup must all share it, otherwise the directory will never be cleaned or
+    /// may be prematurely deleted while files are still being written.
     private static let promiseStagingPrefix = "PromiseStaging-"
 
     private let logger = Logger(subsystem: "com.nininunz.Clerestory", category: "TempFileService")
@@ -48,8 +49,9 @@ final class TempFileService: Sendable {
         return candidate
     }
 
-    /// 创建一个 receiver 批次共享的 staging 目录。目录名与启动时的按龄
-    /// 清理规则严格一致；文件 promise 回调期间不会删除该目录。
+    /// Create a staging directory shared by a receiver batch. The directory name must strictly match the
+    /// age-based cleanup rules at launch; the directory will not be deleted during the file promise
+    /// callback.
     func createPromiseStagingDirectory() throws -> URL {
         let fileManager = FileManager.default
         try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
@@ -89,8 +91,9 @@ final class TempFileService: Sendable {
         for name in names {
             let url = directoryURL.appendingPathComponent(name)
             guard !keep.contains(url.standardizedFileURL.path) else { continue }
-            // Promise writer 可能仍在向 staging 写文件。它由下面的按龄策略
-            // 独立回收，常规孤儿清理绝不能在启动时无条件删除。
+            // The Promise writer may still be writing files to the staging directory. It is independently
+            // reclaimed by the following age-based strategy and regular orphan cleanup must never
+            // unconditionally delete it at launch.
             guard !name.hasPrefix(Self.promiseStagingPrefix) else { continue }
             do {
                 let bytes = allocatedSize(of: url)
@@ -104,8 +107,8 @@ final class TempFileService: Sendable {
         return result
     }
 
-    /// 托管目录当前占用。读取失败的单个文件按 0 计，设置页不会因某个并发
-    /// promise 写入而失效。
+    /// Current usage of the hosted directory. Failed-to-read individual files are counted as 0; the
+    /// settings page will not become invalid due to a concurrent promise write.
     func storageUsage() -> Int64 {
         allocatedSize(of: directoryURL)
     }
@@ -155,10 +158,10 @@ final class TempFileService: Sendable {
         return filePath.hasPrefix(prefix)
     }
 
-    /// 清理 promise 物化的共享 staging 目录（`PromiseStaging-*`）：只删
-    /// 修改时间早于 `maxAge` 秒的（刚完成的拖入可能仍有文件在路上）。
-    /// 与 shelf 内容无关，启动时调用安全（评审 P1：回调不再清理 staging，
-    /// 由本方法兜底；默认 1 小时）。
+    /// Clean the shared staging directory (``PromiseStaging-*``) of promise materialized files: only
+    /// delete files with a modification time earlier than ``maxAge`` seconds (recently completed drags may
+    /// still have files in transit). Irrelevant to shelf content, it is called safely at launch (review
+    /// P1: callbacks no longer clean staging, this method takes over; default 1 hour).
     func cleanupStaleStagingDirectories(maxAge: TimeInterval = 3600,
                                         keepingPaths: Set<String> = []) {
         let fileManager = FileManager.default

@@ -2,8 +2,8 @@ import AppKit
 import Observation
 import SwiftUI
 
-/// 打破 ShelfWindowController 与 OnboardingController 的初始化环：拖出侧只
-/// 读取这一小块运行时上下文，不持有完整引导控制器。
+/// Break the initialization cycle between ShelfWindowController and OnboardingController: dragging out
+/// only reads this small runtime context, without holding the full onboarding controller.
 @MainActor
 final class OnboardingDragContext {
     private var itemID: UUID?
@@ -24,8 +24,9 @@ final class OnboardingDragContext {
     }
 }
 
-/// 启动时是否自动显示快速上手的纯策略。已有未完成 session 总是优先恢复；
-/// 没有显式 onboarding 键的旧用户只做静默迁移，避免升级后被打扰。
+/// Whether to automatically show the quick tour on startup as a pure strategy. Existing incomplete
+/// sessions are always prioritized for recovery; old users without an explicit onboarding key only undergo
+/// silent migration to avoid being disturbed after upgrade.
 struct OnboardingLaunchPolicy: Equatable, Sendable {
     static func hasExistingInstallation(preferences: [String: Any], supportEntries: [String]) -> Bool {
         preferences.keys.contains { $0 != "OpenYoink.onboardingVersion" }
@@ -43,8 +44,9 @@ struct OnboardingLaunchPolicy: Equatable, Sendable {
     }
 }
 
-/// 与 shelf 相邻放置 tutorial panel 的纯布局函数，便于覆盖左右边缘、多屏和
-/// 窄屏回退。panel 始终夹在目标屏可见区域内。
+/// Pure layout function for placing the tutorial panel adjacent to the shelf, facilitating coverage of
+/// left and right edges, multi-screen, and narrow-screen fallback. The panel is always placed within the
+/// visible area of the target screen.
 struct OnboardingPanelLayout: Equatable, Sendable {
     static func frame(shelfFrame: CGRect,
                       panelSize: CGSize,
@@ -84,8 +86,8 @@ final class OnboardingViewModel {
     var failureMessage: String?
 }
 
-/// 一次真实「拖入 → 拖出」练习的编排器。所有教程状态和文件都限制在
-/// Application Support/Clerestory/Tutorial，且运行时只通过随机 token 识别。
+/// Scheduler for a real "drag-in → drag-out" exercise. All tutorial states and files are restricted to
+/// Application Support/Clerestory/Tutorial, and are identified only via a random token at runtime.
 @MainActor
 final class OnboardingController: NSObject, NSWindowDelegate {
     static let currentVersion = 1
@@ -146,7 +148,8 @@ final class OnboardingController: NSObject, NSWindowDelegate {
         }
     }
 
-    /// 启动恢复完成、bookmark 已解析、清理安全门已裁决后调用。
+    /// Called after startup recovery is complete, bookmarks are parsed, and the safety gate for cleanup is
+    /// resolved.
     func startAtLaunch(hasLegacyInstallEvidence: Bool) {
         let pending = sessionStore.load()
         let shouldShow = OnboardingLaunchPolicy.shouldAutomaticallyShow(
@@ -157,8 +160,9 @@ final class OnboardingController: NSObject, NSWindowDelegate {
         )
 
         guard shouldShow else {
-            // 首次带本能力升级的旧用户没有 onboarding 键：写入 1 作为静默
-            // 迁移，后续启动不再重复判断。用户仍可从菜单手动重播。
+            // Old users who upgraded for the first time without an onboarding key: write 1 as a silent
+            // migration, and subsequent startups will not repeat the check. Users can still manually
+            // replay from the menu.
             if !settings.hadPersistedOnboardingVersion {
                 settings.onboardingVersion = Self.currentVersion
             }
@@ -171,8 +175,8 @@ final class OnboardingController: NSObject, NSWindowDelegate {
         startNewSession()
     }
 
-    /// 菜单栏「快速上手…」。正在进行时仅把面板带到前台；否则新建独立
-    /// session，不重置任何设置。
+    /// Menu bar "Quick Tour...". When in progress, only bring the panel to the foreground; otherwise,
+    /// create a new independent session without resetting any settings.
     func replay() {
         if panel.isVisible {
             NSApp.activate(ignoringOtherApps: true)
@@ -203,7 +207,8 @@ final class OnboardingController: NSObject, NSWindowDelegate {
         completionTask?.cancel()
         panel.orderOut(nil)
         endShelfPresentation()
-        // 不删 record/练习文件：未完成 session 下次按 phase 安全恢复。
+        // Do not delete record/exercise files: incomplete sessions can be safely recovered next time by
+        // phase.
     }
 
     private func startNewSession() {
@@ -299,7 +304,8 @@ final class OnboardingController: NSObject, NSWindowDelegate {
         model.phase = .complete
         completionTask?.cancel()
         completionTask = Task { [weak self] in
-            // 让 AppKit 先结束真实 dragging session，再移除练习卡和源文件。
+            // Let AppKit first end the real dragging session, then remove the exercise card and source
+            // files.
             try? await Task.sleep(for: .milliseconds(650))
             guard !Task.isCancelled, let self else { return }
             self.finishSuccessfulSession(record)
@@ -314,8 +320,8 @@ final class OnboardingController: NSObject, NSWindowDelegate {
             if let itemID = completedRecord.tutorialItemID {
                 try shelfStore.removeAndPersistNow(ids: [itemID])
             }
-            // 版本先于 session 文件清理写入：若进程恰在两者之间退出，下次
-            // 启动看到“已完成 + 卡片已不在 shelf”只清理残留，不重播。
+            // Version is written before session file cleanup: if the process exits between the two, the
+            // next startup will only clean up residual files and not replay.
             settings.onboardingVersion = Self.currentVersion
             try sessionStore.discard(completedRecord)
             record = nil
@@ -557,8 +563,8 @@ private struct OnboardingView: View {
     }
 }
 
-/// 第一步的真实 NSDraggingSource 桥。它提供 file URL 与随机 tutorial token，
-/// shelf 仍通过现有 DropImportCoordinator 生成 ShelfItem。
+/// Bridge the first tutorial step to NSDraggingSource. The bridge supplies a file URL and a random
+/// tutorial token. DropImportCoordinator creates the ShelfItem through the usual import path.
 private struct TutorialDragSourceBridge: NSViewRepresentable {
     let fileURL: URL
     let token: String

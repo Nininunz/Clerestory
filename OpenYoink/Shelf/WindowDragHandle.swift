@@ -1,19 +1,20 @@
 import AppKit
 import SwiftUI
 
-/// Custom 位置模式的窗口拖动把手（S9，计划 §1.1 设置行收尾）。
+/// Window drag handle for custom position mode (S9, planned §1.1 setting line closure).
 ///
-/// 透明 NSView，盖在 ShelfView 顶部标题栏区域：mouseDown 直接进入 AppKit
-/// 标准窗口拖动循环（`performDrag(with:)`，自带跨屏跟随与屏幕边界约束），
-/// 鼠标抬起、拖动结束后经 `onDragEnded` 把窗口最终 frame（屏幕坐标）交给
-/// 上层持久化。
+/// A transparent NSView covers the Shelf title bar. Mouse-down enters AppKit’s standard window drag loop
+/// through `performDrag(with:)`, which handles moving between displays and constrains the window to the
+/// screen. On mouse-up, `onDragEnded` passes the final frame in screen coordinates to the caller for
+/// persistence.
 ///
-/// 为什么不用 `isMovableByWindowBackground`：整面板背景可拖会与卡片拖出
-/// （NSDraggingSession 源，mouseDragged 驱动）和 ScrollView 滚动抢手势；
-/// 拖动入口收窄到标题栏区域后互不干扰。
+/// Why not use `isMovableByWindowBackground`: the entire panel background can be dragged, which may
+/// interfere with card dragging out
+/// (NSDraggingSession source, mouseDragged driven) and ScrollView scrolling gesture; dragging entry is
+/// narrowed to the title bar area to avoid interference.
 @MainActor
 final class WindowDragHandleView: NSView {
-    /// 拖动结束回调（参数为窗口最终 frame，全局屏幕坐标）。
+    /// Drag end callback (parameter is the final window frame, global screen coordinates).
     var onDragEnded: ((NSRect) -> Void)?
 
     override init(frame frameRect: NSRect) {
@@ -25,8 +26,8 @@ final class WindowDragHandleView: NSView {
         fatalError("WindowDragHandleView is created programmatically")
     }
 
-    /// 点击即进入窗口拖动循环；面板 nonactivating，acceptsFirstMouse 保证
-    /// 应用未激活时第一击同样可拖。
+    /// Click to enter window drag loop; panel nonactivating, acceptsFirstMouse ensures
+    /// the first click can drag even when the app is not active.
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     override func mouseDown(with event: NSEvent) {
@@ -41,7 +42,7 @@ final class WindowDragHandleView: NSView {
     }
 }
 
-/// SwiftUI 桥接（见 ShelfView.header，仅 custom 位置模式挂载）。
+/// SwiftUI bridging (see ShelfView.header, only mounted in custom position mode).
 struct WindowDragHandle: NSViewRepresentable {
     var onDragEnded: @MainActor (NSRect) -> Void
 

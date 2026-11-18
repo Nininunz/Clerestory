@@ -100,27 +100,29 @@ final class PersistenceController {
 
     // MARK: - Loading
 
-    /// 加载结果（评审 P1 修复）：严格区分「首次启动无文件」与「读取失败」。
-    /// 损坏的文件绝不能静默吞掉——AppDelegate 据此决定是否允许清理
-    /// Materialized 孤儿文件（加载失败时禁止清理，否则一次坏写就会在
-    /// 下次启动时连锁删除全部保管文件）。
+    /// Load result (P1 fix): strictly distinguish between 'no file on first launch' and 'read failure'.
+    /// Damaged files must never be silently ignored — the AppDelegate decides whether to allow cleaning up
+    /// Materialized orphan files (cleaning is prohibited on load failure, otherwise a single bad write
+    /// will cause all custody files to be deleted at the next launch).
     enum LoadResult: Sendable, Equatable {
-        /// 成功读取快照（可能为空）。
+        /// Successfully read the snapshot (may be empty).
         case loaded([ShelfItem])
-        /// 文件不存在（首次启动/全新状态）。
+        /// File not found (first launch / new state).
         case missing
-        /// 文件存在但读取/解码失败（已隔离到 shelf.json.corrupt-<时间戳>）。
+        /// File exists but reading/decoding failed (isolated to shelf.json.corrupt-<timestamp>).
         case failed
 
-        /// 启动时用于构造 ShelfStore 的项目。失败仍以空架进入 UI，但必须
-        /// 保留同一个 LoadResult，不能再次读取后把已隔离文件误判为 missing。
+        /// Items used at startup to construct ShelfStore. Failure still allows an empty shelf to enter UI,
+        /// but must
+        /// retain the same LoadResult, cannot again read and misinterpret isolated files as missing.
         var items: [ShelfItem] {
             guard case .loaded(let items) = self else { return [] }
             return items
         }
 
-        /// 只有拿到可信快照，或确认从未有快照时，才允许删除未被引用的
-        /// Materialized 文件。读取失败时这些文件可能仍被损坏快照引用。
+        /// Only allow deletion of un-referenced Materialized files when a trusted snapshot is obtained, or
+        /// when no snapshot ever existed. These files may still be referenced by corrupted snapshots
+        /// during reading failures.
         var permitsMaterializedOrphanCleanup: Bool {
             switch self {
             case .loaded, .missing: true
@@ -135,8 +137,8 @@ final class PersistenceController {
         loadResult().items
     }
 
-    /// Failure-aware load：missing 与 failed 分开；failed 时把损坏文件改名
-    /// 隔离（保留现场供人工恢复），随后按全新空架启动。
+    /// Failure-aware load: missing and failed are separated; when failed, rename the damaged file to
+    /// isolate (preserve the scene for manual recovery), then start with a fresh empty shelf.
     func loadResult() -> LoadResult {
         guard FileManager.default.fileExists(atPath: shelfFileURL.path) else { return .missing }
         do {
@@ -150,12 +152,16 @@ final class PersistenceController {
         }
     }
 
-    /// Materialized 孤儿清理的最终安全门：本轮读取必须可信，并且磁盘上不能
-    /// 留有任何隔离快照。后者必须跨重启生效——损坏文件被移走后，下次读取
-    /// 会是 `.missing`；若仅看本轮结果，第二次启动仍会删除所有恢复材料。
+    /// Final safety gate for cleaning up Materialized orphans: this round's read must be trusted, and
+    /// there must be
+    /// no isolated snapshots left on disk. The latter must take effect across reboots—after damaged files
+    /// are moved away, the next read will be `.missing`; if only looking at this round's result, the
+    /// second startup would still delete all recovered materials.
     ///
-    /// 隔离快照由用户确认恢复/放弃后手工移走；在此之前宁可保留少量孤儿，
-    /// 也不能自动破坏可恢复数据。目录读取异常同样按不安全处理。
+    /// Isolated snapshots are manually moved away after user confirmation to recover or abandon; before
+    /// that, it's better to retain a small number of orphans,
+    /// and not automatically destroy recoverable data. Directory read exceptions are also treated as
+    /// unsafe.
     func canSafelyCleanupMaterializedOrphans(after result: LoadResult) -> Bool {
         guard result.permitsMaterializedOrphanCleanup else { return false }
         let fileManager = FileManager.default
@@ -193,7 +199,8 @@ final class PersistenceController {
         let kind: Kind
         let modifiedAt: Date?
         let byteCount: Int64
-        /// `false` 的隔离文件仍保留给人工修复，但 UI 不允许用它覆盖当前数据。
+        /// Isolated files with `false` are still retained for manual repair, but UI does not allow them to
+        /// overwrite current data.
         let isRecoverable: Bool
 
         var id: URL { url }
@@ -276,8 +283,9 @@ final class PersistenceController {
         try FileManager.default.removeItem(at: snapshot.url)
     }
 
-    /// 可解码恢复快照中的项目，供 Materialized 清理计算保留集合。损坏的隔离
-    /// 文件会通过 canSafelyCleanup… 阻止清理；有效 backup 则只精确保留其引用。
+    /// Include items from decodable recovery snapshots when deciding which materialized files
+    /// to retain. A damaged quarantined snapshot blocks cleanup entirely. A valid backup
+    /// protects the files it references.
     func recoverableSnapshotItems() -> [ShelfItem] {
         recoverySnapshots().flatMap { snapshot in
             (try? loadRecoverySnapshot(snapshot)) ?? []
@@ -303,7 +311,8 @@ final class PersistenceController {
         return migrate(try decoder.decode(ShelfSnapshot.self, from: data))
     }
 
-    /// 把损坏的 shelf.json 改名隔离（保留供人工检查/恢复；下次保存会写新文件）。
+    /// Rename the damaged shelf.json to isolate (retained for manual inspection/recovery; next save will
+    /// write a new file).
     private func quarantineCorruptFile() {
         let stamp = makeShelfDateFormatter().string(from: Date())
             .replacingOccurrences(of: ":", with: "-")
@@ -312,8 +321,9 @@ final class PersistenceController {
             try FileManager.default.moveItem(at: shelfFileURL, to: quarantineURL)
             logger.warning("Corrupted shelf.json quarantined to \(quarantineURL.path, privacy: .public)")
         } catch {
-            // 仍返回 .failed，清理安全门会继续关闭；明确记录隔离失败，不能
-            // 伪称已保存恢复副本。
+            // Still return .failed, cleanup safety gate will continue to be closed; clearly record the
+            // isolation failure, cannot
+            // pretend that a recovery copy has been saved.
             logger.error("Failed to quarantine corrupted shelf.json: \(error.localizedDescription, privacy: .public)")
         }
     }
@@ -370,9 +380,9 @@ final class PersistenceController {
     }
 
     /// Atomic write: encode to a temporary file in the same directory, then
-    /// atomically replace the target with it. Never pre-deletes the old file —
-    /// 「先删旧文件再移动临时文件」在移动失败/断电时会同时丢掉新旧两份
-    /// （评审 P1：坏 shelf.json 会在下次启动连锁清空保管文件）。
+    /// atomically replace the target with it. Deleting the old file first can lose both
+    /// snapshots if the move fails or power is lost. A missing snapshot can leave managed
+    /// files without references when startup checks for orphans.
     private func writeToDisk(_ items: [ShelfItem]) throws {
         let fileManager = FileManager.default
         try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
@@ -381,8 +391,9 @@ final class PersistenceController {
         let temporaryURL = directoryURL.appendingPathComponent("shelf.json.tmp")
         try data.write(to: temporaryURL)
         if fileManager.fileExists(atPath: shelfFileURL.path) {
-            // 每次覆盖前保留上一份“可完整解码”的已知良好快照。.atomic 会在
-            // 同目录完成临时写与替换；备份失败不应阻止主快照继续保存。
+            // Keep the previous 'decodable' known-good snapshot before each overwrite. .atomic will
+            // complete temporary write and replacement in the same directory; backup failure should not
+            // prevent the main snapshot from being saved.
             do {
                 let previousData = try Data(contentsOf: shelfFileURL)
                 _ = try decoder.decode(ShelfSnapshot.self, from: previousData)
@@ -390,7 +401,8 @@ final class PersistenceController {
             } catch {
                 logger.warning("Could not refresh last-known-good shelf backup: \(error.localizedDescription, privacy: .public)")
             }
-            // replaceItemAt 是同卷原子替换；失败时旧文件保持原样。
+            // replaceItemAt is atomic replacement within the same volume; the old file remains unchanged
+            // on failure.
             _ = try fileManager.replaceItemAt(shelfFileURL, withItemAt: temporaryURL)
         } else {
             try fileManager.moveItem(at: temporaryURL, to: shelfFileURL)
