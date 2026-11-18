@@ -1,114 +1,41 @@
-# Fork release ownership
+# Clerestory release and Sparkle guide
 
-This fork is maintained at https://github.com/Nininunz/Clerestory and derives
-from https://github.com/MuQY1818/OpenYoink. The original MIT license and
-contributor attribution remain intact. The fork is branded Clerestory. The first Clerestory release is 1.0.1 (56). Version 1.0.0 displays OpenYoink.
+Clerestory is maintained in [Nininunz/Clerestory](https://github.com/Nininunz/Clerestory) and derives from [OpenYoink](https://github.com/MuQY1818/OpenYoink). The original MIT license and contributor attribution are preserved. Stable releases use independent semantic versions and strictly increasing build numbers.
 
-## Identity and updates
+## Update compatibility
 
-- Downloads use `Clerestory-<VERSION>.dmg` and contain `Clerestory.app`.
-  The executable and storage paths retain their established names. Sparkle
-  installs updates at the existing app path, so an upgraded copy may still
-  be named `OpenYoink.app`. To rename that copy, quit the app and rename the
-  existing bundle in Finder.
-- App bundle ID: `com.nininunz.OpenYoink` (test targets use the same namespace).
-- Feed: `https://nininunz.github.io/OpenYoink/appcast.xml`.
-- Downloads and bug reports go to Nininunz/Clerestory.
-- Sparkle Keychain account: `com.nininunz.OpenYoink`.
-- Only the public Ed25519 key is stored in `OpenYoink/App/Info.plist`.
-  The private key was generated in the maintainer's login Keychain. Back it up
-  securely before distributing a release; never add it to this repository.
-- `make-release.sh` checks the public key before building and explicitly uses
-  this Keychain account when signing the final DMG.
+| Item | Value |
+| --- | --- |
+| Download | `Clerestory-<VERSION>.dmg` containing `Clerestory.app` |
+| App bundle ID and Sparkle Keychain account | `com.nininunz.OpenYoink` |
+| Public feed | [Clerestory appcast](https://nininunz.github.io/OpenYoink/appcast.xml) |
+| Source appcast | [docs/appcast.xml](appcast.xml) |
+| Hosting | [Account Pages repository](https://github.com/Nininunz/nininunz.github.io), at `OpenYoink/appcast.xml` |
 
-The first public fork release is 1.0.0 (55), with independent semantic versioning
-and strictly increasing build numbers. Upstream releases use another signing
-key and must not be advertised as fork updates. Builds 52–54 were unpublished
-candidates.
+Keep the existing feed URL, signing key, and bundle ID for upgrades from earlier versions of this fork. The account Pages repo also hosts a redirect for legacy Help links. The app repo's project Pages site stays disabled. New appcast entries use `Nininunz/Clerestory` release download URLs. Preserve earlier signed entries and legacy download paths for cached feeds and older installations.
 
-For a local signed/notarized candidate without changing the public feed or badges:
+The public Sparkle Ed25519 key lives in [Info.plist](../OpenYoink/App/Info.plist). The matching private key stays in the maintainer’s Keychain. Back it up securely outside the repository. The release script checks the public key against the Keychain account before building and signs the final DMG with that account. Upstream OpenYoink releases use a different key and feed.
 
-```sh
-OPENYOINK_RELEASE_CANDIDATE=1 Scripts/make-release.sh 1.0.0 55
-```
+## Signing setup
 
-Candidate metadata is written to `export/appcast-candidate.xml`; the DMG remains
-under `export/`. This still submits the artifact to Apple for notarization, but
-does not upload it to GitHub or deploy an update feed. Set `SPARKLE_BIN` if the
-Sparkle tools are in a custom DerivedData location. Choose a new build number
-when creating a subsequent candidate intended to update an installed one.
+Use a Developer ID Application identity, an Apple notarization profile in Keychain, and the fork’s Sparkle signing key. Copy [the signing example](../Scripts/release-signing.example) to the ignored `Scripts/release-signing.local` and configure `DEVELOPER_ID_APPLICATION`, `DEVELOPMENT_TEAM_ID`, and `NOTARY_PROFILE`, or provide them in the environment. The release and notarization scripts load the local file. The example lets existing environment values take precedence. Keep passwords and private keys in Keychain.
 
-## Existing development data
+Run `Scripts/doctor.sh --release` to check tool availability, Developer ID signing, and notarization access. Set `SPARKLE_BIN` if the Sparkle tools are in a custom DerivedData location.
 
-Changing the bundle ID creates a separate sandbox. It does not migrate or
-delete the old sandbox at `~/Library/Containers/com.weijue.OpenYoink`.
-Saved preference key names are unchanged, but their preferences domain changes.
-Do not replace the working development app expecting automatic migration.
+## Build, verify, and publish
 
-Before switching the daily-use app, quit both copies and back up the old
-container. A migration must import preferences into the new domain, transfer
-Application Support/OpenYoink, and handle absolute managed-file paths and
-security-scoped bookmarks. Bookmarks may require reauthorization under the new
-identity; copying the container alone is not a supported migration. Keep the
-old data until files, snippets, clipboard history and settings are verified.
-Automatic migration is not implemented by this identity change.
+Choose a release version and a build number higher than the latest public build. In the commands below, set `version` and `build` to those values.
 
-## Before the first public release
+1. Build a local candidate with `OPENYOINK_RELEASE_CANDIDATE=1 Scripts/make-release.sh "$version" "$build"`. This signs and notarizes the artifact and writes unpublished metadata to `export/appcast-candidate.xml`. The DMG lands under `export/`. Choose a higher build when testing an update from an already installed candidate.
+2. Run the build and test checks in the [CI guide](../Scripts/README-ci.md) and the relevant [manual smoke checks](MANUAL_TESTING.md). Test installing the signed DMG and launching the app in an appropriate test account. Check code signing, notarization stapling, and both architectures. Use supported Intel hardware to verify execution there when available.
+3. Build the public package with `Scripts/make-release.sh "$version" "$build"`. Use the Developer ID build for public distribution. The script produces the signed DMG and writes its Sparkle signature and length to `docs/appcast.xml`. Publish the exact DMG referenced by the appcast to the matching GitHub release. Merge the signed appcast entry into `main`.
+4. Run `Scripts/publish-update-feed.sh` from a checkout with write access to the account Pages repository. It reads the merged appcast, verifies the new release archive and signature, and checks that the deployed bytes match. Then run `Scripts/verify-update-feed.sh "https://nininunz.github.io/OpenYoink/appcast.xml" "$version"` to check the public download, signature, and bundled app.
+5. Confirm Sparkle discovers the update from an earlier signed install using the public feed. Seed disposable Shelf items and a preference first. After installation and relaunch, verify the new build and confirm that the data and setting survived. Record the results with the release evidence.
 
-1. The account Pages repository (`Nininunz/nininunz.github.io`) serves
-   `OpenYoink/appcast.xml` and the legacy Help redirect. This URL is independent
-   of the application repository's name. Keep the `OpenYoink/` path unchanged
-   on the account site because existing installs use it.
-2. Release signing is configured locally using the Developer ID Application
-   certificate for team `8KB55P2YKQ` and Keychain profile `OpenYoink-notary`.
-   These are separate from the Sparkle update key. Other machines must provision
-   their own access and copy `Scripts/release-signing.example` to the ignored
-   `Scripts/release-signing.local`, adjusting the identifiers as needed.
-   Both release and notarization scripts load that file; explicit environment
-   variables override its defaults. Never store passwords or private keys there.
-3. Resolve and test the development-data migration above if retaining that data.
-4. Build using `Scripts/make-release.sh` with `DEVELOPER_ID_APPLICATION`,
-   `DEVELOPMENT_TEAM_ID`, and `NOTARY_PROFILE`. Do not publish ad-hoc artifacts.
-5. Upload the signed and notarized DMG to the matching GitHub release and
-   merge the signed `docs/appcast.xml` entry into the application repository's
-   `main`.
-6. Run `Scripts/publish-update-feed.sh` from a checkout with write access to
-   the account Pages repository. It reads the merged appcast, verifies the
-   release archive and signature, and updates the account site. Then run
-   `Scripts/verify-update-feed.sh` against the public URL.
+## Existing installations
 
+Earlier releases of the Nininunz fork share Clerestory’s bundle ID and data container. Sparkle upgrades an existing copy in place. To change an older copy’s filename from `OpenYoink.app` to `Clerestory.app`, quit it and rename the installed bundle in Finder.
 
-The Developer ID certificate is installed in the maintainer's login Keychain
-(expires December 17, 2027), and the notarization profile has been validated
-with Apple. Pages hosting is configured. The 1.0.0 (55) release is published with its matching stable feed. Local candidate `1.8.11 (52)` passed Apple notarization,
-DMG ticket stapling, Gatekeeper checks for both the DMG and mounted app, and
-Sparkle signature verification. The candidate is universal (arm64 and x86_64).
+Upstream OpenYoink and development builds with different bundle IDs use separate sandboxes. Clerestory has no automatic import for those containers. Keep a backup of the original data before switching builds. Managed paths and security-scoped bookmarks can require relinking or fresh authorization.
 
-## Repository rename and update compatibility
-
-The app repository is now `Nininunz/Clerestory`. The account Pages site
-continues to serve the original Sparkle and older Help URLs. Leave the app
-repository's project Pages site disabled. Keep the existing appcast URL,
-bundle ID, Sparkle key, and build number order.
-
-New updates use download URLs from `Nininunz/Clerestory`. The four earlier
-appcast entries retain the URLs that shipped with them. After the rename,
-each of those URLs downloaded the same DMG and passed Sparkle signature
-verification. Keep those legacy paths available for older clients and
-cached feeds.
-
-## Signed update verification
-
-On November 17, 2026, Sparkle automatically discovered a loopback test feed and
-updated an installed signed/notarized `1.8.11 (52)` to `1.8.12 (53)`. The user
-approved installation; Sparkle downloaded the DMG, replaced the app at the same
-path, and relaunched it. About displayed the target version. The updated app
-passed strict signature verification and Gatekeeper accepted it as Notarized
-Developer ID under team `8KB55P2YKQ`.
-
-A synthetic shelf file, its contents, a text snippet, and the 370 ms hover-delay
-preference survived. Temporary preferences were restored and synthetic shelf
-data removed afterward. The local server was stopped; neither candidate nor
-feed was published. This verifies automatic discovery with user-approved
-installation, not unattended silent installation. Public HTTPS feed delivery
-and daily-use data migration still require verification.
+See the [first release notes](releases/first-fork-release.md) and [initial validation record](releases/validation-2026-11-17.md) for historical release and test evidence.

@@ -2,6 +2,8 @@
 
 For automated PR builds and unit tests, see the [macOS CI guide](README-ci.md). This native UI suite remains a separate local check.
 
+See the [manual testing guide](../docs/MANUAL_TESTING.md) for Finder and browser workflows, hardware checks, and file recovery.
+
 Run `Scripts/test-ui.sh` from a logged-in macOS desktop. XCTest launches the real app and interacts with its native controls. Quit other OpenYoink builds first and avoid using the mouse or keyboard during the run. The suite fails its preflight if a different build is running, because overlapping Islands can intercept clicks and drops. It never quits your normal app automatically.
 
 The script uses local ad-hoc signing, verifies the app, runner, and drag helper signatures, then runs `OpenYoinkUITests` serially. Do not use `CODE_SIGNING_ALLOWED=NO` for this suite: Xcode repackages its runner, and leaving that bundle unsigned can produce macOS's “damaged and can't be opened” alert before tests begin. No signing account is required. During test execution, `caffeinate` keeps the display/system awake and XCTest enforces a 60-second default test budget (90-second maximum); neither changes saved power settings.
