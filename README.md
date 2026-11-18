@@ -105,6 +105,8 @@ xcodebuild \
 
 ## 参与进来
 
+架构、测试、预览与发行指南见[文档索引](docs/README.md)。
+
 在仓库根目录运行 `python3 Scripts/tree.py` 可查看源码目录结构，包括未被 Git 忽略的新文件。输出会跳过已忽略的构建产物和本地配置。
 
 运行 `python3 Scripts/tree.py OpenYoink/Island --depth 2` 可查看指定目录及其下最多两层。输出路径仍以仓库根目录为基准。
