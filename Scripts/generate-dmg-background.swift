@@ -1,19 +1,18 @@
-// generate-dmg-background.swift — 生成 DMG 安装窗口背景图（自绘，无第三方资源）。
+// Generate the custom background for the DMG installer window.
 //
-// 运行：swift Scripts/generate-dmg-background.swift
-// 产物：Scripts/dmg-background.png（600×360 px —— 必须与窗口 pt 尺寸 1:1：
-//   Finder 按图片像素尺寸以 pt 为单位铺背景，@2x 会放大一倍导致元素出界）。
-//   为兼顾 Retina 观感，全部内容先在 2x 离屏画布绘制再降采样到 1x
-//   （超采样抗锯齿）。
+// Run with swift Scripts/generate-dmg-background.swift.
+// The output is Scripts/dmg-background.png at 600 × 360 pixels. Finder draws the
+// image at one point per pixel, so a 2x output would overshoot the window.
+// Render at 2x and downsample to 1x for antialiasing.
 //
-// 布局约定（与 make-dmg.sh 的 Finder 布局参数一致，单位均为 1x pt/px）：
-//   窗口内容 600×360；app 图标中心 (140, 180)、Applications 别名中心
-//   (460, 180)、图标 128pt；两图标之间只画点状引导箭头（无文字，按作者
-//   要求）。NSGraphicsContext 原点左下：y = H - 距顶距离。
+// Layout follows make-dmg.sh in 1x points and pixels. The window is 600 × 360 and
+// the 128-point icons are centered at x = 140 and x = 460. Draw a dotted arrow
+// between the icons. NSGraphicsContext places the origin at the lower left, so
+// subtract distances from the top from the canvas height.
 
 import AppKit
 
-// 1x 输出尺寸与 2x 超采样因子。
+// Output dimensions at 1x and the 2x supersampling factor.
 let W: CGFloat = 600
 let H: CGFloat = 360
 let SS: CGFloat = 2
@@ -37,15 +36,15 @@ NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: big)
 let ctx = NSGraphicsContext.current!.cgContext
 ctx.scaleBy(x: SS, y: SS)  // 之后一律用 1x 坐标书写（原点左下）
 
-// 1. 背景：近白微渐变（上白下浅灰）。
+// Draw a subtle background gradient from white on top to light gray below.
 let bg = NSGradient(colors: [
     NSColor(srgbRed: 1.0, green: 1.0, blue: 1.0, alpha: 1.0),
     NSColor(srgbRed: 0.95, green: 0.96, blue: 0.975, alpha: 1.0),
 ])!
 bg.draw(in: NSRect(x: 0, y: 0, width: W, height: H), angle: -90)
 
-// 2. 引导箭头：点状虚线 + 实心箭头头部，灰蓝色，位于图标行（距顶 165，
-//    用户反馈垂直不居中、偏下，从 180 上移 15pt）。
+// Draw the gray-blue dotted guide and solid arrowhead 165 points from the top,
+// 15 points above the original position.
 let arrowY: CGFloat = H - 165
 let startX: CGFloat = 228   // app 图标右缘 204 → 留 24pt
 let endX: CGFloat = 372     // Applications 左缘 396 → 留 24pt
@@ -71,7 +70,7 @@ head.fill()
 
 NSGraphicsContext.restoreGraphicsState()
 
-// 3. 超采样降落到 1x 画布（高质量插值）。
+// Downsample to the 1x canvas using high-quality interpolation.
 let final = makeRep(W, H)
 NSGraphicsContext.saveGraphicsState()
 NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: final)

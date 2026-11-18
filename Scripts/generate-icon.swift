@@ -64,7 +64,7 @@ for size in sizes {
     print("verified \(size)px: transparent corners, visible width \(visible.count)px")
 }
 
-// Contents.json：10 个槽位（512@2x 复用 1024 主图，依此类推）。
+// Contents.json defines ten icon slots. The 512-point 2x slot uses the 1024-pixel master.
 let contents = """
 {
   "images" : [

@@ -1,14 +1,14 @@
 #!/bin/bash
 #
-# notarize.sh — 用 Apple notarytool 公证并装订 OpenYoink 分发产物。
+# Submit a signed Clerestory artifact to Apple and staple the notarization ticket.
 #
-# 前置条件：
+# Prerequisites
 #   xcrun notarytool store-credentials <profile-name> ...
 #   export NOTARY_PROFILE=<profile-name>
 #
-# 用法：
-#   ./Scripts/notarize.sh export/OpenYoink-1.0.2.dmg
-#   也支持已完成 Developer ID 签名的 .app / .pkg；本脚本不会重签任何组件。
+# Usage: ./Scripts/notarize.sh export/Clerestory-1.0.5.dmg
+# Developer ID-signed .app and .pkg inputs are also supported. This script preserves
+# the existing signatures.
 
 set -euo pipefail
 
@@ -32,7 +32,7 @@ NOTARY_TEMP_DIR=""
 NOTARY_RESULT="$(mktemp /tmp/openyoink-notary-result.XXXXXX)"
 case "$ARTIFACT_PATH" in
     *.app)
-        # notarytool 不直接接受 .app；仅为提交生成临时 zip，票据仍装订回 app。
+        # Submit an app in a temporary ZIP and staple the ticket to the original app.
         NOTARY_TEMP_DIR="$(mktemp -d /tmp/openyoink-notary.XXXXXX)"
         SUBMISSION_PATH="$NOTARY_TEMP_DIR/OpenYoink.zip"
         ditto -c -k --keepParent "$ARTIFACT_PATH" "$SUBMISSION_PATH"

@@ -1,6 +1,6 @@
 #!/bin/bash
-# 验证 Clerestory 发布 app 的版本、签名与 Sparkle helper 权限边界。
-# 用法：verify-distribution.sh <Clerestory.app> <adhoc|developer-id> [VERSION] [BUILD]
+# Verify version metadata, signatures, and the Sparkle helper entitlement boundaries.
+# Usage: verify-distribution.sh <Clerestory.app> <adhoc|developer-id> [VERSION] [BUILD]
 
 set -euo pipefail
 
@@ -79,8 +79,8 @@ for component in "${COMPONENTS[@]}"; do
     fi
 done
 
-# 上一版失败的直接原因：--deep 把主 app sandbox / application-identifier
-# 灌给 Installer、Updater。它们必须保留 Sparkle 自己的空权限集。
+# Signing with --deep previously propagated the app's sandbox and application ID
+# to Installer and Updater. Sparkle's helpers need to retain their own entitlements.
 for helper in "$SPARKLE_ROOT/XPCServices/Installer.xpc" "$SPARKLE_ROOT/Updater.app"; do
     file="$ENTITLEMENTS_DIR/$(printf '%s' "$helper" | shasum | cut -d' ' -f1).plist"
     if [ "$(plutil -extract com.apple.security.app-sandbox raw -o - "$file" 2>/dev/null || true)" = "true" ]; then

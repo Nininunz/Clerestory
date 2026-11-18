@@ -1,20 +1,19 @@
 #!/bin/bash
 #
-# make-dmg.sh — 构建 Clerestory 分发 DMG（拖应用到 Applications 的经典安装界面）。
+# Build a drag-to-Applications installer DMG for Clerestory.
 #
-# 用法：./Scripts/make-dmg.sh [路径到 Clerestory.app]
-#   默认 app：export/Clerestory.app（先跑过 archive 导出；见 README「构建」）。
-# 产物：export/Clerestory-<版本>.dmg
+# Usage: ./Scripts/make-dmg.sh [path to Clerestory.app]
+# The default input is export/Clerestory.app from the archive export.
+# Output is export/Clerestory-<VERSION>.dmg.
 #
-# 流程：staging（app + Applications 符号链接 + 背景图）→ 读写 DMG →
-# Finder AppleScript 设置窗口布局（图标位置/大小/背景）→ 压缩为 UDZO。
-# Finder 布局步骤需要「自动化」权限（首次运行系统会弹授权）；未授权时
-# 跳过布局美化，DMG 仍可用（图标位置默认）。
+# Stage the app, Applications link, and background in a writable image.
+# Finder applies the icon positions, sizes, and background before UDZO compression.
+# The Finder step requires macOS Automation permission.
 #
-# 签名/公证：本脚本不改 app 签名。正式发布由 make-release.sh 在 Xcode
-# Developer ID 归档后调用本脚本，再对最终 DMG 签名、公证和装订。
-# DMG_LAYOUT_TEMPLATE：已有安装包的 .DS_Store；设置后复用其窗口布局，
-# 模板中的应用图标布局应使用 Clerestory.app。直接生成压缩 DMG，打包过程中不操作 Finder。
+# This script preserves the app signature. make-release.sh signs, notarizes, and
+# staples the final DMG after the Developer ID archive.
+# DMG_LAYOUT_TEMPLATE can point to a prior DMG's .DS_Store. Use a layout that
+# references Clerestory.app to create a compressed DMG without scripting Finder.
 
 set -euo pipefail
 
@@ -27,7 +26,7 @@ RW_DMG="$REPO_ROOT/export/$DMG_NAME-rw.dmg"
 FINAL_DMG="$REPO_ROOT/export/$DMG_NAME.dmg"
 BACKGROUND_SRC="$REPO_ROOT/Scripts/dmg-background.png"
 
-# 窗口/图标布局（与 generate-dmg-background.swift 的坐标约定一致）。
+# Window and icon dimensions match generate-dmg-background.swift.
 WIN_W=600; WIN_H=360
 APP_X=140; APP_Y=165
 ALIAS_X=460; ALIAS_Y=165
@@ -72,9 +71,8 @@ echo "==> 挂载"
 MOUNT_DIR="$(hdiutil attach -readwrite -noverify "$RW_DMG" | tail -1 | sed -E 's/.*(\/Volumes\/.*)$/\1/')"
 echo "    mounted at $MOUNT_DIR"
 
-# Finder 窗口布局（需要自动化权限）。失败时自动重试一次（实测 Finder 事件
-# 偶发 -1712 超时/资源忙，重试可过）；再失败则**中止**——宁可不发也不能
-# 把没布局的 DMG 当正式产物发出去（v1.0 曾因此把默认布局的 DMG 推上 Release）。
+# Retry Finder layout once to recover from transient errors such as -1712.
+# Abort if the retry fails to avoid releasing an unstyled installer.
 echo "==> 设置窗口布局（可能弹「自动化」授权）"
 layout_ok=0
 for attempt in 1 2; do
