@@ -1,7 +1,7 @@
-# First fork release (draft)
+# OpenYoink 1.0.0 (55) — release notes draft
 
-Version and publication date are pending. This document is release copy, not an
-announcement that a release is available.
+Version: **1.0.0**, build **55**. Publication date is pending. This document is
+release copy, not an announcement that a release is available.
 
 OpenYoink is a free, MIT-licensed file shelf for macOS. This release begins the
 Nininunz-maintained fork of MuQY1818/OpenYoink.

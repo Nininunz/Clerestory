@@ -1,7 +1,8 @@
 # Release preparation validation: November 17, 2026
 
 Scope: `release-prep`, macOS 27.2.1 on Apple silicon, Xcode 27.2.0.
-Signed candidate: 1.8.12 (53). No release has been published.
+Current signed candidate: **1.0.0 (55)**. No release has been published.
+The earlier 1.8.x versions below were unpublished update-test candidates.
 
 ## Signed candidate
 
@@ -28,9 +29,10 @@ Signed candidate: 1.8.12 (53). No release has been published.
 
 ## Outstanding release checks
 
-- Rebuild the signed release candidate with the follow-up fixes and repeat the
-  first-run smoke check. The earlier signed 1.8.12 (53) artifact predates them.
-  A pristine-account OS-permission check remains separate from the isolated UI test.
+- Investigate the intermittent keyboard-focus failure observed during the signed
+  candidate smoke check (details below). It cleared after relaunch; no focus fix
+  has been made.
+- A pristine-account OS-permission check remains separate from the isolated UI test.
 - Physical external-display and hot-plug checks: not run; no external display
   available. Simulated notchless tests are not equivalent.
 - Public HTTPS feed/download verification: pending publication and deployment.
@@ -63,5 +65,30 @@ notice, and pinned duplicate feedback. Preview-export tests were excluded as in
 CI. The focused run also passed all 56 selected unit tests and three native UI
 checks. No test expectations were relaxed to hide the original failure.
 
-The signed candidate and update-test artifacts predate these source fixes; a
-new signed candidate is still required before publication.
+## Final 1.0.0 (55) candidate smoke check
+
+Rebuilt the universal Developer ID candidate with the follow-up fixes. Installed
+an isolated copy from its DMG. Signature verification, Gatekeeper assessment,
+notarization stapling, and independent Sparkle archive-signature verification
+passed. About displays 1.0.0 (55). Launch, onboarding/Skip, and Settings passed.
+Onboarding was replayed with a launch override on the existing account; this
+was not a pristine-account installation.
+
+The user confirmed file import, Quick Look, and the “Already on Shelf” duplicate
+toast in the signed candidate. Quick Look initially failed with keyboard input
+still going to Safari. After relaunch, the user reported that everything worked,
+then confirmed the duplicate toast. Treat this as a passing final smoke check
+with an unresolved intermittent focus issue, not a verified focus fix.
+
+Added `testShelfClickTakesKeyboardFocusFromAnotherApp`: a separate native helper
+owns focus, and the click is anchored to that helper to avoid XCTest activating
+OpenYoink before the click. It verifies foreground ownership transfers before
+sending Space and checking Quick Look. The focused test passed on the existing
+app code. This does not reproduce or explain the signed-candidate failure; it
+covers the pinned-panel path. The full suite results above predate this added
+test; only the new test was run afterward.
+
+DMG SHA-256:
+`13664c5786444a1369315121793d98454d2354929f0e522380600d2d4d286caa`
+
+The public appcast remains unchanged. No release or candidate was published.

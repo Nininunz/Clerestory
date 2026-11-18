@@ -294,6 +294,38 @@ final class OpenYoinkSmokeUITests: XCTestCase {
         XCTAssertTrue(panel.waitForNonExistence(timeout: 3))
     }
 
+    func testShelfClickTakesKeyboardFocusFromAnotherApp() throws {
+        try requireNotchedDisplay()
+        let app = launch(surface: "--ui-testing-hover", fixtures: ["--ui-testing-shelf-files"])
+        let notch = element("island.window.compact", in: app)
+        XCTAssertTrue(notch.waitForExistence(timeout: 5))
+        notch.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+            .withOffset(CGVector(dx: 20, dy: 0)).hover()
+        let panel = expandedPanel(in: app)
+        XCTAssertTrue(panel.waitForExistence(timeout: 5))
+        element("island.pin", in: panel).click()
+        let first = element("shelf.item.00000000-0000-0000-0000-000000000001", in: panel)
+        XCTAssertTrue(first.waitForExistence(timeout: 5))
+        let target = first.frame
+        let helper = launchDragSource()
+        XCTAssertTrue(element("uitest.drag.file", in: helper).waitForExistence(timeout: 5))
+        XCTAssertEqual(NSWorkspace.shared.frontmostApplication?.bundleIdentifier, "com.nininunz.OpenYoinkUITestDragSource")
+        // Anchor to the foreground helper so XCTest cannot activate OpenYoink
+        // before the click and conceal a broken cross-application focus handoff.
+        let source = element("uitest.drag.file", in: helper)
+        let origin = source.coordinate(withNormalizedOffset: .zero)
+        let helperFrame = source.frame
+        origin.withOffset(CGVector(dx: target.midX - helperFrame.minX,
+                                   dy: target.midY - helperFrame.minY)).click()
+        let focused = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            NSWorkspace.shared.frontmostApplication?.bundleIdentifier == "com.nininunz.OpenYoink"
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [focused], timeout: 3), .completed,
+                       "Clicking a Shelf file must transfer keyboard ownership from the previous app")
+        app.typeKey(.space, modifierFlags: [])
+        XCTAssertTrue(element("shelf.quickLook", in: app).waitForExistence(timeout: 5))
+    }
+
     func testQuickLookKeyboardNavigationAndFocusReturn() throws {
         let app = launch(surface: "--ui-testing-show-shelf", fixtures: ["--ui-testing-shelf-files"])
         let panel = expandedPanel(in: app)
