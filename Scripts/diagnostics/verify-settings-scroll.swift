@@ -1,5 +1,5 @@
 // Run from the repository root in a logged-in macOS desktop session:
-// xcrun swiftc -parse-as-library OpenYoink/Settings/SettingsScroll.swift Scripts/verify-settings-scroll.swift -o /tmp/openyoink-settings-scroll
+// xcrun swiftc -parse-as-library OpenYoink/Settings/SettingsScroll.swift Scripts/diagnostics/verify-settings-scroll.swift -o /tmp/openyoink-settings-scroll
 // /tmp/openyoink-settings-scroll
 // Briefly opens an owned test window; no OpenYoink preferences or shelf data are read.
 import AppKit

@@ -31,4 +31,4 @@ The visible Panel surface defines the hit area. Native hit testing and the drag 
 
 ## Previews and validation
 
-Use the [module preview generator](../Scripts/README-previews.md) to render a fresh gallery from the current checkout. It uses synthetic data and the production module host. The [native UI-test guide](../Scripts/README-ui-tests.md) covers keyboard focus, window lifecycle, and cross-app drag and drop. The [manual testing guide](MANUAL_TESTING.md) covers real source and destination apps, physical displays, and file recovery.
+Use the [module preview generator](development/PREVIEWS.md) to render a fresh gallery from the current checkout. It uses synthetic data and the production module host. The [native UI-test guide](development/UI_TESTS.md) covers keyboard focus, window lifecycle, and cross-app drag and drop. The [manual testing guide](MANUAL_TESTING.md) covers real source and destination apps, physical displays, and file recovery.

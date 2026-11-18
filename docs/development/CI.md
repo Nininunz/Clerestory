@@ -11,7 +11,7 @@ Both workflows run the full pipeline below. Xcode 26 does not run automatically 
 
 `Scripts/test-ci.sh` runs the module-core Swift package tests, builds the Release app, then runs the Debug app-hosted `OpenYoinkTests` suite serially. Local ad-hoc signing needs no Apple account or signing secrets. Shell pipeline failures propagate, individual tests have time limits, and the job has a 30-minute timeout. A newer revision cancels an older run for the same PR or branch.
 
-The native `OpenYoinkUITests` target is not executed in CI. Run it on a logged-in Mac using the [native UI-test guide](README-ui-tests.md). The `IslandModulePreviewTests` catalog exporter is also excluded: use `Scripts/render-module-previews.sh` to regenerate previews. Rendering/layout assertions and fixture tests elsewhere in the unit-test target still run in CI.
+The native `OpenYoinkUITests` target is not executed in CI. Run it on a logged-in Mac using the [native UI-test guide](UI_TESTS.md). The `IslandModulePreviewTests` catalog exporter is also excluded: use `Scripts/render-module-previews.sh` to regenerate previews. Rendering/layout assertions and fixture tests elsewhere in the unit-test target still run in CI.
 
 Reproduce locally with Xcode 26+ installed:
 

@@ -65,7 +65,7 @@ Large catalogs are split into contact sheets of at most 12 captures: `shelf.png`
 
 ## Panel and Notch
 
-See [Panel and Notch architecture](../docs/PANEL_ARCHITECTURE.md) for the display and window behavior. Generate the Shelf and Quick Settings gallery from the current checkout:
+See [Panel and Notch architecture](../PANEL_ARCHITECTURE.md) for the display and window behavior. Generate the Shelf and Quick Settings gallery from the current checkout:
 
 ```sh
 Scripts/render-module-previews.sh --module shelf --module quick-settings \

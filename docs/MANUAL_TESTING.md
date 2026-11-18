@@ -1,6 +1,6 @@
 # Clerestory manual testing
 
-Use this guide for issues that depend on real source and destination apps, macOS permissions, hardware, or the WindowServer. Run the [CI checks](../Scripts/README-ci.md) and [native UI tests](../Scripts/README-ui-tests.md) for automated coverage. Use the [preview generator](../Scripts/README-previews.md) to inspect current module layouts with synthetic data.
+Use this guide for issues that depend on real source and destination apps, macOS permissions, hardware, or the WindowServer. Run the [CI checks](development/CI.md) and [native UI tests](development/UI_TESTS.md) for automated coverage. Use the [preview generator](development/PREVIEWS.md) to inspect current module layouts with synthetic data.
 
 Record the Clerestory version and build, commit, macOS version and build, hardware, display arrangement and scaling, and relevant settings. Mark cases **Pass**, **Fail**, **Blocked**, or **Untested** for the build under test. For failures, record reproducible steps and evidence using synthetic data. Keep unavailable hardware and untested source or destination apps visible in the results.
 
@@ -56,7 +56,7 @@ See [Panel and Notch architecture](PANEL_ARCHITECTURE.md) for display ownership 
 - For Quick Access, add a folder, rename or relink its favorite, and open it with the configured file manager. Copy a test file into the favorite, exercise same-name conflict handling, and verify the original stays intact when removing the favorite.
 - Exercise Timer presets, custom duration, pause, resume, reset, and relaunch. On battery-powered hardware, check charging and unplugging and verify unavailable readings on a machine without a battery. Check that enabled modules resume normally after wake and that Clipboard does not backfill lock-screen changes.
 
-For a read-only idle sample, run `swift Scripts/profile-idle.swift PID 300` with the Clerestory process ID. Compare runs with the same modules, playback, Panel state, and machine load.
+For a read-only idle sample, run `swift Scripts/diagnostics/profile-idle.swift PID 300` with the Clerestory process ID. Compare runs with the same modules, playback, Panel state, and machine load.
 
 ## Release smoke check
 

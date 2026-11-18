@@ -1,8 +1,8 @@
 # Native UI tests
 
-For automated PR builds and unit tests, see the [macOS CI guide](README-ci.md). This native UI suite remains a separate local check.
+For automated PR builds and unit tests, see the [macOS CI guide](CI.md). This native UI suite remains a separate local check.
 
-See the [manual testing guide](../docs/MANUAL_TESTING.md) for Finder and browser workflows, hardware checks, and file recovery.
+See the [manual testing guide](../MANUAL_TESTING.md) for Finder and browser workflows, hardware checks, and file recovery.
 
 Run `Scripts/test-ui.sh` from a logged-in macOS desktop. XCTest launches the real app and interacts with its native controls. Quit other OpenYoink builds first and avoid using the mouse or keyboard during the run. The suite fails its preflight if a different build is running, because overlapping Islands can intercept clicks and drops. It never quits your normal app automatically.
 
