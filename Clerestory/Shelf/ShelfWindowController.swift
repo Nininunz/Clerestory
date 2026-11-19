@@ -329,7 +329,7 @@ final class ShelfWindowController: NSObject {
             // SwiftUI minimum size must not resize or move the hidden panel.
             hostingController.sizingOptions = []
             hostingController.view.setAccessibilityLabel(islandRole == .notch
-                ? String(localized: "Notch") : String(localized: "Expanded Island"))
+                ? String(localized: "Notch") : String(localized: "Clerestory Panel"))
         }
         let dropOverride: DragContainerDropOverride? = presentationStyle == .island && islandRole == .expanded
             ? DragContainerDropOverride(

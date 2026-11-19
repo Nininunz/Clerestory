@@ -107,7 +107,7 @@ struct IslandExpandedView: View {
             Button(pinLabel) {
                 coordinator.setPinned(coordinator.surfaceState != .pinned)
             }
-            Button("Collapse Island") {
+            Button("Close Panel") {
                 coordinator.collapse()
             }
         }
@@ -150,9 +150,9 @@ struct IslandExpandedView: View {
                     .background(Circle().fill(Color.white.opacity(0.07)))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text("Collapse Island"))
+            .accessibilityLabel(Text("Close Panel"))
             .accessibilityIdentifier("island.collapse")
-            .help(Text("Collapse Island"))
+            .help(Text("Close Panel"))
         }
         .frame(height: 38)
     }
@@ -167,8 +167,8 @@ struct IslandExpandedView: View {
 
     private var pinLabel: String {
         coordinator.surfaceState == .pinned
-            ? String(localized: "Unpin Island")
-            : String(localized: "Pin Island")
+            ? String(localized: "Unpin Panel")
+            : String(localized: "Pin Panel")
     }
 
     private var moduleNavigation: some View {
