@@ -1,7 +1,7 @@
 import AppKit
 import Synchronization
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// Cover the CutMoveService sequence of copying, verifying, and trashing before creating an isCut item,
 /// along with Command-drop dispatch in DropImportCoordinator. Use real files in a disposable directory and
@@ -20,7 +20,7 @@ final class CutMoveServiceTests: XCTestCase {
 
         init() {
             let root = FileManager.default.temporaryDirectory
-                .appendingPathComponent("OpenYoinkTests-CutMove-\(UUID().uuidString)", isDirectory: true)
+                .appendingPathComponent("ClerestoryTests-CutMove-\(UUID().uuidString)", isDirectory: true)
             tempFileService = TempFileService(directoryURL: root.appendingPathComponent("Materialized", isDirectory: true))
             containerURL = root.appendingPathComponent("Container", isDirectory: true)
             temporaryURLs.append(root)
@@ -41,7 +41,7 @@ final class CutMoveServiceTests: XCTestCase {
     /// Create a source file/folder outside the container (in a temporary directory).
     private func makeSourceFile(in context: inout Context, named name: String = "sample.txt") throws -> URL {
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkTests-\(UUID().uuidString)-\(name)")
+            .appendingPathComponent("ClerestoryTests-\(UUID().uuidString)-\(name)")
         try "sample content".write(to: url, atomically: true, encoding: .utf8)
         context.temporaryURLs.append(url)
         return url
@@ -108,7 +108,7 @@ final class CutMoveServiceTests: XCTestCase {
         var context = makeContext()
         defer { context.cleanup() }
         let folder = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkTests-\(UUID().uuidString)-docs", isDirectory: true)
+            .appendingPathComponent("ClerestoryTests-\(UUID().uuidString)-docs", isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         try "nested".write(to: folder.appendingPathComponent("inner.txt"), atomically: true, encoding: .utf8)
         context.temporaryURLs.append(folder)
@@ -135,7 +135,7 @@ final class CutMoveServiceTests: XCTestCase {
         defer { context.cleanup() }
         // Source does not exist → copyItem throws an error.
         let missing = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkTests-\(UUID().uuidString)-ghost.txt")
+            .appendingPathComponent("ClerestoryTests-\(UUID().uuidString)-ghost.txt")
         let trashed = Mutex<[URL]>([])
         let service = makeService(context: context) { url in
             trashed.withLock { $0.append(url) }
@@ -235,7 +235,7 @@ final class CutMoveServiceTests: XCTestCase {
     // MARK: - dropMode modifier key determination
 
     func testDropMode_commandWithFileURL_isMove() {
-        let pasteboard = NSPasteboard(name: NSPasteboard.Name("OpenYoinkTests-\(UUID().uuidString)"))
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("ClerestoryTests-\(UUID().uuidString)"))
         pasteboard.writeObjects([URL(fileURLWithPath: "/tmp/a.txt") as NSURL])
         XCTAssertEqual(DropImportCoordinator.dropMode(for: pasteboard, modifiers: .command), .move)
         XCTAssertEqual(DropImportCoordinator.dropMode(for: pasteboard, modifiers: [.command, .option]), .move,
@@ -243,7 +243,7 @@ final class CutMoveServiceTests: XCTestCase {
     }
 
     func testDropMode_withoutCommand_isCopy() {
-        let pasteboard = NSPasteboard(name: NSPasteboard.Name("OpenYoinkTests-\(UUID().uuidString)"))
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("ClerestoryTests-\(UUID().uuidString)"))
         pasteboard.writeObjects([URL(fileURLWithPath: "/tmp/a.txt") as NSURL])
         XCTAssertEqual(DropImportCoordinator.dropMode(for: pasteboard, modifiers: []), .copy)
         XCTAssertEqual(DropImportCoordinator.dropMode(for: pasteboard, modifiers: .option), .copy,
@@ -251,12 +251,12 @@ final class CutMoveServiceTests: XCTestCase {
     }
 
     func testDropMode_commandWithNonFileContent_isCopy() {
-        let text = NSPasteboard(name: NSPasteboard.Name("OpenYoinkTests-\(UUID().uuidString)"))
+        let text = NSPasteboard(name: NSPasteboard.Name("ClerestoryTests-\(UUID().uuidString)"))
         text.writeObjects(["hello" as NSString])
         XCTAssertEqual(DropImportCoordinator.dropMode(for: text, modifiers: .command), .copy,
                        "文本没有「原文件」概念，⌘ 无效")
 
-        let url = NSPasteboard(name: NSPasteboard.Name("OpenYoinkTests-\(UUID().uuidString)"))
+        let url = NSPasteboard(name: NSPasteboard.Name("ClerestoryTests-\(UUID().uuidString)"))
         url.declareTypes([PasteboardTypes.url], owner: nil)
         url.setString("https://www.apple.com", forType: PasteboardTypes.url)
         XCTAssertEqual(DropImportCoordinator.dropMode(for: url, modifiers: .command), .copy,
@@ -289,7 +289,7 @@ final class CutMoveServiceTests: XCTestCase {
             noticeCenter: noticeCenter,
             cutMoveService: service
         )
-        let pasteboard = NSPasteboard(name: NSPasteboard.Name("OpenYoinkTests-\(UUID().uuidString)"))
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("ClerestoryTests-\(UUID().uuidString)"))
         pasteboard.writeObjects([movable as NSURL, stuck as NSURL])
 
         var received: [ShelfItem] = []
@@ -343,7 +343,7 @@ final class CutMoveServiceTests: XCTestCase {
             tempFileService: context.tempFileService,
             cutMoveService: service
         )
-        let pasteboard = NSPasteboard(name: NSPasteboard.Name("OpenYoinkTests-\(UUID().uuidString)"))
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("ClerestoryTests-\(UUID().uuidString)"))
         pasteboard.writeObjects([source as NSURL])
 
         let result = coordinator.importItems(from: pasteboard, mode: .copy) { _ in }
@@ -367,7 +367,7 @@ final class CutMoveServiceTests: XCTestCase {
             tempFileService: context.tempFileService,
             cutMoveService: service
         )
-        let pasteboard = NSPasteboard(name: NSPasteboard.Name("OpenYoinkTests-\(UUID().uuidString)"))
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("ClerestoryTests-\(UUID().uuidString)"))
         pasteboard.writeObjects([source as NSURL])
         let callback = expectation(description: "managed item reached persistence boundary")
 

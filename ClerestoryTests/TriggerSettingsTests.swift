@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// Trigger settings default values and persistence (SettingsStore's S7 field), as well as
 /// TriggerSensitivity → recognition parameter gear mapping.
@@ -9,7 +9,7 @@ final class TriggerSettingsTests: XCTestCase {
 
     /// Independent UserDefaults suite to avoid polluting the app's own settings.
     private func makeSuite() throws -> (defaults: UserDefaults, name: String) {
-        let name = "OpenYoinkTests-\(UUID().uuidString)"
+        let name = "ClerestoryTests-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
         return (defaults, name)
     }
@@ -87,7 +87,7 @@ final class TriggerSettingsTests: XCTestCase {
         let (defaults, name) = try makeSuite()
         defer { defaults.removePersistentDomain(forName: name) }
 
-        defaults.set("garbage", forKey: "OpenYoink.edgeTriggerSensitivity")
+        defaults.set("garbage", forKey: "Clerestory.edgeTriggerSensitivity")
 
         let store = SettingsStore(defaults: defaults)
         XCTAssertEqual(store.edgeTriggerSensitivity, .medium)
@@ -114,7 +114,7 @@ final class TriggerSettingsTests: XCTestCase {
         let (defaults, name) = try makeSuite()
         defer { defaults.removePersistentDomain(forName: name) }
 
-        defaults.set("garbage", forKey: "OpenYoink.dragAutoAppearMode")
+        defaults.set("garbage", forKey: "Clerestory.dragAutoAppearMode")
         let store = SettingsStore(defaults: defaults)
         XCTAssertEqual(store.dragAutoAppearMode, .edgeOnly)
     }
@@ -124,7 +124,7 @@ final class TriggerSettingsTests: XCTestCase {
         let (defaults, name) = try makeSuite()
         defer { defaults.removePersistentDomain(forName: name) }
 
-        defaults.set(true, forKey: "OpenYoink.edgeTriggerEnabled")
+        defaults.set(true, forKey: "Clerestory.edgeTriggerEnabled")
         let store = SettingsStore(defaults: defaults)
         XCTAssertEqual(store.dragAutoAppearMode, .edgeOnly)
 
@@ -139,8 +139,8 @@ final class TriggerSettingsTests: XCTestCase {
         let (defaults, name) = try makeSuite()
         defer { defaults.removePersistentDomain(forName: name) }
 
-        defaults.set(true, forKey: "OpenYoink.edgeTriggerEnabled")
-        defaults.set("off", forKey: "OpenYoink.dragAutoAppearMode")
+        defaults.set(true, forKey: "Clerestory.edgeTriggerEnabled")
+        defaults.set("off", forKey: "Clerestory.dragAutoAppearMode")
         let store = SettingsStore(defaults: defaults)
         XCTAssertEqual(store.dragAutoAppearMode, .off)
     }

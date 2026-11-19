@@ -11,7 +11,7 @@ enum ResourceUsagePolicy {
 }
 
 extension Notification.Name {
-    static let openYoinkResourcePolicyDidChange = Notification.Name("OpenYoink.resourcePolicyDidChange")
+    static let clerestoryResourcePolicyDidChange = Notification.Name("Clerestory.resourcePolicyDidChange")
 }
 
 /// Notification-driven state shared by samplers. No polling and no lock-screen UI access.
@@ -41,7 +41,7 @@ final class ResourceUsageState {
             Task { @MainActor in
                 guard let self else { return }
                 action(self)
-                NotificationCenter.default.post(name: .openYoinkResourcePolicyDidChange, object: nil)
+                NotificationCenter.default.post(name: .clerestoryResourcePolicyDidChange, object: nil)
             }
         }
         tokens.append((center, token))

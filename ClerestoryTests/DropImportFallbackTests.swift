@@ -1,6 +1,6 @@
 import AppKit
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// Task one 'Universal Drag In' fallback chain unit test: Main chain (promise→fileURL→image→url→text) all
 /// zero output,
@@ -24,7 +24,7 @@ final class DropImportFallbackTests: XCTestCase {
 
         init() {
             let materializedDir = FileManager.default.temporaryDirectory
-                .appendingPathComponent("OpenYoinkTests-Materialized-\(UUID().uuidString)", isDirectory: true)
+                .appendingPathComponent("ClerestoryTests-Materialized-\(UUID().uuidString)", isDirectory: true)
             tempFileService = TempFileService(directoryURL: materializedDir)
             coordinator = DropImportCoordinator(bookmarkService: bookmarkService,
                                                 tempFileService: tempFileService,
@@ -43,7 +43,7 @@ final class DropImportFallbackTests: XCTestCase {
     private func makeContext() -> Context { Context() }
 
     private func makePasteboard() -> NSPasteboard {
-        NSPasteboard(name: NSPasteboard.Name("OpenYoinkTests-\(UUID().uuidString)"))
+        NSPasteboard(name: NSPasteboard.Name("ClerestoryTests-\(UUID().uuidString)"))
     }
 
     private func T(_ raw: String) -> NSPasteboard.PasteboardType {
@@ -177,8 +177,8 @@ final class DropImportFallbackTests: XCTestCase {
         defer { context.cleanup() }
         let blob = Data([0x00, 0xFF, 0x01, 0xFE])
         let pasteboard = makePasteboard()
-        pasteboard.declareTypes([T("com.openyoink.test.unknown-blob")], owner: nil)
-        pasteboard.setData(blob, forType: T("com.openyoink.test.unknown-blob"))
+        pasteboard.declareTypes([T("com.clerestory.test.unknown-blob")], owner: nil)
+        pasteboard.setData(blob, forType: T("com.clerestory.test.unknown-blob"))
 
         let itemReady = expectation(description: "blob materialized")
         var received: ShelfItem?
@@ -210,7 +210,7 @@ final class DropImportFallbackTests: XCTestCase {
         vcfItem.setData(Data("BEGIN:VCARD\r\nVERSION:3.0\r\nFN:A\r\nEND:VCARD\r\n".utf8),
                         forType: T("public.vcard"))
         let blobItem = NSPasteboardItem()
-        blobItem.setData(Data([0x00, 0x01, 0x02, 0x03]), forType: T("com.openyoink.test.unknown-blob"))
+        blobItem.setData(Data([0x00, 0x01, 0x02, 0x03]), forType: T("com.clerestory.test.unknown-blob"))
         let pasteboard = makePasteboard()
         pasteboard.writeObjects([vcfItem, blobItem])
 
@@ -261,7 +261,7 @@ final class DropImportFallbackTests: XCTestCase {
         let context = makeContext()
         defer { context.cleanup() }
         let pasteboard = makePasteboard()
-        pasteboard.declareTypes([T("com.openyoink.test.void")], owner: nil)
+        pasteboard.declareTypes([T("com.clerestory.test.void")], owner: nil)
         // Write no data —— zero content item.
 
         let result = context.coordinator.importItems(from: pasteboard, onAsyncItemReady: ignoringAsyncItems())

@@ -3,7 +3,7 @@ import Foundation
 /// Three-tier sensitivity for drag edge triggers.
 ///
 /// Persisted by `SettingsStore` as the raw value string under the existing
-/// `OpenYoink.*Sensitivity` keys — no separate persistence lives here.
+/// `Clerestory.*Sensitivity` keys — no separate persistence lives here.
 /// `CaseIterable` so the S8 settings page can drive a picker directly.
 enum TriggerSensitivity: String, CaseIterable, Sendable, Codable {
     /// Hardest to trigger (longest dwell and narrowest band).

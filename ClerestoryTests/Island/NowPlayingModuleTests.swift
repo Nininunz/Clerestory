@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 @MainActor
 final class NowPlayingModuleTests: XCTestCase {
@@ -441,7 +441,7 @@ final class NowPlayingModuleTests: XCTestCase {
         let assets: MediaRemoteAdapterAssets
 
         init(getOutput: String) throws {
-            root = FileManager.default.temporaryDirectory.appendingPathComponent("OpenYoinkMediaTest-" + UUID().uuidString)
+            root = FileManager.default.temporaryDirectory.appendingPathComponent("ClerestoryMediaTest-" + UUID().uuidString)
             try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
             let script = root.appendingPathComponent("adapter.pl")
             // A deterministic local subprocess stands in for the OS adapter.

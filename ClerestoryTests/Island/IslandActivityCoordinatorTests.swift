@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 @MainActor
 final class IslandActivityCoordinatorTests: XCTestCase {
@@ -36,7 +36,7 @@ final class IslandActivityCoordinatorTests: XCTestCase {
     }
 
     func testExtendedModuleChoicesPersistIndependentlyAcrossRestart() throws {
-        let suite = "OpenYoink.ExtensionPersistence.\(UUID().uuidString)"
+        let suite = "Clerestory.ExtensionPersistence.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let first = IslandModuleRegistry.quickSettingsDescriptor

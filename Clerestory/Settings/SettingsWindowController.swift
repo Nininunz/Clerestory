@@ -73,7 +73,7 @@ final class SettingsWindowController {
             window.contentMinSize = NSSize(width: 680, height: 480)
             window.setContentSize(NSSize(width: 720, height: 520))
             window.isReleasedWhenClosed = false
-            window.setFrameAutosaveName("OpenYoinkSettings")
+            window.setFrameAutosaveName("ClerestorySettings")
             window.center()
             self.window = window
         }

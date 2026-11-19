@@ -67,7 +67,7 @@ for component in "${COMPONENTS[@]}"; do
     fi
 done
 
-ENTITLEMENTS_DIR="$(mktemp -d /tmp/openyoink-verify.XXXXXX)"
+ENTITLEMENTS_DIR="$(mktemp -d /tmp/clerestory-verify.XXXXXX)"
 trap 'rm -rf "$ENTITLEMENTS_DIR"' EXIT
 
 for component in "${COMPONENTS[@]}"; do

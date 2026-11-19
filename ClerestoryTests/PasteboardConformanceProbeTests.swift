@@ -1,7 +1,7 @@
 import AppKit
 import UniformTypeIdentifiers
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// Drag-in conformance probe (Task 1) —— solidify the system behaviors relied upon when registering the
 /// `dragInTypes` design into repeatable assertions. These behaviors were previously only known through
@@ -20,7 +20,7 @@ import XCTest
 /// conformance rules as observed through the pasteboard.
 final class PasteboardConformanceProbeTests: XCTestCase {
     private func makePasteboard() -> NSPasteboard {
-        NSPasteboard(name: NSPasteboard.Name("OpenYoinkProbeTests-\(UUID().uuidString)"))
+        NSPasteboard(name: NSPasteboard.Name("ClerestoryProbeTests-\(UUID().uuidString)"))
     }
 
     private func T(_ raw: String) -> NSPasteboard.PasteboardType {
@@ -84,7 +84,7 @@ final class PasteboardConformanceProbeTests: XCTestCase {
     // MARK: - 3. Coverage boundary: undeclared custom identifiers are not hit by generics.
 
     func testProbe_undeclaredReverseDNSIdentifier_matchesNothingGeneric() {
-        let custom = T("com.openyoink.probe.undeclared-\(UUID().uuidString)")
+        let custom = T("com.clerestory.probe.undeclared-\(UUID().uuidString)")
         let pasteboard = makePasteboard()
         pasteboard.declareTypes([custom], owner: nil)
         pasteboard.setData(Data([1, 2, 3]), forType: custom)
@@ -118,7 +118,7 @@ final class PasteboardConformanceProbeTests: XCTestCase {
     /// UTType to determine conformance for arbitrary pasteboard type strings.
     func testProbe_uttypeInit_nilForNonUTIAndUndeclaredIdentifiers() {
         XCTAssertNil(UTType("text/uri-list"))
-        XCTAssertNil(UTType("com.openyoink.probe.undeclared-\(UUID().uuidString)"))
+        XCTAssertNil(UTType("com.clerestory.probe.undeclared-\(UUID().uuidString)"))
         XCTAssertNil(UTType("NSFilenamesPboardType"))
         // Contrast: declared types are parsed normally and conformance is searchable.
         XCTAssertTrue(UTType("com.adobe.pdf")?.conforms(to: .data) ?? false)

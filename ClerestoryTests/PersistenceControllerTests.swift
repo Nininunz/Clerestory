@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 @MainActor
 final class PersistenceControllerTests: XCTestCase {
@@ -10,7 +10,7 @@ final class PersistenceControllerTests: XCTestCase {
     /// are nonisolated and cannot touch MainActor state).
     private func makeTempDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkTests-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("ClerestoryTests-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
     }

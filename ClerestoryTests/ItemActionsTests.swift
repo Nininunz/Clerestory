@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// S6: Availability rules for project operations (`ItemActions.canX`, pure logic) —
 /// the basis for right-click menu disabled state and stale 'File Unavailable' branch.

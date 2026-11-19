@@ -1,5 +1,5 @@
 import SwiftUI
-@testable import OpenYoink
+@testable import Clerestory
 
 /// Typed cases replace string comparisons when preparing a Shelf state.
 enum ShelfScenario: String, CaseIterable {

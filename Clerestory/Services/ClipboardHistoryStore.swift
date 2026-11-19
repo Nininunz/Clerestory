@@ -39,7 +39,7 @@ final class ClipboardHistoryStore {
         }
         lastChangeCount = pasteboard.changeCount
         _ = ResourceUsageState.shared
-        resourceToken = NotificationCenter.default.addObserver(forName: .openYoinkResourcePolicyDidChange,
+        resourceToken = NotificationCenter.default.addObserver(forName: .clerestoryResourcePolicyDidChange,
                                                                object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in self?.updateRecording() }
         }
@@ -250,7 +250,7 @@ final class ClipboardHistoryStore {
 // Isolated, non-running fixtures for the module preview catalog. Never used by app startup.
 extension ClipboardHistoryStore {
     static func preview(settings: SettingsStore, directory: URL, entries: [ClipboardHistoryEntry] = [], loading: Bool = false, error: String? = nil, notice: String? = nil) -> ClipboardHistoryStore {
-        let store = ClipboardHistoryStore(settings: settings, pasteboard: NSPasteboard(name: .init("OpenYoink.ModulePreviews")), directoryURL: directory)
+        let store = ClipboardHistoryStore(settings: settings, pasteboard: NSPasteboard(name: .init("Clerestory.ModulePreviews")), directoryURL: directory)
         store.entries = entries
         store.isLoading = loading
         store.errorMessage = error

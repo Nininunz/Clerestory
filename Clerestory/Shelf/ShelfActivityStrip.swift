@@ -7,7 +7,7 @@ struct ShelfActivityStrip: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
-    /// Executes only recovery actions for which OpenYoink still has enough
+    /// Executes only recovery actions for which Clerestory still has enough
     /// information. Source-session failures deliberately remain dismiss-only.
     var onPerformRecovery: ((RecoveryAction) -> Void)?
 

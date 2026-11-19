@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_dir="$(cd "$(dirname "$0")/.." && pwd)"
-output_dir="${OPENYOINK_CI_OUTPUT:-$(mktemp -d "${TMPDIR:-/tmp}/openyoink-ci.XXXXXX")}"
+output_dir="${CLERESTORY_CI_OUTPUT:-$(mktemp -d "${TMPDIR:-/tmp}/clerestory-ci.XXXXXX")}"
 mkdir -p "$output_dir"
 output_dir="$(cd "$output_dir" && pwd)"
 cd "$repo_dir"

@@ -2,7 +2,7 @@ import AppKit
 import Synchronization
 import UniformTypeIdentifiers
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// Strategy mapping / stack expansion / assertion of representations for each kind in DragPayloadBuilder.
 ///
@@ -38,7 +38,7 @@ final class DragPayloadBuilderTests: XCTestCase {
 
     /// Write the writer to a test pasteboard and return the set of declared types.
     private func advertisedTypes(of writer: NSPasteboardWriting) -> [String] {
-        let pasteboard = NSPasteboard(name: NSPasteboard.Name("OpenYoinkTests-\(UUID().uuidString)"))
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("ClerestoryTests-\(UUID().uuidString)"))
         guard pasteboard.writeObjects([writer]) else { return [] }
         return pasteboard.types?.map(\.rawValue) ?? []
     }
@@ -46,7 +46,7 @@ final class DragPayloadBuilderTests: XCTestCase {
     /// Write the drag writer to a test pasteboard and return it so assertions can read the payload through
     /// the same path as a drop target.
     private func writtenPasteboard(for writer: NSPasteboardWriting) -> NSPasteboard {
-        let pasteboard = NSPasteboard(name: NSPasteboard.Name("OpenYoinkTests-\(UUID().uuidString)"))
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("ClerestoryTests-\(UUID().uuidString)"))
         precondition(pasteboard.writeObjects([writer]), "writer 必须能写入 pasteboard")
         return pasteboard
     }
@@ -157,7 +157,7 @@ final class DragPayloadBuilderTests: XCTestCase {
 
     func testUnresolvableBookmarkDoesNotAdvertiseTheSavedPath() throws {
         let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkTests-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("ClerestoryTests-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let replacement = directory.appendingPathComponent("report.txt")
@@ -172,7 +172,7 @@ final class DragPayloadBuilderTests: XCTestCase {
     }
 
     func testMixedDragRemovalKeepsTheItemThatCouldNotBeRepresented() throws {
-        let suite = "OpenYoinkTests-SkippedDrag-\(UUID().uuidString)"
+        let suite = "ClerestoryTests-SkippedDrag-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -356,7 +356,7 @@ final class DragPayloadBuilderTests: XCTestCase {
         let bookmarkService = BookmarkService()
         defer { bookmarkService.stopAccessingAll() }
         let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkTests-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("ClerestoryTests-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let managedSource = directory.appendingPathComponent("cut.txt")

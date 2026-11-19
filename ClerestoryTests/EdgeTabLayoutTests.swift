@@ -1,6 +1,6 @@
 import CoreGraphics
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// EdgeTab layout pure logic unit test: ring frame (edge/offset mapping/picking), offset reverse
 /// calculation, side switch judgment, emphasized state enlarged frame, etc. (anchor layout has been

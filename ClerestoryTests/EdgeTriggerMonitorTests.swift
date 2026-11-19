@@ -1,6 +1,6 @@
 import CoreGraphics
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// Edge trigger pure logic: trigger with condition (isInsideEdgeBand) and dwell tracking
 /// (EdgeDwellTracker).

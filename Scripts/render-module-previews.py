@@ -9,7 +9,7 @@ import time
 import fcntl
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-CONFIG = pathlib.Path('/tmp/openyoink-preview-request.json')
+CONFIG = pathlib.Path('/tmp/clerestory-preview-request.json')
 
 
 def main():
@@ -21,9 +21,9 @@ def main():
     parser.add_argument('--output', type=pathlib.Path, help='Output folder (default: unique temporary folder)')
     parser.add_argument('--no-open', action='store_true')
     args = parser.parse_args()
-    output = (args.output or pathlib.Path(tempfile.mkdtemp(prefix='openyoink-previews-', dir='/tmp'))).resolve()
+    output = (args.output or pathlib.Path(tempfile.mkdtemp(prefix='clerestory-previews-', dir='/tmp'))).resolve()
     output.mkdir(parents=True, exist_ok=True)
-    with open('/tmp/openyoink-preview.lock', 'w') as lock:
+    with open('/tmp/clerestory-preview.lock', 'w') as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
@@ -36,7 +36,7 @@ def main():
         try:
             with (output / 'build.log').open('w') as log:
                 process = subprocess.Popen(['xcodebuild', 'test', '-quiet', '-project', 'Clerestory.xcodeproj',
-                    '-scheme', 'Clerestory', '-destination', 'platform=macOS', '-derivedDataPath', '/tmp/openyoink-derived',
+                    '-scheme', 'Clerestory', '-destination', 'platform=macOS', '-derivedDataPath', '/tmp/clerestory-derived',
                     '-only-testing:ClerestoryTests/IslandModulePreviewTests', 'CODE_SIGNING_ALLOWED=NO'], cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)
                 while process.poll() is None:
                     for request in output.glob('capture-*.json'):

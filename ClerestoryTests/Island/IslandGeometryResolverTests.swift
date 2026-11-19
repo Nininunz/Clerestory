@@ -1,6 +1,6 @@
 import AppKit
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 final class IslandGeometryResolverTests: XCTestCase {
     func testDetachedPanelKeepsHoverAcrossGapWithoutGrowingNotchHitbox() {

@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 final class ShelfNoticePresentationTests: XCTestCase {
     private func context(_ surface: IslandSurfaceState = .collapsed, transitioning: Bool = false,

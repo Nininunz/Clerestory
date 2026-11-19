@@ -1,6 +1,6 @@
 import AppKit
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 @MainActor
 final class ShelfKeyboardNavigationTests: XCTestCase {
@@ -195,12 +195,12 @@ final class ClipboardControllerTests: XCTestCase {
     }
 
     private func makePasteboard() -> NSPasteboard {
-        NSPasteboard(name: NSPasteboard.Name("OpenYoinkTests.\(UUID().uuidString)"))
+        NSPasteboard(name: NSPasteboard.Name("ClerestoryTests.\(UUID().uuidString)"))
     }
 
     private func makeFile() throws -> URL {
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkClipboard-\(UUID().uuidString).txt")
+            .appendingPathComponent("ClerestoryClipboard-\(UUID().uuidString).txt")
         try "hello".write(to: url, atomically: true, encoding: .utf8)
         return url
     }

@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// .ask Judgment logic for the drag-out strategy confirmation dialog (S8): whether to remove this time +
 /// check 'Do not ask again' to solidify the write-back strategy. NSAlert interaction cannot be headless

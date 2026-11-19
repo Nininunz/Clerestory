@@ -1,5 +1,5 @@
 import SwiftUI
-@testable import OpenYoink
+@testable import Clerestory
 
 /// Runtime message formatters and models, without executing clipboard, file, or recovery actions.
 @MainActor

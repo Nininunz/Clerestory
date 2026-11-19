@@ -159,7 +159,7 @@ final class PowerSourceMonitor: IslandModule {
         guard !isRunning else { return }
         isRunning = true
         _ = ResourceUsageState.shared
-        resourceToken = NotificationCenter.default.addObserver(forName: .openYoinkResourcePolicyDidChange,
+        resourceToken = NotificationCenter.default.addObserver(forName: .clerestoryResourcePolicyDidChange,
                                                                object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in self?.restartPolling() }
         }

@@ -16,6 +16,6 @@ Reproduce the CI check locally with Xcode 27.2 installed:
 Scripts/test-ci.sh
 ```
 
-The script prints a fresh temporary results directory. Set `OPENYOINK_CI_OUTPUT` to an empty directory to choose its location. An existing `unit-tests.xcresult` makes Xcode refuse the run, so use a fresh output directory for each run. `DEVELOPER_DIR` can select the installed Xcode version locally; CI pins it in the workflow.
+The script prints a fresh temporary results directory. Set `CLERESTORY_CI_OUTPUT` to an empty directory to choose its location. An existing `unit-tests.xcresult` makes Xcode refuse the run, so use a fresh output directory for each run. `DEVELOPER_DIR` can select the installed Xcode version locally; CI pins it in the workflow.
 
 Every completed job attempts to upload `macos-ci-results-xcode-<version>`, containing toolchain/build/test logs and the unit-test `.xcresult` bundle, retained for 14 days. No app binary or full DerivedData directory is uploaded. The workflow has read-only repository access and does not deploy or publish releases. Pages deployment remains a separate workflow.

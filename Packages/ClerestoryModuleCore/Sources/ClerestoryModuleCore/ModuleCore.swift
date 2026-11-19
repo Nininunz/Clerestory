@@ -2,7 +2,7 @@ import Foundation
 
 /// Stable, forward-compatible identifier for a first-party Island module.
 ///
-/// A string-backed value lets newer OpenYoink versions round-trip module
+/// A string-backed value lets newer Clerestory versions round-trip module
 /// configuration through an older build without losing unknown identifiers.
 public struct IslandModuleID: RawRepresentable, Hashable, Codable, Sendable,
     ExpressibleByStringLiteral, Comparable

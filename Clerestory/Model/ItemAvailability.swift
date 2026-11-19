@@ -2,7 +2,7 @@ import Foundation
 
 /// Runtime-only availability of a shelf item.
 ///
-/// Missing external references and missing OpenYoink-managed copies are kept
+/// Missing external references and missing Clerestory-managed copies are kept
 /// separate because their safe recovery actions are fundamentally different:
 /// an external reference may be reconnected by the user, while a managed copy
 /// must go through storage/recovery and must never be rebound to arbitrary data.

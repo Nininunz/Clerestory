@@ -1,6 +1,6 @@
 import AppKit
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 @MainActor
 final class ShelfActionTests: XCTestCase {
@@ -11,12 +11,12 @@ final class ShelfActionTests: XCTestCase {
     }
 
     private func makePasteboard() -> NSPasteboard {
-        NSPasteboard(name: .init("OpenYoinkShelfActionTests.\(UUID().uuidString)"))
+        NSPasteboard(name: .init("ClerestoryShelfActionTests.\(UUID().uuidString)"))
     }
 
     private func makeFile(named name: String = "item.txt") throws -> URL {
         let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkShelfActionTests-\(UUID().uuidString)",
+            .appendingPathComponent("ClerestoryShelfActionTests-\(UUID().uuidString)",
                                    isDirectory: true)
         try FileManager.default.createDirectory(at: directory,
                                                 withIntermediateDirectories: true)

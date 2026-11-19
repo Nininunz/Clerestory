@@ -3,18 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Open-Yoink Drag-Out Test Page</title>
+<title>Clerestory Drag-Out Test Page</title>
 <!--
-  Open-Yoink manual test fixture (no network, no dependencies).
+  Clerestory manual test fixture (no network, no dependencies).
   Open this file directly in Safari / Chrome / Firefox via file:// and drag
-  items out of the Open-Yoink shelf onto the zones below.
+  items out of the Clerestory shelf onto the zones below.
 
   What to verify / 验证点:
   1. File Zone: a shelf file/folder dropped here must appear in the log with
      name/size/type — proves the browser accepted either the fileURL mapping
      or the file promise (DataTransfer.files non-empty).
   2. Type Inspector: shows raw e.dataTransfer.types / items so you can see
-     which representations Open-Yoink advertised (public.file-url,
+     which representations Clerestory advertised (public.file-url,
      promise UTI, public.png, public.utf8-plain-text, ...).
   3. Rich Text Zone (contenteditable): text drops should insert text.
   4. Plain textarea: text/URL drops should insert a string.
@@ -42,8 +42,8 @@
 </style>
 </head>
 <body>
-<h1>Open-Yoink Drag-Out Test Page / 拖出测试页</h1>
-<p>Drag items from the Open-Yoink shelf into the zones. Nothing is uploaded anywhere.
+<h1>Clerestory Drag-Out Test Page / 拖出测试页</h1>
+<p>Drag items from the Clerestory shelf into the zones. Nothing is uploaded anywhere.
    把 shelf 里的项目拖到下面各区域即可，本页不联网。</p>
 
 <h2>1. File Upload Zone / 文件上传区</h2>
@@ -57,7 +57,7 @@
 <h2>2. Type Inspector / 表示层检查器</h2>
 <div class="zone" id="typeZone">
   Drop anything here to inspect advertised types
-  <small>显示 e.dataTransfer.types 与 items（对照 Open-Yoink 应广播的表示）</small>
+  <small>显示 e.dataTransfer.types 与 items（对照 Clerestory 应广播的表示）</small>
   <div id="typeLog"></div>
 </div>
 

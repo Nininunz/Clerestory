@@ -63,9 +63,9 @@ final class IslandTimerStore: IslandModule {
         isCore: false
     )
 
-    private static let persistenceKey = "OpenYoink.islandTimerState"
-    private static let configurationKey = "OpenYoink.islandTimerConfiguration"
-    private static let historyKey = "OpenYoink.islandFocusHistory"
+    private static let persistenceKey = "Clerestory.islandTimerState"
+    private static let configurationKey = "Clerestory.islandTimerConfiguration"
+    private static let historyKey = "Clerestory.islandFocusHistory"
     private static let maximumHistoryCount = 2_000
 
     private let defaults: UserDefaults

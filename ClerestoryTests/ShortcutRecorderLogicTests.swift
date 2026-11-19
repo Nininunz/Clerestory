@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// Pure logic of shortcut recorder control (S8): combination validation (must contain ⌘/⌥/⌃ at least one,
 /// rejects bare keys and only ⇧), modifier key symbol display order (⌃⌥⇧⌘), key name list.

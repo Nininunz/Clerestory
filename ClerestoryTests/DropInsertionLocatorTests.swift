@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// C6: Drag into mouse position → grid insertion index row-column mapping (DropInsertionLocator pure
 /// logic).

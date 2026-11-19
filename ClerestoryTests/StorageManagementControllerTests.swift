@@ -1,12 +1,12 @@
 import Foundation
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 @MainActor
 final class StorageManagementControllerTests: XCTestCase {
     private func makeTempDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkTests-Storage-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("ClerestoryTests-Storage-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
     }

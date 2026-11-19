@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// IgnoreListService exact match: Hit / Miss / Empty list / Case and whitespace tolerance.
 /// (NSWorkspace foreground app query depends on running WindowServer, not covered in headless unit tests.)

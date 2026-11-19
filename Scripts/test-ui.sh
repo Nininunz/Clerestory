@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_dir="$(cd "$(dirname "$0")/.." && pwd)"
-derived_data="${OPENYOINK_UI_DERIVED_DATA:-$(mktemp -d /tmp/openyoink-ui.XXXXXX)}"
+derived_data="${CLERESTORY_UI_DERIVED_DATA:-$(mktemp -d /tmp/clerestory-ui.XXXXXX)}"
 common=(
   -project "$repo_dir/Clerestory.xcodeproj"
   -scheme Clerestory

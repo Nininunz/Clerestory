@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 @MainActor
 final class IslandNotchWingRowTests: XCTestCase {

@@ -29,12 +29,12 @@ fi
 
 SUBMISSION_PATH="$ARTIFACT_PATH"
 NOTARY_TEMP_DIR=""
-NOTARY_RESULT="$(mktemp /tmp/openyoink-notary-result.XXXXXX)"
+NOTARY_RESULT="$(mktemp /tmp/clerestory-notary-result.XXXXXX)"
 case "$ARTIFACT_PATH" in
     *.app)
         # Submit an app in a temporary ZIP and staple the ticket to the original app.
-        NOTARY_TEMP_DIR="$(mktemp -d /tmp/openyoink-notary.XXXXXX)"
-        SUBMISSION_PATH="$NOTARY_TEMP_DIR/OpenYoink.zip"
+        NOTARY_TEMP_DIR="$(mktemp -d /tmp/clerestory-notary.XXXXXX)"
+        SUBMISSION_PATH="$NOTARY_TEMP_DIR/Clerestory.zip"
         ditto -c -k --keepParent "$ARTIFACT_PATH" "$SUBMISSION_PATH"
         ;;
     *.dmg|*.pkg) ;;
@@ -46,7 +46,7 @@ esac
 
 cleanup() {
     rm -f -- "$NOTARY_RESULT"
-    if [ -n "$NOTARY_TEMP_DIR" ] && [[ "$NOTARY_TEMP_DIR" == /tmp/openyoink-notary.* ]]; then
+    if [ -n "$NOTARY_TEMP_DIR" ] && [[ "$NOTARY_TEMP_DIR" == /tmp/clerestory-notary.* ]]; then
         rm -rf -- "$NOTARY_TEMP_DIR"
     fi
 }

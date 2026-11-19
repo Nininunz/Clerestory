@@ -1,6 +1,6 @@
 import AppKit
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// UX1 Drag start state machine (DragGestureTracker) and pure logic unit test for auto-show session
 /// (DragAutoShowSession).

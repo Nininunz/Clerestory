@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// Fixtures are trimmed from real TokenTracker 1.5.10 responses.
 final class AIUsageParsingTests: XCTestCase {

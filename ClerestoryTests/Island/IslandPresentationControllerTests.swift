@@ -1,6 +1,6 @@
 import AppKit
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 @MainActor
 final class IslandPresentationControllerTests: XCTestCase {

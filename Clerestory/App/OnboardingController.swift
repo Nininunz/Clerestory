@@ -29,7 +29,7 @@ final class OnboardingDragContext {
 /// silent migration to avoid being disturbed after upgrade.
 struct OnboardingLaunchPolicy: Equatable, Sendable {
     static func hasExistingInstallation(preferences: [String: Any], supportEntries: [String]) -> Bool {
-        preferences.keys.contains { $0 != "OpenYoink.onboardingVersion" }
+        preferences.keys.contains { $0 != "Clerestory.onboardingVersion" }
             || supportEntries.contains { $0 != "Tutorial" }
     }
 

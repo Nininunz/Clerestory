@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 @MainActor
 final class IslandModuleChromeTests: XCTestCase {
@@ -295,7 +295,7 @@ final class IslandModuleChromeTests: XCTestCase {
     }
 
     func testClipboardStatesKeepTitleInsideViewport() async throws {
-        let suite = "OpenYoink.ClipboardLayoutTest.\(UUID().uuidString)"
+        let suite = "Clerestory.ClipboardLayoutTest.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = SettingsStore(defaults: defaults)

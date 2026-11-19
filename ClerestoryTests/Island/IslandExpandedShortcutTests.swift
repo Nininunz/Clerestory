@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 @MainActor
 final class IslandExpandedShortcutTests: XCTestCase {
@@ -35,10 +35,10 @@ final class IslandExpandedShortcutTests: XCTestCase {
         try withSettings { defaults in
             let unknown = IslandModuleID(rawValue: "future-module")
             let old = IslandModuleConfiguration(enabledModuleIDs: [.shelf, .timer, unknown], pinnedModuleIDs: [.timer, .shelf])
-            defaults.set(try JSONEncoder().encode(old), forKey: "OpenYoink.islandModuleConfiguration")
+            defaults.set(try JSONEncoder().encode(old), forKey: "Clerestory.islandModuleConfiguration")
             let floating: [IslandModuleID?] = [nil, .timer, .quickSettings, nil, .shelf, unknown, nil, nil]
-            defaults.set(try JSONEncoder().encode(floating), forKey: "OpenYoink.notchlessShortcutPositions")
-            defaults.set(["timer", "shelf"], forKey: "OpenYoink.compactModuleOrder")
+            defaults.set(try JSONEncoder().encode(floating), forKey: "Clerestory.notchlessShortcutPositions")
+            defaults.set(["timer", "shelf"], forKey: "Clerestory.compactModuleOrder")
             let settings = SettingsStore(defaults: defaults)
             XCTAssertEqual(settings.islandModuleConfiguration.shortcutPositions, floating)
             XCTAssertTrue(settings.islandModuleConfiguration.isEnabled(unknown))
@@ -60,8 +60,8 @@ final class IslandExpandedShortcutTests: XCTestCase {
                 old.assignShortcut(.timer, at: 2)
                 old.assignShortcut(.shelf, at: 3)
                 old.assignShortcut(.quickSettings, at: 6)
-                defaults.set(try JSONEncoder().encode(old), forKey: "OpenYoink.islandModuleConfiguration")
-                if corrupt { defaults.set(Data("bad data".utf8), forKey: "OpenYoink.notchlessShortcutPositions") }
+                defaults.set(try JSONEncoder().encode(old), forKey: "Clerestory.islandModuleConfiguration")
+                if corrupt { defaults.set(Data("bad data".utf8), forKey: "Clerestory.notchlessShortcutPositions") }
                 let settings = SettingsStore(defaults: defaults)
                 XCTAssertEqual(settings.islandModuleConfiguration.shortcutPositions,
                                [.timer, .shelf, .quickSettings, nil, nil, nil, nil, nil])

@@ -51,7 +51,7 @@ actor FavoriteFolderCopyService {
                     }
                 }
                 if Task.isCancelled { result.cancelled = sources.count - index; break }
-                let staging = folder.appendingPathComponent(".openyoink-copy-\(UUID().uuidString)", isDirectory: true)
+                let staging = folder.appendingPathComponent(".clerestory-copy-\(UUID().uuidString)", isDirectory: true)
                 try manager.createDirectory(at: staging, withIntermediateDirectories: false)
                 defer { try? manager.removeItem(at: staging) }
                 let stagedFile = staging.appendingPathComponent(source.lastPathComponent)

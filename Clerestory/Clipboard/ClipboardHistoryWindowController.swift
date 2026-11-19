@@ -23,7 +23,7 @@ final class ClipboardHistoryWindowController {
             window.contentMinSize = NSSize(width: 460, height: 340)
             window.setContentSize(NSSize(width: 560, height: 460))
             window.isReleasedWhenClosed = false
-            window.setFrameAutosaveName("OpenYoinkClipboardHistory")
+            window.setFrameAutosaveName("ClerestoryClipboardHistory")
             window.center()
             self.window = window
         }

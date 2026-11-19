@@ -4,14 +4,14 @@ import OSLog
 /// Shared locations inside the app's sandbox container.
 enum AppDirectories {
     private static let uiTestDirectory = FileManager.default.temporaryDirectory
-        .appendingPathComponent("OpenYoinkUITests-" + UUID().uuidString, isDirectory: true)
+        .appendingPathComponent("ClerestoryUITests-" + UUID().uuidString, isDirectory: true)
 
     /// `Application Support/Clerestory` inside the sandbox container.
     static func applicationSupport() -> URL {
         // Allocate before any service can load state. Clearing a shared test
         // directory in applicationWillFinishLaunching is too late for stores
         // initialized by SwiftUI while constructing the app scene.
-        if ProcessInfo.processInfo.environment["OPENYOINK_UI_TESTING"] == "1" {
+        if ProcessInfo.processInfo.environment["CLERESTORY_UI_TESTING"] == "1" {
             return uiTestDirectory
         }
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first

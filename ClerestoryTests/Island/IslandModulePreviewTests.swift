@@ -1,9 +1,9 @@
 import AppKit
 import SwiftUI
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
-/// Run explicitly to regenerate /tmp/openyoink-module-previews.
+/// Run explicitly to regenerate /tmp/clerestory-module-previews.
 /// Captures real module views; fixtures never start services or use standard defaults.
 @MainActor
 final class IslandModulePreviewTests: XCTestCase {

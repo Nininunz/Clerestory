@@ -1,7 +1,7 @@
 import AppKit
 import UniformTypeIdentifiers
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// Verify import classification, ordering, and item fields. Feed file URLs, text, URLs, and image data
 /// through `NSPasteboard(name:)` and inspect the resulting ShelfItems.
@@ -43,7 +43,7 @@ final class DropImportCoordinatorTests: XCTestCase {
 
         init() {
             let materializedDir = FileManager.default.temporaryDirectory
-                .appendingPathComponent("OpenYoinkTests-Materialized-\(UUID().uuidString)", isDirectory: true)
+                .appendingPathComponent("ClerestoryTests-Materialized-\(UUID().uuidString)", isDirectory: true)
             tempFileService = TempFileService(directoryURL: materializedDir)
             coordinator = DropImportCoordinator(bookmarkService: bookmarkService, tempFileService: tempFileService)
             temporaryURLs.append(materializedDir)
@@ -62,12 +62,12 @@ final class DropImportCoordinatorTests: XCTestCase {
     private func makeContext() -> Context { Context() }
 
     private func makePasteboard() -> NSPasteboard {
-        NSPasteboard(name: NSPasteboard.Name("OpenYoinkTests-\(UUID().uuidString)"))
+        NSPasteboard(name: NSPasteboard.Name("ClerestoryTests-\(UUID().uuidString)"))
     }
 
     private func makeTempFile(in context: inout Context, named name: String = "sample.txt") throws -> URL {
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkTests-\(UUID().uuidString)-\(name)")
+            .appendingPathComponent("ClerestoryTests-\(UUID().uuidString)-\(name)")
         try "sample content".write(to: url, atomically: true, encoding: .utf8)
         context.temporaryURLs.append(url)
         return url
@@ -75,7 +75,7 @@ final class DropImportCoordinatorTests: XCTestCase {
 
     private func makeTempDirectory(in context: inout Context) throws -> URL {
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkTests-\(UUID().uuidString)-folder", isDirectory: true)
+            .appendingPathComponent("ClerestoryTests-\(UUID().uuidString)-folder", isDirectory: true)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         context.temporaryURLs.append(url)
         return url
@@ -136,7 +136,7 @@ final class DropImportCoordinatorTests: XCTestCase {
         var context = makeContext()
         defer { context.cleanup() }
         let imageURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkTests-\(UUID().uuidString)-pic.png")
+            .appendingPathComponent("ClerestoryTests-\(UUID().uuidString)-pic.png")
         try makePNGData().write(to: imageURL)
         context.temporaryURLs.append(imageURL)
         let pasteboard = makePasteboard()

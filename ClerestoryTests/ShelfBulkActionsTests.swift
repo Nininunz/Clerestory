@@ -1,6 +1,6 @@
 import Foundation
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 @MainActor
 final class ShelfBulkActionsTests: XCTestCase {
@@ -44,7 +44,7 @@ final class ShelfBulkActionsTests: XCTestCase {
 
     private func makeRoot() throws -> URL {
         let root = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkTests-Bulk-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("ClerestoryTests-Bulk-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         return root
     }

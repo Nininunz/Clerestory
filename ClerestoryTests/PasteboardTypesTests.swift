@@ -1,7 +1,7 @@
 import AppKit
 import UniformTypeIdentifiers
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// PasteboardTypes capability detection and priority (pure function, no pasteboard instance construction).
 final class PasteboardTypesTests: XCTestCase {
@@ -167,7 +167,7 @@ final class PasteboardTypesTests: XCTestCase {
                        [.init(type: PasteboardTypes.calendarEvent, tier: 2)])
         XCTAssertEqual(PasteboardTypes.materializationCandidates(in: [PasteboardTypes.emailMessage]),
                        [.init(type: PasteboardTypes.emailMessage, tier: 2)])
-        let unknown = NSPasteboard.PasteboardType("com.openyoink.test.undeclared")
+        let unknown = NSPasteboard.PasteboardType("com.clerestory.test.undeclared")
         XCTAssertEqual(PasteboardTypes.materializationCandidates(in: [unknown]),
                        [.init(type: unknown, tier: 3)])
         XCTAssertEqual(PasteboardTypes.materializationCandidates(in: [PasteboardTypes.data]),
@@ -177,7 +177,7 @@ final class PasteboardTypesTests: XCTestCase {
     /// Sorting: tier1 has priority, items within the same tier maintain declaration order; text family
     /// (conforms to .text and no extension) are excluded —— handed over to the string fallback branch.
     func testMaterializationCandidates_orderingAndTextExclusion() {
-        let unknown = NSPasteboard.PasteboardType("com.openyoink.test.undeclared")
+        let unknown = NSPasteboard.PasteboardType("com.clerestory.test.undeclared")
         let utf16 = NSPasteboard.PasteboardType("public.utf16-plain-text")
         let candidates = PasteboardTypes.materializationCandidates(
             in: [unknown, PasteboardTypes.calendarEvent, PasteboardTypes.vCard, utf16])
@@ -192,14 +192,14 @@ final class PasteboardTypesTests: XCTestCase {
         XCTAssertEqual(PasteboardTypes.materializationFileExtension(for: PasteboardTypes.vCard), "vcf")
         XCTAssertEqual(PasteboardTypes.materializationFileExtension(for: PasteboardTypes.calendarEvent), "ics")
         XCTAssertEqual(PasteboardTypes.materializationFileExtension(for: PasteboardTypes.emailMessage), "eml")
-        let unknown = NSPasteboard.PasteboardType("com.openyoink.test.undeclared")
+        let unknown = NSPasteboard.PasteboardType("com.clerestory.test.undeclared")
         XCTAssertEqual(PasteboardTypes.materializationFileExtension(for: unknown), "dat")
     }
 
     func testMaterializedDisplayBaseName_typeDescriptionOrLocalizedFallback() {
         XCTAssertEqual(PasteboardTypes.materializedDisplayBaseName(for: PasteboardTypes.vCard),
                        UTType.vCard.localizedDescription)
-        let unknown = NSPasteboard.PasteboardType("com.openyoink.test.undeclared")
+        let unknown = NSPasteboard.PasteboardType("com.clerestory.test.undeclared")
         XCTAssertEqual(PasteboardTypes.materializedDisplayBaseName(for: unknown),
                        String(localized: "Dropped Item"))
     }

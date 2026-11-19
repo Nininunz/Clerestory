@@ -1,5 +1,5 @@
 import Foundation
-@testable import OpenYoink
+@testable import Clerestory
 
 /// Fresh values per call; no user files, bookmarks, persistence, or services.
 enum ShelfFixtures {
