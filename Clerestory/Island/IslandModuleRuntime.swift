@@ -1,8 +1,9 @@
 import SwiftUI
 
 /// Runtime boundary shared by every first-party Island module. The event
-/// stream is deliberately independent from SwiftUI so lifecycle and activity
-/// routing stay testable and cancellable.
+/// stream is deliberately independent from SwiftUI so lifecycle and event
+/// routing stay testable and cancellable. Modules that have a `ModuleMessenger`
+/// set statuses directly instead of sending activity events.
 @MainActor
 protocol IslandModuleRuntime: AnyObject {
     var descriptor: IslandModuleDescriptor { get }
@@ -52,6 +53,7 @@ final class CallbackIslandModuleRuntime: IslandModuleRuntime {
     private let startAction: @MainActor () -> Void
     private let stopAction: @MainActor () -> Void
     private(set) var isRunning = false
+    private var publishedActivityID: String?
 
     init(
         descriptor: IslandModuleDescriptor,
@@ -80,9 +82,14 @@ final class CallbackIslandModuleRuntime: IslandModuleRuntime {
         stopAction()
     }
 
+    /// Replaces the module's one activity. Only an activity with another id is removed first,
+    /// so an update does not clear and re-add its status.
     func replaceActivity(_ activity: IslandActivity?) {
-        continuation.yield(.removeAllActivities)
+        if let publishedActivityID, publishedActivityID != activity?.id {
+            continuation.yield(.removeActivity(id: publishedActivityID))
+        }
         if let activity { continuation.yield(.publishActivity(activity)) }
+        publishedActivityID = activity?.id
     }
 
     func publish(_ event: IslandModuleEvent) {
@@ -129,11 +136,14 @@ final class TransfersModuleRuntime: IslandModuleRuntime {
         continuation.yield(.removeAllActivities)
     }
 
+    /// Its one activity id is "transfer", so a new task updates it in place.
     func refresh() {
         guard isRunning else { return }
-        continuation.yield(.removeAllActivities)
-        guard let task = transferStore.currentTask else { return }
-        continuation.yield(.publishActivity(Self.activity(for: task)))
+        if let task = transferStore.currentTask {
+            continuation.yield(.publishActivity(Self.activity(for: task)))
+        } else {
+            continuation.yield(.removeAllActivities)
+        }
     }
 
     private static func activity(for task: TransferTask) -> IslandActivity {
@@ -175,18 +185,18 @@ final class IslandModuleContainer {
     private(set) var availability: [IslandModuleID: IslandModuleAvailability] = [:]
     private(set) var runningModuleIDs: Set<IslandModuleID> = []
 
-    @ObservationIgnored private let coordinator: IslandActivityCoordinator
+    @ObservationIgnored private let messages: IslandMessageCenter
     @ObservationIgnored private var eventTasks: [IslandModuleID: Task<Void, Never>] = [:]
 
     init(
         registrations: [IslandModuleRegistration],
-        coordinator: IslandActivityCoordinator
+        messages: IslandMessageCenter
     ) {
         var seen = Set<IslandModuleID>()
         self.registrations = registrations
             .filter { seen.insert($0.id).inserted }
             .sorted { $0.descriptor.order < $1.descriptor.order }
-        self.coordinator = coordinator
+        self.messages = messages
     }
 
     deinit {
@@ -241,6 +251,8 @@ final class IslandModuleContainer {
                 self?.consume(event, from: moduleID)
             }
         }
+        // Before start(), so a status the module sets while starting is accepted.
+        messages.moduleDidStart(moduleID)
         registration.runtime.start()
         availability[moduleID] = .available
     }
@@ -249,22 +261,61 @@ final class IslandModuleContainer {
         guard runningModuleIDs.remove(registration.id) != nil else { return }
         registration.runtime.stop()
         eventTasks.removeValue(forKey: registration.id)?.cancel()
-        coordinator.removeActivities(for: registration.id)
+        // After stop(), so nothing the module sets while stopping outlives it.
+        messages.moduleDidStop(registration.id)
         availability.removeValue(forKey: registration.id)
     }
 
     private func consume(_ event: IslandModuleEvent, from moduleID: IslandModuleID) {
         guard runningModuleIDs.contains(moduleID) else { return }
+        if case let .availabilityChanged(next) = event {
+            availability[moduleID] = next
+            return
+        }
+        IslandActivityStatusAdapter.apply(event, to: messages.messenger(for: moduleID))
+    }
+}
+
+/// TEMPORARY (issue #80, PR 3): turns the old activity events of modules that do not have a
+/// `ModuleMessenger` yet into statuses. Delete it in PR 4, together with IslandActivity,
+/// IslandActivityPriority and IslandModuleEvent, once every module sets statuses itself.
+///
+/// The messenger is the one for the module whose stream sent the event, so a module can only
+/// change its own statuses. Adapted statuses never announce: whether a module's raised
+/// statuses show a pill and speak is decided per module when it migrates.
+@MainActor
+enum IslandActivityStatusAdapter {
+    static func apply(_ event: IslandModuleEvent, to messenger: ModuleMessenger) {
         switch event {
         case let .publishActivity(activity):
-            guard activity.moduleID == moduleID else { return }
-            coordinator.publish(activity)
+            // An activity for another module is ignored rather than moved.
+            guard activity.moduleID == messenger.moduleID else { return }
+            messenger.setStatus(status(for: activity, expiresAt: activity.expiresAt.map {
+                messenger.expiry(after: .seconds($0.timeIntervalSinceNow))
+            }))
         case let .removeActivity(id):
-            coordinator.removeActivity(id: id)
+            messenger.clearStatus(id)
         case .removeAllActivities:
-            coordinator.removeActivities(for: moduleID)
-        case let .availabilityChanged(next):
-            availability[moduleID] = next
+            messenger.setStatuses([])
+        case .availabilityChanged:
+            break
         }
+    }
+
+    /// Keeps each priority's notch tint: critical battery red; system warnings and finished
+    /// timers orange; transfers and drags accent; everything else white.
+    static func tone(for priority: IslandActivityPriority) -> IslandStatus.Tone {
+        switch priority {
+        case .criticalBattery: .critical
+        case .systemWarning, .timerFinished: .warning
+        case .transfer, .userDrag: .progress
+        case .shelfSummary, .selectedModule, .nowPlaying, .powerChange: .neutral
+        }
+    }
+
+    static func status(for activity: IslandActivity, expiresAt: Duration?) -> IslandStatus {
+        IslandStatus(key: activity.id, title: activity.title, detail: activity.detail,
+                     systemImage: activity.systemImage, tone: tone(for: activity.priority),
+                     announcesWhenRaised: false, expiresAt: expiresAt)
     }
 }

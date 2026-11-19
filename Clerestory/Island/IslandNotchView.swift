@@ -12,6 +12,7 @@ struct IslandNotchView: View {
     @Environment(PowerSourceMonitor.self) private var powerMonitor
     @Environment(NowPlayingModuleStore.self) private var nowPlayingStore
     @Environment(AIUsageModuleStore.self) private var aiUsageStore
+    @Environment(IslandMessageCenter.self) private var messages
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isNotchHovering = false
     @State private var mediaAccent = ArtworkAccent.fallback
@@ -61,10 +62,18 @@ struct IslandNotchView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
+    /// The notice or status the notch shows for its display. See IslandNotchIndicatorResolver.
+    private var indicator: IslandNotchIndicator? {
+        IslandNotchIndicatorResolver.resolve(display: notchDisplay.moduleID, center: messages,
+                                             isDragInProgress: coordinator.isDragInProgress)
+    }
+
     @ViewBuilder
     private var notchLeading: some View {
-        let activity = coordinator.notchPrimaryActivity()
-        if notchDisplay == .media, let image = notchArtworkImage {
+        let indicator = indicator
+        // Artwork stays unless a warning or critical indicator needs the icon.
+        if notchDisplay == .media, let image = notchArtworkImage,
+           (indicator?.tint ?? .neutral) < .warning {
             NotchNowPlayingArtworkView(
                 image: image,
                 tint: mediaAccent.color,
@@ -72,12 +81,9 @@ struct IslandNotchView: View {
             )
             .transition(.opacity.combined(with: .scale(scale: 0.86)))
         } else {
-            IslandNotchWingIcon(systemName: activity.flatMap {
-                $0.moduleID == notchDisplay.moduleID ? $0.systemImage : nil
-            } ?? notchDisplay.systemImage)
-                .foregroundStyle(activity?.moduleID == notchDisplay.moduleID
-                                 ? activityTint(activity) : .white)
-                .opacity(notchIsHighlighted || activity?.moduleID == notchDisplay.moduleID ? 1 : 0.72)
+            IslandNotchWingIcon(systemName: indicator?.systemImage ?? notchDisplay.systemImage)
+                .foregroundStyle(indicator.map { Self.tint($0.tint) } ?? .white)
+                .opacity(notchIsHighlighted || indicator != nil ? 1 : 0.72)
                 .accessibilityHidden(true)
         }
     }
@@ -139,7 +145,7 @@ struct IslandNotchView: View {
             }
         }
         .foregroundStyle(.white)
-        .opacity(notchIsHighlighted || coordinator.notchPrimaryActivity()?.moduleID == notchDisplay.moduleID ? 1 : 0.72)
+        .opacity(notchIsHighlighted || indicator != nil ? 1 : 0.72)
         .accessibilityHidden(true)
     }
 
@@ -192,6 +198,10 @@ struct IslandNotchView: View {
     }
 
     private var notchAccessibilityLabel: String {
+        IslandNotchIndicatorResolver.accessibilityLabel(notchDisplayAccessibilityLabel, indicator: indicator)
+    }
+
+    private var notchDisplayAccessibilityLabel: String {
         switch notchDisplay {
         case .battery:
             return powerMonitor.snapshot.hasBattery
@@ -211,11 +221,7 @@ struct IslandNotchView: View {
             return aiUsageStore.notchSummary ?? String(localized: "AI Usage unavailable")
         case .transfers:
             return transferStore.hasVisibleActivity ? String(localized: "Transfers") : String(localized: "No active transfers")
-        default:
-            if let activity = coordinator.notchPrimaryActivity(),
-               activity.moduleID == notchDisplay.moduleID {
-                return [activity.title, activity.detail].compactMap { $0 }.joined(separator: ", ")
-            }
+        case .fallback:
             return String(localized: "Clerestory Panel")
         }
     }
@@ -235,13 +241,13 @@ struct IslandNotchView: View {
         return defaultModuleDescriptor?.id ?? .quickSettings
     }
 
-    private func activityTint(_ activity: IslandActivity?) -> Color {
-        switch activity?.priority {
-        case .criticalBattery: return .red
-        case .systemWarning: return .orange
-        case .timerFinished: return .orange
-        case .transfer, .userDrag: return .accentColor
-        default: return .white
+    /// Critical red, warning orange, progress accent, neutral white, as before statuses.
+    private static func tint(_ tone: IslandStatus.Tone) -> Color {
+        switch tone {
+        case .critical: .red
+        case .warning: .orange
+        case .progress: .accentColor
+        case .neutral: .white
         }
     }
 

@@ -102,97 +102,196 @@ final class PowerSourceMonitorTests: XCTestCase {
         XCTAssertEqual(snapshot.temperatureCelsius, 28.5)
     }
 
-    func testLowPowerModeToastOnlyFollowsObservedStateChanges() {
-        let monitor = PowerSourceMonitor()
-        var toasts: [IslandActivity] = []
-        monitor.onActivity = { activity in
-            if let activity, activity.id == "battery.low-power-mode" {
-                toasts.append(activity)
-            }
-        }
+    func testMissingMaximumIsUnavailable() {
+        XCTAssertEqual(PowerSourceMonitor.snapshot(from: [:]), .unavailable)
+        XCTAssertEqual(PowerSourceMonitor.snapshot(from: nil), .unavailable)
+    }
 
+    // MARK: - Statuses and notices
+
+    func testLowPowerModeNoticeOnlyFollowsObservedStateChanges() {
+        let (monitor, center) = makeMonitor()
         var reading = snapshot(percentage: 80)
         reading.lowPowerMode = true
         monitor.process(reading)
         monitor.process(reading)
-        XCTAssertTrue(toasts.isEmpty)
+        XCTAssertTrue(spoken.messages.isEmpty)
 
         reading.lowPowerMode = false
         monitor.process(reading)
         monitor.process(reading)
         reading.lowPowerMode = true
         monitor.process(reading)
-        XCTAssertEqual(toasts.map(\.title), ["Low Power Mode disabled", "Low Power Mode enabled"])
+        XCTAssertEqual(spoken.messages, ["Low Power Mode disabled", "Low Power Mode enabled"])
+        XCTAssertEqual(center.currentNotice?.notice.key, "low-power-mode")
     }
 
-    /// Turning on Low Power Mode at low battery keeps the persistent alert and
-    /// shows the new mode in it, instead of replacing it with a short toast.
-    func testLowPowerModeChangeKeepsTheLowBatteryAlert() {
-        let monitor = PowerSourceMonitor()
-        var activities: [IslandActivity?] = []
-        monitor.onActivity = { activities.append($0) }
+    func testLowThenPlugInKeepsLowAndPostsPowerNotice() {
+        let (monitor, center) = makeMonitor()
         monitor.process(snapshot(percentage: 15))
-        XCTAssertEqual(activities.last??.id, "battery.low")
+        XCTAssertEqual(center.statuses(for: .battery), [low(15)])
+        let noticesBefore = noticeKeys(center)
 
-        var reading = snapshot(percentage: 15)
-        reading.lowPowerMode = true
-        monitor.process(reading)
-        let latest = activities.last ?? nil
-        XCTAssertEqual(latest?.id, "battery.low")
-        XCTAssertNil(latest?.expiresAt)
-        XCTAssertEqual(latest?.detail, "15% · Low Power Mode on")
-        XCTAssertFalse(activities.contains { $0?.id == "battery.low-power-mode" })
+        monitor.process(snapshot(percentage: 15, power: true))
+        XCTAssertEqual(center.statuses(for: .battery), [low(15)])
+        XCTAssertEqual(noticeKeys(center), noticesBefore + ["power"])
+        XCTAssertEqual(spoken.messages, ["Battery low, 15%", "Power connected, 15%"],
+                       "Plugging in does not raise low again")
     }
 
-    /// Unplugging while the mode also changes publishes one activity, not two.
-    func testUnplugWithModeChangePublishesOneActivity() {
-        let monitor = PowerSourceMonitor()
-        var activities: [IslandActivity?] = []
-        monitor.onActivity = { activities.append($0) }
-        monitor.process(snapshot(percentage: 80, power: true))
-        activities.removeAll()
-        var reading = snapshot(percentage: 80, power: false)
-        reading.lowPowerMode = true
-        monitor.process(reading)
-        XCTAssertEqual(activities.compactMap { $0?.id }, ["battery.power-change"])
+    func testUnplugIntoTheBandSetsLowAndPostsPowerNotice() {
+        let (monitor, center) = makeMonitor()
+        monitor.process(snapshot(percentage: 21, power: true))
+        monitor.process(snapshot(percentage: 20, power: false))
+        XCTAssertEqual(center.statuses(for: .battery), [low(20)])
+        XCTAssertEqual(noticeKeys(center), ["status.low", "power"],
+                       "The raised status and the power change both show, one after the other")
+        XCTAssertEqual(center.currentNotice?.notice.title, "Battery low · 20%")
+        XCTAssertEqual(center.waitingNotices.first?.notice.title, "Running on battery · 20%")
     }
 
-    func testMissingMaximumIsUnavailable() {
-        XCTAssertEqual(PowerSourceMonitor.snapshot(from: [:]), .unavailable)
-        XCTAssertEqual(PowerSourceMonitor.snapshot(from: nil), .unavailable)
+    func testStopThenStartInTheSameBandSetsLowAgain() {
+        let center = makeCenter()
+        let monitor = PowerSourceMonitor(samplingAllowed: { true }, snapshotProvider: {
+            .init(hasBattery: true, percentage: 15, isCharging: false, isConnectedToPower: false)
+        })
+        monitor.messenger = center.messenger(for: .battery)
+        monitor.start()
+        XCTAssertEqual(center.statuses(for: .battery), [low(15)])
+        monitor.stop()
+        center.moduleDidStop(.battery)
+        XCTAssertTrue(center.statuses(for: .battery).isEmpty)
+
+        center.moduleDidStart(.battery)
+        monitor.start()
+        defer { monitor.stop() }
+        XCTAssertEqual(center.statuses(for: .battery), [low(15)])
+        XCTAssertEqual(spoken.messages.filter { $0 == "Battery low, 15%" }.count, 2,
+                       "Each start raises low again")
     }
 
-    func testThresholdNotificationIsDeduplicatedWithinBand() {
-        let monitor = PowerSourceMonitor()
-        var activities: [IslandActivity?] = []
-        monitor.onActivity = { activities.append($0) }
+    func testLowIsRaisedOncePerBand() {
+        let (monitor, center) = makeMonitor()
         monitor.process(snapshot(percentage: 21))
         monitor.process(snapshot(percentage: 20))
         monitor.process(snapshot(percentage: 18))
-        XCTAssertEqual(activities.compactMap { $0 }.filter { $0.id == "battery.low" }.count, 1)
+        XCTAssertEqual(center.statuses(for: .battery), [low(18)])
+        XCTAssertEqual(spoken.messages, ["Battery low, 20%"], "A lower percentage in the band is silent")
         monitor.process(snapshot(percentage: 10))
-        XCTAssertEqual(activities.compactMap { $0 }.filter { $0.id == "battery.low" }.count, 2)
+        XCTAssertEqual(center.topStatus(for: .battery)?.title, "Battery critically low")
+        XCTAssertEqual(center.topStatus(for: .battery)?.tone, .critical)
+        XCTAssertEqual(spoken.messages, ["Battery low, 20%", "Battery critically low, 10%"])
     }
 
-    func testPowerChangeExpiresAfterTwoPointFiveSeconds() {
-        let now = Date(timeIntervalSince1970: 5_000)
-        let monitor = PowerSourceMonitor(now: { now })
-        var latest: IslandActivity?
-        monitor.onActivity = { latest = $0 }
+    func testChargingOutOfCriticallyLowDoesNotAnnounceAgain() {
+        let (monitor, center) = makeMonitor()
+        monitor.process(snapshot(percentage: 10, power: true))
+        XCTAssertEqual(spoken.messages, ["Battery critically low, 10%"])
+        let noticesBefore = noticeKeys(center)
+
+        monitor.process(snapshot(percentage: 11, power: true))
+        XCTAssertEqual(center.topStatus(for: .battery)?.title, "Battery low", "The title follows the charge")
+        XCTAssertEqual(spoken.messages, ["Battery critically low, 10%"], "A rising charge is silent")
+        XCTAssertEqual(noticeKeys(center), noticesBefore, "and shows no new pill")
+
+        monitor.process(snapshot(percentage: 11, power: false))
+        monitor.process(snapshot(percentage: 10, power: false))
+        XCTAssertEqual(spoken.messages.last, "Battery critically low, 10%", "Falling again announces")
+    }
+
+    func testPowerChangeNoticeLastsTwoPointFiveSeconds() async {
+        let (monitor, center) = makeMonitor()
         monitor.process(snapshot(percentage: 80, power: false))
         monitor.process(snapshot(percentage: 80, power: true))
-        XCTAssertEqual(latest?.id, "battery.power-change")
-        XCTAssertEqual(latest?.expiresAt, now.addingTimeInterval(2.5))
+        XCTAssertEqual(center.currentNotice?.notice.key, "power")
+        XCTAssertEqual(center.currentNotice?.notice.title, "Power connected · 80%")
+        XCTAssertEqual(center.currentNotice?.notice.systemImage, "bolt.fill")
+        await clock.advance(by: 2.4)
+        XCTAssertNotNil(center.currentNotice)
+        await clock.advance(by: 0.1)
+        XCTAssertNil(center.currentNotice)
     }
 
-    func testRecoveringAboveLowBatteryThresholdClearsActivity() {
-        let monitor = PowerSourceMonitor()
-        var activities: [IslandActivity?] = []
-        monitor.onActivity = { activities.append($0) }
+    func testRecoveringAboveTheLowThresholdClearsLow() {
+        let (monitor, center) = makeMonitor()
         monitor.process(snapshot(percentage: 20))
+        XCTAssertEqual(center.currentNotice?.raisedStatusKey, "low")
         monitor.process(snapshot(percentage: 21))
-        XCTAssertEqual(activities.first.flatMap { $0 }?.id, "battery.low")
-        XCTAssertNil(activities.last ?? nil)
+        XCTAssertTrue(center.statuses(for: .battery).isEmpty)
+        XCTAssertNil(center.currentNotice, "The raised notice goes with its status")
+    }
+
+    /// Unplugging while the mode also changes posts one notice, not two.
+    func testUnplugWithModeChangePostsOnlyThePowerNotice() {
+        let (monitor, center) = makeMonitor()
+        monitor.process(snapshot(percentage: 80, power: true))
+        var reading = snapshot(percentage: 80, power: false)
+        reading.lowPowerMode = true
+        monitor.process(reading)
+        XCTAssertEqual(noticeKeys(center), ["power"])
+    }
+
+    func testLowSurvivesPowerAndLowPowerModeNotices() async {
+        let (monitor, center) = makeMonitor()
+        monitor.process(snapshot(percentage: 15))
+        await clock.advance(by: IslandMessageCenter.defaultDuration)
+        XCTAssertNil(center.currentNotice)
+
+        monitor.process(snapshot(percentage: 15, power: true))
+        XCTAssertEqual(center.currentNotice?.notice.key, "power")
+        XCTAssertEqual(center.statuses(for: .battery), [low(15)])
+        await clock.advance(by: PowerSourceMonitor.powerNoticeDuration)
+        XCTAssertNil(center.currentNotice)
+        XCTAssertEqual(center.statuses(for: .battery), [low(15)], "No notice removes the status")
+
+        var reading = snapshot(percentage: 15, power: true)
+        reading.lowPowerMode = true
+        monitor.process(reading)
+        XCTAssertEqual(center.currentNotice?.notice.key, "low-power-mode")
+        XCTAssertEqual(center.statuses(for: .battery), [low(15)])
+        await clock.advance(by: PowerSourceMonitor.powerNoticeDuration)
+        XCTAssertNil(center.currentNotice)
+        XCTAssertEqual(center.statuses(for: .battery), [low(15)])
+        XCTAssertEqual(spoken.messages.filter { $0.hasPrefix("Battery low") }.count, 1,
+                       "Low was raised once and never republished")
+    }
+
+    func testLosingTheBatteryClearsLow() {
+        let (monitor, center) = makeMonitor()
+        monitor.process(snapshot(percentage: 15))
+        monitor.process(.unavailable)
+        XCTAssertTrue(center.statuses(for: .battery).isEmpty)
+    }
+
+    private let clock = ManualMessageClock()
+    private var spoken: AnnouncementRecorder!
+
+    override func setUp() async throws {
+        spoken = AnnouncementRecorder()
+    }
+
+    private func makeCenter() -> IslandMessageCenter {
+        let center = IslandMessageCenter.forTesting(clock: clock, announcer: .recording(into: spoken))
+        center.setNoticeClockRunning(true)
+        center.moduleDidStart(.battery)
+        return center
+    }
+
+    /// The messenger holds the center weakly, so a test keeps the returned center alive.
+    private func makeMonitor() -> (PowerSourceMonitor, IslandMessageCenter) {
+        let center = makeCenter()
+        let monitor = PowerSourceMonitor()
+        monitor.messenger = center.messenger(for: .battery)
+        return (monitor, center)
+    }
+
+    private func noticeKeys(_ center: IslandMessageCenter) -> [String] {
+        ([center.currentNotice] + center.waitingNotices).compactMap { $0?.notice.key }
+    }
+
+    private func low(_ percentage: Int) -> IslandStatus {
+        IslandStatus(key: "low", title: percentage <= 10 ? "Battery critically low" : "Battery low",
+                     detail: "\(percentage)%", systemImage: "battery.25percent", tone: .critical)
     }
 
     private func snapshot(percentage: Int, power: Bool = false) -> PowerSourceMonitor.Snapshot {

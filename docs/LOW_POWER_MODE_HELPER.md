@@ -11,7 +11,7 @@ The helper is optional and ships as its own installer package, `ClerestoryLowPow
 - The helper runs as root and accepts no other requests. It reads the active power source, reads that profile's current mode with `pmset -g custom`, and flips only that profile with `/usr/bin/pmset`. It runs `pmset` with fixed arguments and a minimal environment, one request at a time.
 - On Macs with High Power Mode, `pmset` reports `powermode` instead of `lowpowermode`. The helper handles both. Turning Low Power Mode off there returns to Automatic, not to High Power.
 - The launchd plist names Clerestory in `AssociatedBundleIdentifiers`, so System Settings lists the helper under Clerestory in **General → Login Items & Extensions → Allow in the Background**.
-- The app's battery monitor shows a toast when macOS reports the change.
+- When macOS reports the change, the app's battery monitor posts a short "Low Power Mode enabled" or "disabled" notice in the notice pill. A low-battery status in the Notch stays while it shows.
 
 ## Build, sign, and notarize the package
 
@@ -40,7 +40,7 @@ sudo /usr/sbin/installer -pkg export/helper/ClerestoryLowPowerMode.pkg -target /
 
 If the button still says the helper is unavailable after installing, check that Clerestory is switched on under **System Settings → General → Login Items & Extensions → Allow in the Background**.
 
-Run a Clerestory build signed by the same team (Developer ID, or Apple Development for local testing). Ad-hoc builds don't match the helper's requirement. In Battery, click the leaf to switch modes for the active power source, and click again to switch back. Each click should change the system mode without asking for a password, and show one toast.
+Run a Clerestory build signed by the same team (Developer ID, or Apple Development for local testing). Ad-hoc builds don't match the helper's requirement. In Battery, click the leaf to switch modes for the active power source, and click again to switch back. Each click should change the system mode without asking for a password, and show one notice.
 
 ## Uninstall
 

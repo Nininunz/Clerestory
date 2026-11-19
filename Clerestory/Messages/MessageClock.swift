@@ -1,6 +1,7 @@
 import Foundation
 
-/// The time source for notice lifetimes. Tests inject a manual clock so timing is deterministic.
+/// The time source for notice lifetimes and status expiry. Tests inject a manual clock so timing
+/// is deterministic.
 ///
 /// Time is a `Duration` since an arbitrary origin on a monotonic timeline, so changes to the
 /// wall clock never stretch or cut short a notice, and sums of visible time stay exact.
@@ -12,7 +13,7 @@ protocol MessageClock: Sendable {
 }
 
 /// Time for the running app. It uses the suspending clock: a notice is not visible while the
-/// Mac sleeps, so that time does not count.
+/// Mac sleeps, so that time does not count. It does not count toward a status's expiry either.
 struct SystemMessageClock: MessageClock {
     private let origin = SuspendingClock.now
 

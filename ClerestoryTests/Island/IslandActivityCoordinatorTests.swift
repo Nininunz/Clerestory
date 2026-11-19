@@ -280,63 +280,6 @@ final class IslandActivityCoordinatorTests: XCTestCase {
         XCTAssertTrue(registry.isEnabled(.battery))
     }
 
-    func testPriorityPicksDragBeforeTransferAndTimer() {
-        let coordinator = IslandActivityCoordinator()
-        coordinator.publish(activity(id: "timer", module: .timer, priority: .timerFinished))
-        coordinator.publish(activity(id: "transfer", module: .transfers, priority: .transfer))
-        coordinator.publish(activity(id: "drag", module: .shelf, priority: .userDrag))
-        XCTAssertEqual(coordinator.primaryActivity()?.id, "drag")
-        coordinator.removeActivity(id: "drag")
-        XCTAssertEqual(coordinator.primaryActivity()?.id, "transfer")
-    }
-
-    func testAdvisoryAlertYieldsToNowPlayingAfterItsSpotlight() {
-        let coordinator = IslandActivityCoordinator()
-        let start = Date(timeIntervalSince1970: 1_000)
-        coordinator.publish(activity(id: "media", module: .media, priority: .nowPlaying), at: start)
-        coordinator.publish(activity(id: "ai", module: .aiUsage, priority: .systemWarning), at: start)
-
-        XCTAssertEqual(coordinator.primaryActivity(at: start.addingTimeInterval(1))?.id, "ai")
-        let after = start.addingTimeInterval(IslandActivityCoordinator.advisorySpotlightDuration + 1)
-        XCTAssertEqual(coordinator.primaryActivity(at: after)?.id, "media")
-
-        // Republishing fresh numbers must not restart the spotlight.
-        coordinator.publish(activity(id: "ai", module: .aiUsage, priority: .systemWarning), at: after)
-        XCTAssertEqual(coordinator.primaryActivity(at: after)?.id, "media")
-
-        // Without media, the alert keeps the notch Island.
-        coordinator.removeActivity(id: "media")
-        XCTAssertEqual(coordinator.primaryActivity(at: after)?.id, "ai")
-    }
-
-    func testCriticalActivitiesStillOutrankNowPlaying() {
-        let coordinator = IslandActivityCoordinator()
-        let start = Date(timeIntervalSince1970: 1_000)
-        coordinator.publish(activity(id: "media", module: .media, priority: .nowPlaying), at: start)
-        coordinator.publish(activity(id: "battery", module: .battery, priority: .criticalBattery), at: start)
-        let after = start.addingTimeInterval(IslandActivityCoordinator.advisorySpotlightDuration + 60)
-        XCTAssertEqual(coordinator.primaryActivity(at: after)?.id, "battery")
-    }
-
-    func testSelectedModuleSummaryDoesNotOverrideAnotherModule() {
-        let coordinator = IslandActivityCoordinator()
-        coordinator.publish(activity(id: "timer", module: .timer,
-                                     priority: .selectedModule))
-        XCTAssertNil(coordinator.primaryActivity())
-        coordinator.selectedModule = .timer
-        XCTAssertEqual(coordinator.primaryActivity()?.id, "timer")
-    }
-
-    func testNotchActivityDoesNotDependOnExpandedSelection() {
-        let coordinator = IslandActivityCoordinator()
-        coordinator.publish(activity(id: "timer", module: .timer,
-                                     priority: .selectedModule))
-        XCTAssertEqual(coordinator.notchPrimaryActivity()?.id, "timer")
-        coordinator.selectedModule = .media
-        XCTAssertEqual(coordinator.notchPrimaryActivity()?.id, "timer")
-        XCTAssertNil(coordinator.primaryActivity())
-    }
-
     func testNotchWingsFollowManualSelection() {
         let enabled: [IslandModuleID] = [.shelf, .timer, .battery]
         XCTAssertEqual(IslandNotchDisplay.selected(.battery, enabled: enabled), .battery)
@@ -344,34 +287,16 @@ final class IslandActivityCoordinatorTests: XCTestCase {
         XCTAssertEqual(IslandNotchDisplay.selected(.shelf, enabled: enabled), .shelf)
     }
 
-    func testExpiredActivityIsIgnoredAndPruned() {
-        let coordinator = IslandActivityCoordinator()
-        let now = Date(timeIntervalSince1970: 100)
-        coordinator.publish(.init(id: "expired", moduleID: .battery,
-                                  priority: .powerChange, title: "Power", detail: nil,
-                                  systemImage: "bolt", expiresAt: now.addingTimeInterval(-1)))
-        XCTAssertNil(coordinator.primaryActivity(at: now))
-        coordinator.pruneExpired(at: now)
-        XCTAssertTrue(coordinator.activities.isEmpty)
-    }
-
-    func testExpiringActivityPrunesItselfWithoutPolling() async throws {
-        let coordinator = IslandActivityCoordinator()
-        coordinator.publish(.init(id: "brief", moduleID: .battery,
-                                  priority: .powerChange, title: "Power", detail: nil,
-                                  systemImage: "bolt",
-                                  expiresAt: Date().addingTimeInterval(0.02)))
-        try await Task.sleep(for: .milliseconds(80))
-        XCTAssertTrue(coordinator.activities.isEmpty)
-    }
-
     func testCancelledDragRestoresPreviousModuleAndState() {
         let coordinator = IslandActivityCoordinator()
         coordinator.show(module: .timer, pinned: true)
+        XCTAssertFalse(coordinator.isDragInProgress)
         coordinator.beginDrag()
+        XCTAssertTrue(coordinator.isDragInProgress)
         XCTAssertEqual(coordinator.selectedModule, .shelf)
         XCTAssertEqual(coordinator.surfaceState, .expanded)
         coordinator.endDrag(imported: false)
+        XCTAssertFalse(coordinator.isDragInProgress)
         XCTAssertEqual(coordinator.selectedModule, .timer)
         XCTAssertEqual(coordinator.surfaceState, .pinned)
     }
@@ -512,7 +437,7 @@ final class IslandActivityCoordinatorTests: XCTestCase {
         coordinator.onSurfaceAnimationCompleted = { completions += 1 }
         XCTAssertTrue(coordinator.isSurfaceTransitionPending)
         let collapseID = coordinator.surfaceTransitionID
-        coordinator.publish(activity(id: "sample", module: .system, priority: .selectedModule))
+        coordinator.selectedModule = .system
         XCTAssertTrue(coordinator.isSurfaceTransitionPending)
         XCTAssertEqual(coordinator.surfaceTransitionID, collapseID)
         coordinator.completeSurfaceTransition(collapseID)
@@ -536,11 +461,5 @@ final class IslandActivityCoordinatorTests: XCTestCase {
         XCTAssertEqual(coordinator.surfaceState, .collapsed)
         coordinator.completeSurfaceTransition(currentID)
         XCTAssertFalse(coordinator.isSurfaceTransitionPending)
-    }
-
-    private func activity(id: String, module: IslandModuleID,
-                          priority: IslandActivityPriority) -> IslandActivity {
-        .init(id: id, moduleID: module, priority: priority,
-              title: id, detail: nil, systemImage: "circle", expiresAt: nil)
     }
 }

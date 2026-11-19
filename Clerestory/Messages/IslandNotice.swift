@@ -23,6 +23,16 @@ struct IslandNotice: Equatable, Sendable {
 
     /// Tooltip and VoiceOver text.
     var fullText: String { detail ?? title }
+
+    /// The symbol the pill and the notch show: `systemImage`, or the tone's symbol.
+    var symbol: String {
+        if let systemImage { return systemImage }
+        return switch tone {
+        case .success: "checkmark.circle.fill"
+        case .info: "info.circle"
+        case .warning, .error: "exclamationmark.triangle.fill"
+        }
+    }
 }
 
 /// The one button a notice may carry. A closed enum keeps notices Equatable and free of closures.
@@ -58,8 +68,8 @@ struct ModuleMessenger {
         self.center = center
     }
 
-    /// For previews and tests that don't care about messages. It has no center, so its posts
-    /// and withdrawals go nowhere.
+    /// For previews and tests that don't care about messages. It has no center, so its posts,
+    /// statuses and withdrawals go nowhere.
     static let inert = ModuleMessenger(moduleID: .shelf, center: nil)
 
     /// Whether posts reach a message center. `false` for `inert`.
@@ -73,6 +83,28 @@ struct ModuleMessenger {
     /// Removes this module's visible or waiting notice with this key.
     func withdrawNotice(_ key: String) {
         center?.withdrawNotice(key, from: moduleID)
+    }
+
+    /// Adds or updates this module's status with the same key. An equal value changes nothing.
+    /// Ignored until the module has started. See `IslandMessageCenter` for raising.
+    func setStatus(_ status: IslandStatus) {
+        center?.setStatus(status, from: moduleID)
+    }
+
+    /// Removes this module's status with this key.
+    func clearStatus(_ key: String) {
+        center?.clearStatus(key, from: moduleID)
+    }
+
+    /// Replaces this module's whole set of statuses in one change. Statuses that stay keep
+    /// the time they were raised.
+    func setStatuses(_ statuses: [IslandStatus]) {
+        center?.setStatuses(statuses, from: moduleID)
+    }
+
+    /// A value for `IslandStatus.expiresAt`, this far from now on the center's clock.
+    func expiry(after duration: Duration) -> Duration {
+        (center?.now ?? .zero) + duration
     }
 }
 

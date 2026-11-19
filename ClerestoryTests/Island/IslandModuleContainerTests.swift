@@ -11,7 +11,7 @@ final class IslandModuleContainerTests: XCTestCase {
         let settings = SettingsStore(defaults: defaults)
         settings.setIslandModuleEnabled(true, id: .timer)
         let runtime = RuntimeSpy(id: .timer)
-        let container = makeContainer(runtime: runtime, coordinator: IslandActivityCoordinator())
+        let container = makeContainer(runtime: runtime)
         container.apply(configuration: settings.effectiveIslandModuleConfiguration, isActive: true)
         XCTAssertEqual(runtime.startCount, 0)
         settings.experimentalModulesEnabled = true
@@ -30,7 +30,7 @@ final class IslandModuleContainerTests: XCTestCase {
     func testQuickSettingsRemainsAvailableWithoutPinnedOrEnabledModules() {
         let runtime = RuntimeSpy(id: .quickSettings)
         let coordinator = IslandActivityCoordinator()
-        let container = makeContainer(runtime: runtime, coordinator: coordinator)
+        let container = makeContainer(runtime: runtime)
         let configuration = IslandModuleConfiguration(enabledModuleIDs: [], pinnedModuleIDs: [])
 
         coordinator.show(module: .quickSettings)
@@ -48,8 +48,7 @@ final class IslandModuleContainerTests: XCTestCase {
 
     func testLifecycleIsIdempotentAndDisabledRuntimeStops() {
         let runtime = RuntimeSpy(id: .timer)
-        let coordinator = IslandActivityCoordinator()
-        let container = makeContainer(runtime: runtime, coordinator: coordinator)
+        let container = makeContainer(runtime: runtime)
         let enabled = IslandModuleConfiguration(
             enabledModuleIDs: [.timer], pinnedModuleIDs: [.timer]
         )
@@ -65,42 +64,156 @@ final class IslandModuleContainerTests: XCTestCase {
         XCTAssertEqual(runtime.stopCount, 1)
     }
 
-    func testEventsAreConsumedAndCancelledOnStop() async {
+    func testEventsBecomeStatusesAndAreDroppedOnStop() async {
         let runtime = RuntimeSpy(id: .timer)
-        let coordinator = IslandActivityCoordinator()
-        let container = makeContainer(runtime: runtime, coordinator: coordinator)
+        let messages = IslandMessageCenter.forTesting()
+        let container = makeContainer(runtime: runtime, messages: messages)
         let enabled = IslandModuleConfiguration(
             enabledModuleIDs: [.timer], pinnedModuleIDs: []
         )
         container.apply(configuration: enabled, isActive: true)
         runtime.publish(.publishActivity(activity(id: "first")))
-        try? await Task.sleep(for: .milliseconds(20))
-        XCTAssertEqual(coordinator.activities["first"]?.moduleID, .timer)
+        await settleEvents()
+        XCTAssertEqual(messages.statuses(for: .timer).map(\.key), ["first"])
 
         container.stopAll()
+        XCTAssertTrue(messages.statuses(for: .timer).isEmpty)
         runtime.publish(.publishActivity(activity(id: "late")))
-        try? await Task.sleep(for: .milliseconds(20))
-        XCTAssertNil(coordinator.activities["first"])
-        XCTAssertNil(coordinator.activities["late"])
+        await settleEvents()
+        XCTAssertTrue(messages.statuses(for: .timer).isEmpty)
     }
 
-    func testRuntimeCannotPublishActivityForAnotherModule() async {
+    func testModuleIsStartedInTheCenterBeforeItsRuntimeStarts() {
+        let messages = IslandMessageCenter.forTesting()
         let runtime = RuntimeSpy(id: .timer)
-        let coordinator = IslandActivityCoordinator()
-        let container = makeContainer(runtime: runtime, coordinator: coordinator)
-        container.apply(configuration: .init(enabledModuleIDs: [.timer], pinnedModuleIDs: []),
+        runtime.onStart = {
+            // A module that sets a status while starting, as Transfers and Battery do.
+            messages.messenger(for: .timer).setStatus(.init(key: "running", title: "Focus",
+                                                            systemImage: "timer"))
+        }
+        var statusesAtStop: [IslandStatus] = []
+        runtime.onStop = { statusesAtStop = messages.statuses(for: .timer) }
+        let container = makeContainer(runtime: runtime, messages: messages)
+        container.apply(configuration: .init(enabledModuleIDs: [.timer], pinnedModuleIDs: []), isActive: true)
+        XCTAssertTrue(messages.isModuleStarted(.timer))
+        XCTAssertEqual(messages.statuses(for: .timer).map(\.key), ["running"])
+
+        container.stopAll()
+        XCTAssertEqual(statusesAtStop.map(\.key), ["running"], "The center clears statuses after stop()")
+        XCTAssertFalse(messages.isModuleStarted(.timer))
+        XCTAssertTrue(messages.statuses(for: .timer).isEmpty)
+    }
+
+    func testShelfCountsAsStartedWhileItIsEnabled() {
+        let messages = IslandMessageCenter.forTesting()
+        let runtime = RuntimeSpy(id: .shelf)
+        let container = makeContainer(runtime: runtime, messages: messages)
+        XCTAssertFalse(messages.isModuleStarted(.shelf))
+        container.apply(configuration: .init(enabledModuleIDs: [.shelf], pinnedModuleIDs: []), isActive: true)
+        XCTAssertTrue(messages.isModuleStarted(.shelf))
+        // Notices are never gated: Shelf startup notices are posted before any module starts.
+        container.apply(configuration: .init(enabledModuleIDs: [], pinnedModuleIDs: []), isActive: true)
+        XCTAssertFalse(messages.isModuleStarted(.shelf))
+        messages.messenger(for: .shelf).post(.alreadyOnShelf)
+        XCTAssertEqual(messages.currentNotice?.moduleID, .shelf)
+    }
+
+    /// Replaces testRuntimeCannotPublishActivityForAnotherModule: the adapter writes through the
+    /// sending module's messenger, so a module can neither add nor remove another's statuses.
+    func testAdapterKeepsEachModulesStatusesToItself() async {
+        let timer = RuntimeSpy(id: .timer)
+        let battery = RuntimeSpy(id: .battery)
+        let messages = IslandMessageCenter.forTesting()
+        let container = IslandModuleContainer(registrations: [timer, battery].map { runtime in
+            .init(descriptor: runtime.descriptor, runtime: runtime, makeContentView: { _ in AnyView(EmptyView()) })
+        }, messages: messages)
+        container.apply(configuration: .init(enabledModuleIDs: [.timer, .battery], pinnedModuleIDs: []),
                         isActive: true)
-        runtime.publish(.publishActivity(.init(
+        battery.publish(.publishActivity(.init(
+            id: "battery.low", moduleID: .battery, priority: .criticalBattery,
+            title: "Battery low", detail: "15%", systemImage: "battery.25percent", expiresAt: nil
+        )))
+        timer.publish(.publishActivity(.init(
             id: "forged", moduleID: .battery, priority: .systemWarning,
             title: "Forged", detail: nil, systemImage: "xmark", expiresAt: nil
         )))
-        await Task.yield()
-        XCTAssertNil(coordinator.activities["forged"])
+        timer.publish(.removeActivity(id: "battery.low"))
+        timer.publish(.removeAllActivities)
+        await settleEvents()
+
+        XCTAssertEqual(messages.statuses(for: .battery).map(\.key), ["battery.low"])
+        XCTAssertTrue(messages.statuses(for: .timer).isEmpty)
+        container.stopAll()
+    }
+
+    func testAdapterMapsPrioritiesToTheTintsTheyHadAndNeverAnnounces() async {
+        let expected: [(IslandActivityPriority, IslandStatus.Tone)] = [
+            (.criticalBattery, .critical), (.systemWarning, .warning), (.timerFinished, .warning),
+            (.transfer, .progress), (.userDrag, .progress), (.shelfSummary, .neutral),
+            (.selectedModule, .neutral), (.nowPlaying, .neutral), (.powerChange, .neutral),
+        ]
+        for (priority, tone) in expected {
+            XCTAssertEqual(IslandActivityStatusAdapter.tone(for: priority), tone, "\(priority)")
+        }
+
+        let clock = ManualMessageClock()
+        let spoken = AnnouncementRecorder()
+        let messages = IslandMessageCenter.forTesting(clock: clock, announcer: .recording(into: spoken))
+        messages.setNoticeClockRunning(true)
+        messages.moduleDidStart(.aiUsage)
+        let aiUsage = messages.messenger(for: .aiUsage)
+        IslandActivityStatusAdapter.apply(.publishActivity(.init(
+            id: "aiUsage.limit.5h.80", moduleID: .aiUsage, priority: .systemWarning,
+            title: "5h limit at 80%", detail: "Resets in 2 h", systemImage: "gauge.with.dots.needle.100percent",
+            expiresAt: Date().addingTimeInterval(600)
+        )), to: aiUsage)
+        let status = messages.topStatus(for: .aiUsage)
+        XCTAssertEqual(status?.title, "5h limit at 80%")
+        XCTAssertEqual(status?.detail, "Resets in 2 h")
+        XCTAssertEqual(status?.tone, .warning)
+        XCTAssertFalse(status?.announcesWhenRaised ?? true)
+        XCTAssertTrue(spoken.messages.isEmpty, "Unmigrated modules do not speak")
+        XCTAssertNil(messages.currentNotice, "Unmigrated modules do not show a pill")
+
+        await clock.advance(by: 599)
+        XCTAssertNotNil(messages.topStatus(for: .aiUsage))
+        await clock.advance(by: 2)
+        XCTAssertNil(messages.topStatus(for: .aiUsage), "The activity's expiry carries over")
+    }
+
+    func testReplacingAnActivityUpdatesItsStatusWithoutClearingIt() async {
+        let runtime = CallbackIslandModuleRuntime(descriptor: .init(id: .timer, title: "Timer", systemImage: "timer",
+                                                                    order: 0, isCore: false))
+        let messages = IslandMessageCenter.forTesting()
+        let container = IslandModuleContainer(registrations: [.init(
+            descriptor: runtime.descriptor, runtime: runtime, makeContentView: { _ in AnyView(EmptyView()) }
+        )], messages: messages)
+        container.apply(configuration: .init(enabledModuleIDs: [.timer], pinnedModuleIDs: []), isActive: true)
+        runtime.replaceActivity(activity(id: "timer.running"))
+        await settleEvents()
+        let probe = ObservationProbe()
+        probe.track { _ = messages.statuses(for: .timer) }
+        runtime.replaceActivity(activity(id: "timer.running"))
+        await settleEvents()
+        XCTAssertEqual(probe.changes, 0, "An unchanged activity is not removed and published again")
+
+        runtime.replaceActivity(activity(id: "timer.finished"))
+        await settleEvents()
+        XCTAssertEqual(messages.statuses(for: .timer).map(\.key), ["timer.finished"])
+        runtime.replaceActivity(nil)
+        await settleEvents()
+        XCTAssertTrue(messages.statuses(for: .timer).isEmpty)
+        container.stopAll()
+    }
+
+    /// Lets the container's event tasks drain what the runtimes yielded.
+    private func settleEvents() async {
+        for _ in 0..<20 { await Task.yield() }
     }
 
     private func makeContainer(
         runtime: RuntimeSpy,
-        coordinator: IslandActivityCoordinator
+        messages: IslandMessageCenter = .forTesting()
     ) -> IslandModuleContainer {
         IslandModuleContainer(
             registrations: [.init(
@@ -108,7 +221,7 @@ final class IslandModuleContainerTests: XCTestCase {
                 runtime: runtime,
                 makeContentView: { _ in AnyView(EmptyView()) }
             )],
-            coordinator: coordinator
+            messages: messages
         )
     }
 
@@ -134,7 +247,10 @@ private final class RuntimeSpy: IslandModuleRuntime {
         continuation = captured!
     }
 
-    func start() { startCount += 1 }
-    func stop() { stopCount += 1 }
+    var onStart: () -> Void = {}
+    var onStop: () -> Void = {}
+
+    func start() { startCount += 1; onStart() }
+    func stop() { stopCount += 1; onStop() }
     func publish(_ event: IslandModuleEvent) { continuation.yield(event) }
 }

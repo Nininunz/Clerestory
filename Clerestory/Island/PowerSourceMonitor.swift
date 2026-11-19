@@ -129,7 +129,6 @@ final class PowerSourceMonitor: IslandModule {
     @ObservationIgnored
     nonisolated(unsafe) private var runLoopSource: CFRunLoopSource?
     @ObservationIgnored private var pollingTask: Task<Void, Never>?
-    private var lastAlertBand: Int?
     private let nowProvider: @MainActor () -> Date
     private let fullChargeAlertEnabled: @MainActor () -> Bool
     private(set) var snapshot: Snapshot = .unavailable
@@ -139,7 +138,8 @@ final class PowerSourceMonitor: IslandModule {
     @ObservationIgnored private let samplingAllowed: @MainActor () -> Bool
     @ObservationIgnored private let snapshotProvider: @MainActor () -> Snapshot
     @ObservationIgnored nonisolated(unsafe) private var resourceToken: NSObjectProtocol?
-    var onActivity: (@MainActor (IslandActivity?) -> Void)?
+    /// Where Battery sets its "low" status and posts its power notices.
+    @ObservationIgnored var messenger: ModuleMessenger = .inert
     var onStateChange: (@MainActor () -> Void)?
 
     init(now: @escaping @MainActor () -> Date = Date.init,
@@ -223,7 +223,7 @@ final class PowerSourceMonitor: IslandModule {
             CFRunLoopSourceInvalidate(runLoopSource)
             self.runLoopSource = nil
         }
-        onActivity?(nil)
+        messenger.setStatuses([])
     }
 
     func refresh() {
@@ -237,7 +237,7 @@ final class PowerSourceMonitor: IslandModule {
         let previous = snapshot
         snapshot = current
         recordPowerSample(from: current)
-        evaluateActivity(previous: previous, current: current)
+        updateMessages(previous: previous, current: current)
         onStateChange?()
     }
 
@@ -347,86 +347,65 @@ final class PowerSourceMonitor: IslandModule {
         return .unavailable
     }
 
-    private func evaluateActivity(previous: Snapshot, current: Snapshot) {
-        guard current.hasBattery else {
-            lastAlertBand = nil
-            onActivity?(nil)
-            return
-        }
+    /// How long Battery's power, Low Power Mode and full-charge notices stay on screen.
+    static let powerNoticeDuration: TimeInterval = 2.5
 
-        let alertBand: Int? = if current.percentage <= 10 {
-            10
-        } else if current.percentage <= 20 {
-            20
-        } else {
-            nil
-        }
-        if alertBand != lastAlertBand, let alertBand {
-            lastAlertBand = alertBand
-            onActivity?(lowBatteryActivity(band: alertBand, current: current))
-            return
-        } else if alertBand == nil, lastAlertBand != nil {
-            lastAlertBand = nil
-            onActivity?(nil)
-        }
-
-        guard previous.hasBattery else { return }
+    /// Every sample sets the whole status set, so "low" is there exactly while the battery is
+    /// low, whatever notices come and go. The center announces it once when it is raised.
+    private func updateMessages(previous: Snapshot, current: Snapshot) {
+        messenger.setStatuses(current.hasBattery ? Self.statuses(for: current, previous: previous) : [])
+        guard current.hasBattery, previous.hasBattery else { return }
         if previous.isConnectedToPower != current.isConnectedToPower {
-            onActivity?(.init(
-                id: "battery.power-change",
-                moduleID: .battery,
-                priority: .powerChange,
-                title: current.isConnectedToPower
-                    ? String(localized: "Power connected")
-                    : String(localized: "Running on battery"),
-                detail: "\(current.percentage)%",
+            let title = current.isConnectedToPower
+                ? String(localized: "Power connected")
+                : String(localized: "Running on battery")
+            let percentage = "\(current.percentage)%"
+            messenger.post(IslandNotice(
+                key: "power",
+                title: IslandStatus.pillText(title: title, detail: percentage),
+                detail: IslandStatus.spokenText(title: title, detail: percentage),
                 systemImage: current.isConnectedToPower ? "bolt.fill" : "battery.75percent",
-                expiresAt: nowProvider().addingTimeInterval(2.5)
+                duration: Self.powerNoticeDuration
             ))
         } else if previous.lowPowerMode != current.lowPowerMode {
-            if let band = lastAlertBand {
-                // Keep the persistent low-battery alert; show the new mode in it.
-                onActivity?(lowBatteryActivity(band: band, current: current))
-            } else {
-                onActivity?(.init(
-                    id: "battery.low-power-mode",
-                    moduleID: .battery,
-                    priority: .powerChange,
-                    title: current.lowPowerMode
-                        ? String(localized: "Low Power Mode enabled")
-                        : String(localized: "Low Power Mode disabled"),
-                    detail: nil,
-                    systemImage: current.lowPowerMode ? "leaf.fill" : "leaf",
-                    expiresAt: nowProvider().addingTimeInterval(2.5)
-                ))
-            }
+            messenger.post(IslandNotice(
+                key: "low-power-mode",
+                title: current.lowPowerMode
+                    ? String(localized: "Low Power Mode enabled")
+                    : String(localized: "Low Power Mode disabled"),
+                systemImage: current.lowPowerMode ? "leaf.fill" : "leaf",
+                duration: Self.powerNoticeDuration
+            ))
         } else if fullChargeAlertEnabled(),
                   previous.percentage < 100,
                   current.percentage == 100 {
-            onActivity?(.init(id: "battery.full", moduleID: .battery,
-                              priority: .powerChange,
-                              title: String(localized: "Battery fully charged"),
-                              detail: nil, systemImage: "battery.100percent",
-                              expiresAt: nowProvider().addingTimeInterval(2.5)))
+            messenger.post(IslandNotice(
+                key: "full",
+                title: String(localized: "Battery fully charged"),
+                tone: .success,
+                systemImage: "battery.100percent",
+                duration: Self.powerNoticeDuration
+            ))
         }
     }
 
-    /// The persistent low-battery alert. It stays until the battery leaves the
-    /// low bands, and also shows when Low Power Mode is on.
-    private func lowBatteryActivity(band: Int, current: Snapshot) -> IslandActivity {
-        .init(
-            id: "battery.low",
-            moduleID: .battery,
-            priority: .criticalBattery,
-            title: band == 10
+    /// "low" while the battery is at 20% or less. Both bands are critical, so the notch stays
+    /// red; the title changes at 10%, which raises it again. A rising charge never announces:
+    /// charging from 10% to 11% changes the title back to "Battery low" without a new pill or
+    /// speech.
+    static func statuses(for snapshot: Snapshot, previous: Snapshot? = nil) -> [IslandStatus] {
+        guard snapshot.hasBattery, snapshot.percentage <= 20 else { return [] }
+        let isRising = previous.map { $0.hasBattery && snapshot.percentage > $0.percentage } ?? false
+        return [IslandStatus(
+            key: "low",
+            title: snapshot.percentage <= 10
                 ? String(localized: "Battery critically low")
                 : String(localized: "Battery low"),
-            detail: current.lowPowerMode
-                ? String(localized: "\(current.percentage)% · Low Power Mode on")
-                : "\(current.percentage)%",
+            detail: "\(snapshot.percentage)%",
             systemImage: "battery.25percent",
-            expiresAt: nil
-        )
+            tone: .critical,
+            announcesWhenRaised: !isRising
+        )]
     }
 }
 

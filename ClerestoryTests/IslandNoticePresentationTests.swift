@@ -75,4 +75,10 @@ final class IslandNoticePresentationTests: XCTestCase {
                                     context: context(.expanded, dragging: true, shown: .shelf)), .waiting)
         XCTAssertEqual(state.update(noticeID: 1, from: .shelf, context: context(.expanded, shown: .shelf)), .visible)
     }
+
+    func testOthersWaitOnlyForAnUnpinnedPanel() {
+        XCTAssertTrue(context(.expanded, shown: .shelf).othersWaitForClose)
+        XCTAssertFalse(context(.pinned, shown: .shelf).othersWaitForClose)
+        XCTAssertFalse(context(.collapsed).othersWaitForClose)
+    }
 }

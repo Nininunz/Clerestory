@@ -106,7 +106,6 @@ final class ShelfWindowController: NSObject {
     let islandModuleContainer: IslandModuleContainer
     private let transfersModuleRuntime: TransfersModuleRuntime
     private let timerModuleRuntime: CallbackIslandModuleRuntime
-    private let batteryModuleRuntime: CallbackIslandModuleRuntime
     private let mediaModuleRuntime: CallbackIslandModuleRuntime
     private let favoriteFoldersModuleRuntime: CallbackIslandModuleRuntime
     private var classicHoverPreviewState = ClassicShelfHoverPreviewStateMachine()
@@ -283,6 +282,7 @@ final class ShelfWindowController: NSObject {
                 .environment(\.shelfMessenger, shelfMessenger)
                 .environment(importCoordinator.transferStore)
                 .environment(islandActivityCoordinator)
+                .environment(messages)
                 .environment(islandModuleRegistry)
                 .environment(islandModuleContainer)
                 .environment(islandTimerStore)
@@ -512,7 +512,6 @@ final class ShelfWindowController: NSObject {
         self.favoriteFolderDropCoordinator = favoriteFolderDropCoordinator
         self.transfersModuleRuntime = transfersModuleRuntime
         self.timerModuleRuntime = timerModuleRuntime
-        self.batteryModuleRuntime = batteryModuleRuntime
         self.mediaModuleRuntime = mediaModuleRuntime
         self.favoriteFoldersModuleRuntime = favoriteFoldersModuleRuntime
         self.islandModuleContainer = IslandModuleContainer(
@@ -579,7 +578,7 @@ final class ShelfWindowController: NSObject {
                     makeContentView: { _ in AnyView(IslandAIUsageView()) }
                 ),
             ],
-            coordinator: islandActivityCoordinator
+            messages: messages
         )
         self.classicDragOutController = DragOutController(
             store: store,
@@ -627,9 +626,7 @@ final class ShelfWindowController: NSObject {
                 self.islandActivityCoordinator.show(module: .timer)
             }
         }
-        powerSourceMonitor.onActivity = { [weak self] activity in
-            self?.batteryModuleRuntime.replaceActivity(activity)
-        }
+        powerSourceMonitor.messenger = messages.messenger(for: .battery)
         favoriteFolderDropCoordinator.onActivity = { [weak self] activity in
             self?.favoriteFoldersModuleRuntime.replaceActivity(activity)
         }
