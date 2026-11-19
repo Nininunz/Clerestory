@@ -359,11 +359,6 @@ final class SettingsStore {
         islandModuleConfiguration = configuration
     }
 
-    /// Hide the shelf automatically after a drag-out. Default: false.
-    var autoHide: Bool {
-        didSet { defaults.set(autoHide, forKey: Keys.autoHide) }
-    }
-
     /// What happens after an item is dragged out. Default: keep.
     var dragOutRemovalPolicy: DragOutRemovalPolicy {
         didSet { defaults.set(dragOutRemovalPolicy.rawValue, forKey: Keys.dragOutRemovalPolicy) }
@@ -489,7 +484,6 @@ final class SettingsStore {
         static let islandModuleConfiguration = prefix + "islandModuleConfiguration"
         static let islandModuleConfigurationCorruptBackup =
             prefix + "islandModuleConfigurationCorruptBackup"
-        static let autoHide = prefix + "autoHide"
         static let dragOutRemovalPolicy = prefix + "dragOutRemovalPolicy"
         static let autoUpdateCheckEnabled = prefix + "autoUpdateCheckEnabled"
         static let onboardingVersion = prefix + "onboardingVersion"
@@ -530,7 +524,6 @@ final class SettingsStore {
             Keys.aiUsageNotchMetric: AIUsageNotchMetric.todayCost.rawValue,
             Keys.aiUsageLimitAlertsEnabled: true,
             Keys.aiUsageServerPort: TokenTrackerClient.defaultPort,
-            Keys.autoHide: false,
             Keys.dragOutRemovalPolicy: DragOutRemovalPolicy.keep.rawValue,
             Keys.autoUpdateCheckEnabled: true,
             Keys.hotKeyEnabled: true,
@@ -620,7 +613,6 @@ final class SettingsStore {
                 defaults.set(encoded, forKey: Keys.islandModuleConfiguration)
             }
         }
-        autoHide = defaults.bool(forKey: Keys.autoHide)
         dragOutRemovalPolicy = DragOutRemovalPolicy(
             rawValue: defaults.string(forKey: Keys.dragOutRemovalPolicy) ?? ""
         ) ?? .keep

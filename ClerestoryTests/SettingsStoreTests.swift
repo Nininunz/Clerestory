@@ -37,11 +37,9 @@ final class SettingsStoreTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: name) }
 
         let store = SettingsStore(defaults: defaults)
-        store.autoHide = true
         store.dragOutRemovalPolicy = .ask
 
         let reloaded = SettingsStore(defaults: defaults)
-        XCTAssertTrue(reloaded.autoHide)
         XCTAssertEqual(reloaded.dragOutRemovalPolicy, .ask)
     }
 
@@ -57,7 +55,6 @@ final class SettingsStoreTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: name) }
 
         let store = SettingsStore(defaults: defaults)
-        XCTAssertFalse(store.autoHide)
         XCTAssertEqual(store.dragOutRemovalPolicy, .keep)
         XCTAssertEqual(store.onboardingVersion, 0)
         XCTAssertFalse(store.hadPersistedOnboardingVersion)

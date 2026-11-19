@@ -14,7 +14,6 @@ final class SupportController {
         let operatingSystem: String
         let architecture: String
         let hotKeyEnabled: Bool
-        let autoHide: Bool
         let dragOutRemovalPolicy: SettingsStore.DragOutRemovalPolicy
         let autoUpdateCheckEnabled: Bool
     }
@@ -92,7 +91,6 @@ final class SupportController {
             operatingSystem: ProcessInfo.processInfo.operatingSystemVersionString,
             architecture: Self.architecture,
             hotKeyEnabled: settings.hotKeyEnabled,
-            autoHide: settings.autoHide,
             dragOutRemovalPolicy: settings.dragOutRemovalPolicy,
             autoUpdateCheckEnabled: settings.autoUpdateCheckEnabled
         )

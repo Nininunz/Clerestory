@@ -32,7 +32,7 @@ final class ShelfWindowController: NSObject {
     /// Runtime focus/expanded-stack state shared with SwiftUI card rendering.
     private let interaction = ShelfInteractionState()
     /// Starts drag-out sessions and applies the remove, keep, or ask preference
-    /// after the drop. Successful drops enter recent history and can trigger auto-hide.
+    /// after the drop. Successful drops enter recent history.
     private let islandDragOutController: DragOutController
     /// Temporary file storage for text actions in the card context menu.
     private let tempFileService: TempFileService
@@ -64,7 +64,7 @@ final class ShelfWindowController: NSObject {
     let favoriteFoldersStore: FavoriteFoldersStore
     let favoriteFolderDropCoordinator: FavoriteFolderDropCoordinator
     let islandModuleContainer: IslandModuleContainer
-    /// Onboarding pauses auto-hide without changing the saved preference.
+    /// Open onboarding presentations. The last one to end restores the earlier visibility.
     private var onboardingPresentationCount = 0
 
     struct OnboardingPresentationSnapshot: Equatable, Sendable {
@@ -499,14 +499,6 @@ final class ShelfWindowController: NSObject {
             guard let self else { return }
             self.interaction.normalize(for: self.store.items)
         }
-        // DragSessionController reports a successful drop only when the operation
-        // is nonempty. Read the current auto-hide preference when the callback runs.
-        islandDragOutController.onSuccessfulDrop = { [weak self] in
-            guard let self,
-                  self.onboardingPresentationCount == 0,
-                  self.settings.autoHide else { return }
-            self.collapseIsland(animated: true)
-        }
         quickLookCoordinator.onNavigationKey = { [weak self] event in
             guard let self else { return false }
             return self.handleItemKeyDown(event, in: self.islandPanel)
@@ -624,7 +616,7 @@ final class ShelfWindowController: NSObject {
         if takeKeyboardFocus { islandPanel.makeKey() }
     }
 
-    /// Onboarding saves the prior visibility, pauses auto-hide, and shows Shelf.
+    /// Onboarding saves the prior visibility and shows Shelf.
     /// When the lease ends, it restores visibility without writing preferences.
     func beginOnboardingPresentation() -> OnboardingPresentationSnapshot {
         // Without the Panel's Shelf there is nothing to show, and so nothing to close later.

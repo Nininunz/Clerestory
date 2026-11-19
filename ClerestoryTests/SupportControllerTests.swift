@@ -10,7 +10,6 @@ final class SupportControllerTests: XCTestCase {
         operatingSystem: "macOS 26.5 (Build 25F70)",
         architecture: "arm64",
         hotKeyEnabled: true,
-        autoHide: false,
         dragOutRemovalPolicy: .keep,
         autoUpdateCheckEnabled: true
     )

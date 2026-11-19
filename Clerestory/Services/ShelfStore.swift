@@ -107,10 +107,9 @@ final class ShelfStore {
         }
     }
 
-    /// UX5/UX6: items change callback (called after every persistent item change —— add, delete, move,
-    /// stack operation, update). ShelfWindowController uses this for compact height animation and
-    /// auto-hide of empty shelf; selection set changes do not trigger (do not affect layout). Optional for
-    /// testing.
+    /// Called after every persistent item change (add, delete, move, stack operation, update), not
+    /// after selection changes. ShelfWindowController uses it to drop selection for removed items.
+    /// Optional for testing.
     var onItemsDidChange: (@MainActor () -> Void)?
 
     init(items: [ShelfItem] = [], persistence: PersistenceController? = nil) {

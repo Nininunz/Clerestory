@@ -65,10 +65,6 @@ final class DragOutController {
     /// schema.
     private let tutorialTokenForItem: @MainActor (UUID) -> String?
 
-    /// S8: Callback after a successful drag (`operation` is non-nil), connected by ShelfWindowController
-    /// after init to implement autoHide (init phase cannot capture incomplete self).
-    /// Does nothing if nil (Preview/testing).
-    var onSuccessfulDrop: (@MainActor () -> Void)?
 
     init(store: ShelfStore,
          settings: SettingsStore,
@@ -162,7 +158,6 @@ final class DragOutController {
                                                    tutorialTokenForItem(item.id) == nil ? nil : item.id
                                                }
                                            ),
-                                           onSuccessfulDrop: onSuccessfulDrop,
                                            dragAnchorOffset: dragAnchorOffset,
                                            fileAccess: fileAccess)
         // Counted only once a session really starts: the source's
@@ -306,7 +301,6 @@ final class DragSessionController: NSObject, NSDraggingSource {
     /// Tutorial items are cleaned up by OnboardingController after the real target is confirmed, and are
     /// unaffected by the user's regular drag-out strategy. They are never added to Recent Items.
     private let policyExcludedItemIDs: Set<UUID>
-    private let onSuccessfulDrop: (@MainActor () -> Void)?
     private let anchorOffset: CGSize
     private var fileAccess: BookmarkAccessLease?
 
@@ -317,7 +311,6 @@ final class DragSessionController: NSObject, NSDraggingSource {
          recents: RecentItemsService,
          delivery: DeliveryCoordinator? = nil,
          policyExcludedItemIDs: Set<UUID> = [],
-         onSuccessfulDrop: (@MainActor () -> Void)? = nil,
          dragAnchorOffset: CGSize = .zero,
          fileAccess: BookmarkAccessLease? = nil) {
         self.contents = contents
@@ -327,7 +320,6 @@ final class DragSessionController: NSObject, NSDraggingSource {
         self.recents = recents
         self.delivery = delivery
         self.policyExcludedItemIDs = policyExcludedItemIDs
-        self.onSuccessfulDrop = onSuccessfulDrop
         self.anchorOffset = dragAnchorOffset
         self.fileAccess = fileAccess
         super.init()
@@ -348,8 +340,7 @@ final class DragSessionController: NSObject, NSDraggingSource {
 
     /// Session end handling: Only process according to the set strategy when an actual drop occurs
     /// (`operation` is non-empty; cancel/reject is empty) — remove top-level items and record in recent
-    /// history, retain as-is, or (`.ask`) show a confirmation dialog. After a successful drop, first call
-    /// `onSuccessfulDrop` (autoHide connection point).
+    /// history, retain as-is, or (`.ask`) show a confirmation dialog.
     ///
     /// F-05: The `isCut` item does not participate in the above strategy — the cut semantics imply
     /// removal. After delivery confirmation (promise write completion), `DeliveryCoordinator` removes the
@@ -372,7 +363,6 @@ final class DragSessionController: NSObject, NSDraggingSource {
             delivery?.noteSessionEnded(id: sessionID, accepted: false)
             return
         }
-        onSuccessfulDrop?()
         switch settings.dragOutRemovalPolicy {
         case .keep:
             break

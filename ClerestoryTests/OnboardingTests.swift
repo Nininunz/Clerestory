@@ -91,7 +91,7 @@ final class OnboardingPolicyAndLayoutTests: XCTestCase {
         XCTAssertFalse(OnboardingLaunchPolicy.hasExistingInstallation(
             preferences: ["Clerestory.onboardingVersion": 0], supportEntries: ["Tutorial"]))
         XCTAssertTrue(OnboardingLaunchPolicy.hasExistingInstallation(
-            preferences: ["Clerestory.autoHide": true], supportEntries: []))
+            preferences: ["Clerestory.hotKeyEnabled": true], supportEntries: []))
         XCTAssertTrue(OnboardingLaunchPolicy.hasExistingInstallation(
             preferences: [:], supportEntries: ["shelf.json"]))
     }
