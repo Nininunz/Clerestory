@@ -19,10 +19,23 @@ final class OnboardingSessionStoreTests: XCTestCase {
         XCTAssertNil(record.tutorialItemID)
         XCTAssertFalse(record.token.isEmpty)
         XCTAssertTrue(FileManager.default.fileExists(atPath: file.path))
-        XCTAssertEqual(file.lastPathComponent, OnboardingSessionStore.tutorialFileName)
+        XCTAssertEqual(file.lastPathComponent, "Clerestory Practice File.txt")
         XCTAssertEqual(file.deletingLastPathComponent().deletingLastPathComponent().standardizedFileURL,
                        root.standardizedFileURL)
         XCTAssertEqual(store.load(), record)
+    }
+
+    func testResumingLegacySessionRecognizesOriginalPracticeFile() throws {
+        let (store, root) = makeStore()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let record = try store.begin()
+        let file = store.tutorialFileURL(for: record)
+        let legacyFile = file.deletingLastPathComponent().appendingPathComponent("OpenYoink 练习文件.txt")
+        try FileManager.default.moveItem(at: file, to: legacyFile)
+
+        let resumed = try XCTUnwrap(store.load())
+        XCTAssertEqual(store.tutorialFileURL(for: resumed), legacyFile)
+        XCTAssertTrue(store.isTutorialFile(legacyFile, for: resumed))
     }
 
     func testAwaitingExportPersistsItemIdentityForCrashResume() throws {

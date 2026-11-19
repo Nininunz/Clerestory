@@ -502,7 +502,7 @@ private struct OnboardingView: View {
             Image(systemName: "doc.text.fill")
                 .font(.title2)
                 .foregroundStyle(.blue)
-            Text(OnboardingSessionStore.tutorialFileName)
+            Text(model.tutorialFileURL?.lastPathComponent ?? OnboardingSessionStore.tutorialFileName)
                 .fontWeight(.medium)
                 .lineLimit(1)
             Spacer()
