@@ -33,9 +33,9 @@ final class IslandModulePreviewTests: XCTestCase {
 
     private func battery() async throws {
         let states: [(String, PowerSourceMonitor.Snapshot)] = [
-            ("On battery", .init(hasBattery: true, percentage: 64, isCharging: false, isConnectedToPower: false, powerWatts: -8.2)),
-            ("Charging", .init(hasBattery: true, percentage: 42, isCharging: true, isConnectedToPower: true, powerWatts: 27.4)),
-            ("Connected / full", .init(hasBattery: true, percentage: 100, isCharging: false, isConnectedToPower: true, powerWatts: 0)),
+            ("On battery", .init(hasBattery: true, percentage: 64, isCharging: false, isConnectedToPower: false, powerWatts: -8.2, estimatedMinutes: 185)),
+            ("Charging", .init(hasBattery: true, percentage: 42, isCharging: true, isConnectedToPower: true, powerWatts: 27.4, isCalculatingEstimate: true, adapterWatts: 94)),
+            ("Connected / full", .init(hasBattery: true, percentage: 100, isCharging: false, isConnectedToPower: true, powerWatts: 0, isCharged: true)),
             ("Power reading unavailable", .init(hasBattery: true, percentage: 64, isCharging: false, isConnectedToPower: false)),
             ("No internal battery", .unavailable)
         ]

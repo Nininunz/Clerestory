@@ -11,4 +11,5 @@
 | Manual testing | [Manual testing](MANUAL_TESTING.md) covers cross-app drag and drop, file recovery, hardware, and accessibility. |
 | Visual previews | [Module previews](development/PREVIEWS.md) explains how to render fresh captures with synthetic data. |
 | Publishing releases | [Release and Sparkle guide](RELEASING.md) covers signing, notarization, feed publication, and update verification. |
+| Low Power Mode helper | [Helper guide](LOW_POWER_MODE_HELPER.md) covers the optional privileged helper: how it works, building and notarizing its installer package, and uninstalling. |
 | Repository metadata | [README badges](badges/README.md) explains how to refresh the checked-in badges. [Third-party notices](../THIRD_PARTY_NOTICES.md) records bundled dependencies and attribution. |
