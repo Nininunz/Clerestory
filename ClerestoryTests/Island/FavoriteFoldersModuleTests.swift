@@ -63,6 +63,48 @@ final class FavoriteFoldersModuleTests: XCTestCase {
         XCTAssertEqual(store.items.count, 1)
     }
 
+    func testAddingFoldersPostsNotices() throws {
+        let first = try makeTemporaryDirectory()
+        let second = try makeTemporaryDirectory()
+        let file = first.appendingPathComponent("note.txt")
+        try Data("note".utf8).write(to: file)
+        let messages = IslandMessageCenter.forTesting()
+        let store = makeStore(messages: messages)
+        store.start()
+
+        _ = store.addFolders([first])
+        assertNotice(in: messages, key: "added", tone: .success, title: "Folder added to Quick Access.")
+        _ = store.addFolders([second, file])
+        assertNotice(in: messages, key: "added", tone: .success, title: "Folder added to Quick Access.")
+        _ = store.addFolders([first, second])
+        assertNotice(in: messages, key: "duplicate", tone: .info, title: "This folder is already in Quick Access.")
+        _ = store.addFolders([file])
+        assertNotice(in: messages, key: "add-failed", tone: .error, title: "Some folders could not be added.")
+        XCTAssertEqual(FavoriteFoldersStore.importNotice(for: .init(added: 2))?.title, "Folders added to Quick Access.")
+        XCTAssertNil(FavoriteFoldersStore.importNotice(for: .init()))
+    }
+
+    func testLoadFailureIsALastingRowUntilAFolderIsAdded() throws {
+        let directory = try makeTemporaryDirectory()
+        try Data("not json".utf8).write(to: directory.appendingPathComponent("folder-favorites.json"))
+        let folder = try makeTemporaryDirectory()
+        let messages = IslandMessageCenter.forTesting()
+        let store = FavoriteFoldersStore(
+            persistence: FavoriteFoldersPersistenceController(directoryURL: directory),
+            bookmarkService: BookmarkService(),
+            opener: FavoriteFolderOpenerSpy(),
+            messenger: messages.messenger(for: .folders)
+        )
+
+        store.start()
+        XCTAssertTrue(store.didFailToLoad)
+        XCTAssertNil(messages.currentNotice, "A load failure is page content, not a notice")
+
+        _ = store.addFolders([folder])
+        XCTAssertFalse(store.didFailToLoad)
+        store.stop()
+    }
+
     func testDefaultOpenDoesNotSpecifyFinderOrAnotherApplication() throws {
         let folder = try makeTemporaryDirectory()
         let opener = FavoriteFolderOpenerSpy()
@@ -93,7 +135,8 @@ final class FavoriteFoldersModuleTests: XCTestCase {
         let folder = try makeTemporaryDirectory()
         let opener = FavoriteFolderOpenerSpy()
         opener.nextErrorMessage = "Handler unavailable"
-        let store = makeStore(opener: opener)
+        let messages = IslandMessageCenter.forTesting()
+        let store = makeStore(opener: opener, messages: messages)
         store.start()
         _ = store.addFolders([folder])
         let itemID = try XCTUnwrap(store.items.first?.id)
@@ -101,7 +144,50 @@ final class FavoriteFoldersModuleTests: XCTestCase {
         XCTAssertTrue(store.open(itemID))
 
         XCTAssertTrue(store.isUnavailable(itemID))
-        XCTAssertTrue(store.noticeIsError)
+        let posted = try XCTUnwrap(messages.currentNotice)
+        XCTAssertEqual(posted.notice.key, "open-failed")
+        XCTAssertEqual(posted.notice.tone, .error)
+        XCTAssertEqual(posted.notice.title, "Could not open this folder.")
+        XCTAssertEqual(posted.notice.detail, "Could not open this folder. Handler unavailable")
+
+        opener.nextErrorMessage = nil
+        XCTAssertTrue(store.open(itemID))
+        XCTAssertFalse(store.isUnavailable(itemID))
+        XCTAssertNil(messages.currentNotice, "Opening it again withdraws the failure")
+    }
+
+    func testMissingFolderShowsOnItsTileWithoutANotice() throws {
+        let folder = try makeTemporaryDirectory()
+        let messages = IslandMessageCenter.forTesting()
+        let store = makeStore(messages: messages)
+        store.start()
+        _ = store.addFolders([folder])
+        messages.messenger(for: .folders).withdrawNotice("added")
+        let itemID = try XCTUnwrap(store.items.first?.id)
+        try FileManager.default.removeItem(at: folder)
+
+        XCTAssertFalse(store.open(itemID))
+
+        XCTAssertTrue(store.isUnavailable(itemID))
+        XCTAssertNil(messages.currentNotice)
+    }
+
+    func testRelocatingToAFilePostsTheReason() throws {
+        let folder = try makeTemporaryDirectory()
+        let file = folder.appendingPathComponent("note.txt")
+        try Data("note".utf8).write(to: file)
+        let messages = IslandMessageCenter.forTesting()
+        let store = makeStore(messages: messages)
+        store.start()
+        _ = store.addFolders([folder])
+        let itemID = try XCTUnwrap(store.items.first?.id)
+
+        XCTAssertFalse(store.relocate(itemID, to: file))
+        assertNotice(in: messages, key: "relocate-failed", tone: .error,
+                     title: "Only folders can be added to Quick Access.")
+
+        XCTAssertTrue(store.relocate(itemID, to: folder))
+        XCTAssertNil(messages.currentNotice, "Relocating withdraws the failure")
     }
 
     func testPasteboardRoutingAcceptsFoldersAndRejectsFiles() throws {
@@ -225,12 +311,25 @@ final class FavoriteFoldersModuleTests: XCTestCase {
     }
 
     private func makeStore(
-        opener: (any FavoriteFolderOpening)? = nil
+        opener: (any FavoriteFolderOpening)? = nil,
+        messages: IslandMessageCenter? = nil
     ) -> FavoriteFoldersStore {
         FavoriteFoldersStore(
             bookmarkService: BookmarkService(),
-            opener: opener ?? FavoriteFolderOpenerSpy()
+            opener: opener ?? FavoriteFolderOpenerSpy(),
+            messenger: messages?.messenger(for: .folders) ?? .inert
         )
+    }
+
+    private func assertNotice(in messages: IslandMessageCenter, key: String, tone: IslandNotice.Tone,
+                              title: String, file: StaticString = #filePath, line: UInt = #line) {
+        guard let posted = messages.currentNotice else {
+            return XCTFail("No notice posted", file: file, line: line)
+        }
+        XCTAssertEqual(posted.moduleID, .folders, file: file, line: line)
+        XCTAssertEqual(posted.notice.key, key, file: file, line: line)
+        XCTAssertEqual(posted.notice.tone, tone, file: file, line: line)
+        XCTAssertEqual(posted.notice.title, title, file: file, line: line)
     }
 
     private func makeTemporaryDirectory() throws -> URL {

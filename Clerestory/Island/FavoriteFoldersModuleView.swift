@@ -6,7 +6,6 @@ struct FavoriteFoldersModuleView: View {
     @Environment(FavoriteFoldersStore.self) private var store
     @Environment(FavoriteFolderDropCoordinator.self) private var copyCoordinator
     @Environment(DropTargetState.self) private var dropTargetState
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var addPanel: NSOpenPanel?
     @State private var renameTargetID: UUID?
@@ -32,9 +31,11 @@ struct FavoriteFoldersModuleView: View {
                 .help(Text("Add folders"))
             }
 
-            if let noticeMessage = store.noticeMessage {
-                notice(message: noticeMessage, isError: store.noticeIsError)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+            if store.didFailToLoad {
+                IslandStatusRow(
+                    message: String(localized: "Folder favorites could not be loaded. The damaged data was kept for recovery."),
+                    isError: true
+                )
             }
             HStack(spacing: 6) {
                 Image(systemName: "folder.badge.plus")
@@ -105,8 +106,6 @@ struct FavoriteFoldersModuleView: View {
                     .allowsHitTesting(false)
             }
         }
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.16),
-                   value: store.noticeMessage)
         .alert("Rename Favorite", isPresented: renameAlertPresented) {
             TextField("Name", text: $renameText)
             Button("Cancel", role: .cancel) {
@@ -133,10 +132,6 @@ struct FavoriteFoldersModuleView: View {
                 if !presented { renameTargetID = nil }
             }
         )
-    }
-
-    private func notice(message: String, isError: Bool) -> some View {
-        IslandModuleNotice(message: message, isError: isError, onDismiss: store.dismissNotice)
     }
 
     private func chooseFolders() {

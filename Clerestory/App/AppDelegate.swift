@@ -71,7 +71,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// User settings shared with drag-session policy and injected into the SwiftUI Settings scene.
     var settingsStore: SettingsStore { startup.settings }
     lazy var clipboardHistoryStore: ClipboardHistoryStore = {
-        let history = ClipboardHistoryStore(settings: settingsStore)
+        let history = ClipboardHistoryStore(settings: settingsStore, messenger: messages.messenger(for: .clipboard))
         history.onAddToShelf = { [weak self] content in self?.addHistoryToShelf(content) }
         history.onShowWindow = { [weak self] in self?.clipboardHistoryWindowController.show() }
         return history

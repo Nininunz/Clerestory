@@ -26,9 +26,8 @@ struct IslandAIUsageView: View {
                     if let snapshot = store.snapshot {
                         VStack(spacing: 10) {
                             if case let .failed(message) = store.status {
-                                IslandModuleNotice(message: message, isError: true)
-                                Button("Retry") { store.requestRefresh() }
-                                    .buttonStyle(IslandActionButtonStyle())
+                                IslandStatusRow(message: message, isError: true,
+                                                action: .init(title: "Retry") { store.requestRefresh() })
                             }
                             content(snapshot)
                         }

@@ -2676,16 +2676,6 @@
         }
       }
     },
-    "This folder is not available. Locate it again to reconnect the favorite." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This folder is not available. Locate it again to reconnect the favorite."
-          }
-        }
-      }
-    },
     "Unavailable" : {
       "localizations" : {
         "en" : {

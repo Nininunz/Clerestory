@@ -382,6 +382,38 @@ final class IslandModuleChromeTests: XCTestCase {
         }
     }
 
+    func testModuleNoticesAndStatusRowsFitAtBothModuleWidths() throws {
+        let notices: [IslandNotice] = [
+            ClipboardHistoryStore.copiedNotice, ClipboardHistoryStore.copyFailedNotice,
+            ClipboardHistoryStore.favoritesLimitNotice,
+            try XCTUnwrap(FavoriteFoldersStore.importNotice(for: .init(added: 2))),
+            try XCTUnwrap(FavoriteFoldersStore.importNotice(for: .init(duplicates: 1))),
+            try XCTUnwrap(FavoriteFoldersStore.importNotice(for: .init(rejected: 1))),
+            FavoriteFoldersStore.openFailedNotice(reason: "The application can't be opened.")
+        ]
+        let rows: [IslandStatusRow] = [
+            IslandStatusRow(message: "Folder favorites could not be loaded. The damaged data was kept for recovery.",
+                            isError: true),
+            IslandStatusRow(message: ClipboardHistoryStore.storageFullMessage, isError: true),
+            IslandStatusRow(message: "Clipboard history could not be saved.", isError: true, style: .window),
+            IslandStatusRow(message: "TokenTracker returned HTTP 503", isError: true,
+                            action: .init(title: "Retry") {})
+        ]
+        for width in [CGFloat(260), 464] {
+            for notice in notices {
+                let bitmap = try render(IslandNoticePill(notice: notice).frame(width: width))
+                XCTAssertEqual(bitmap.pixelsWide, Int(width * 2), notice.key)
+                XCTAssertLessThanOrEqual(bitmap.pixelsHigh, 150, notice.key)
+            }
+            for row in rows {
+                let bitmap = try render(row.frame(width: width).fixedSize(horizontal: false, vertical: true))
+                XCTAssertEqual(bitmap.pixelsWide, Int(width * 2), row.message)
+                XCTAssertGreaterThanOrEqual(bitmap.pixelsHigh, 40, row.message)
+                XCTAssertLessThanOrEqual(bitmap.pixelsHigh, 200, row.message)
+            }
+        }
+    }
+
     private func render<V: View>(_ view: V) throws -> NSBitmapImageRep {
         let renderer = ImageRenderer(content: view)
         renderer.scale = 2
