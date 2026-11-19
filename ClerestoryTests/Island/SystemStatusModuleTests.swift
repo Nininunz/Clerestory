@@ -196,7 +196,7 @@ final class SystemStatusMetricTests: XCTestCase {
         await provider.set(sample)
         await store.refresh()
         XCTAssertEqual(spoken.messages.count, 4, "Critical is a higher level, so each announces once")
-        XCTAssertTrue(spoken.messages.contains("Memory pressure is critical, Apps may slow down"))
+        XCTAssertTrue(spoken.messages.contains("Memory pressure is critical, Apps may slow down. Show is available."))
         await store.refresh()
         XCTAssertEqual(spoken.messages.count, 4)
 

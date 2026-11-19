@@ -173,7 +173,7 @@ final class IslandTimerStoreTests: XCTestCase {
         XCTAssertEqual(status.title, "Timer finished")
         XCTAssertEqual(status.tone, .warning)
         XCTAssertEqual(messages.statuses(for: .timer).count, 1, "Finished replaces running")
-        XCTAssertEqual(spoken.messages, ["Timer finished"], "Announced once when raised")
+        XCTAssertEqual(spoken.messages, ["Timer finished. Show is available."], "Announced once when raised")
         XCTAssertEqual(messages.currentNotice?.raisedStatusKey, "finished")
 
         timer.acknowledgeFinished()
@@ -225,7 +225,7 @@ final class IslandTimerStoreTests: XCTestCase {
         timer.updateForCurrentTime()
 
         XCTAssertEqual(messages.topStatus(for: .timer)?.key, "finished")
-        XCTAssertEqual(spoken.messages, ["Timer finished"], "VoiceOver still speaks it")
+        XCTAssertEqual(spoken.messages, ["Timer finished. Show is available."], "VoiceOver still speaks it")
         XCTAssertNil(messages.currentNotice, "The open Panel already shows Timer, so no pill")
     }
 

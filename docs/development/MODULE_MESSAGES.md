@@ -36,7 +36,7 @@ messenger.clearStatus("running")
 - `key` only has to be unique within the module.
 - `tone` is `neutral`, `progress`, `warning` or `critical`. It sets the Notch tint: white, accent, orange or red. Only a critical status shows when the Notch displays another module.
 - `level` orders statuses of the same tone. A higher level means the condition got worse.
-- A status is *raised* when it is new, its tone goes up, or its level goes up at the same tone. A raised warning or critical status shows its text once in the pill and is spoken, unless `announcesWhenRaised` is false or the open Panel already shows the module. A title or detail change alone is silent.
+- A status is *raised* when it is new, its tone goes up, or its level goes up at the same tone. A raised warning or critical status shows its text once in the pill and is spoken, unless `announcesWhenRaised` is false or the open Panel already shows the module. A title or detail change alone is silent. The pill has a **Show** button (`.openModule`) that opens the Panel on the module, which withdraws the pill.
 - Setting an equal value changes nothing. Statuses are ignored until the module has started, and stopping the module clears them.
 - `isDismissible` lets the module's page hide one with `messenger.dismissStatus(key)` until it clears. `expiresAt` (from `messenger.expiry(after:)`) removes one on the center's clock.
 
@@ -73,7 +73,7 @@ Pass `style: .window` in a regular window. Full-page states, such as an empty mo
 ## VoiceOver
 
 - Every notice is spoken when it is posted, even while it waits behind an open Panel or a drag. Replacing a notice with the same text is not spoken again.
-- A raised warning or critical status is spoken once as "title, detail".
+- A raised warning or critical status is spoken once as "title, detail". When it also shows a pill, "Show is available." follows.
 - Priority is high for errors, critical statuses and notices with a button, medium for warnings, and low otherwise.
 - A notice with a button adds its title, such as "Open Recovery is available.", because the pill never takes keyboard focus.
 - The Notch's label adds the status its icon shows, such as "Battery, 15 percent, Battery low".
