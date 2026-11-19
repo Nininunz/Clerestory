@@ -267,4 +267,51 @@ final class ClipboardControllerTests: XCTestCase {
 
         XCTAssertEqual(result, .init(copiedCount: 1, skippedCount: 1, didWrite: true))
     }
+
+    // MARK: - "Select Item" recovery (#81)
+
+    func testFocusRetainedItemSelectsAndFocusesATopLevelItem() {
+        let items = ShelfFixtures.notes(count: 3)
+        let store = ShelfStore(items: items)
+        let interaction = ShelfInteractionState()
+
+        XCTAssertTrue(interaction.focusRetainedItem(items[1].id, in: store))
+
+        XCTAssertEqual(interaction.focusedItemID, items[1].id)
+        XCTAssertEqual(store.selection, [items[1].id])
+        XCTAssertNil(interaction.expandedStackID)
+    }
+
+    func testFocusRetainedItemInsideAStackFocusesTheStackWhenStacksAreOff() {
+        let children = ShelfFixtures.notes(count: 2)
+        let stack = ShelfItem(kind: .stack, displayName: "Retained stack", children: children)
+        let store = ShelfStore(items: [stack])
+        let interaction = ShelfInteractionState(stacksEnabled: false)
+
+        XCTAssertTrue(interaction.focusRetainedItem(children[1].id, in: store))
+
+        XCTAssertEqual(interaction.focusedItemID, stack.id)
+        XCTAssertEqual(store.selection, [stack.id])
+    }
+
+    func testFocusRetainedItemInsideAStackOpensItWhenStacksAreOn() {
+        let children = ShelfFixtures.notes(count: 2)
+        let stack = ShelfItem(kind: .stack, displayName: "Retained stack", children: children)
+        let store = ShelfStore(items: [stack])
+        let interaction = ShelfInteractionState(stacksEnabled: true)
+
+        XCTAssertTrue(interaction.focusRetainedItem(children[1].id, in: store))
+
+        XCTAssertEqual(interaction.expandedStackID, stack.id)
+        XCTAssertEqual(interaction.focusedItemID, children[1].id)
+        XCTAssertEqual(interaction.childSelection, [children[1].id])
+    }
+
+    func testFocusRetainedItemReportsAnItemThatIsGone() {
+        let store = ShelfStore(items: ShelfFixtures.notes(count: 1))
+        let interaction = ShelfInteractionState()
+
+        XCTAssertFalse(interaction.focusRetainedItem(UUID(), in: store))
+        XCTAssertNil(interaction.focusedItemID)
+    }
 }
