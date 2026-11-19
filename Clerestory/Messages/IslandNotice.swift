@@ -18,7 +18,7 @@ struct IslandNotice: Equatable, Sendable {
     var systemImage: String? = nil
     /// The one button the pill may show.
     var action: IslandNoticeAction? = nil
-    /// Visible time in seconds. `nil` uses the message center's default.
+    /// Visible time in seconds. `nil` means 4 s, or 8 s with an action. Clamped to 2...10 s.
     var duration: TimeInterval? = nil
 
     /// Tooltip and VoiceOver text.
@@ -65,12 +65,12 @@ struct ModuleMessenger {
     /// Whether posts reach a message center. `false` for `inert`.
     var isConnected: Bool { center != nil }
 
-    /// The newest notice replaces the current one.
+    /// Shows the notice, or queues it behind another module's notice. See `IslandMessageCenter`.
     func post(_ notice: IslandNotice) {
         center?.post(notice, from: moduleID)
     }
 
-    /// Clears the current notice only if this module posted it with this key.
+    /// Removes this module's visible or waiting notice with this key.
     func withdrawNotice(_ key: String) {
         center?.withdrawNotice(key, from: moduleID)
     }

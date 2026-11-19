@@ -444,7 +444,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Immediate mode opens a hidden Shelf and marks it as automatic. A visible Shelf stays
     /// as it is. Edge-only mode tracks the drag and delegates opening to the edge trigger.
     private func handleDragStart() {
-        noticeRevisionBeforeDrag = messages.revision
+        noticeRevisionBeforeDrag = messages.noticeRevision(for: .shelf)
         dragAutoShowSession.dragBegan()
         guard settingsStore.effectivePreferredShelfSurface == .classic else { return }
         guard settingsStore.classicShelfEnabled else { return }
@@ -477,7 +477,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if islandDragWasActivated {
             shelfPresentationCoordinator.dragEnded(
                 imported: imported,
-                hasPendingNotice: messages.current != nil && messages.revision != noticeRevisionBeforeDrag
+                // Only Shelf feedback from this drag collapses the panel the drag opened.
+                hasPendingNotice: messages.hasNewCurrentNotice(from: .shelf, since: noticeRevisionBeforeDrag)
             )
             islandDragWasActivated = false
         }
@@ -487,15 +488,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - UX3 clipboard save
 
-    /// "Add Clipboard Image to Shelf" adds only the clipboard's image and reveals Shelf, so the
-    /// result or the "no image" notice is visible.
+    /// "Add Clipboard Image to Shelf" adds only the clipboard's image and reveals Shelf to show
+    /// it. With no image, the Shelf stays closed and the notice shows under the notch.
     private func addClipboardImageToShelf() {
         let scheduled = dropImportCoordinator.importClipboardImages(from: .general) { [weak self] item in
             self?.shelfStore.add(item)
         }
-        shelfPresentationCoordinator.show(animated: true)
-        if scheduled == 0 {
-            shelfMessenger.post(.clipboardHasNoImage)
+        switch ClipboardImageImportOutcome(scheduledCount: scheduled) {
+        case .showShelf:
+            shelfPresentationCoordinator.show(animated: true)
+        case .notice(let notice):
+            shelfMessenger.post(notice)
         }
     }
 
@@ -852,5 +855,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.clipboardHistoryStore.prune(force: true)
             self.clipboardHistoryStore.updateRecording()
         }
+    }
+}
+
+/// What "Add Clipboard Image to Shelf" does after scheduling imports. Opening the panel only
+/// for a real image keeps the "no image" notice under the notch instead of behind an open panel.
+enum ClipboardImageImportOutcome: Equatable {
+    case showShelf
+    case notice(ShelfNotice)
+
+    init(scheduledCount: Int) {
+        self = scheduledCount > 0 ? .showShelf : .notice(.clipboardHasNoImage)
     }
 }

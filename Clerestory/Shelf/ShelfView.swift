@@ -129,7 +129,6 @@ struct ShelfView: View {
     /// v1.2: runtime-only asynchronous batch status.
     @Environment(TransferStore.self) private var transferStore
     @Environment(ShelfInteractionState.self) private var interaction
-    @Environment(\.accessibilityAnnouncementCenter) private var announcementCenter
     /// v1.2: unavailable-item actions (external reconnect vs managed recovery).
     @Environment(\.itemRecoveryController) private var itemRecoveryController
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -176,9 +175,6 @@ struct ShelfView: View {
             .onDisappear { showsManagementActions = false }
             .onChange(of: store.searchQuery) { normalizeSearch() }
             .onChange(of: store.contentFilter) { normalizeSearch() }
-            .onChange(of: transferStore.currentTask, initial: true) { _, task in
-                announcementCenter?.announce(task: task)
-            }
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("shelf.root")
     }

@@ -95,7 +95,7 @@ final class ShelfActionTests: XCTestCase {
             try? FileManager.default.removeItem(at: secondURL.deletingLastPathComponent())
         }
         let pasteboard = makePasteboard()
-        let messages = IslandMessageCenter()
+        let messages = IslandMessageCenter.forTesting()
         let runner = ShelfActionRunner(bookmarkService: bookmarks,
                                        messenger: messages.messenger(for: .shelf),
                                        pasteboard: pasteboard)
@@ -114,7 +114,7 @@ final class ShelfActionTests: XCTestCase {
         XCTAssertEqual(result, .init(state: .completed, succeededCount: 2, skippedCount: 1))
         XCTAssertEqual(pasteboard.string(forType: PasteboardTypes.plainText),
                        "\(firstURL.path)\n\(secondURL.path)")
-        XCTAssertNotNil(messages.current)
+        XCTAssertNotNil(messages.currentNotice)
     }
 
     func testCopyPathFailurePreservesExistingClipboard() {
@@ -190,7 +190,7 @@ final class ShelfActionTests: XCTestCase {
     }
 
     func testUserCancelledShareIsSilent() {
-        let messages = IslandMessageCenter()
+        let messages = IslandMessageCenter.forTesting()
         let runner = ShelfActionRunner(bookmarkService: bookmarks, messenger: messages.messenger(for: .shelf))
         let service = NSSharingService(
             title: "Test",
@@ -206,11 +206,12 @@ final class ShelfActionTests: XCTestCase {
                            code: CocoaError.Code.userCancelled.rawValue)
         )
 
-        XCTAssertNil(messages.current)
+        XCTAssertNil(messages.currentNotice)
     }
 
     func testRealShareFailureShowsNonDestructiveNotice() {
-        let messages = IslandMessageCenter()
+        let spoken = AnnouncementRecorder()
+        let messages = IslandMessageCenter.forTesting(announcer: .recording(into: spoken))
         let runner = ShelfActionRunner(bookmarkService: bookmarks, messenger: messages.messenger(for: .shelf))
         let service = NSSharingService(
             title: "Test",
@@ -226,8 +227,10 @@ final class ShelfActionTests: XCTestCase {
         )
 
         XCTAssertEqual(
-            messages.current?.notice.fullText,
+            messages.currentNotice?.notice.fullText,
             String(localized: "Sharing failed. The selected items remain on the shelf.")
         )
+        XCTAssertEqual(spoken.messages,
+                       [String(localized: "Sharing failed. The selected items remain on the shelf.")])
     }
 }

@@ -2360,6 +2360,18 @@
         }
       }
     },
+    "%@ is available." : {
+      "extractionState" : "manual",
+      "comment" : "VoiceOver, after a notice's text. The argument is the notice's button title, such as Open Recovery.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ is available."
+          }
+        }
+      }
+    },
     "(Default)" : {
       "localizations" : {
         "en" : {

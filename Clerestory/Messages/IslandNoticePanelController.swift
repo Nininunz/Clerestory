@@ -3,6 +3,8 @@ import Observation
 import SwiftUI
 
 /// Owns the independent notice pill window; presentation policy lives in IslandNoticePresentation.
+/// It is the message center's presenter: it runs the notice clock only while the pill is on
+/// screen and the pointer is not resting on its button.
 @MainActor
 final class IslandNoticePanelController: NSObject {
     private weak var anchor: NSWindow?
@@ -10,11 +12,14 @@ final class IslandNoticePanelController: NSObject {
     private let coordinator: IslandActivityCoordinator
     private let settings: SettingsStore
     private let dropTarget: DropTargetState
+    private let pointerLocation: @MainActor () -> CGPoint
     let panel = NSPanel(contentRect: .zero,
                         styleMask: [.borderless, .nonactivatingPanel],
                         backing: .buffered, defer: false)
 
     private var presentation = IslandNoticePresentation()
+    private var phase: IslandNoticePresentation.Phase = .idle
+    private var isPointerOverAction = false
     private var hostingView: NSHostingView<IslandNoticePanelContent>?
     private var renderedNotice: IslandNotice?
     private var pillSize = CGSize.zero
@@ -24,12 +29,14 @@ final class IslandNoticePanelController: NSObject {
     private var stopped = false
 
     init(anchor: NSWindow, messages: IslandMessageCenter, coordinator: IslandActivityCoordinator,
-         settings: SettingsStore, dropTarget: DropTargetState) {
+         settings: SettingsStore, dropTarget: DropTargetState,
+         pointerLocation: @escaping @MainActor () -> CGPoint = { NSEvent.mouseLocation }) {
         self.anchor = anchor
         self.messages = messages
         self.coordinator = coordinator
         self.settings = settings
         self.dropTarget = dropTarget
+        self.pointerLocation = pointerLocation
         super.init()
         panel.isReleasedWhenClosed = false
         panel.isOpaque = false
@@ -57,9 +64,24 @@ final class IslandNoticePanelController: NSObject {
         return NSBezierPath(roundedRect: frame, xRadius: frame.height / 2, yRadius: frame.height / 2).contains(point)
     }
 
-    /// The larger shadow canvas must not intercept clicks meant for the Island.
+    /// The larger shadow canvas must not intercept clicks meant for the Island. Resting on a
+    /// pill's button holds the notice; IslandPresentationController calls this on every move.
     func updatePointer(at point: CGPoint) {
-        panel.ignoresMouseEvents = renderedNotice?.action == nil || !contains(point)
+        isPointerOverAction = renderedNotice?.action != nil && contains(point)
+        panel.ignoresMouseEvents = !isPointerOverAction
+        updateNoticeClock()
+    }
+
+    /// Only visible, unheld time counts. With the Panel disabled (idle) nothing can show the
+    /// notice, so it times out as if seen rather than piling up.
+    private func updateNoticeClock() {
+        guard !stopped else { return }
+        let running = switch phase {
+        case .visible: !isPointerOverAction
+        case .idle: true
+        case .waiting: false
+        }
+        messages.setNoticeClockRunning(running)
     }
 
     func stop() {
@@ -67,7 +89,8 @@ final class IslandNoticePanelController: NSObject {
         animationGeneration += 1
         isShowing = false
         NotificationCenter.default.removeObserver(self)
-        messages.setPresentationDeferred(false)
+        // Without a presenter nobody can see a notice, so its time does not count.
+        messages.setNoticeClockRunning(false)
         panel.orderOut(nil)
     }
 
@@ -75,14 +98,14 @@ final class IslandNoticePanelController: NSObject {
         .init(isEnabled: settings.islandEnabled,
               surface: coordinator.surfaceState,
               isTransitioning: coordinator.isSurfaceTransitionPending,
-              isDragging: dropTarget.isTargeted)
+              isDragging: dropTarget.isTargeted,
+              shownModule: coordinator.surfaceState.isExpanded ? coordinator.selectedModule : nil)
     }
 
     private func observe() {
         guard !stopped else { return }
         withObservationTracking {
-            _ = messages.current
-            _ = messages.revision
+            _ = messages.currentNotice
             _ = context
             _ = coordinator.currentLayout
         } onChange: { [weak self] in
@@ -95,11 +118,11 @@ final class IslandNoticePanelController: NSObject {
 
     private func refresh() {
         guard !stopped else { return }
-        let phase = presentation.update(revision: messages.current == nil ? nil : messages.revision,
-                                        context: context)
-        messages.setPresentationDeferred(phase == .waiting)
-        guard phase == .visible, let anchor, let notice = messages.current?.notice else {
+        let current = messages.currentNotice
+        phase = presentation.update(noticeID: current?.id, from: current?.moduleID, context: context)
+        guard phase == .visible, let anchor, let notice = current?.notice else {
             dismiss()
+            updatePointer(at: pointerLocation())
             return
         }
         updateContent(notice)
@@ -112,7 +135,7 @@ final class IslandNoticePanelController: NSObject {
         panel.level = anchor.level
         if isShowing { move(to: target) } else { show(at: target) }
         lastTargetFrame = target
-        updatePointer(at: NSEvent.mouseLocation)
+        updatePointer(at: pointerLocation())
     }
 
     private func updateContent(_ notice: IslandNotice) {
@@ -131,7 +154,7 @@ final class IslandNoticePanelController: NSObject {
         }
         pillSize = IslandNoticePlacement.pillSize(in: host.fittingSize)
         renderedNotice = notice
-        updatePointer(at: NSEvent.mouseLocation)
+        updatePointer(at: pointerLocation())
     }
 
     private var reducedMotion: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
@@ -142,7 +165,7 @@ final class IslandNoticePanelController: NSObject {
         panel.alphaValue = 0
         panel.setFrame(target.offsetBy(dx: 0, dy: reducedMotion ? 0 : 8), display: true)
         panel.orderFront(nil)
-        updatePointer(at: NSEvent.mouseLocation)
+        updatePointer(at: pointerLocation())
         NSAnimationContext.runAnimationGroup { context in
             context.duration = reducedMotion ? 0 : 0.2
             panel.animator().setFrame(target, display: true)

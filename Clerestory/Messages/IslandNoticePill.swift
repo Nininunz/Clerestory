@@ -21,8 +21,8 @@ struct IslandNoticePill: View {
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            if let action = notice.action, let onPerformAction {
-                Button(action.title) { onPerformAction(action) }
+            if let action = notice.action, let onPerformAction, let actionTitle {
+                Button(actionTitle) { onPerformAction(action) }
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 8)
@@ -47,6 +47,11 @@ struct IslandNoticePill: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(notice.fullText))
         .accessibilityIdentifier("island.notice")
+    }
+
+    /// The button's title, from the notice's action. `nil` when the pill shows no button.
+    var actionTitle: String? {
+        onPerformAction == nil ? nil : notice.action?.title
     }
 
     private var symbol: String {

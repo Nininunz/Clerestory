@@ -4,6 +4,21 @@ import XCTest
 
 @MainActor
 final class IslandNoticePanelTests: XCTestCase {
+    private let clock = ManualMessageClock()
+
+    private func makeMessages() -> IslandMessageCenter {
+        IslandMessageCenter.forTesting(clock: clock)
+    }
+
+    /// A pointer far from the pill, so the real mouse position cannot hold a notice.
+    private func makeController(anchor: NSWindow, messages: IslandMessageCenter,
+                                coordinator: IslandActivityCoordinator, settings: SettingsStore,
+                                dropTarget: DropTargetState = DropTargetState()) -> IslandNoticePanelController {
+        IslandNoticePanelController(anchor: anchor, messages: messages, coordinator: coordinator,
+                                    settings: settings, dropTarget: dropTarget,
+                                    pointerLocation: { CGPoint(x: -10_000, y: -10_000) })
+    }
+
     // These tests create real windows. Keep the fixture and the pill's shadow
     // inside the host display so AppKit's screen-edge constraints do not move
     // them. Screen-edge/notch geometry is covered by the pure layout tests.
@@ -28,20 +43,24 @@ final class IslandNoticePanelTests: XCTestCase {
         coordinator.currentLayout = layout
         coordinator.show(module: .shelf)
         coordinator.completeSurfaceTransition(coordinator.surfaceTransitionID)
-        let messages = IslandMessageCenter()
-        let shelf = messages.messenger(for: .shelf)
+        let messages = makeMessages()
+        // The panel shows Shelf, so a notice from another module waits for it to close.
+        let battery = messages.messenger(for: .battery)
+        let power = IslandNotice(key: "power", title: "Power connected")
         let anchor = NSWindow(contentRect: layout.expandedFrame,
                               styleMask: [.borderless], backing: .buffered, defer: false)
         anchor.isReleasedWhenClosed = false
         anchor.orderFront(nil)
         defer { anchor.close() }
-        let controller = IslandNoticePanelController(anchor: anchor, messages: messages,
-            coordinator: coordinator, settings: settings, dropTarget: DropTargetState())
+        let controller = makeController(anchor: anchor, messages: messages,
+            coordinator: coordinator, settings: settings)
         defer { controller.stop() }
-        shelf.post(.alreadyOnShelf)
-        try await Task.sleep(for: .seconds(IslandMessageCenter.displayDuration + 0.3))
+        battery.post(power)
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertFalse(messages.isNoticeClockRunning, "Waiting time does not count")
+        await clock.advance(by: 60)
         XCTAssertFalse(controller.panel.isVisible)
-        XCTAssertEqual(messages.current?.notice, ShelfNotice.alreadyOnShelf.notice)
+        XCTAssertEqual(messages.currentNotice?.notice, power)
         coordinator.collapse()
         let oldClose = coordinator.surfaceTransitionID
         coordinator.show(module: .shelf)
@@ -54,9 +73,11 @@ final class IslandNoticePanelTests: XCTestCase {
         coordinator.completeSurfaceTransition(coordinator.surfaceTransitionID)
         try await Task.sleep(for: .milliseconds(300))
         XCTAssertTrue(controller.panel.isVisible)
-        try await Task.sleep(for: .seconds(IslandMessageCenter.displayDuration + 0.3))
+        XCTAssertTrue(messages.isNoticeClockRunning)
+        await clock.advance(by: IslandMessageCenter.defaultDuration)
+        XCTAssertNil(messages.currentNotice)
+        try await Task.sleep(for: .milliseconds(300))
         XCTAssertFalse(controller.panel.isVisible)
-        XCTAssertNil(messages.current)
     }
 
     func testReopeningPushesVisiblePillBelowExpandedIsland() async throws {
@@ -67,14 +88,14 @@ final class IslandNoticePanelTests: XCTestCase {
         let coordinator = IslandActivityCoordinator()
         let layout = try liveLayout()
         coordinator.currentLayout = layout
-        let messages = IslandMessageCenter()
+        let messages = makeMessages()
         let shelf = messages.messenger(for: .shelf)
         let anchor = NSWindow(contentRect: layout.notchFrame, styleMask: [.borderless], backing: .buffered, defer: false)
         anchor.isReleasedWhenClosed = false
         anchor.orderFront(nil)
         defer { anchor.close() }
-        let controller = IslandNoticePanelController(anchor: anchor, messages: messages,
-            coordinator: coordinator, settings: settings, dropTarget: DropTargetState())
+        let controller = makeController(anchor: anchor, messages: messages,
+            coordinator: coordinator, settings: settings)
         defer { controller.stop() }
         shelf.post(.alreadyOnShelf)
         try await Task.sleep(for: .milliseconds(300))
@@ -101,7 +122,12 @@ final class IslandNoticePanelTests: XCTestCase {
         coordinator.completeSurfaceTransition(coordinator.surfaceTransitionID)
         shelf.post(.alreadyOnShelf)
         try await Task.sleep(for: .milliseconds(300))
-        XCTAssertFalse(controller.panel.isVisible, "A new identical notice still waits for its own initial close")
+        XCTAssertTrue(controller.panel.isVisible, "A repeat updates the visible pill in place")
+        messages.messenger(for: .battery).post(IslandNotice(key: "power", title: "Power connected"))
+        await clock.advance(by: IslandMessageCenter.handoffDuration)
+        XCTAssertEqual(messages.currentNotice?.moduleID, .battery)
+        try await Task.sleep(for: .milliseconds(300))
+        XCTAssertFalse(controller.panel.isVisible, "Another module's notice waits for the panel to close")
     }
 
     func testPlacementKeepsTenPointGapAtEveryIslandHeight() {
@@ -127,7 +153,7 @@ final class IslandNoticePanelTests: XCTestCase {
         coordinator.currentLayout = layout
         coordinator.show(module: .shelf, pinned: true)
         coordinator.completeSurfaceTransition(coordinator.surfaceTransitionID)
-        let messages = IslandMessageCenter()
+        let messages = makeMessages()
         let shelf = messages.messenger(for: .shelf)
         let target = DropTargetState()
         let anchor = NSWindow(contentRect: layout.expandedFrame, styleMask: [.borderless], backing: .buffered, defer: false)
@@ -135,7 +161,7 @@ final class IslandNoticePanelTests: XCTestCase {
         anchor.orderFront(nil)
         let islandFrame = anchor.frame
         defer { anchor.close() }
-        let controller = IslandNoticePanelController(anchor: anchor, messages: messages,
+        let controller = makeController(anchor: anchor, messages: messages,
             coordinator: coordinator, settings: settings, dropTarget: target)
         defer { controller.stop() }
         shelf.post(.reconnected)
@@ -157,7 +183,10 @@ final class IslandNoticePanelTests: XCTestCase {
         XCTAssertEqual(movedPill.midX, anchor.frame.midX, accuracy: 1)
         XCTAssertEqual(anchor.frame.minY - movedPill.maxY, 10, accuracy: 1)
         shelf.post(.receivedAwaitingRecovery)
+        XCTAssertEqual(messages.waitingNotices.count, 1, "A notice with a button waits behind the plain one")
+        await clock.advance(by: IslandMessageCenter.handoffDuration)
         try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(messages.currentNotice?.notice, ShelfNotice.receivedAwaitingRecovery.notice)
         let recoveryFrame = try XCTUnwrap(controller.interactionFrame)
         controller.updatePointer(at: CGPoint(x: recoveryFrame.midX, y: recoveryFrame.midY))
         XCTAssertFalse(pill.ignoresMouseEvents)
@@ -169,6 +198,7 @@ final class IslandNoticePanelTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(300))
         XCTAssertFalse(pill.isVisible)
         XCTAssertNil(controller.interactionFrame)
+        XCTAssertFalse(messages.isNoticeClockRunning, "Drag time does not count")
         target.hasDuplicateFiles = true
         try await Task.sleep(for: .milliseconds(300))
         XCTAssertFalse(pill.isVisible, "Duplicate feedback must wait for release")
@@ -176,6 +206,7 @@ final class IslandNoticePanelTests: XCTestCase {
         target.hasDuplicateFiles = false
         try await Task.sleep(for: .milliseconds(300))
         XCTAssertFalse(pill.isVisible, "A nonduplicate drag must clear duplicate feedback")
+        shelf.withdrawNotice(ShelfNotice.receivedAwaitingRecovery.rawValue)
         shelf.post(.alreadyOnShelf)
         target.isTargeted = false
         try await Task.sleep(for: .milliseconds(300))
@@ -190,14 +221,123 @@ final class IslandNoticePanelTests: XCTestCase {
         XCTAssertNil(pill.parent)
         XCTAssertEqual(try XCTUnwrap(controller.interactionFrame).maxY,
                        layout.closedNoticeAnchor.minY - 10, accuracy: 1)
-        shelf.post(.alreadyOnShelf)
+        shelf.post(.removed)
         try await Task.sleep(for: .milliseconds(300))
         XCTAssertTrue(pill.isVisible, "A new completion notice must also work while the Island is hidden")
-        try await Task.sleep(for: .seconds(IslandMessageCenter.displayDuration + 0.3))
+        XCTAssertEqual(messages.currentNotice?.notice, ShelfNotice.removed.notice)
+        await clock.advance(by: IslandMessageCenter.defaultDuration)
+        try await Task.sleep(for: .milliseconds(300))
         XCTAssertFalse(pill.isVisible, "Only the notice's own expiry should dismiss it")
         coordinator.show(module: .shelf)
         anchor.orderFront(nil)
         try await Task.sleep(for: .milliseconds(100))
         XCTAssertFalse(pill.isVisible, "Reopening must not replay an expired notice")
+    }
+
+    private func makeCollapsedFixture(_ context: PreviewContext) throws
+        -> (SettingsStore, IslandActivityCoordinator, NSWindow, IslandGeometryResolver.Layout) {
+        let settings = context.settings()
+        settings.islandEnabled = true
+        let coordinator = IslandActivityCoordinator()
+        let layout = try liveLayout()
+        coordinator.currentLayout = layout
+        let anchor = NSWindow(contentRect: layout.notchFrame, styleMask: [.borderless], backing: .buffered, defer: false)
+        anchor.isReleasedWhenClosed = false
+        anchor.orderFront(nil)
+        return (settings, coordinator, anchor, layout)
+    }
+
+    func testHoveringActionablePillStopsClockAndLeavingResumesIt() async throws {
+        let context = PreviewContext()
+        defer { context.cleanUp() }
+        let (settings, coordinator, anchor, _) = try makeCollapsedFixture(context)
+        defer { anchor.close() }
+        let messages = makeMessages()
+        let controller = makeController(anchor: anchor, messages: messages,
+            coordinator: coordinator, settings: settings)
+        defer { controller.stop() }
+        let shelf = messages.messenger(for: .shelf)
+
+        shelf.post(.moveRecoveryNeedsAttention)
+        try await Task.sleep(for: .milliseconds(300))
+        XCTAssertTrue(controller.panel.isVisible)
+        XCTAssertTrue(messages.isNoticeClockRunning)
+        await clock.advance(by: 2)
+        let frame = try XCTUnwrap(controller.interactionFrame)
+        controller.updatePointer(at: CGPoint(x: frame.midX, y: frame.midY))
+        XCTAssertFalse(messages.isNoticeClockRunning, "Resting on a pill with a button holds it")
+        await clock.advance(by: 60)
+        XCTAssertNotNil(messages.currentNotice)
+        controller.updatePointer(at: CGPoint(x: frame.midX, y: frame.maxY + 40))
+        XCTAssertTrue(messages.isNoticeClockRunning)
+        await clock.advance(by: 5.9)
+        XCTAssertNotNil(messages.currentNotice, "Leaving resumes the remaining time, not a new one")
+        await clock.advance(by: 0.1)
+        XCTAssertNil(messages.currentNotice)
+
+        shelf.post(.removed)
+        try await Task.sleep(for: .milliseconds(300))
+        let plainFrame = try XCTUnwrap(controller.interactionFrame)
+        controller.updatePointer(at: CGPoint(x: plainFrame.midX, y: plainFrame.midY))
+        XCTAssertTrue(messages.isNoticeClockRunning, "A pill without a button is not held")
+        XCTAssertTrue(controller.panel.ignoresMouseEvents)
+    }
+
+    func testStartupNoticeWaitsForThePanelInsteadOfExpiring() async throws {
+        let context = PreviewContext()
+        defer { context.cleanUp() }
+        let (settings, coordinator, anchor, _) = try makeCollapsedFixture(context)
+        defer { anchor.close() }
+        let messages = makeMessages()
+        messages.messenger(for: .shelf).post(.moveRecoveryNeedsAttention)
+        await clock.advance(by: 60)
+        XCTAssertEqual(messages.currentNotice?.notice, ShelfNotice.moveRecoveryNeedsAttention.notice,
+                       "No presenter yet, so no time counts")
+
+        let controller = makeController(anchor: anchor, messages: messages,
+            coordinator: coordinator, settings: settings)
+        defer { controller.stop() }
+        try await Task.sleep(for: .milliseconds(300))
+        XCTAssertTrue(controller.panel.isVisible)
+        await clock.advance(by: IslandMessageCenter.actionDuration - 0.1)
+        XCTAssertNotNil(messages.currentNotice)
+        await clock.advance(by: 0.1)
+        XCTAssertNil(messages.currentNotice)
+    }
+
+    func testShownModuleNoticeAppearsInUnpinnedPanel() async throws {
+        let context = PreviewContext()
+        defer { context.cleanUp() }
+        let settings = context.settings()
+        settings.islandEnabled = true
+        let coordinator = IslandActivityCoordinator()
+        let layout = try liveLayout()
+        coordinator.currentLayout = layout
+        coordinator.show(module: .shelf)
+        coordinator.completeSurfaceTransition(coordinator.surfaceTransitionID)
+        let anchor = NSWindow(contentRect: layout.expandedFrame, styleMask: [.borderless], backing: .buffered, defer: false)
+        anchor.isReleasedWhenClosed = false
+        anchor.orderFront(nil)
+        defer { anchor.close() }
+        let messages = makeMessages()
+        let controller = makeController(anchor: anchor, messages: messages,
+            coordinator: coordinator, settings: settings)
+        defer { controller.stop() }
+
+        messages.messenger(for: .shelf).post(.removed)
+        try await Task.sleep(for: .milliseconds(300))
+        XCTAssertTrue(controller.panel.isVisible, "The panel shows Shelf, so its notice appears right away")
+        XCTAssertTrue(messages.isNoticeClockRunning)
+    }
+
+    func testButtonTitleComesFromTheAction() {
+        for action in [IslandNoticeAction.openStorageRecovery, .openModule(.timer)] {
+            let pill = IslandNoticePill(notice: IslandNotice(key: "a", title: "Something happened", action: action),
+                                        onPerformAction: { _ in })
+            XCTAssertEqual(pill.actionTitle, action.title)
+        }
+        XCTAssertNil(IslandNoticePill(notice: IslandNotice(key: "a", title: "Plain"), onPerformAction: { _ in }).actionTitle)
+        XCTAssertNil(IslandNoticePill(notice: ShelfNotice.moveRecoveryNeedsAttention.notice).actionTitle,
+                     "Without a handler the pill shows no button")
     }
 }
