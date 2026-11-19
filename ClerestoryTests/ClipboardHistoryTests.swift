@@ -1,4 +1,6 @@
 import AppKit
+import ImageIO
+import UniformTypeIdentifiers
 import XCTest
 @testable import Clerestory
 
@@ -193,8 +195,211 @@ final class ClipboardHistoryTests: XCTestCase {
             XCTAssertTrue(history.entries.isEmpty, "Marker: \(marker); types: \((pasteboard.types ?? []).map(\.rawValue))")
             history.clear()
         }
-        XCTAssertFalse(ClipboardHistoryPolicy.permits(types: ["PasswordPboardType"], sourceIsIgnored: false))
+        XCTAssertFalse(ClipboardHistoryPolicy.permits(types: ["PasswordPboardType"], itemTypes: ["PasswordPboardType"],
+                                                      sourceIsIgnored: false))
         XCTAssertTrue(history.entries.isEmpty)
+    }
+
+    private func writeFileCopy(path: String, tiff: Data?, extraString: String? = nil) {
+        let item = NSPasteboardItem()
+        item.setString(URL(fileURLWithPath: path).absoluteString, forType: .fileURL)
+        if let tiff { item.setData(tiff, forType: .tiff) }
+        if let extraString { item.setString(extraString, forType: .string) }
+        pasteboard.clearContents()
+        pasteboard.writeObjects([item])
+    }
+
+    private func tiffData(width: Int, height: Int, noise: Bool = false) throws -> Data {
+        let bitmap = try XCTUnwrap(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: width, pixelsHigh: height,
+                                                   bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true,
+                                                   isPlanar: false, colorSpaceName: .deviceRGB,
+                                                   bytesPerRow: 0, bitsPerPixel: 0))
+        let bytes = try XCTUnwrap(bitmap.bitmapData)
+        var seed: UInt32 = 0x9E37_79B9
+        for index in 0..<(bitmap.bytesPerRow * height) {
+            if noise {
+                seed = seed &* 1_664_525 &+ 1_013_904_223
+                bytes[index] = index % 4 == 3 ? 255 : UInt8(truncatingIfNeeded: seed >> 24)
+            } else {
+                bytes[index] = index % 4 == 3 ? 255 : 90
+            }
+        }
+        return try XCTUnwrap(bitmap.tiffRepresentation)
+    }
+
+    private func waitForEntries(_ count: Int = 1) async throws {
+        for _ in 0..<400 where history.entries.count < count {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+    }
+
+    /// Issue #13: WeChat copies an image as its bitmap plus a link to its
+    /// cache file. That is an image copy, not a file copy.
+    func testImageCopiedWithItsSourceFileIsRecorded() async throws {
+        try await start()
+        let tiff = try tiffData(width: 4, height: 4)
+        writeFileCopy(path: "/tmp/RWTemp/d66917156c72526a.jpg", tiff: tiff)
+        history.poll()
+        XCTAssertEqual(history.entries.first?.content, .image(tiff, type: "public.tiff"))
+    }
+
+    /// Finder: one image file copied, so the pasteboard holds only its link.
+    /// History never opens files the user only copied.
+    func testImageFileCopiedInFinderIsNotRead() async throws {
+        try await start()
+        let png = try imageData(width: 6, height: 6)
+        let file = directory.appendingPathComponent("poster.png")
+        try png.write(to: file)
+        writeFileCopy(path: file.path, tiff: nil, extraString: "poster.png")
+        history.poll()
+        try await Task.sleep(for: .milliseconds(200))
+        XCTAssertTrue(history.entries.isEmpty)
+    }
+
+    /// Finder writes the file's icon; that bitmap is not the copied content.
+    func testFinderIconNextToAnImageFileIsNotRecorded() async throws {
+        try await start()
+        let item = NSPasteboardItem()
+        item.setString(URL(fileURLWithPath: "/tmp/photo.png").absoluteString, forType: .fileURL)
+        item.setData(try tiffData(width: 4, height: 4), forType: .tiff)
+        item.setData(Data([0x69, 0x63, 0x6E, 0x73]), forType: .init("com.apple.icns"))
+        pasteboard.clearContents()
+        pasteboard.writeObjects([item])
+        history.poll()
+        XCTAssertTrue(history.entries.isEmpty)
+    }
+
+    func testBitmapWithSeveralImageFilesIsNotRecorded() async throws {
+        try await start()
+        let first = NSPasteboardItem()
+        first.setString(URL(fileURLWithPath: "/tmp/a.png").absoluteString, forType: .fileURL)
+        first.setData(try tiffData(width: 4, height: 4), forType: .tiff)
+        let second = NSPasteboardItem()
+        second.setString(URL(fileURLWithPath: "/tmp/b.png").absoluteString, forType: .fileURL)
+        pasteboard.clearContents()
+        pasteboard.writeObjects([first, second])
+        history.poll()
+        XCTAssertTrue(history.entries.isEmpty)
+    }
+
+    func testNonImageAndMultiFileCopiesAreStillSkipped() async throws {
+        try await start()
+        // A bitmap next to a non-image file is the file's icon, not content.
+        writeFileCopy(path: "/tmp/report.pdf", tiff: try tiffData(width: 4, height: 4))
+        history.poll()
+        let first = NSPasteboardItem()
+        first.setString(URL(fileURLWithPath: "/tmp/a.png").absoluteString, forType: .fileURL)
+        let second = NSPasteboardItem()
+        second.setString(URL(fileURLWithPath: "/tmp/b.png").absoluteString, forType: .fileURL)
+        pasteboard.clearContents()
+        pasteboard.writeObjects([first, second])
+        history.poll()
+        try await Task.sleep(for: .milliseconds(200))
+        XCTAssertTrue(history.entries.isEmpty)
+    }
+
+    func testOversizedTiffIsReencodedToFit() async throws {
+        try await start()
+        let tiff = try tiffData(width: 1_400, height: 1_000)
+        XCTAssertGreaterThan(tiff.count, ClipboardHistoryPolicy.maximumImageBytes)
+        pasteboard.clearContents()
+        pasteboard.setData(tiff, forType: .tiff)
+        history.poll()
+        try await waitForEntries()
+        guard case .image(let data, let type)? = history.entries.first?.content else {
+            return XCTFail("Oversized TIFF was not recorded")
+        }
+        XCTAssertEqual(type, "public.png")
+        XCTAssertLessThanOrEqual(data.count, ClipboardHistoryPolicy.maximumImageBytes)
+    }
+
+    func testPhotoThatStaysTooLargeAsPNGFallsBackToJPEGAndPastesAsTIFF() async throws {
+        let tiff = try tiffData(width: 1_600, height: 1_200, noise: true)
+        let encoded = try XCTUnwrap(ClipboardHistoryPolicy.reencodedImage(tiff))
+        XCTAssertEqual(encoded.type, "public.jpeg")
+        let content = ClipboardHistoryEntry.Content.image(encoded.data, type: encoded.type)
+        XCTAssertTrue(content.isValid)
+
+        try await start()
+        XCTAssertTrue(history.copy(ClipboardHistoryEntry(content: content)))
+        XCTAssertEqual(pasteboard.data(forType: .init("public.jpeg")), encoded.data)
+        // The item itself promises TIFF (not only AppKit's conversion), built on request.
+        XCTAssertEqual(pasteboard.pasteboardItems?.first?.types.contains(.tiff), true)
+        let promised = try XCTUnwrap(pasteboard.pasteboardItems?.first?.data(forType: .tiff))
+        let source = try XCTUnwrap(CGImageSourceCreateWithData(promised as CFData, nil))
+        XCTAssertEqual(CGImageSourceGetType(source) as String?, UTType.tiff.identifier)
+        let properties = try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any])
+        XCTAssertEqual(properties[kCGImagePropertyPixelWidth] as? Int, 1_600)
+    }
+
+    /// A camera photo stored sideways with an orientation tag is re-encoded upright.
+    func testReencodingAppliesImageOrientation() throws {
+        let source = try XCTUnwrap(CGImageSourceCreateWithData(try tiffData(width: 40, height: 20) as CFData, nil))
+        let image = try XCTUnwrap(CGImageSourceCreateImageAtIndex(source, 0, nil))
+        let tagged = NSMutableData()
+        let destination = try XCTUnwrap(CGImageDestinationCreateWithData(tagged, UTType.tiff.identifier as CFString, 1, nil))
+        CGImageDestinationAddImage(destination, image, [kCGImagePropertyOrientation: 6] as CFDictionary)
+        XCTAssertTrue(CGImageDestinationFinalize(destination))
+
+        let encoded = try XCTUnwrap(ClipboardHistoryPolicy.reencodedImage(tagged as Data))
+        let result = try XCTUnwrap(CGImageSourceCreateWithData(encoded.data as CFData, nil))
+        let properties = try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(result, 0, nil) as? [CFString: Any])
+        XCTAssertEqual(properties[kCGImagePropertyPixelWidth] as? Int, 20)
+        XCTAssertEqual(properties[kCGImagePropertyPixelHeight] as? Int, 40)
+    }
+
+    /// Too many pixels is rejected from the header, before anything is decoded.
+    func testReencodingRejectsImagesOverTheSizeLimitBeforeDecoding() throws {
+        let tooWide = try tiffData(width: ClipboardHistoryPolicy.maximumImageSide + 1, height: 1)
+        XCTAssertNil(ClipboardHistoryPolicy.reencodedImage(tooWide))
+    }
+
+    func testClearHistoryWinsOverAnImageStillBeingReencoded() async throws {
+        try await start()
+        pasteboard.clearContents()
+        pasteboard.setData(try tiffData(width: 1_400, height: 1_000), forType: .tiff)
+        history.poll()
+        history.clear()
+        // Let the stale re-encode finish, then record a fresh small image.
+        try await Task.sleep(for: .milliseconds(1_500))
+        let small = try tiffData(width: 4, height: 4)
+        pasteboard.clearContents()
+        pasteboard.setData(small, forType: .tiff)
+        history.poll()
+        try await waitForEntries()
+        XCTAssertEqual(history.entries.map(\.content), [.image(small, type: "public.tiff")])
+    }
+
+    /// An oversized image that can't be made to fit keeps the copy's text, as before.
+    func testOversizedImageThatCannotFitFallsBackToText() async throws {
+        try await start()
+        let tooWide = try tiffData(width: ClipboardHistoryPolicy.maximumImageSide + 1, height: 100)
+        XCTAssertGreaterThan(tooWide.count, ClipboardHistoryPolicy.maximumImageBytes)
+        let item = NSPasteboardItem()
+        item.setData(tooWide, forType: .tiff)
+        item.setString("A1\tB1", forType: .string)
+        pasteboard.clearContents()
+        pasteboard.writeObjects([item])
+        history.poll()
+        try await waitForEntries()
+        XCTAssertEqual(history.entries.first?.content, .text("A1\tB1"))
+    }
+
+    /// Some apps still write only the legacy file list; that is a file copy too.
+    func testLegacyFileListCopyIsNotRecorded() async throws {
+        try await start()
+        let filenames = NSPasteboard.PasteboardType("NSFilenamesPboardType")
+        pasteboard.clearContents()
+        pasteboard.declareTypes([filenames, .string], owner: nil)
+        pasteboard.setPropertyList(["/tmp/report.pdf"], forType: filenames)
+        pasteboard.setString("/tmp/report.pdf", forType: .string)
+        history.poll()
+        XCTAssertTrue(history.entries.isEmpty)
+    }
+
+    func testPreviewTextSkipsLeadingBlankLines() {
+        XCTAssertEqual(ClipboardHistoryEntry.Content.text("\n\n  First line\nsecond").previewText,
+                       "First line\nsecond")
     }
 
     func testPrivacyMarkerOnSecondPasteboardItemProtectsEntireCopy() async throws {
