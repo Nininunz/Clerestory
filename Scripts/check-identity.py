@@ -33,5 +33,5 @@ for file in ["Clerestory/Services/UpdateController.swift", "Clerestory/Services/
 release = (root / "Scripts/make-release.sh").read_text()
 assert '"$SIGN_UPDATE" --account com.nininunz.OpenYoink' in release
 assert '"$SPARKLE_BIN/generate_keys" --account com.nininunz.OpenYoink -p' in release
-assert (root / "Clerestory/Resources/OpenYoink-LICENSE.txt").read_bytes() == (root / "LICENSE").read_bytes()
+assert (root / "Clerestory/Resources/Clerestory-LICENSE.txt").read_bytes() == (root / "LICENSE").read_bytes()
 print("App identity, signing-account selection, and update ownership checks passed.")
