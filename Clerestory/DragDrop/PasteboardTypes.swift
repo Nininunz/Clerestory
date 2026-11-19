@@ -31,6 +31,8 @@ enum PasteboardTypes {
     static let png = NSPasteboard.PasteboardType(UTType.png.identifier)
     /// `public.tiff`.
     static let tiff = NSPasteboard.PasteboardType(UTType.tiff.identifier)
+    /// `public.jpeg`. Some apps and browsers offer a copied or dragged photo only as JPEG.
+    static let jpeg = NSPasteboard.PasteboardType(UTType.jpeg.identifier)
     /// `public.image` (generic image data).
     static let image = NSPasteboard.PasteboardType(UTType.image.identifier)
     /// `public.url`.
@@ -78,8 +80,10 @@ enum PasteboardTypes {
     static let filePromiseTypes: [NSPasteboard.PasteboardType] =
         NSFilePromiseReceiver.readableDraggedTypes.map { NSPasteboard.PasteboardType($0) }
 
-    /// Image data family, ordered by priority at materialization (PNG no conversion, TIFF needs encoding).
-    static let imageTypes: [NSPasteboard.PasteboardType] = [png, tiff, image]
+    /// Image data family, ordered by priority at materialization. PNG and JPEG are stored as they
+    /// are; TIFF and generic image data are converted to PNG. JPEG comes before TIFF so a photo that
+    /// also offers (or promises) a TIFF keeps its JPEG bytes and the TIFF is never built.
+    static let imageTypes: [NSPasteboard.PasteboardType] = [png, jpeg, tiff, image]
     /// Text family. Main chain only materializes plain text; drag-and-drop with only HTML/RTF (no plain
     /// text)
     /// is handled by `DropImportCoordinator` chain materializing as .html/.rtf file items (Task 1).

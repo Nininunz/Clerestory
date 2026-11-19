@@ -295,6 +295,119 @@ final class DropImportCoordinatorTests: XCTestCase {
         XCTAssertEqual(context.coordinator.transferStore.currentTask?.itemIDs, [item.id])
     }
 
+    /// JPEG image data is stored as dropped, with its own extension.
+    func testImport_jpegData_keepsOriginalBytes() async throws {
+        let context = makeContext()
+        defer { context.cleanup() }
+        let rep = try XCTUnwrap(NSBitmapImageRep(data: try makePNGData()))
+        let jpegData = try XCTUnwrap(rep.representation(using: .jpeg, properties: [:]))
+        let pasteboard = makePasteboard()
+        pasteboard.declareTypes([PasteboardTypes.jpeg], owner: nil)
+        pasteboard.setData(jpegData, forType: PasteboardTypes.jpeg)
+
+        let itemReady = expectation(description: "JPEG item materialized")
+        var received: ShelfItem?
+        let result = context.coordinator.importItems(from: pasteboard) { item in
+            received = item
+            itemReady.fulfill()
+        }
+
+        XCTAssertEqual(result.pendingMaterializations, 1)
+        await fulfillment(of: [itemReady], timeout: 5)
+        let item = try XCTUnwrap(received)
+        XCTAssertEqual(item.kind, .image)
+        XCTAssertEqual(item.displayName, DropImportCoordinator.materializedJPEGDisplayName)
+        let path = try XCTUnwrap(item.path)
+        XCTAssertEqual(URL(fileURLWithPath: path).pathExtension, "jpg")
+        XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: path)), jpegData)
+    }
+
+    /// An item carrying both JPEG data and a link becomes an image, not a link
+    /// (ported from MuQY1818/OpenYoink@219e1d1).
+    func testImport_jpegDataWinsOverLinkOnTheSameItem() async throws {
+        let context = makeContext()
+        defer { context.cleanup() }
+        let rep = try XCTUnwrap(NSBitmapImageRep(data: try makePNGData()))
+        let jpegData = try XCTUnwrap(rep.representation(using: .jpeg, properties: [:]))
+        let pasteboard = makePasteboard()
+        pasteboard.declareTypes([PasteboardTypes.jpeg, PasteboardTypes.url], owner: nil)
+        pasteboard.setData(jpegData, forType: PasteboardTypes.jpeg)
+        pasteboard.setString("https://example.com/photo.jpg", forType: PasteboardTypes.url)
+
+        let itemReady = expectation(description: "image wins over link")
+        let result = context.coordinator.importItems(from: pasteboard) { item in
+            XCTAssertEqual(item.kind, .image)
+            itemReady.fulfill()
+        }
+        XCTAssertEqual(result.pendingMaterializations, 1)
+        await fulfillment(of: [itemReady], timeout: 5)
+    }
+
+    /// A JPEG that also promises TIFF (a JPEG history entry copied back) keeps its JPEG bytes, and
+    /// the TIFF is never built.
+    func testImport_jpegWithPromisedTIFF_keepsJPEGAndNeverBuildsTIFF() async throws {
+        let context = makeContext()
+        defer { context.cleanup() }
+        let rep = try XCTUnwrap(NSBitmapImageRep(data: try makePNGData()))
+        let jpegData = try XCTUnwrap(rep.representation(using: .jpeg, properties: [:]))
+        let provider = CountingTIFFProvider()
+        let item = NSPasteboardItem()
+        item.setData(jpegData, forType: PasteboardTypes.jpeg)
+        item.setDataProvider(provider, forTypes: [.tiff])
+        let pasteboard = makePasteboard()
+        pasteboard.clearContents()
+        pasteboard.writeObjects([item])
+
+        let itemReady = expectation(description: "JPEG kept")
+        var received: ShelfItem?
+        _ = context.coordinator.importItems(from: pasteboard) { item in
+            received = item
+            itemReady.fulfill()
+        }
+        await fulfillment(of: [itemReady], timeout: 5)
+        let path = try XCTUnwrap(received?.path)
+        XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: path)), jpegData)
+        XCTAssertEqual(provider.requests, 0, "The promised TIFF must not be requested")
+    }
+
+    /// An empty PNG next to a valid TIFF on the same item uses the TIFF.
+    func testImport_emptyPNGWithValidTIFF_usesTIFF() async throws {
+        let context = makeContext()
+        defer { context.cleanup() }
+        let tiff = try XCTUnwrap(NSBitmapImageRep(data: try makePNGData())?.tiffRepresentation)
+        let pasteboard = makePasteboard()
+        pasteboard.declareTypes([.png, .tiff], owner: nil)
+        pasteboard.setData(Data(), forType: .png)
+        pasteboard.setData(tiff, forType: .tiff)
+
+        let itemReady = expectation(description: "TIFF used")
+        var received: ShelfItem?
+        let result = context.coordinator.importItems(from: pasteboard) { item in
+            received = item
+            itemReady.fulfill()
+        }
+        XCTAssertEqual(result.pendingMaterializations, 1)
+        await fulfillment(of: [itemReady], timeout: 5)
+        XCTAssertEqual(received?.kind, .image)
+    }
+
+    /// An empty image representation is skipped, so the drop falls through to the text instead of
+    /// failing (ported from MuQY1818/OpenYoink@219e1d1).
+    func testImport_emptyImageData_fallsThroughToText() throws {
+        let context = makeContext()
+        defer { context.cleanup() }
+        let pasteboard = makePasteboard()
+        pasteboard.declareTypes([.png, .string], owner: nil)
+        pasteboard.setData(Data(), forType: .png)
+        pasteboard.setString("hello", forType: .string)
+
+        let result = context.coordinator.importItems(from: pasteboard, onAsyncItemReady: ignoringAsyncItems())
+
+        XCTAssertEqual(result.pendingMaterializations, 0)
+        let item = try XCTUnwrap(result.items.only)
+        XCTAssertEqual(item.kind, .text)
+    }
+
     // MARK: - URL
 
     func testImport_publicURL_producesURLItem() throws {
@@ -357,4 +470,14 @@ final class DropImportCoordinatorTests: XCTestCase {
 
 private extension Array {
     var only: Element? { count == 1 ? first : nil }
+}
+
+/// Counts requests for a promised TIFF, to prove the importer never asks for it.
+private final class CountingTIFFProvider: NSObject, NSPasteboardItemDataProvider {
+    private(set) var requests = 0
+
+    func pasteboard(_ pasteboard: NSPasteboard?, item: NSPasteboardItem,
+                    provideDataForType type: NSPasteboard.PasteboardType) {
+        requests += 1
+    }
 }

@@ -67,6 +67,16 @@ final class DropImportCoordinator {
         String(localized: "Dropped Image.png")
     }
 
+    nonisolated static var materializedJPEGDisplayName: String {
+        String(localized: "Dropped Image.jpg")
+    }
+
+    /// The stored name for dropped image data: JPEG keeps its own extension
+    /// because its bytes are stored unchanged.
+    nonisolated static func materializedImageDisplayName(for type: NSPasteboard.PasteboardType) -> String {
+        type == PasteboardTypes.jpeg ? materializedJPEGDisplayName : materializedImageDisplayName
+    }
+
     /// UX1: Successful import callback (drag and drop and UX3 clipboard save share this entry).
     /// `importItems`
     /// Trigger synchronously on MainActor when returning `handled` —— AppDelegate uses this to mark
@@ -666,21 +676,21 @@ final class DropImportCoordinator {
                                               onItemReady: @escaping @MainActor (ShelfItem) -> Void) -> Int {
         let payloads: [(type: NSPasteboard.PasteboardType, data: Data)] =
             (pasteboard.pasteboardItems ?? []).compactMap { item in
-                guard let type = PasteboardTypes.preferredImageType(in: item.types),
-                      let data = item.data(forType: type) else {
-                    return nil
+                // Use the first image type that has data; an empty one falls through to the next.
+                for type in PasteboardTypes.imageTypes where item.types.contains(type) {
+                    if let data = item.data(forType: type), !data.isEmpty { return (type, data) }
                 }
-                return (type, data)
+                return nil
             }
 
         guard !payloads.isEmpty else { return 0 }
         transferStore.beginImport(id: taskID, expectedCount: payloads.count)
-        let reportFailure: @MainActor () -> Void = { [transferStore] in
+        let reportFailure: @MainActor (String) -> Void = { [transferStore] itemName in
             transferStore.recordFailure(
                 taskID: taskID,
                 failure: TransferFailure(
                     reason: .materializationFailed,
-                    itemName: Self.materializedImageDisplayName,
+                    itemName: itemName,
                     recoveryAction: .dragAgainFromSource
                 )
             )
@@ -692,13 +702,14 @@ final class DropImportCoordinator {
         for payload in payloads {
             Task.detached { [bookmarkService, tempFileService, logger] in
                 do {
-                    guard let pngData = Self.pngData(from: payload.data, type: payload.type) else {
+                    guard let imageData = Self.storedImageData(from: payload.data, type: payload.type) else {
                         throw DropImportError.imageConversionFailed
                     }
-                    let destination = try tempFileService.uniqueFileURL(suggestedName: Self.materializedImageDisplayName)
-                    try pngData.write(to: destination, options: .atomic)
+                    let displayName = Self.materializedImageDisplayName(for: payload.type)
+                    let destination = try tempFileService.uniqueFileURL(suggestedName: displayName)
+                    try imageData.write(to: destination, options: .atomic)
                     let item = Self.makeFileBackedItem(for: destination,
-                                                       displayName: Self.materializedImageDisplayName,
+                                                       displayName: displayName,
                                                        forcedKind: .image,
                                                        bookmarkService: bookmarkService,
                                                        logger: logger)
@@ -707,7 +718,7 @@ final class DropImportCoordinator {
                     // Fail without crashing or being silent: log + D10 inline prompt, drag-and-drop is
                     // still considered as handled.
                     logger.error("Failed to materialize dropped image data: \(error.localizedDescription, privacy: .public)")
-                    await reportFailure()
+                    await reportFailure(Self.materializedImageDisplayName(for: payload.type))
                 }
             }
         }
@@ -717,8 +728,10 @@ final class DropImportCoordinator {
     /// Use PNG data directly; TIFF / general image is transcoded to PNG via NSBitmapImageRep.
     /// Non-isolated: transcoding is done in background task locally, NSBitmapImageRep (non-Sendable) is
     /// not passed across actors.
-    private nonisolated static func pngData(from data: Data, type: NSPasteboard.PasteboardType) -> Data? {
-        if type == PasteboardTypes.png {
+    /// PNG and JPEG are stored as dropped, so a photo keeps its compression and
+    /// metadata. Other bitmaps (TIFF, generic image data) are converted to PNG.
+    private nonisolated static func storedImageData(from data: Data, type: NSPasteboard.PasteboardType) -> Data? {
+        if type == PasteboardTypes.png || type == PasteboardTypes.jpeg {
             return data
         }
         return NSBitmapImageRep(data: data)?.representation(using: .png, properties: [:])
