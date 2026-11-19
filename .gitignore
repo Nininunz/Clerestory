@@ -22,7 +22,6 @@ xcuserdata/
 # Swift Package Manager
 .build/
 .swiftpm/
-Package.pins
 Package.resolved
 # Pin the app's package versions (Sparkle) so CI and releases build the same code.
 !Clerestory.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
@@ -35,10 +34,6 @@ ExportOptions.plist
 # Local env
 .env
 *.local
-
-# Plan / tooling
-.workbuddy/
-outputs/
 
 # Personal editor appearance
 .vscode/settings.json
