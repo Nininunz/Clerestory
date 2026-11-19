@@ -19,7 +19,7 @@ struct IslandAIUsageView: View {
                 case .notRunning:
                     notRunningState
                 case let .failed(message) where store.snapshot == nil:
-                    IslandModuleState(title: "Can't read TokenTracker", message: LocalizedStringKey(message)) {
+                    IslandModuleState(title: "Can't read TokenTracker", message: Text(verbatim: message)) {
                         Button("Retry") { store.requestRefresh() }
                     }
                 default:
@@ -223,8 +223,8 @@ struct IslandAIUsageView: View {
         return IslandModuleState(
             title: installed ? "TokenTracker isn't running" : "Get TokenTracker",
             message: installed
-                ? "Open TokenTracker and your AI usage shows up here."
-                : "AI usage comes from TokenTracker, a free, open-source tracker for Claude Code, Codex, Cursor and more.",
+                ? Text("Open TokenTracker and your AI usage shows up here.")
+                : Text("AI usage comes from TokenTracker, a free, open-source tracker for Claude Code, Codex, Cursor and more."),
             systemImage: AIUsageModuleStore.moduleDescriptor.systemImage
         ) {
             Button(installed ? "Open TokenTracker" : "Download TokenTracker") { store.openTokenTracker() }

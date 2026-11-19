@@ -243,7 +243,9 @@ struct IslandHeaderButtonStyle: ButtonStyle {
 /// Full-body states share typography, spacing, and optional recovery actions.
 struct IslandModuleState<Actions: View>: View {
     let title: LocalizedStringKey
-    var message: LocalizedStringKey? = nil
+    /// `Text("…")` for app text, `Text(verbatim:)` for text that is already localized or comes
+    /// from elsewhere, such as an error description, so it is not looked up or read as Markdown.
+    var message: Text? = nil
     var systemImage = "exclamationmark.triangle"
     var isLoading = false
     @ViewBuilder var actions: Actions
@@ -263,7 +265,7 @@ struct IslandModuleState<Actions: View>: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(IslandVisualStyle.primaryText)
             if let message {
-                Text(message)
+                message
                     .font(.system(size: 12))
                     .foregroundStyle(IslandVisualStyle.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
@@ -291,7 +293,7 @@ struct IslandEmptyState: View {
     let systemImage: String
 
     var body: some View {
-        IslandModuleState(title: title, message: message, systemImage: systemImage) { EmptyView() }
+        IslandModuleState(title: title, message: Text(message), systemImage: systemImage) { EmptyView() }
     }
 }
 

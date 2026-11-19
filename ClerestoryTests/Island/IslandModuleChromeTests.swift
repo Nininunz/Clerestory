@@ -278,12 +278,12 @@ final class IslandModuleChromeTests: XCTestCase {
     }
 
     func testStateAllowsLongErrorDetailsToGrowWithoutTruncation() throws {
-        let short = try render(IslandModuleState(title: "Couldn't load", message: "Try again.") {
+        let short = try render(IslandModuleState(title: "Couldn't load", message: Text(verbatim: "Try again.")) {
             Button("Retry") {}
         }.frame(width: 240).fixedSize(horizontal: false, vertical: true))
         let long = try render(IslandModuleState(
             title: "Couldn't load",
-            message: "The service could not be reached. Check that the application is running and that access has been granted, then try again. Your existing data is still available."
+            message: Text(verbatim: "The service could not be reached. Check that the application is running and that access has been granted, then try again. Your existing data is still available.")
         ) {
             Button("Retry") {}
         }.frame(width: 240).fixedSize(horizontal: false, vertical: true))

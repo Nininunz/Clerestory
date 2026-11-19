@@ -702,7 +702,7 @@ final class AIUsageModuleStore: IslandModuleRuntime {
 
     func openTokenTracker() {
         if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: TokenTrackerClient.bundleIdentifier) {
-            NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration()) { _, _ in
+            NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration()) { [weak self] _, _ in
                 Task { @MainActor [weak self] in
                     // The embedded server needs a moment after launch.
                     try? await Task.sleep(for: .seconds(4))

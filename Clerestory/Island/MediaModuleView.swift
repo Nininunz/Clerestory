@@ -21,7 +21,7 @@ struct IslandNowPlayingView: View {
                 if store.availability == .disabled {
                     IslandModuleState(
                         title: "Enable Now Playing",
-                        message: "Show album artwork, playback progress, and media controls in the panel.",
+                        message: Text("Show album artwork, playback progress, and media controls in the panel."),
                         systemImage: "music.note"
                     ) {
                         Button("Enable") { settings.islandMediaEnabled = true }
