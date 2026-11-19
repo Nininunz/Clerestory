@@ -100,7 +100,7 @@ fi
 # Locate Sparkle's command-line tools.
 if [ -z "${SPARKLE_BIN:-}" ]; then
     SPARKLE_BIN=
-    for candidate in "$HOME"/Library/Developer/Xcode/DerivedData/{Clerestory,Open-Yoink}-*/SourcePackages/artifacts/sparkle/Sparkle/bin; do
+    for candidate in "$HOME"/Library/Developer/Xcode/DerivedData/Clerestory-*/SourcePackages/artifacts/sparkle/Sparkle/bin; do
         if [ -x "$candidate/sign_update" ]; then
             SPARKLE_BIN=$candidate
             break

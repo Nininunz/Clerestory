@@ -160,16 +160,6 @@
         }
       }
     },
-    "Configure the optional notch display in Notch." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Configure the optional notch display in Notch."
-          }
-        }
-      }
-    },
     "Uses the same panel while hiding the notch display. Your opening controls in Panel still apply. Turn this off to use the real display geometry." : {
       "localizations" : {
         "en" : {
@@ -470,76 +460,6 @@
         }
       }
     },
-    "The same panel is used on every display. Choose where it opens below." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The same panel is used on every display. Choose where it opens below."
-          }
-        }
-      }
-    },
-    "Connect a display to show the panel." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Connect a display to show the panel."
-          }
-        }
-      }
-    },
-    "The panel stays on the display chosen as main in System Settings." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The panel stays on the display chosen as main in System Settings."
-          }
-        }
-      }
-    },
-    "The panel uses a connected display until the main display is available." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The panel uses a connected display until the main display is available."
-          }
-        }
-      }
-    },
-    "The panel follows the pointer across displays." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The panel follows the pointer across displays."
-          }
-        }
-      }
-    },
-    "This display is unavailable. The panel temporarily uses a connected display." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This display is unavailable. The panel temporarily uses a connected display."
-          }
-        }
-      }
-    },
-    "The panel stays on this display until you choose another." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The panel stays on this display until you choose another."
-          }
-        }
-      }
-    },
     "Appears only on notched displays. Your preference is saved for when a notched display is in use." : {
       "localizations" : {
         "en" : {
@@ -646,46 +566,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Enable the panel and drag-to-open, and turn off hover opening."
-          }
-        }
-      }
-    },
-    "Without a notch, when idle" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Without a notch, when idle"
-          }
-        }
-      }
-    },
-    "Show the pill" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show the pill"
-          }
-        }
-      }
-    },
-    "Shrink to a dot" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Shrink to a dot"
-          }
-        }
-      }
-    },
-    "Hide until the pointer reaches the top edge" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hide until the pointer reaches the top edge"
           }
         }
       }
@@ -970,26 +850,6 @@
         }
       }
     },
-    "Can't read limits: %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Can't read limits: %@"
-          }
-        }
-      }
-    },
-    "Data from TokenTracker" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Data from TokenTracker"
-          }
-        }
-      }
-    },
     "Open Dashboard" : {
       "localizations" : {
         "en" : {
@@ -1236,16 +1096,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Clear Shelf"
-          }
-        }
-      }
-    },
-    "Clear Shelf, including hidden items" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clear Shelf, including hidden items"
           }
         }
       }
@@ -1790,16 +1640,6 @@
         }
       }
     },
-    "Undo Remove (⌘Z)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Undo Remove (⌘Z)"
-          }
-        }
-      }
-    },
     "You can keep up to 30 favorites." : {
       "localizations" : {
         "en" : {
@@ -1880,16 +1720,6 @@
         }
       }
     },
-    "File Shelf" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "File Shelf"
-          }
-        }
-      }
-    },
     "Files & Clipboard" : {
       "localizations" : {
         "en" : {
@@ -1906,16 +1736,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Full Toolbox"
-          }
-        }
-      }
-    },
-    "Presets change modules and reveal behavior. Your files, history and recording choice are kept." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Presets change modules and reveal behavior. Your files, history and recording choice are kept."
           }
         }
       }
@@ -2176,16 +1996,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "30 Days"
-          }
-        }
-      }
-    },
-    "Stored only on this Mac, up to 30 text, URL or image items. Password-manager privacy markers and ignored apps are skipped; unmarked sensitive text may still be recorded." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Stored only on this Mac, up to 30 text, URL or image items. Password-manager privacy markers and ignored apps are skipped; unmarked sensitive text may still be recorded."
           }
         }
       }
@@ -2596,16 +2406,6 @@
         }
       }
     },
-    "Quick Access · %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quick Access · %lld"
-          }
-        }
-      }
-    },
     "Remove Favorite" : {
       "localizations" : {
         "en" : {
@@ -2706,16 +2506,6 @@
         }
       }
     },
-    "Choose up to %lld pinned modules" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose up to %lld pinned modules"
-          }
-        }
-      }
-    },
     "Connected to Power" : {
       "localizations" : {
         "en" : {
@@ -2756,16 +2546,6 @@
         }
       }
     },
-    "Empty module position" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Empty module position"
-          }
-        }
-      }
-    },
     "Choose a module" : {
       "localizations" : {
         "en" : {
@@ -2792,16 +2572,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Disk space is low"
-          }
-        }
-      }
-    },
-    "Enabled in the module library" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enabled in the module library"
           }
         }
       }
@@ -2896,16 +2666,6 @@
         }
       }
     },
-    "Module Library" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Module Library"
-          }
-        }
-      }
-    },
     "Module unavailable" : {
       "localizations" : {
         "en" : {
@@ -2966,16 +2726,6 @@
         }
       }
     },
-    "Open Full Settings" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open Full Settings"
-          }
-        }
-      }
-    },
     "Performance may be reduced" : {
       "localizations" : {
         "en" : {
@@ -2992,16 +2742,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pin"
-          }
-        }
-      }
-    },
-    "Pin module" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pin module"
           }
         }
       }
@@ -3072,16 +2812,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Unpin"
-          }
-        }
-      }
-    },
-    "Unpin module" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unpin module"
           }
         }
       }
@@ -3568,28 +3298,6 @@
         }
       }
     },
-    "Couldn't deliver %@ — the item stays on the shelf." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Couldn't deliver %@ — the item stays on the shelf."
-          }
-        }
-      }
-    },
-    "Couldn't move %@ — a reference was added instead." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Couldn't move %@ — a reference was added instead."
-          }
-        }
-      }
-    },
     "Custom" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3620,18 +3328,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Don't ask again"
-          }
-        }
-      }
-    },
-    "Double-click for Quick Look" : {
-      "extractionState" : "manual",
-      "comment" : "Accessibility hint on item cards",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Double-click for Quick Look"
           }
         }
       }
@@ -3809,17 +3505,6 @@
         }
       }
     },
-    "File unavailable — it may have been moved or deleted." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "File unavailable — it may have been moved or deleted."
-          }
-        }
-      }
-    },
     "Folder" : {
       "extractionState" : "manual",
       "comment" : "Item kind name, used in accessibility labels",
@@ -3839,17 +3524,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "General"
-          }
-        }
-      }
-    },
-    "Global Hot Key" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Global Hot Key"
           }
         }
       }
@@ -4067,17 +3741,6 @@
         }
       }
     },
-    "Moved into the shelf — will be delivered on drag out" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Moved into the shelf — will be delivered on drag out"
-          }
-        }
-      }
-    },
     "No Recent Items" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4107,17 +3770,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Open"
-          }
-        }
-      }
-    },
-    "Clerestory is based on OpenYoink by weijue and contributors. Bundled third-party components are Sparkle (MIT) for updates and mediaremote-adapter (BSD 3-Clause) for the opt-in experimental Now Playing module. A complete attribution record is available in THIRD_PARTY_NOTICES.md in the source repository." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clerestory is based on OpenYoink by weijue and contributors. Bundled third-party components are Sparkle (MIT) for updates and mediaremote-adapter (BSD 3-Clause) for the opt-in experimental Now Playing module. A complete attribution record is available in THIRD_PARTY_NOTICES.md in the source repository."
           }
         }
       }
@@ -4173,17 +3825,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Recent Items"
-          }
-        }
-      }
-    },
-    "Release to add a reference" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Release to add a reference"
           }
         }
       }
@@ -4507,18 +4148,6 @@
         }
       }
     },
-    "Update checks contact GitHub Pages and releases only; nothing else uses the network." : {
-      "extractionState" : "manual",
-      "comment" : "Footnote under the automatic update check setting",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Update checks contact GitHub Pages and releases only; nothing else uses the network."
-          }
-        }
-      }
-    },
     "Updates" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4584,17 +4213,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "While dragging, hold the cursor at the shelf's screen edge for a moment to reveal it. Not available in custom position mode."
-          }
-        }
-      }
-    },
-    "Will move on drag out" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Will move on drag out"
           }
         }
       }
@@ -4907,17 +4525,6 @@
         }
       }
     },
-    "Resolve or delete quarantined recovery data before cleaning files." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Resolve or delete quarantined recovery data before cleaning files."
-          }
-        }
-      }
-    },
     "Resolve managed move recovery data before cleaning files." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5189,17 +4796,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Preparing received content…"
-          }
-        }
-      }
-    },
-    "The destination accepted the items." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The destination accepted the items."
           }
         }
       }
@@ -6491,17 +6087,6 @@
         }
       }
     },
-    "Battery unavailable" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Battery unavailable"
-          }
-        }
-      }
-    },
     "Charging" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6553,39 +6138,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Drop into Clerestory"
-          }
-        }
-      }
-    },
-    "Enable Experimental Now Playing?" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enable Experimental Now Playing?"
-          }
-        }
-      }
-    },
-    "Experimental media support may stop working after a macOS update. It stays off unless you enable it." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Experimental media support may stop working after a macOS update. It stays off unless you enable it."
-          }
-        }
-      }
-    },
-    "Hover waits briefly before expanding. Click, drag to the top, and the global shortcut always remain available." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hover waits briefly before expanding. Click, drag to the top, and the global shortcut always remain available."
           }
         }
       }
@@ -6645,17 +6197,6 @@
         }
       }
     },
-    "Not applicable" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Not applicable"
-          }
-        }
-      }
-    },
     "Notify when fully charged" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6674,17 +6215,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Now Playing"
-          }
-        }
-      }
-    },
-    "Now Playing (Experimental)" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Now Playing (Experimental)"
           }
         }
       }
@@ -6876,39 +6406,6 @@
         }
       }
     },
-    "This experimental module could not read the current player." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This experimental module could not read the current player."
-          }
-        }
-      }
-    },
-    "This feature uses a bundled compatibility helper and may fail after macOS updates. Shelf, transfers, timer, and battery are unaffected." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This feature uses a bundled compatibility helper and may fail after macOS updates. Shelf, transfers, timer, and battery are unaffected."
-          }
-        }
-      }
-    },
-    "Time remaining %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Time remaining %@"
-          }
-        }
-      }
-    },
     "Timer" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7063,17 +6560,6 @@
         }
       }
     },
-    "Choose a duration" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose a duration"
-          }
-        }
-      }
-    },
     "Experimental" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7081,17 +6567,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Experimental"
-          }
-        }
-      }
-    },
-    "Experimental Now Playing" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Experimental Now Playing"
           }
         }
       }
@@ -7228,28 +6703,6 @@
         }
       }
     },
-    "Primary Shelf" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Primary Shelf"
-          }
-        }
-      }
-    },
-    "The shortcut and automatic drag reveal use the primary shelf. The other surface stays available independently." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The shortcut and automatic drag reveal use the primary shelf. The other surface stays available independently."
-          }
-        }
-      }
-    },
     "After a successful drop, the receiving shelf stays open so you can drag the item to its destination." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7257,28 +6710,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "After a successful drop, the receiving shelf stays open so you can drag the item to its destination."
-          }
-        }
-      }
-    },
-    "Enable Clerestory Panel" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enable Clerestory Panel"
-          }
-        }
-      }
-    },
-    "Click is always available. Hover waits briefly before expanding." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Click is always available. Hover waits briefly before expanding."
           }
         }
       }
@@ -7492,17 +6923,6 @@
         }
       }
     },
-    "Main Display" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Main Display"
-          }
-        }
-      }
-    },
     "Follow Pointer" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7510,28 +6930,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Follow Pointer"
-          }
-        }
-      }
-    },
-    "Unavailable Display" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unavailable Display"
-          }
-        }
-      }
-    },
-    "Current Main" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Current Main"
           }
         }
       }
