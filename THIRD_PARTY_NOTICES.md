@@ -1,20 +1,24 @@
 # Third-Party Notices & Clean-Implementation Record
 
-Clerestory 基于 Open-Yoink，后者是一个**清洁实现（clean-room implementation）**。我们参考了若干开源项目的**公开可观察行为与架构思路**，但没有复制其源代码、UI 素材或专有实现。本文件记录所包含的第三方代码及其许可证（Sparkle、mediaremote-adapter、liquid-glass-react），以及行为参考来源；如引入更多第三方代码或资源，会在此追加。
+Clerestory is based on Open-Yoink, which is a **clean-room implementation**. We referred to the **publicly observable behavior and architectural ideas** of several open-source projects, but did not copy their source code, UI assets, or proprietary implementations. This file records the third-party code that is included and its licenses (Sparkle, mediaremote-adapter, liquid-glass-react), as well as the sources of behavioral reference; if more third-party code or resources are introduced, they will be added here.
 
-## 第三方代码
+> Original statement from OpenYoink (Chinese):
+>
+> Open-Yoink 是一个**清洁实现（clean-room implementation）**。我们参考了若干开源项目的**公开可观察行为与架构思路**，但没有复制其源代码、UI 素材或专有实现。
 
-应用内包含以下第三方代码：
+## Third-Party Code
 
-1. **Sparkle**（自动更新框架，Swift Package Manager 引入，`upToNextMajorVersion: 2.6.0`，实际解析 2.10.1）。Sparkle 以 binary framework 形式链入 app，用于检查更新（GitHub Pages 上的 appcast feed）与安装更新包（GitHub Releases 上的 DMG，EdDSA 签名校验）。
-2. **mediaremote-adapter**（供默认关闭、完全本地处理的可选 Now Playing 模块使用）。Clerestory 固定于 mediaremote-adapter 上游提交 `e3ff5021eb0875858bd05f48d2e9ba2e962d1cf6`，捆绑其 Perl 适配脚本、从该提交源码构建的通用二进制 `MediaRemoteAdapter.framework` 和 capability probe 客户端。开启 `--allow-missing-title`，缺少标题的有效播放会话显示播放器名称。应用不直接链接私有 MediaRemote 符号；用户未启用媒体模块时不会启动 helper。
+The application includes the following third-party code:
+
+1. **Sparkle** (automatic update framework, added via Swift Package Manager, `upToNextMajorVersion: 2.6.0`, actually resolved to 2.10.1). Sparkle is linked into the app as a binary framework and is used to check for updates (an appcast feed on GitHub Pages) and to install update packages (DMGs on GitHub Releases, with EdDSA signature verification).
+2. **mediaremote-adapter** (used by the optional Now Playing module, which is off by default and runs entirely locally). Clerestory pins mediaremote-adapter to upstream commit `e3ff5021eb0875858bd05f48d2e9ba2e962d1cf6` and bundles its Perl adapter script, a universal binary `MediaRemoteAdapter.framework` built from that commit's source, and the capability probe client. `--allow-missing-title` is enabled, so a valid playback session with no title shows the player's name. The app does not link private MediaRemote symbols directly; the helper is not launched when the user has not enabled the media module.
 
 ### mediaremote-adapter
 
-- 项目名：mediaremote-adapter
-- 仓库：https://github.com/ungive/mediaremote-adapter
-- 许可证：BSD 3-Clause
-- 版权：Copyright (c) 2025, Jonas van den Berg and contributors
+- Project name: mediaremote-adapter
+- Repository: https://github.com/ungive/mediaremote-adapter
+- License: BSD 3-Clause
+- Copyright: Copyright (c) 2025, Jonas van den Berg and contributors
 
 ```
 BSD 3-Clause License
@@ -49,9 +53,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ### Sparkle
 
-- 项目名：Sparkle
-- 仓库：https://github.com/sparkle-project/Sparkle
-- 许可证：MIT（完整文本如下，自包内 `LICENSE` 原样复制）
+- Project name: Sparkle
+- Repository: https://github.com/sparkle-project/Sparkle
+- License: MIT (full text below, copied verbatim from the `LICENSE` file in the package)
 
 ```
 Copyright (c) 2006-2013 Andy Matuschak.
@@ -190,35 +194,35 @@ IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 ```
 
-## 行为参考（行为级研究，未复制代码）
+## Behavioral References (behavior-level research; no code copied)
 
-| 项目 | 仓库 | 许可证 | 参考点 |
+| Project | Repository | License | What was referenced |
 |---|---|---|---|
-| HoldMac | https://github.com/Funnyrz/HoldMac | MIT | 文件引用式暂存、Finder 拖拽启发式触发思路 |
-| DropKit | https://github.com/chenyuxiaojin/DropKit | MIT | shelf + 菜单栏产品结构、摇动召唤交互思路 |
-| ShelfMate | https://github.com/stoimeniliev/shelfmate | MIT | NSPanel 窗口行为、摇动检测思路 |
-| NotchPocket | https://github.com/ijashuzain/NotchPocket | MIT | NSPanel + NSItemProvider 拖放结构 |
-| nab | https://github.com/jameshiew/nab | MIT-0 | 最小 shelf 生命周期与窗口行为 |
-| Dropshit | https://github.com/iamsumanp/Dropshit | MIT | fileURL + NSFilePromiseProvider 多表示拖出思路 |
+| HoldMac | https://github.com/Funnyrz/HoldMac | MIT | File-reference-style staging; the idea of heuristic triggering from Finder drags |
+| DropKit | https://github.com/chenyuxiaojin/DropKit | MIT | Shelf + menu bar product structure; the idea of a shake-to-summon interaction |
+| ShelfMate | https://github.com/stoimeniliev/shelfmate | MIT | NSPanel window behavior; the idea of shake detection |
+| NotchPocket | https://github.com/ijashuzain/NotchPocket | MIT | NSPanel + NSItemProvider drag-and-drop structure |
+| nab | https://github.com/jameshiew/nab | MIT-0 | Minimal shelf lifecycle and window behavior |
+| Dropshit | https://github.com/iamsumanp/Dropshit | MIT | The idea of multi-representation drag-out using fileURL + NSFilePromiseProvider |
 
-> ClipKit（GPL-3.0）仅作为剪贴板功能的行为参考，未复制其代码。
+> ClipKit (GPL-3.0) was used only as a behavioral reference for the clipboard feature; none of its code was copied.
 
-## 项目自有资源
+## Project-Owned Resources
 
-- **App 图标**：`Scripts/AppIcon-master.png` 由项目作者使用 ChatGPT（AI 图像生成）创作并人工选定，版权归项目作者本人所有，随项目以 MIT 许可证发布；`Scripts/generate-icon.swift` 为项目自绘的重采样脚本，负责从主图生成 `Assets.xcassets` 全部槽位。
-- 其余代码、界面、文案、本地化字符串均为项目原创。
+- **App icon**: `Scripts/AppIcon-master.png` was created by the project author using ChatGPT (AI image generation) and selected by hand. Its copyright belongs to the project author personally, and it is released with the project under the MIT License. `Scripts/generate-icon.swift` is a resampling script written by the project itself; it generates every slot in `Assets.xcassets` from the master image.
+- All other code, interface, text, and localized strings are original to the project.
 
-## 当前版本确认声明
+## Confirmation Statement for the Current Version
 
-**Clerestory 包含 Sparkle（MIT）与 mediaremote-adapter（BSD 3-Clause），并改编了 liquid-glass-react（MIT）的外观设计（见下文）；除此之外不含其他第三方代码、库、图片或字体。** 「行为参考」表所列其他项目仅为行为级参考，无任何代码或素材进入本仓库。如未来版本引入更多第三方代码或资源，将在此文件追加其许可证文本与版权归属。
+**Clerestory includes Sparkle (MIT) and mediaremote-adapter (BSD 3-Clause), and adapts the appearance design of liquid-glass-react (MIT) (see below); apart from these, it contains no other third-party code, libraries, images, or fonts.** The other projects listed in the "Behavioral References" table are behavior-level references only; none of their code or assets has entered this repository. If a future version introduces more third-party code or resources, their license texts and copyright attributions will be appended to this file.
 
-## 商标声明
+## Trademark Notice
 
-「Yoink」是 Eternal Storms Software 的产品名称。Clerestory 及其所基于的 Open-Yoink 均与其无任何隶属或授权关系，仅借鉴其公开描述的用户行为，不复制其代码、图标、文案或品牌资产。
+"Yoink" is a product name of Eternal Storms Software. Neither Clerestory nor Open-Yoink, on which it is based, has any affiliation with or authorization from Eternal Storms Software. They draw only on Yoink's publicly described user behavior and do not copy its code, icons, text, or brand assets.
 
-## Apple 平台
+## Apple Platform
 
-本应用使用 Apple 公开 API（AppKit、SwiftUI、UniformTypeIdentifiers、Quick Look 等）开发，遵循 Apple Developer Program License Agreement。
+This application is developed using Apple public APIs (AppKit, SwiftUI, UniformTypeIdentifiers, Quick Look, and others) and follows the Apple Developer Program License Agreement.
 
 
 ## Local Appearance customization — liquid-glass-react
