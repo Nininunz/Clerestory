@@ -11,7 +11,11 @@ struct AboutSettingsTab: View {
     var body: some View {
         SettingsForm {
             Section {
-                LabeledContent("Version", value: AppBuildInfo.versionString)
+                // Selectable so a bug report can include the exact version and build.
+                LabeledContent("Version") {
+                    Text(verbatim: versionText)
+                        .textSelection(.enabled)
+                }
                 LabeledContent("License", value: "MIT")
             }
 
@@ -33,6 +37,16 @@ struct AboutSettingsTab: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    /// Debug builds also show the commit, like the Quick Settings footer. A release build's
+    /// version and build already identify its tagged commit.
+    private var versionText: String {
+        #if DEBUG
+        AppBuildInfo.debugVersionString
+        #else
+        AppBuildInfo.versionString
+        #endif
     }
 
     @ViewBuilder
