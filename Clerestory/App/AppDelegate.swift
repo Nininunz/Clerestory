@@ -507,6 +507,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         switch content {
         case .text(let value): item.setString(value, forType: .string)
         case .url(let value): item.setString(value, forType: .URL)
+        // Pass the stored bytes; the importer writes the image off the main actor.
         case .image(let data, let type): item.setData(data, forType: .init(type))
         }
         pasteboard.writeObjects([item])

@@ -71,7 +71,7 @@ Regular file drags provide both a file URL and a filename Chromium understands. 
 
 ### Clipboard history
 
-Clipboard recording is off by default. To use it, turn on **Experimental Modules** under **Settings → Modules**, then turn on **Record Clipboard** in the Clipboard History settings there. Until you turn it on, the clipboard is read only at the moment you double-press the shortcut to park it. Once on, only newly copied text, HTTP(S) links and PNG/TIFF images are recorded — nothing from before, and never copied files.
+Clipboard recording is off by default. To use it, turn on **Experimental Modules** under **Settings → Modules**, then turn on **Record Clipboard** in the Clipboard History settings there. Until you turn it on, the clipboard is read only at the moment you double-press the shortcut to park it. Once on, only newly copied text, HTTP(S) links and images are recorded — nothing from before. Images are kept as PNG or TIFF; one over 5 MiB is re-encoded as PNG or JPEG to fit. If it still doesn't fit, the copy's text or link is kept instead, when there is one. Copied files are never opened or recorded. When an app copies an image together with a link to its file, as WeChat does, only the image is kept.
 
 History is stored as plain text on this Mac and is never uploaded or synced. Keep 30, 100 or 300 entries (default 30) for 1, 7 or 30 days (default 7), plus up to 30 favorites that never expire, all within 20 MiB. Turning recording off keeps what's already there; clearing it deletes it.
 

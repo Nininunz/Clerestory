@@ -3691,6 +3691,18 @@
         }
       }
     },
+    "Dropped Image.jpg" : {
+      "extractionState" : "manual",
+      "comment" : "Display name for JPEG image data materialized from a drop",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dropped Image.jpg"
+          }
+        }
+      }
+    },
     "Dropped Item" : {
       "extractionState" : "manual",
       "comment" : "Fallback display name base for generic data materialized from a drop",
