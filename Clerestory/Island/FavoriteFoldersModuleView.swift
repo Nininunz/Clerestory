@@ -53,8 +53,6 @@ struct FavoriteFoldersModuleView: View {
                     Text("\(copyCoordinator.completed) / \(copyCoordinator.total)").font(.caption.monospacedDigit())
                     Button("Cancel") { copyCoordinator.cancelCopy() }.buttonStyle(IslandPressFeedbackStyle())
                 }
-            } else if let message = copyCoordinator.message {
-                IslandModuleNotice(message: message)
             }
 
             if store.items.isEmpty {

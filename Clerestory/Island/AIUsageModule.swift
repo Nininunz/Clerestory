@@ -568,7 +568,6 @@ final class AIUsageModuleStore: IslandModuleRuntime {
     }
 
     let descriptor = AIUsageModuleStore.moduleDescriptor
-    let events: AsyncStream<IslandModuleEvent>
 
     private(set) var status: Status = .idle
     private(set) var snapshot: AIUsageSnapshot?
@@ -579,7 +578,7 @@ final class AIUsageModuleStore: IslandModuleRuntime {
     @ObservationIgnored private let notchMetric: @MainActor () -> AIUsageNotchMetric
     @ObservationIgnored private let alertsEnabled: @MainActor () -> Bool
     @ObservationIgnored private let now: @MainActor () -> Date
-    @ObservationIgnored private let continuation: AsyncStream<IslandModuleEvent>.Continuation
+    @ObservationIgnored private let messenger: ModuleMessenger
     @ObservationIgnored private var pollingTask: Task<Void, Never>?
     @ObservationIgnored private var refreshTask: Task<Void, Never>?
     @ObservationIgnored nonisolated(unsafe) private var policyToken: NSObjectProtocol?
@@ -590,16 +589,15 @@ final class AIUsageModuleStore: IslandModuleRuntime {
         isSelectedAndExpanded: @escaping @MainActor () -> Bool,
         notchMetric: @escaping @MainActor () -> AIUsageNotchMetric,
         alertsEnabled: @escaping @MainActor () -> Bool,
-        now: @escaping @MainActor () -> Date = Date.init
+        now: @escaping @MainActor () -> Date = Date.init,
+        messenger: ModuleMessenger = .inert
     ) {
         self.makeProvider = makeProvider
         self.isSelectedAndExpanded = isSelectedAndExpanded
         self.notchMetric = notchMetric
         self.alertsEnabled = alertsEnabled
         self.now = now
-        var captured: AsyncStream<IslandModuleEvent>.Continuation?
-        events = AsyncStream { captured = $0 }
-        continuation = captured!
+        self.messenger = messenger
     }
 
     deinit {
@@ -620,6 +618,12 @@ final class AIUsageModuleStore: IslandModuleRuntime {
         restartPolling()
     }
 
+    /// Marks the store running without its polling loop, so a test drives every fetch through
+    /// `refresh()` itself.
+    func startForTesting() {
+        isRunning = true
+    }
+
     func stop() {
         guard isRunning else { return }
         isRunning = false
@@ -630,7 +634,7 @@ final class AIUsageModuleStore: IslandModuleRuntime {
         if let policyToken { NotificationCenter.default.removeObserver(policyToken) }
         policyToken = nil
         alertEvaluator.reset()
-        continuation.yield(.removeAllActivities)
+        messenger.setStatuses([])
     }
 
     /// Opening the module refreshes data that is older than `maxAge`.
@@ -737,21 +741,28 @@ final class AIUsageModuleStore: IslandModuleRuntime {
         }
     }
 
+    /// How long a limit warning keeps the Notch orange after its threshold is crossed.
+    static let limitStatusDuration: Duration = .seconds(10 * 60)
+
+    /// A window that crosses a threshold sets one warning status, "limit.<window>", for
+    /// `limitStatusDuration`. Its raise is the one pill and the speech, so no notice is posted.
+    /// Its level is the threshold crossed (0 for 80%, 1 for 95%), so crossing a higher threshold
+    /// raises it again even when the rounded percent in the title is unchanged.
     private func evaluateAlerts(_ windows: [AIUsageLimitWindow]) {
         let crossed = alertEvaluator.evaluate(windows)
         guard alertsEnabled() else { return }
         let date = now()
         for (window, threshold) in crossed {
             let percent = AIUsageFormat.percent(window.fraction)
-            continuation.yield(.publishActivity(IslandActivity(
-                id: "aiUsage.limit.\(window.id).\(Int(threshold * 100))",
-                moduleID: .aiUsage,
-                priority: .systemWarning,
+            messenger.setStatus(IslandStatus(
+                key: "limit.\(window.id)",
                 title: String(localized: "\(window.title) limit at \(percent)"),
                 detail: AIUsageFormat.reset(window.resetsAt, now: date),
                 systemImage: "gauge.with.dots.needle.100percent",
-                expiresAt: date.addingTimeInterval(10 * 60)
-            )))
+                tone: .warning,
+                level: AIUsageLimitAlertEvaluator.thresholds.firstIndex(of: threshold) ?? 0,
+                expiresAt: messenger.expiry(after: Self.limitStatusDuration)
+            ))
         }
     }
 

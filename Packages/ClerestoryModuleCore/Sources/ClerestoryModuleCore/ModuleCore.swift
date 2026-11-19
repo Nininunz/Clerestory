@@ -47,55 +47,6 @@ public enum IslandModuleAvailability: Equatable, Codable, Sendable {
     case degraded(reason: String)
 }
 
-public enum IslandActivityPriority: Int, Comparable, Codable, Sendable {
-    case shelfSummary = 10
-    case selectedModule = 20
-    case nowPlaying = 25
-    case powerChange = 30
-    case systemWarning = 35
-    case criticalBattery = 40
-    case timerFinished = 50
-    case transfer = 60
-    case userDrag = 70
-
-    public static func < (lhs: Self, rhs: Self) -> Bool {
-        lhs.rawValue < rhs.rawValue
-    }
-}
-
-public struct IslandActivity: Identifiable, Equatable, Codable, Sendable {
-    public let id: String
-    public let moduleID: IslandModuleID
-    public let priority: IslandActivityPriority
-    public let title: String
-    public let detail: String?
-    public let systemImage: String
-    public let expiresAt: Date?
-
-    public init(id: String, moduleID: IslandModuleID,
-                priority: IslandActivityPriority, title: String,
-                detail: String?, systemImage: String, expiresAt: Date?) {
-        self.id = id
-        self.moduleID = moduleID
-        self.priority = priority
-        self.title = title
-        self.detail = detail
-        self.systemImage = systemImage
-        self.expiresAt = expiresAt
-    }
-
-    public func isActive(at date: Date) -> Bool {
-        expiresAt.map { $0 > date } ?? true
-    }
-}
-
-public enum IslandModuleEvent: Equatable, Sendable {
-    case publishActivity(IslandActivity)
-    case removeActivity(id: String)
-    case removeAllActivities
-    case availabilityChanged(IslandModuleAvailability)
-}
-
 /// Persisted user configuration. `enabledModuleIDs` is an ordered array rather
 /// than a Set so unknown future identifiers survive a load/save round trip.
 public struct IslandModuleConfiguration: Codable, Equatable, Sendable {

@@ -18,7 +18,6 @@ final class FavoriteFolderDropCoordinator {
     private(set) var isCopying = false
     private(set) var completed = 0
     private(set) var total = 0
-    private(set) var message: String?
     private(set) var conflictName: String?
     @ObservationIgnored var tileFrames: [UUID: CGRect] = [:]
     @ObservationIgnored var viewport: CGRect = .zero
@@ -28,7 +27,8 @@ final class FavoriteFolderDropCoordinator {
     @ObservationIgnored private let copier: FavoriteFolderCopyService
     @ObservationIgnored private var copyTask: Task<Void, Never>?
     @ObservationIgnored private var conflictContinuation: CheckedContinuation<FolderCopyConflictDecision, Never>?
-    @ObservationIgnored var onActivity: (@MainActor (IslandActivity?) -> Void)?
+    /// Where Quick Access sets its "copy" status and posts the copy result.
+    @ObservationIgnored var messenger: ModuleMessenger = .inert
     @ObservationIgnored private(set) var protectedPaths: Set<String> = []
 
     init(folders: FavoriteFoldersStore, bookmarks: BookmarkService) {
@@ -62,11 +62,9 @@ final class FavoriteFolderDropCoordinator {
         isCopying = true
         completed = 0
         total = sources.count
-        message = nil
         protectedPaths = Set(sources.compactMap { try? bookmarks.resolve($0).url.path })
-        onActivity?(.init(id: "folders.copy", moduleID: .folders, priority: .transfer,
-                          title: String(localized: "Copying files…"), detail: nil,
-                          systemImage: "doc.on.doc", expiresAt: nil))
+        messenger.setStatus(IslandStatus(key: "copy", title: String(localized: "Copying files…"),
+                                         systemImage: "doc.on.doc", tone: .progress))
         copyTask = Task { [self] in
             let result = await copier.copy(sources, to: destination, conflict: { [weak self] name in
                 await self?.resolveConflict(name) ?? .cancel
@@ -74,14 +72,25 @@ final class FavoriteFolderDropCoordinator {
             isCopying = false
             protectedPaths = []
             copyTask = nil
-            message = String(localized: "Copied: \(result.copied) · Skipped: \(result.skipped) · Failed: \(result.failed) · Cancelled: \(result.cancelled)")
-            onActivity?(.init(id: "folders.copy", moduleID: .folders, priority: .transfer,
-                              title: String(localized: "Folder copy complete"), detail: message,
-                              systemImage: result.failed > 0 ? "exclamationmark.triangle" : "checkmark.circle",
-                              expiresAt: Date().addingTimeInterval(8)))
+            messenger.clearStatus("copy")
+            messenger.post(Self.completionNotice(for: result))
         }
         return true
     }
+    /// How long the copy result stays on screen.
+    static let completionNoticeDuration: TimeInterval = 8
+
+    static func completionNotice(for result: FolderCopyResult) -> IslandNotice {
+        IslandNotice(
+            key: "copy-complete",
+            title: String(localized: "Folder copy complete"),
+            detail: String(localized: "Copied: \(result.copied) · Skipped: \(result.skipped) · Failed: \(result.failed) · Cancelled: \(result.cancelled)"),
+            tone: result.failed > 0 ? .warning : .success,
+            systemImage: result.failed > 0 ? "exclamationmark.triangle" : "checkmark.circle",
+            duration: completionNoticeDuration
+        )
+    }
+
     private func fileBookmarks(_ context: DragContainerDropContext) -> [Data] {
         if let items = context.internalItems {
             let leaves = DragPayloadBuilder.flattenedItems(items)

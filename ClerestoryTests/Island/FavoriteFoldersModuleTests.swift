@@ -156,6 +156,62 @@ final class FavoriteFoldersModuleTests: XCTestCase {
         XCTAssertEqual(store.selectedID, secondID)
     }
 
+    func testFolderCopyShowsProgressStatusThenCompletionNotice() async throws {
+        let target = try makeTemporaryDirectory()
+        let sourceFolder = try makeTemporaryDirectory()
+        let file = sourceFolder.appendingPathComponent("note.txt")
+        try Data("note".utf8).write(to: file)
+        let store = makeStore()
+        store.start()
+        XCTAssertEqual(store.addFolders([target]).added, 1)
+        let folderID = try XCTUnwrap(store.items.first?.id)
+
+        let messages = IslandMessageCenter.forTesting()
+        messages.moduleDidStart(.folders)
+        let coordinator = FavoriteFolderDropCoordinator(folders: store, bookmarks: BookmarkService())
+        coordinator.messenger = messages.messenger(for: .folders)
+        let tile = CGRect(x: 0, y: 0, width: 100, height: 100)
+        coordinator.tileFrames[folderID] = tile
+        coordinator.viewport = tile
+        let pasteboard = NSPasteboard(name: .init("FavoriteFoldersTests-copy-\(UUID().uuidString)"))
+        pasteboard.clearContents()
+        pasteboard.writeObjects([file as NSURL])
+
+        XCTAssertTrue(coordinator.perform(DragContainerDropContext(
+            pasteboard: pasteboard, location: CGPoint(x: 50, y: 50), isInternal: false, internalItems: nil
+        )))
+        let copying = try XCTUnwrap(messages.topStatus(for: .folders))
+        XCTAssertEqual(copying.key, "copy")
+        XCTAssertEqual(copying.title, "Copying files…")
+        XCTAssertEqual(copying.tone, .progress)
+        XCTAssertNil(messages.currentNotice)
+
+        // The copy runs on the copier actor; give it up to 10 s.
+        let deadline = ContinuousClock.now + .seconds(10)
+        while coordinator.isCopying, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        guard !coordinator.isCopying else {
+            return XCTFail("The folder copy did not finish within 10 s")
+        }
+        XCTAssertTrue(messages.statuses(for: .folders).isEmpty, "Completion clears the status")
+        let posted = try XCTUnwrap(messages.currentNotice)
+        XCTAssertEqual(posted.moduleID, .folders)
+        XCTAssertEqual(posted.notice.title, "Folder copy complete")
+        XCTAssertEqual(posted.notice.detail, "Copied: 1 · Skipped: 0 · Failed: 0 · Cancelled: 0")
+        XCTAssertEqual(posted.notice.tone, .success)
+        XCTAssertEqual(IslandMessageCenter.duration(for: posted.notice), 8)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: target.appendingPathComponent("note.txt").path))
+    }
+
+    func testFolderCopyNoticeWarnsWhenAnythingFailed() {
+        let failed = FavoriteFolderDropCoordinator.completionNotice(for: FolderCopyResult(copied: 2, failed: 1))
+        XCTAssertEqual(failed.tone, .warning)
+        XCTAssertEqual(failed.detail, "Copied: 2 · Skipped: 0 · Failed: 1 · Cancelled: 0")
+        let skipped = FavoriteFolderDropCoordinator.completionNotice(for: FolderCopyResult(copied: 1, skipped: 1))
+        XCTAssertEqual(skipped.tone, .success)
+    }
+
     func testStartAndStopAreIdempotent() {
         let store = makeStore()
 

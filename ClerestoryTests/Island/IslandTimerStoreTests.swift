@@ -126,19 +126,107 @@ final class IslandTimerStoreTests: XCTestCase {
         timer.stop()
     }
 
-    func testFocusGoalIsUsedForNotchActivity() throws {
+    func testFocusGoalIsUsedForTheRunningStatus() throws {
         let (defaults, name) = try suite()
         defer { defaults.removePersistentDomain(forName: name) }
-
+        let messages = IslandMessageCenter.forTesting()
+        messages.moduleDidStart(.timer)
         let timer = IslandTimerStore(defaults: defaults)
-        var publishedActivity: IslandActivity?
-        timer.onActivity = { publishedActivity = $0 }
+        timer.messenger = messages.messenger(for: .timer)
         timer.setGoal("Finish the timer redesign")
         timer.start(duration: 60)
 
-        XCTAssertEqual(publishedActivity?.title, "Finish the timer redesign")
-        XCTAssertEqual(publishedActivity?.systemImage, "scope")
+        let status = try XCTUnwrap(messages.topStatus(for: .timer))
+        XCTAssertEqual(status.key, "running")
+        XCTAssertEqual(status.title, "Finish the timer redesign")
+        XCTAssertEqual(status.detail, "01:00")
+        XCTAssertEqual(status.systemImage, "scope")
+        XCTAssertEqual(status.tone, .neutral)
+        timer.pause()
+        XCTAssertEqual(messages.statuses(for: .timer).map(\.key), ["running"], "Paused keeps the running status")
+        timer.reset()
+        XCTAssertTrue(messages.statuses(for: .timer).isEmpty, "Idle clears it")
+    }
+
+    func testFinishingSetsTheFinishedStatusAndCallsOnDidFinishOnce() throws {
+        let (defaults, name) = try suite()
+        defer { defaults.removePersistentDomain(forName: name) }
+        let spoken = AnnouncementRecorder()
+        let messages = IslandMessageCenter.forTesting(announcer: .recording(into: spoken))
+        messages.moduleDidStart(.timer)
+        var now = Date(timeIntervalSince1970: 1_000)
+        let timer = IslandTimerStore(defaults: defaults, now: { now })
+        timer.messenger = messages.messenger(for: .timer)
+        var finishCount = 0
+        timer.onDidFinish = { finishCount += 1 }
+        timer.start(duration: 60)
+        XCTAssertNil(messages.currentNotice, "A running timer is neutral and never announces")
+
+        now = now.addingTimeInterval(61)
+        timer.updateForCurrentTime()
+        timer.updateForCurrentTime()
+        timer.start()
+
+        XCTAssertEqual(finishCount, 1)
+        let status = try XCTUnwrap(messages.topStatus(for: .timer))
+        XCTAssertEqual(status.key, "finished")
+        XCTAssertEqual(status.title, "Timer finished")
+        XCTAssertEqual(status.tone, .warning)
+        XCTAssertEqual(messages.statuses(for: .timer).count, 1, "Finished replaces running")
+        XCTAssertEqual(spoken.messages, ["Timer finished"], "Announced once when raised")
+        XCTAssertEqual(messages.currentNotice?.raisedStatusKey, "finished")
+
+        timer.acknowledgeFinished()
+        XCTAssertTrue(messages.statuses(for: .timer).isEmpty)
+        XCTAssertNil(messages.currentNotice, "The pill goes when the status clears first")
+    }
+
+    func testTimerThatFinishedWhileQuitOpensThePanelOnceAtLaunch() throws {
+        let (defaults, name) = try suite()
+        defer { defaults.removePersistentDomain(forName: name) }
+        var now = Date(timeIntervalSince1970: 1_000)
+        let beforeQuit = IslandTimerStore(defaults: defaults, now: { now })
+        beforeQuit.start(duration: 60)
+        beforeQuit.stop()
+
+        now = now.addingTimeInterval(300)
+        let messages = IslandMessageCenter.forTesting()
+        messages.moduleDidStart(.timer)
+        let timer = IslandTimerStore(defaults: defaults, now: { now })
+        XCTAssertEqual(timer.state, .finished(originalDuration: 60), "Restore completes the expired timer")
+        timer.messenger = messages.messenger(for: .timer)
+        var finishCount = 0
+        timer.onDidFinish = { finishCount += 1 }
+
+        timer.start()
+        XCTAssertEqual(finishCount, 1, "The first start opens the Panel once")
+        XCTAssertEqual(messages.topStatus(for: .timer)?.key, "finished")
+
         timer.stop()
+        timer.start()
+        XCTAssertEqual(finishCount, 1, "A later stop and start while finished does not reopen it")
+        timer.stop()
+    }
+
+    func testFinishedPillIsWithdrawnWhenThePanelShowsTimer() throws {
+        let (defaults, name) = try suite()
+        defer { defaults.removePersistentDomain(forName: name) }
+        let spoken = AnnouncementRecorder()
+        let messages = IslandMessageCenter.forTesting(announcer: .recording(into: spoken))
+        messages.moduleDidStart(.timer)
+        var now = Date(timeIntervalSince1970: 1_000)
+        let timer = IslandTimerStore(defaults: defaults, now: { now })
+        timer.messenger = messages.messenger(for: .timer)
+        // ShelfWindowController opens the Panel on Timer from onDidFinish.
+        timer.onDidFinish = { messages.setShownModule(.timer, othersWait: true) }
+        timer.start(duration: 60)
+
+        now = now.addingTimeInterval(60)
+        timer.updateForCurrentTime()
+
+        XCTAssertEqual(messages.topStatus(for: .timer)?.key, "finished")
+        XCTAssertEqual(spoken.messages, ["Timer finished"], "VoiceOver still speaks it")
+        XCTAssertNil(messages.currentNotice, "The open Panel already shows Timer, so no pill")
     }
 
     func testGoalLengthIsBoundedBeforePersistence() throws {

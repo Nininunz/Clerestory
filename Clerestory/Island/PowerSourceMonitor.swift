@@ -353,7 +353,7 @@ final class PowerSourceMonitor: IslandModule {
     /// Every sample sets the whole status set, so "low" is there exactly while the battery is
     /// low, whatever notices come and go. The center announces it once when it is raised.
     private func updateMessages(previous: Snapshot, current: Snapshot) {
-        messenger.setStatuses(current.hasBattery ? Self.statuses(for: current, previous: previous) : [])
+        messenger.setStatuses(current.hasBattery ? Self.statuses(for: current) : [])
         guard current.hasBattery, previous.hasBattery else { return }
         if previous.isConnectedToPower != current.isConnectedToPower {
             let title = current.isConnectedToPower
@@ -390,21 +390,20 @@ final class PowerSourceMonitor: IslandModule {
     }
 
     /// "low" while the battery is at 20% or less. Both bands are critical, so the notch stays
-    /// red; the title changes at 10%, which raises it again. A rising charge never announces:
-    /// charging from 10% to 11% changes the title back to "Battery low" without a new pill or
-    /// speech.
-    static func statuses(for snapshot: Snapshot, previous: Snapshot? = nil) -> [IslandStatus] {
+    /// red. "Battery critically low" at 10% or less is level 1, so falling into it raises the
+    /// status again, while charging back out of it (level 0, "Battery low") is silent.
+    static func statuses(for snapshot: Snapshot) -> [IslandStatus] {
         guard snapshot.hasBattery, snapshot.percentage <= 20 else { return [] }
-        let isRising = previous.map { $0.hasBattery && snapshot.percentage > $0.percentage } ?? false
+        let isCritical = snapshot.percentage <= 10
         return [IslandStatus(
             key: "low",
-            title: snapshot.percentage <= 10
+            title: isCritical
                 ? String(localized: "Battery critically low")
                 : String(localized: "Battery low"),
             detail: "\(snapshot.percentage)%",
             systemImage: "battery.25percent",
             tone: .critical,
-            announcesWhenRaised: !isRising
+            level: isCritical ? 1 : 0
         )]
     }
 }

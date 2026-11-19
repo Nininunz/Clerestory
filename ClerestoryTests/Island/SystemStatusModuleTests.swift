@@ -82,8 +82,151 @@ final class SystemStatusMetricTests: XCTestCase {
         await store.refresh()
         store.processMemoryPressureEvent(.critical)
         XCTAssertEqual(store.snapshot.memoryPressure, .critical)
-        XCTAssertEqual(store.alerts.first?.id, "system.memory-pressure")
+        XCTAssertEqual(store.alerts.first?.key, "memory-pressure")
         store.stop()
+    }
+
+    @MainActor
+    func testEachSampleSetsTheWholeSetOfStatuses() async {
+        let spoken = AnnouncementRecorder()
+        let messages = IslandMessageCenter.forTesting(announcer: .recording(into: spoken))
+        let (store, provider) = startedStore(messages: messages)
+
+        var warning = SystemSnapshot.unavailable()
+        warning.thermalStatus = .serious
+        warning.diskAvailableBytes = 5_000_000_000
+        warning.diskTotalBytes = 500_000_000_000
+        await provider.set(warning)
+        await store.refresh()
+        XCTAssertEqual(Set(messages.statuses(for: .system).map(\.key)), ["thermal", "disk-space"])
+        XCTAssertTrue(messages.statuses(for: .system).allSatisfy { $0.tone == .warning && $0.expiresAt == nil })
+        XCTAssertEqual(store.alerts.map(\.key), ["thermal", "disk-space"], "The page keeps the sample order")
+        XCTAssertEqual(spoken.messages.count, 2, "Thermal and disk warnings are announced once when raised")
+
+        await store.refresh()
+        XCTAssertEqual(spoken.messages.count, 2, "An unchanged sample is silent")
+
+        warning.thermalStatus = .nominal
+        await provider.set(warning)
+        await store.refresh()
+        XCTAssertEqual(messages.statuses(for: .system).map(\.key), ["disk-space"])
+
+        await provider.set(.unavailable())
+        await store.refresh()
+        XCTAssertTrue(messages.statuses(for: .system).isEmpty)
+        XCTAssertTrue(store.alerts.isEmpty)
+        store.stop()
+    }
+
+    @MainActor
+    func testIgnoreDismissesOnlyThatKeyUntilItClearsAndReturns() async {
+        let messages = IslandMessageCenter.forTesting()
+        let (store, provider) = startedStore(messages: messages)
+
+        var warning = SystemSnapshot.unavailable()
+        warning.thermalStatus = .serious
+        warning.diskAvailableBytes = 5_000_000_000
+        warning.diskTotalBytes = 500_000_000_000
+        await provider.set(warning)
+        await store.refresh()
+        store.ignoreAlert("thermal")
+        XCTAssertEqual(messages.statuses(for: .system).map(\.key), ["disk-space"])
+        XCTAssertEqual(store.alerts.map(\.key), ["disk-space"])
+
+        await store.refresh()
+        XCTAssertEqual(store.alerts.map(\.key), ["disk-space"], "Ignored while the condition holds")
+
+        var cleared = warning
+        cleared.thermalStatus = .nominal
+        await provider.set(cleared)
+        await store.refresh()
+        await provider.set(warning)
+        await store.refresh()
+        XCTAssertEqual(store.alerts.map(\.key), ["thermal", "disk-space"], "It returns once raised again")
+        store.stop()
+    }
+
+    @MainActor
+    func testApplicationAlertsLastUntilTheNextSampleAndAreNeverAnnounced() async {
+        let clock = ManualMessageClock()
+        let spoken = AnnouncementRecorder()
+        let messages = IslandMessageCenter.forTesting(clock: clock, announcer: .recording(into: spoken))
+        messages.setNoticeClockRunning(true)
+        var now = Date(timeIntervalSince1970: 10_000)
+        let (store, provider) = startedStore(messages: messages, now: { now })
+
+        await provider.set(snapshotWithApplication(cpu: 0, memory: 3_000_000_000))
+        await store.refresh()
+        let key = "application.com.example.app"
+        let status = messages.topStatus(for: .system)
+        XCTAssertEqual(status?.key, key)
+        XCTAssertEqual(status?.tone, .warning)
+        XCTAssertNil(status?.expiresAt)
+        XCTAssertEqual(status?.isDismissible, true)
+        XCTAssertTrue(spoken.messages.isEmpty, "Application alerts are never announced")
+        XCTAssertNil(messages.currentNotice)
+
+        // The old 12 s expiry left a gap before the next 15 s sample.
+        await clock.advance(by: 14.9)
+        XCTAssertEqual(messages.statuses(for: .system).map(\.key), [key])
+        XCTAssertEqual(store.alerts.map(\.key), [key])
+
+        now = now.addingTimeInterval(15)
+        await store.refresh()
+        XCTAssertTrue(messages.statuses(for: .system).isEmpty, "The evaluator reports it once per cooldown")
+        XCTAssertTrue(store.alerts.isEmpty, "The page and the Notch drop it together")
+        store.stop()
+    }
+
+    @MainActor
+    func testGettingWorseAnnouncesOnceAndImprovingIsSilent() async {
+        let spoken = AnnouncementRecorder()
+        let messages = IslandMessageCenter.forTesting(announcer: .recording(into: spoken))
+        let (store, provider) = startedStore(messages: messages)
+
+        var sample = SystemSnapshot.unavailable()
+        sample.memoryPressure = .warning
+        sample.thermalStatus = .serious
+        await provider.set(sample)
+        await store.refresh()
+        XCTAssertEqual(spoken.messages.count, 2)
+
+        sample.memoryPressure = .critical
+        sample.thermalStatus = .critical
+        await provider.set(sample)
+        await store.refresh()
+        XCTAssertEqual(spoken.messages.count, 4, "Critical is a higher level, so each announces once")
+        XCTAssertTrue(spoken.messages.contains("Memory pressure is critical, Apps may slow down"))
+        await store.refresh()
+        XCTAssertEqual(spoken.messages.count, 4)
+
+        sample.memoryPressure = .warning
+        sample.thermalStatus = .serious
+        await provider.set(sample)
+        await store.refresh()
+        XCTAssertEqual(spoken.messages.count, 4, "Improving is silent")
+        XCTAssertEqual(messages.topStatus(for: .system)?.level, 0)
+
+        sample.memoryPressure = .critical
+        await provider.set(sample)
+        await store.refresh()
+        XCTAssertEqual(spoken.messages.count, 5, "Flapping back up announces once more")
+        store.stop()
+    }
+
+    /// A store marked running without its sampling loop, so the test's own `refresh()` calls are
+    /// its only samples.
+    @MainActor
+    private func startedStore(
+        messages: IslandMessageCenter,
+        now: @escaping @MainActor () -> Date = Date.init
+    ) -> (SystemStatusModuleStore, ScriptedSystemProvider) {
+        let provider = ScriptedSystemProvider(snapshot: .unavailable())
+        let store = SystemStatusModuleStore(provider: provider, isSelectedAndExpanded: { false },
+                                            now: now, messenger: messages.messenger(for: .system))
+        messages.moduleDidStart(.system)
+        store.startForTesting()
+        return (store, provider)
     }
 
     func testApplicationCPURequiresSixtySecondsAndThenCoolsDown() {
@@ -136,4 +279,18 @@ private actor FixedSystemProvider: SystemStatusProviding {
     }
 
     func sample() async -> SystemSnapshot { fixedSnapshot }
+}
+
+private actor ScriptedSystemProvider: SystemStatusProviding {
+    private var snapshot: SystemSnapshot
+
+    init(snapshot: SystemSnapshot) {
+        self.snapshot = snapshot
+    }
+
+    func set(_ snapshot: SystemSnapshot) {
+        self.snapshot = snapshot
+    }
+
+    func sample() async -> SystemSnapshot { snapshot }
 }

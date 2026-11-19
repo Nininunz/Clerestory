@@ -3,7 +3,7 @@ import SwiftUI
 
 struct IslandSystemStatusView: View {
     @Environment(SystemStatusModuleStore.self) private var store
-    @State private var detailAlert: IslandActivity?
+    @State private var detailAlert: IslandStatus?
 
     private let columns = [
         GridItem(.flexible(), spacing: 8),
@@ -75,7 +75,7 @@ struct IslandSystemStatusView: View {
         )) {
             Button("OK", role: .cancel) { detailAlert = nil }
             Button("Ignore Once") {
-                if let detailAlert { store.ignoreAlert(id: detailAlert.id) }
+                if let detailAlert { store.ignoreAlert(detailAlert.key) }
                 detailAlert = nil
             }
         } message: { Text(detailAlert?.detail ?? "") }
@@ -121,7 +121,7 @@ struct IslandSystemStatusView: View {
     private var alertStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 7) {
-                ForEach(store.alerts) { alert in
+                ForEach(store.alerts, id: \.key) { alert in
                     HStack(spacing: 7) {
                         Image(systemName: alert.systemImage)
                             .foregroundStyle(.orange)
@@ -141,7 +141,7 @@ struct IslandSystemStatusView: View {
                             .buttonStyle(IslandPressFeedbackStyle())
                             .font(.system(size: 9, weight: .semibold))
                             .foregroundStyle(Color.accentColor)
-                        Button("Ignore Once") { store.ignoreAlert(id: alert.id) }
+                        Button("Ignore Once") { store.ignoreAlert(alert.key) }
                             .buttonStyle(IslandPressFeedbackStyle())
                             .font(.system(size: 9))
                             .foregroundStyle(.white.opacity(0.56))

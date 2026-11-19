@@ -64,23 +64,54 @@ final class IslandModuleContainerTests: XCTestCase {
         XCTAssertEqual(runtime.stopCount, 1)
     }
 
-    func testEventsBecomeStatusesAndAreDroppedOnStop() async {
+    func testStatusesAreDroppedOnStopAndIgnoredUntilTheNextStart() {
         let runtime = RuntimeSpy(id: .timer)
         let messages = IslandMessageCenter.forTesting()
+        runtime.messenger = messages.messenger(for: .timer)
         let container = makeContainer(runtime: runtime, messages: messages)
-        let enabled = IslandModuleConfiguration(
-            enabledModuleIDs: [.timer], pinnedModuleIDs: []
-        )
+        let enabled = IslandModuleConfiguration(enabledModuleIDs: [.timer], pinnedModuleIDs: [])
         container.apply(configuration: enabled, isActive: true)
-        runtime.publish(.publishActivity(activity(id: "first")))
-        await settleEvents()
+        runtime.setStatus("first")
         XCTAssertEqual(messages.statuses(for: .timer).map(\.key), ["first"])
 
         container.stopAll()
         XCTAssertTrue(messages.statuses(for: .timer).isEmpty)
-        runtime.publish(.publishActivity(activity(id: "late")))
-        await settleEvents()
+        runtime.setStatus("late")
+        XCTAssertTrue(messages.statuses(for: .timer).isEmpty, "A stopped module cannot set statuses")
+    }
+
+    /// Modules write through a messenger rather than a one-shot event stream, so a module that
+    /// stops and starts again keeps updating its statuses.
+    func testModuleKeepsUpdatingAfterStopAndStart() throws {
+        let name = "ContainerRestart.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let messages = IslandMessageCenter.forTesting()
+        let timer = IslandTimerStore(defaults: defaults)
+        timer.messenger = messages.messenger(for: .timer)
+        let runtime = CallbackIslandModuleRuntime(descriptor: timer.descriptor,
+                                                  start: { timer.start() }, stop: { timer.stop() })
+        let container = IslandModuleContainer(registrations: [.init(
+            descriptor: runtime.descriptor, runtime: runtime, makeContentView: { _ in AnyView(EmptyView()) }
+        )], messages: messages)
+        let enabled = IslandModuleConfiguration(enabledModuleIDs: [.timer], pinnedModuleIDs: [])
+        let disabled = IslandModuleConfiguration(enabledModuleIDs: [], pinnedModuleIDs: [])
+
+        container.apply(configuration: enabled, isActive: true)
+        timer.start(duration: 60)
+        XCTAssertEqual(messages.statuses(for: .timer).map(\.key), ["running"])
+        timer.reset()
+        container.apply(configuration: disabled, isActive: true)
+        container.apply(configuration: enabled, isActive: true)
         XCTAssertTrue(messages.statuses(for: .timer).isEmpty)
+
+        timer.start(duration: 60)
+        XCTAssertEqual(messages.statuses(for: .timer).map(\.key), ["running"])
+        timer.pause()
+        XCTAssertEqual(messages.statuses(for: .timer).map(\.key), ["running"])
+        timer.reset()
+        XCTAssertTrue(messages.statuses(for: .timer).isEmpty)
+        container.stopAll()
     }
 
     func testModuleIsStartedInTheCenterBeforeItsRuntimeStarts() {
@@ -118,99 +149,6 @@ final class IslandModuleContainerTests: XCTestCase {
         XCTAssertEqual(messages.currentNotice?.moduleID, .shelf)
     }
 
-    /// Replaces testRuntimeCannotPublishActivityForAnotherModule: the adapter writes through the
-    /// sending module's messenger, so a module can neither add nor remove another's statuses.
-    func testAdapterKeepsEachModulesStatusesToItself() async {
-        let timer = RuntimeSpy(id: .timer)
-        let battery = RuntimeSpy(id: .battery)
-        let messages = IslandMessageCenter.forTesting()
-        let container = IslandModuleContainer(registrations: [timer, battery].map { runtime in
-            .init(descriptor: runtime.descriptor, runtime: runtime, makeContentView: { _ in AnyView(EmptyView()) })
-        }, messages: messages)
-        container.apply(configuration: .init(enabledModuleIDs: [.timer, .battery], pinnedModuleIDs: []),
-                        isActive: true)
-        battery.publish(.publishActivity(.init(
-            id: "battery.low", moduleID: .battery, priority: .criticalBattery,
-            title: "Battery low", detail: "15%", systemImage: "battery.25percent", expiresAt: nil
-        )))
-        timer.publish(.publishActivity(.init(
-            id: "forged", moduleID: .battery, priority: .systemWarning,
-            title: "Forged", detail: nil, systemImage: "xmark", expiresAt: nil
-        )))
-        timer.publish(.removeActivity(id: "battery.low"))
-        timer.publish(.removeAllActivities)
-        await settleEvents()
-
-        XCTAssertEqual(messages.statuses(for: .battery).map(\.key), ["battery.low"])
-        XCTAssertTrue(messages.statuses(for: .timer).isEmpty)
-        container.stopAll()
-    }
-
-    func testAdapterMapsPrioritiesToTheTintsTheyHadAndNeverAnnounces() async {
-        let expected: [(IslandActivityPriority, IslandStatus.Tone)] = [
-            (.criticalBattery, .critical), (.systemWarning, .warning), (.timerFinished, .warning),
-            (.transfer, .progress), (.userDrag, .progress), (.shelfSummary, .neutral),
-            (.selectedModule, .neutral), (.nowPlaying, .neutral), (.powerChange, .neutral),
-        ]
-        for (priority, tone) in expected {
-            XCTAssertEqual(IslandActivityStatusAdapter.tone(for: priority), tone, "\(priority)")
-        }
-
-        let clock = ManualMessageClock()
-        let spoken = AnnouncementRecorder()
-        let messages = IslandMessageCenter.forTesting(clock: clock, announcer: .recording(into: spoken))
-        messages.setNoticeClockRunning(true)
-        messages.moduleDidStart(.aiUsage)
-        let aiUsage = messages.messenger(for: .aiUsage)
-        IslandActivityStatusAdapter.apply(.publishActivity(.init(
-            id: "aiUsage.limit.5h.80", moduleID: .aiUsage, priority: .systemWarning,
-            title: "5h limit at 80%", detail: "Resets in 2 h", systemImage: "gauge.with.dots.needle.100percent",
-            expiresAt: Date().addingTimeInterval(600)
-        )), to: aiUsage)
-        let status = messages.topStatus(for: .aiUsage)
-        XCTAssertEqual(status?.title, "5h limit at 80%")
-        XCTAssertEqual(status?.detail, "Resets in 2 h")
-        XCTAssertEqual(status?.tone, .warning)
-        XCTAssertFalse(status?.announcesWhenRaised ?? true)
-        XCTAssertTrue(spoken.messages.isEmpty, "Unmigrated modules do not speak")
-        XCTAssertNil(messages.currentNotice, "Unmigrated modules do not show a pill")
-
-        await clock.advance(by: 599)
-        XCTAssertNotNil(messages.topStatus(for: .aiUsage))
-        await clock.advance(by: 2)
-        XCTAssertNil(messages.topStatus(for: .aiUsage), "The activity's expiry carries over")
-    }
-
-    func testReplacingAnActivityUpdatesItsStatusWithoutClearingIt() async {
-        let runtime = CallbackIslandModuleRuntime(descriptor: .init(id: .timer, title: "Timer", systemImage: "timer",
-                                                                    order: 0, isCore: false))
-        let messages = IslandMessageCenter.forTesting()
-        let container = IslandModuleContainer(registrations: [.init(
-            descriptor: runtime.descriptor, runtime: runtime, makeContentView: { _ in AnyView(EmptyView()) }
-        )], messages: messages)
-        container.apply(configuration: .init(enabledModuleIDs: [.timer], pinnedModuleIDs: []), isActive: true)
-        runtime.replaceActivity(activity(id: "timer.running"))
-        await settleEvents()
-        let probe = ObservationProbe()
-        probe.track { _ = messages.statuses(for: .timer) }
-        runtime.replaceActivity(activity(id: "timer.running"))
-        await settleEvents()
-        XCTAssertEqual(probe.changes, 0, "An unchanged activity is not removed and published again")
-
-        runtime.replaceActivity(activity(id: "timer.finished"))
-        await settleEvents()
-        XCTAssertEqual(messages.statuses(for: .timer).map(\.key), ["timer.finished"])
-        runtime.replaceActivity(nil)
-        await settleEvents()
-        XCTAssertTrue(messages.statuses(for: .timer).isEmpty)
-        container.stopAll()
-    }
-
-    /// Lets the container's event tasks drain what the runtimes yielded.
-    private func settleEvents() async {
-        for _ in 0..<20 { await Task.yield() }
-    }
-
     private func makeContainer(
         runtime: RuntimeSpy,
         messages: IslandMessageCenter = .forTesting()
@@ -224,27 +162,18 @@ final class IslandModuleContainerTests: XCTestCase {
             messages: messages
         )
     }
-
-    private func activity(id: String) -> IslandActivity {
-        .init(id: id, moduleID: .timer, priority: .timerFinished,
-              title: id, detail: nil, systemImage: "timer", expiresAt: nil)
-    }
 }
 
 @MainActor
 private final class RuntimeSpy: IslandModuleRuntime {
     let descriptor: IslandModuleDescriptor
-    let events: AsyncStream<IslandModuleEvent>
-    private let continuation: AsyncStream<IslandModuleEvent>.Continuation
+    var messenger: ModuleMessenger = .inert
     private(set) var startCount = 0
     private(set) var stopCount = 0
 
     init(id: IslandModuleID) {
         descriptor = .init(id: id, title: id.rawValue,
                            systemImage: "circle", order: 0, isCore: false)
-        var captured: AsyncStream<IslandModuleEvent>.Continuation?
-        events = AsyncStream { captured = $0 }
-        continuation = captured!
     }
 
     var onStart: () -> Void = {}
@@ -252,5 +181,8 @@ private final class RuntimeSpy: IslandModuleRuntime {
 
     func start() { startCount += 1; onStart() }
     func stop() { stopCount += 1; onStop() }
-    func publish(_ event: IslandModuleEvent) { continuation.yield(event) }
+    /// Replaces the module's statuses with one, as a store does on each update.
+    func setStatus(_ key: String) {
+        messenger.setStatuses([.init(key: key, title: key, systemImage: "circle")])
+    }
 }

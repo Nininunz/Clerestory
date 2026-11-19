@@ -459,10 +459,11 @@ final class IslandMessageCenterTests: XCTestCase {
     // MARK: - Statuses
 
     private func status(_ key: String, _ title: String? = nil, detail: String? = nil,
-                        tone: IslandStatus.Tone = .neutral, announces: Bool = true,
+                        tone: IslandStatus.Tone = .neutral, level: Int = 0, announces: Bool = true,
                         dismissible: Bool = false, expiresAt: Duration? = nil) -> IslandStatus {
         IslandStatus(key: key, title: title ?? key, detail: detail, systemImage: "circle", tone: tone,
-                     announcesWhenRaised: announces, isDismissible: dismissible, expiresAt: expiresAt)
+                     level: level, announcesWhenRaised: announces, isDismissible: dismissible,
+                     expiresAt: expiresAt)
     }
 
     private func startedCenter(_ modules: IslandModuleID...) -> IslandMessageCenter {
@@ -489,18 +490,28 @@ final class IslandMessageCenterTests: XCTestCase {
         XCTAssertEqual(center.currentNotice, notice, "and leaves the notice alone")
         XCTAssertEqual(center.topStatus(for: .system)?.detail, "1 GB")
 
-        system.setStatus(status("disk", "Disk space is critically low", detail: "1 GB", tone: .warning))
-        XCTAssertEqual(spoken.messages.last, "Disk space is critically low, 1 GB", "A title change raises it again")
+        system.setStatus(status("disk", "Disk space is very low", detail: "1 GB", tone: .warning))
+        XCTAssertEqual(spoken.messages.count, 1, "A title-only change is silent")
+        XCTAssertEqual(center.currentNotice?.id, notice.id)
+
+        system.setStatus(status("disk", "Disk space is critically low", detail: "1 GB", tone: .warning, level: 1))
+        XCTAssertEqual(spoken.messages.last, "Disk space is critically low, 1 GB", "A higher level raises it again")
+        XCTAssertEqual(spoken.messages.count, 2)
         XCTAssertEqual(center.currentNotice?.id, notice.id, "Its notice updates in place")
         XCTAssertEqual(center.currentNotice?.notice.title, "Disk space is critically low · 1 GB")
 
+        system.setStatus(status("disk", "Disk space is low", detail: "2 GB", tone: .warning, level: 0))
+        XCTAssertEqual(spoken.messages.count, 2, "A lower level is silent")
+        system.setStatus(status("disk", "Disk space is critically low", detail: "1 GB", tone: .warning, level: 1))
+        XCTAssertEqual(spoken.messages.count, 3, "Getting worse again raises it again")
+
         system.setStatus(status("disk", "Disk space is critically low", detail: "1 GB", tone: .critical))
-        XCTAssertEqual(spoken.messages.count, 3, "A higher tone raises it again")
+        XCTAssertEqual(spoken.messages.count, 4, "A higher tone raises it again, even at a lower level")
         XCTAssertEqual(spoken.announcements.last?.priority, .high)
         XCTAssertEqual(center.currentNotice?.notice.tone, .error)
 
-        system.setStatus(status("disk", "Disk space is critically low", detail: "1 GB", tone: .warning))
-        XCTAssertEqual(spoken.messages.count, 3, "A lower tone is not a raise")
+        system.setStatus(status("disk", "Disk space is critically low", detail: "1 GB", tone: .warning, level: 2))
+        XCTAssertEqual(spoken.messages.count, 4, "A lower tone is not a raise, whatever its level")
         XCTAssertTrue(center.waitingNotices.isEmpty)
     }
 
@@ -623,10 +634,14 @@ final class IslandMessageCenterTests: XCTestCase {
         system.setStatuses([status("b"), status("a", detail: "new detail")])
         XCTAssertEqual(center.statuses(for: .system).map(\.key), ["b", "a"], "Staying or a new detail is not a raise")
         system.setStatuses([status("b"), status("a", "A again")])
-        XCTAssertEqual(center.statuses(for: .system).map(\.key), ["a", "b"], "A new title raises it")
+        XCTAssertEqual(center.statuses(for: .system).map(\.key), ["b", "a"], "A new title is not a raise")
+        system.setStatuses([status("b", level: 1), status("a", "A again")])
+        XCTAssertEqual(center.statuses(for: .system).map(\.key), ["b", "a"], "A higher level orders first")
+        system.setStatuses([status("b"), status("a", level: 1)])
+        XCTAssertEqual(center.statuses(for: .system).map(\.key), ["a", "b"], "A higher level raises it")
     }
 
-    func testTopStatusOrdersByToneThenRecency() {
+    func testTopStatusOrdersByToneThenLevelThenRecency() {
         let center = startedCenter(.system)
         let system = center.messenger(for: .system)
         system.setStatus(status("warning", tone: .warning, announces: false))
@@ -634,6 +649,9 @@ final class IslandMessageCenterTests: XCTestCase {
         XCTAssertEqual(center.topStatus(for: .system)?.key, "warning")
         system.setStatus(status("newest warning", tone: .warning, announces: false))
         XCTAssertEqual(center.statuses(for: .system).map(\.key), ["newest warning", "warning", "newer"])
+        system.setStatus(status("warning", tone: .warning, level: 1, announces: false))
+        XCTAssertEqual(center.statuses(for: .system).map(\.key), ["warning", "newest warning", "newer"],
+                       "Within a tone, a higher level comes first")
         XCTAssertNil(center.topStatus(for: .battery))
     }
 

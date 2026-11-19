@@ -3106,12 +3106,12 @@
         }
       }
     },
-    "View system details" : {
+    "Apps may slow down" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "View system details"
+            "value" : "Apps may slow down"
           }
         }
       }
