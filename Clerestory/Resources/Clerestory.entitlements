@@ -8,7 +8,7 @@
 	<true/>
 	<key>com.apple.security.files.bookmarks.app-scope</key>
 	<true/>
-	<!-- v1.4.1 experimental media fallback. Apple Events are requested only
+	<!-- Experimental media fallback. Apple Events are requested only
 	     after the user enables Now Playing and the bundled adapter is unavailable. -->
 	<key>com.apple.security.automation.apple-events</key>
 	<true/>

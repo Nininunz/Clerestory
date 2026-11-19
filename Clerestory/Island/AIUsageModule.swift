@@ -720,8 +720,14 @@ final class AIUsageModuleStore: IslandModuleRuntime {
         }
     }
 
+    /// The TokenTracker dashboard on the port the provider uses, so a custom
+    /// port in Settings applies to the link as well as to data fetching.
+    var dashboardURL: URL {
+        (makeProvider() as? TokenTrackerClient ?? TokenTrackerClient()).dashboardURL
+    }
+
     func openDashboard() {
-        NSWorkspace.shared.open(TokenTrackerClient().dashboardURL)
+        NSWorkspace.shared.open(dashboardURL)
     }
 
     private func restartPolling() {

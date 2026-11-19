@@ -120,11 +120,18 @@ final class OnboardingController: NSObject, NSWindowDelegate {
                 model: model,
                 onSkip: { [weak self] in self?.skip() },
                 onDone: { [weak self] in self?.closeAfterCompletion() },
-                onTutorialDrop: { [weak self] token in self?.acceptTutorialDrop(token) }
+                onTutorialDrop: { [weak self] token in self?.acceptTutorialDrop(token) },
+                panelShortcut: { [weak self] in self?.panelShortcutText }
             )
         )
         return panel
     }()
+
+    /// The panel shortcut as shown in Settings, or nil when it is off or unset.
+    private var panelShortcutText: String? {
+        guard settings.hotKeyEnabled, let shortcut = settings.hotKeyShortcut else { return nil }
+        return ShortcutRecorderLogic.displayString(for: shortcut)
+    }
 
     init(settings: SettingsStore,
          shelfStore: ShelfStore,
@@ -400,6 +407,7 @@ private struct OnboardingView: View {
     let onSkip: () -> Void
     let onDone: () -> Void
     let onTutorialDrop: (String) -> Void
+    let panelShortcut: () -> String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -479,7 +487,13 @@ private struct OnboardingView: View {
                     .font(.system(size: 30))
                     .foregroundStyle(.green)
                     .accessibilityHidden(true)
-                Text("You're ready. Clerestory will appear when you start dragging, and ⌘⇧Space shows or hides it anytime.")
+                Group {
+                    if let shortcut = panelShortcut() {
+                        Text("You're ready. Move the pointer or drag a file to the top center of the screen to open Clerestory, or press \(shortcut) anytime.")
+                    } else {
+                        Text("You're ready. Move the pointer or drag a file to the top center of the screen to open Clerestory, or use the menu bar icon.")
+                    }
+                }
                     .font(.callout)
                     .fixedSize(horizontal: false, vertical: true)
             }

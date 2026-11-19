@@ -31,16 +31,16 @@ Hover, click, and drag-to-open are enabled by default. Adjust the hover delays o
 
 - **Panel.** Opens on the display where you trigger it and stays on that display until dismissed. Use **Settings → Panel → Shortcut Positions** or **Quick Settings** to arrange module shortcuts.
 - **Notch.** An optional companion on the built-in display of a Mac with a physical notch. It is on by default. Use **Settings → Notch** to turn it off, choose its module order, and set a cycling shortcut (none is set by default). Hold Shift with that shortcut to cycle backward.
-- **Shelf** and **Quick Settings** are available by default. To use other modules, turn on **Experimental Modules** under **Settings → Modules**, then choose the modules you want. Experimental modules include Transfers, Timer, Battery, Now Playing, System Status, Quick Access, Clipboard, and AI Usage.
+- **Shelf** and **Quick Settings** are available by default. To use other modules, turn on **Experimental Modules** under **Settings → Modules**. Transfers, Timer, Battery and System Status turn on right away; turn on the others individually. Experimental modules include Transfers, Timer, Battery, Now Playing, System Status, Quick Access, Clipboard, and AI Usage.
 
 ## File safety and lifecycle
 
-A regular drop only remembers where the file is; nothing gets moved. Removing a card, or turning on "remove after drop", never deletes the original. Dropping onto Finder asks for a copy, and the destination decides whether to take it.
+A regular drop only remembers where the file is; nothing gets moved. Removing a card, or setting **After dragging out** to **Remove** in **Settings → Modules → Shelf**, never deletes the original. Dropping onto Finder asks for a copy, and the destination decides whether to take it.
 
 > [!WARNING]
 > Holding `⌘` while dropping is a **move**: Clerestory copies the file into its own sandbox, checks the copy, and then moves the original to the Trash. If anything goes wrong, the original stays where it was and the item is kept as a regular reference. You can get the original back until you empty the Trash.
 
-A moved item's card and sandbox copy are deleted only after it has been dropped somewhere successfully, regardless of the regular "after drop" setting. If the drop is cancelled or fails, both stay so you can try again.
+A moved item's card and sandbox copy are deleted only after it has been dropped somewhere successfully, regardless of the **After dragging out** setting. If the drop is cancelled or fails, both stay so you can try again.
 
 <details>
 <summary>Where each kind of item is stored, and when it's cleaned up</summary>
@@ -71,7 +71,7 @@ Regular file drags provide both a file URL and a filename Chromium understands. 
 
 ### Clipboard history
 
-Clipboard recording is off by default. To use it, enable the experimental Clipboard module under **Settings → Modules**, then enable recording in its settings. Until you turn it on, the clipboard is read only at the moment you double-press the shortcut to park it. Once on, only newly copied text, HTTP(S) links and PNG/TIFF images are recorded — nothing from before, and never copied files.
+Clipboard recording is off by default. To use it, turn on **Experimental Modules** under **Settings → Modules**, then turn on **Record Clipboard** in the Clipboard History settings there. Until you turn it on, the clipboard is read only at the moment you double-press the shortcut to park it. Once on, only newly copied text, HTTP(S) links and PNG/TIFF images are recorded — nothing from before, and never copied files.
 
 History is stored as plain text on this Mac and is never uploaded or synced. Keep 30, 100 or 300 entries (default 30) for 1, 7 or 30 days (default 7), plus up to 30 favorites that never expire, all within 20 MiB. Turning recording off keeps what's already there; clearing it deletes it.
 
@@ -79,7 +79,7 @@ Items marked private by common password managers, and apps you've set to ignore,
 
 ## Build from source
 
-You'll need macOS 15+ and Xcode 26+.
+You'll need macOS 15+ and Xcode 27.2, the version CI uses.
 
 ```bash
 git clone https://github.com/Nininunz/Clerestory.git

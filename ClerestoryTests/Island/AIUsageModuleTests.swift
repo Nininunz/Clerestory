@@ -213,4 +213,21 @@ final class AIUsageModuleStoreTests: XCTestCase {
         XCTAssertNil(store.notchValue)
         store.stop()
     }
+
+    func testDashboardUsesConfiguredPort() {
+        let custom = AIUsageModuleStore(
+            makeProvider: { TokenTrackerClient(port: 9123) },
+            isSelectedAndExpanded: { false },
+            notchMetric: { .todayCost },
+            alertsEnabled: { true }
+        )
+        XCTAssertEqual(custom.dashboardURL, URL(string: "http://localhost:9123"))
+        let other = AIUsageModuleStore(
+            makeProvider: { StubAIUsageProvider(result: .failure(.notRunning)) },
+            isSelectedAndExpanded: { false },
+            notchMetric: { .todayCost },
+            alertsEnabled: { true }
+        )
+        XCTAssertEqual(other.dashboardURL, URL(string: "http://localhost:\(TokenTrackerClient.defaultPort)"))
+    }
 }

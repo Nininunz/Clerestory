@@ -2792,10 +2792,16 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "只需两步" } }
       }
     },
-    "You're ready. Clerestory will appear when you start dragging, and ⌘⇧Space shows or hides it anytime." : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "You're ready. Clerestory will appear when you start dragging, and ⌘⇧Space shows or hides it anytime." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已经学会了。开始拖拽时 Clerestory 会自动出现，按 ⌘⇧Space 可随时显示或隐藏。" } }
+    "You're ready. Move the pointer or drag a file to the top center of the screen to open Clerestory, or press %@ anytime." : {
+      "extractionState" : "manual", "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "You're ready. Move the pointer or drag a file to the top center of the screen to open Clerestory, or press %@ anytime." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已经学会了。将指针移到或把文件拖到屏幕顶部中央即可打开 Clerestory，也可随时按 %@。" } }
+      }
+    },
+    "You're ready. Move the pointer or drag a file to the top center of the screen to open Clerestory, or use the menu bar icon." : {
+      "extractionState" : "manual", "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "You're ready. Move the pointer or drag a file to the top center of the screen to open Clerestory, or use the menu bar icon." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已经学会了。将指针移到或把文件拖到屏幕顶部中央即可打开 Clerestory，也可以使用菜单栏图标。" } }
       }
     },
     "%lld items" : {
@@ -5149,10 +5155,10 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "显示当前播放器的封面和控制，处理均在本机完成；macOS 更新后兼容性可能发生变化。" } }
       }
     },
-    "Clerestory is based on OpenYoink by weijue and contributors. Bundled third-party components are Sparkle (MIT) for updates and mediaremote-adapter (BSD 3-Clause) for the optional local Now Playing module. A complete attribution record is available in THIRD_PARTY_NOTICES.md in the source repository." : {
+    "Clerestory is based on OpenYoink by weijue and contributors. Bundled third-party components are Sparkle (MIT) for updates and mediaremote-adapter (BSD 3-Clause) for the optional local Now Playing module. The glass edge highlights adapt liquid-glass-react (MIT). A complete attribution record is available in THIRD_PARTY_NOTICES.md in the source repository." : {
       "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory is based on OpenYoink by weijue and contributors. Bundled third-party components are Sparkle (MIT) for updates and mediaremote-adapter (BSD 3-Clause) for the optional local Now Playing module. A complete attribution record is available in THIRD_PARTY_NOTICES.md in the source repository." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory 基于 weijue 和贡献者开发的 OpenYoink。内置第三方组件包括用于更新的 Sparkle（MIT），以及用于可选本地“正在播放”模块的 mediaremote-adapter（BSD 3-Clause）。完整署名记录见源码仓库中的 THIRD_PARTY_NOTICES.md。" } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory is based on OpenYoink by weijue and contributors. Bundled third-party components are Sparkle (MIT) for updates and mediaremote-adapter (BSD 3-Clause) for the optional local Now Playing module. The glass edge highlights adapt liquid-glass-react (MIT). A complete attribution record is available in THIRD_PARTY_NOTICES.md in the source repository." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory 基于 weijue 和贡献者开发的 OpenYoink。内置第三方组件包括用于更新的 Sparkle（MIT），以及用于可选本地“正在播放”模块的 mediaremote-adapter（BSD 3-Clause）。玻璃边缘高光改编自 liquid-glass-react（MIT）。完整署名记录见源码仓库中的 THIRD_PARTY_NOTICES.md。" } }
       }
     },
     "Side Shelf" : {
