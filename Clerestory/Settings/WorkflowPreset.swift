@@ -35,12 +35,6 @@ extension SettingsStore {
     /// Changes presentation only. Data, privacy consent, shortcut, and unknown module IDs survive.
     func applyWorkflowPreset(_ preset: WorkflowPreset) {
         guard WorkflowPreset.availableCases(experimentalModulesEnabled: experimentalModulesEnabled).contains(preset) else { return }
-        if SideShelfAvailability.isEnabled {
-            classicShelfEnabled = true
-            edgeTabEnabled = true
-            dragAutoAppearMode = .edgeOnly
-            classicShelfHoverRevealEnabled = false
-        }
         islandDragApproachEnabled = true
         islandHoverRevealEnabled = false
         islandEnabled = true

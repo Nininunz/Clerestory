@@ -78,17 +78,6 @@
         }
       }
     },
-    "With Side Shelf enabled, the shelf shortcut controls it. Otherwise it opens the panel." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "With Side Shelf enabled, the shelf shortcut controls it. Otherwise it opens the panel."
-          }
-        }
-      }
-    },
     "No shortcut is set by default. Hold Shift with the shortcut to cycle backward (release Shift if it is already part of your shortcut). Your choice is remembered independently of the panel module. Clear the shortcut to disable both directions." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -990,76 +979,6 @@
         }
       }
     },
-    "Liquid Glass uses system reflections and interaction effects. Extra highlights apply to other materials." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Liquid Glass uses system reflections and interaction effects. Extra highlights apply to other materials."
-          }
-        }
-      }
-    },
-    "Side Tab" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Side Tab"
-          }
-        }
-      }
-    },
-    "Show tab icon" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show tab icon"
-          }
-        }
-      }
-    },
-    "Tab Icon Size" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tab Icon Size"
-          }
-        }
-      }
-    },
-    "Hiding or resizing the icon keeps the tab clickable and draggable. The tab follows the selected glass material and theme." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hiding or resizing the icon keeps the tab clickable and draggable. The tab follows the selected glass material and theme."
-          }
-        }
-      }
-    },
-    "Manage Shelf" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Manage Shelf"
-          }
-        }
-      }
-    },
-    "Batch Selection" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Batch Selection"
-          }
-        }
-      }
-    },
     "Remove Selected" : {
       "localizations" : {
         "en" : {
@@ -1150,346 +1069,6 @@
         }
       }
     },
-    "Clear Glass shows the background without blur. Raise transparency to fade the remaining tint and edge reflections." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clear Glass shows the background without blur. Raise transparency to fade the remaining tint and edge reflections."
-          }
-        }
-      }
-    },
-    "Preview Motion" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Preview Motion"
-          }
-        }
-      }
-    },
-    "Background Transparency" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Background Transparency"
-          }
-        }
-      }
-    },
-    "Background transparency is controlled by Reduce Transparency in system settings." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Background transparency is controlled by Reduce Transparency in system settings."
-          }
-        }
-      }
-    },
-    "100% clears the glass background. Files and text stay fully visible." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "100% clears the glass background. Files and text stay fully visible."
-          }
-        }
-      }
-    },
-    "File card controls apply to files on the shelf." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "File card controls apply to files on the shelf."
-          }
-        }
-      }
-    },
-    "Extra Edge Highlight" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Extra Edge Highlight"
-          }
-        }
-      }
-    },
-    "Highlight Movement" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Highlight Movement"
-          }
-        }
-      }
-    },
-    "Raise Extra Edge Highlight above 0%, then move the pointer over the preview or shelf to see the motion." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Raise Extra Edge Highlight above 0%, then move the pointer over the preview or shelf to see the motion."
-          }
-        }
-      }
-    },
-    "Appearance" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Appearance"
-          }
-        }
-      }
-    },
-    "Liquid Glass" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Liquid Glass"
-          }
-        }
-      }
-    },
-    "Clear Glass" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clear Glass"
-          }
-        }
-      }
-    },
-    "Frosted" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Frosted"
-          }
-        }
-      }
-    },
-    "Solid" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Solid"
-          }
-        }
-      }
-    },
-    "Light" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Light"
-          }
-        }
-      }
-    },
-    "Dark" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dark"
-          }
-        }
-      }
-    },
-    "Neutral" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Neutral"
-          }
-        }
-      }
-    },
-    "Blue" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Blue"
-          }
-        }
-      }
-    },
-    "Purple" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Purple"
-          }
-        }
-      }
-    },
-    "Pink" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pink"
-          }
-        }
-      }
-    },
-    "Mint" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mint"
-          }
-        }
-      }
-    },
-    "Amber" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Amber"
-          }
-        }
-      }
-    },
-    "Live Preview" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Live Preview"
-          }
-        }
-      }
-    },
-    "Material and Theme" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Material and Theme"
-          }
-        }
-      }
-    },
-    "Glass Material" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Glass Material"
-          }
-        }
-      }
-    },
-    "Color Theme" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Color Theme"
-          }
-        }
-      }
-    },
-    "Tint" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tint"
-          }
-        }
-      }
-    },
-    "Tint Color" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tint Color"
-          }
-        }
-      }
-    },
-    "Tint Intensity" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tint Intensity"
-          }
-        }
-      }
-    },
-    "Corners and File Cards" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Corners and File Cards"
-          }
-        }
-      }
-    },
-    "Shelf Corner Radius" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Shelf Corner Radius"
-          }
-        }
-      }
-    },
-    "File Card Opacity" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "File Card Opacity"
-          }
-        }
-      }
-    },
-    "File Card Corner Radius" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "File Card Corner Radius"
-          }
-        }
-      }
-    },
-    "Highlights and Motion" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Highlights and Motion"
-          }
-        }
-      }
-    },
     "Edge Highlight" : {
       "localizations" : {
         "en" : {
@@ -1506,46 +1085,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Elasticity"
-          }
-        }
-      }
-    },
-    "Highlights Follow Pointer" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Highlights Follow Pointer"
-          }
-        }
-      }
-    },
-    "Restore Appearance Defaults" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Restore Appearance Defaults"
-          }
-        }
-      }
-    },
-    "Document" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Document"
-          }
-        }
-      }
-    },
-    "%lld pt" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld pt"
           }
         }
       }
@@ -1756,36 +1295,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Apply"
-          }
-        }
-      }
-    },
-    "Side Shelf Reveal" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Side Shelf Reveal"
-          }
-        }
-      }
-    },
-    "Preview side shelf on hover" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Preview side shelf on hover"
-          }
-        }
-      }
-    },
-    "Drag the edge tab to reposition it. File drag reveal is configured below." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Drag the edge tab to reposition it. File drag reveal is configured below."
           }
         }
       }
@@ -3240,18 +2749,6 @@
         }
       }
     },
-    "Click the tab to show the shelf, drag it along the edge to reposition, or drop files onto it. Not shown in custom position mode." : {
-      "extractionState" : "manual",
-      "comment" : "Footnote under the edge tab setting explaining its interactions",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Click the tab to show the shelf, drag it along the edge to reposition, or drop files onto it. Not shown in custom position mode."
-          }
-        }
-      }
-    },
     "Clear Recent" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3298,29 +2795,6 @@
         }
       }
     },
-    "Custom" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Custom"
-          }
-        }
-      }
-    },
-    "Do nothing" : {
-      "extractionState" : "manual",
-      "comment" : "Drag auto-appear mode: no automatic appearance while dragging",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Do nothing"
-          }
-        }
-      }
-    },
     "Don't ask again" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3340,40 +2814,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Double-press saves clipboard"
-          }
-        }
-      }
-    },
-    "Drag the shelf by its title bar to place it anywhere. The edge trigger is unavailable in custom mode." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Drag the shelf by its title bar to place it anywhere. The edge trigger is unavailable in custom mode."
-          }
-        }
-      }
-    },
-    "Drag to move" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Drag to move"
-          }
-        }
-      }
-    },
-    "Drag triggers stay silent while an ignored app is frontmost." : {
-      "extractionState" : "manual",
-      "comment" : "Footnote in the Triggers settings tab explaining the ignore list",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Drag triggers stay silent while an ignored app is frontmost."
           }
         }
       }
@@ -3539,74 +2979,6 @@
         }
       }
     },
-    "Hide after dragging out" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hide after dragging out"
-          }
-        }
-      }
-    },
-    "Hide automatically when empty" : {
-      "extractionState" : "manual",
-      "comment" : "General setting: hide the shelf when its last item is removed or dragged out",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hide automatically when empty"
-          }
-        }
-      }
-    },
-    "Keep expanded after dropping" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keep expanded after dropping"
-          }
-        }
-      }
-    },
-    "Applies only to the side shelf opened automatically during a drag. Drag-out and empty-shelf settings still apply." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Applies only to the side shelf opened automatically during a drag. Drag-out and empty-shelf settings still apply."
-          }
-        }
-      }
-    },
-    "Hide Shelf" : {
-      "extractionState" : "manual",
-      "comment" : "Menu bar item and inner-edge collapse handle label/tooltip",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hide Shelf"
-          }
-        }
-      }
-    },
-    "High" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "High"
-          }
-        }
-      }
-    },
     "Hold ⌘ while dropping to move the original here" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3685,17 +3057,6 @@
         }
       }
     },
-    "Left" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Left"
-          }
-        }
-      }
-    },
     "License" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3715,28 +3076,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Link"
-          }
-        }
-      }
-    },
-    "Low" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Low"
-          }
-        }
-      }
-    },
-    "Medium" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Medium"
           }
         }
       }
@@ -3770,17 +3109,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Open"
-          }
-        }
-      }
-    },
-    "Position" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Position"
           }
         }
       }
@@ -3906,28 +3234,6 @@
         }
       }
     },
-    "Right" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Right"
-          }
-        }
-      }
-    },
-    "Sensitivity" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sensitivity"
-          }
-        }
-      }
-    },
     "Settings…" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3962,42 +3268,6 @@
         }
       }
     },
-    "Show at screen edge" : {
-      "extractionState" : "manual",
-      "comment" : "Drag auto-appear mode: reveal only when the drag rests at the shelf's screen edge",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show at screen edge"
-          }
-        }
-      }
-    },
-    "Show edge tab while shelf is hidden" : {
-      "extractionState" : "manual",
-      "comment" : "General setting: keep a small tab on the shelf's screen edge while the shelf is hidden",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show edge tab while shelf is hidden"
-          }
-        }
-      }
-    },
-    "Show immediately" : {
-      "extractionState" : "manual",
-      "comment" : "Drag auto-appear mode: show at the configured position as soon as a drag starts",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show immediately"
-          }
-        }
-      }
-    },
     "Show in Finder" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4005,17 +3275,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Show in Finder"
-          }
-        }
-      }
-    },
-    "Show Shelf" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show Shelf"
           }
         }
       }
@@ -4028,18 +3287,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Stack"
-          }
-        }
-      }
-    },
-    "System" : {
-      "extractionState" : "manual",
-      "comment" : "Language preference: follow the system language",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "System"
           }
         }
       }
@@ -4087,30 +3334,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The original files are never deleted."
-          }
-        }
-      }
-    },
-    "The shelf appears at its configured position as soon as you start dragging — no need to reach the screen edge." : {
-      "extractionState" : "manual",
-      "comment" : "Footnote for the immediate drag auto-appear mode",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The shelf appears at its configured position as soon as you start dragging — no need to reach the screen edge."
-          }
-        }
-      }
-    },
-    "The shelf won't appear automatically while dragging." : {
-      "extractionState" : "manual",
-      "comment" : "Footnote for the disabled drag auto-appear mode",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The shelf won't appear automatically while dragging."
           }
         }
       }
@@ -4170,29 +3393,6 @@
         }
       }
     },
-    "Width" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Width"
-          }
-        }
-      }
-    },
-    "When Dragging Files" : {
-      "extractionState" : "manual",
-      "comment" : "Settings section: what happens when the user starts dragging files",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "When Dragging Files"
-          }
-        }
-      }
-    },
     "When enabled, a single press toggles the shelf after a brief delay (0.3 s) so a double press can be recognized." : {
       "extractionState" : "manual",
       "comment" : "Footnote under the double-press hot key setting explaining the single-press latency trade-off",
@@ -4201,18 +3401,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "When enabled, a single press toggles the shelf after a brief delay (0.3 s) so a double press can be recognized."
-          }
-        }
-      }
-    },
-    "While dragging, hold the cursor at the shelf's screen edge for a moment to reveal it. Not available in custom position mode." : {
-      "extractionState" : "manual",
-      "comment" : "Footnote for the edge-based drag auto-appear mode",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "While dragging, hold the cursor at the shelf's screen edge for a moment to reveal it. Not available in custom position mode."
           }
         }
       }
@@ -6659,35 +5847,13 @@
         }
       }
     },
-    "Clerestory is based on OpenYoink by weijue and contributors. Bundled third-party components are Sparkle (MIT) for updates and mediaremote-adapter (BSD 3-Clause) for the optional local Now Playing module. The glass edge highlights adapt liquid-glass-react (MIT). A complete attribution record is available in THIRD_PARTY_NOTICES.md in the source repository." : {
+    "Clerestory is based on OpenYoink by weijue and contributors. Bundled third-party components are Sparkle (MIT) for updates and mediaremote-adapter (BSD 3-Clause) for the optional local Now Playing module. A complete attribution record is available in THIRD_PARTY_NOTICES.md in the source repository." : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Clerestory is based on OpenYoink by weijue and contributors. Bundled third-party components are Sparkle (MIT) for updates and mediaremote-adapter (BSD 3-Clause) for the optional local Now Playing module. The glass edge highlights adapt liquid-glass-react (MIT). A complete attribution record is available in THIRD_PARTY_NOTICES.md in the source repository."
-          }
-        }
-      }
-    },
-    "Side Shelf" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Side Shelf"
-          }
-        }
-      }
-    },
-    "Enable Side Shelf" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enable Side Shelf"
+            "value" : "Clerestory is based on OpenYoink by weijue and contributors. Bundled third-party components are Sparkle (MIT) for updates and mediaremote-adapter (BSD 3-Clause) for the optional local Now Playing module. A complete attribution record is available in THIRD_PARTY_NOTICES.md in the source repository."
           }
         }
       }

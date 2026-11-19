@@ -15,11 +15,7 @@ final class ShelfStore {
     private(set) var items: [ShelfItem]
 
     /// Ids of the currently selected top-level items (multi-select).
-    private(set) var selection: Set<UUID> = [] {
-        didSet {
-            if oldValue != selection { onSelectionDidChange?() }
-        }
-    }
+    private(set) var selection: Set<UUID> = []
 
     struct DuplicateDrop: Equatable {
         let id = UUID()
@@ -111,15 +107,10 @@ final class ShelfStore {
         }
     }
 
-    /// UX5/UX6: items change callback (called after every persistent item change —— add, delete, move,
-    /// stack operation, update). ShelfWindowController uses this for compact height animation and
-    /// auto-hide of empty shelf; selection set changes do not trigger (do not affect layout). Optional for
-    /// testing.
+    /// Called after every persistent item change (add, delete, move, stack operation, update), not
+    /// after selection changes. ShelfWindowController uses it to drop selection for removed items.
+    /// Optional for testing.
     var onItemsDidChange: (@MainActor () -> Void)?
-
-    /// Selection controls the v1.3 quick-action row and therefore affects the
-    /// compact panel height even though it is never persisted.
-    var onSelectionDidChange: (@MainActor () -> Void)?
 
     init(items: [ShelfItem] = [], persistence: PersistenceController? = nil) {
         self.items = items

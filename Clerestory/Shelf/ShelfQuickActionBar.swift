@@ -6,7 +6,6 @@ import SwiftUI
 /// labels while preserving full VoiceOver labels, hints and tooltips.
 struct ShelfQuickActionBar: View {
     @Environment(\.shelfActionRunner) private var runner
-    @Environment(\.shelfPresentationStyle) private var presentationStyle
     let items: [ShelfItem]
     var inline = false
 
@@ -20,7 +19,7 @@ struct ShelfQuickActionBar: View {
             }
             .fixedSize()
             .accessibilityIdentifier("shelf.quickActions")
-        } else if presentationStyle == .island {
+        } else {
             actionRows
                 .padding(.horizontal, 6)
                 .frame(height: 34)
@@ -34,21 +33,6 @@ struct ShelfQuickActionBar: View {
                 }
                 .fixedSize(horizontal: true, vertical: false)
                 .frame(maxWidth: .infinity)
-                .accessibilityElement(children: .contain)
-                .accessibilityIdentifier("shelf.quickActions")
-        } else {
-            actionRows
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 6)
-                .frame(height: 36)
-                .background {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(.regularMaterial)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
-                        }
-                }
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("shelf.quickActions")
         }
@@ -82,8 +66,7 @@ struct ShelfQuickActionBar: View {
                 menuButton(.revealInFinder)
             } label: {
                 Label("More", systemImage: "ellipsis.circle")
-                    .foregroundStyle(presentationStyle == .island
-                                     ? Color.white.opacity(0.92) : Color.primary)
+                    .foregroundStyle(Color.white.opacity(0.92))
             }
             .menuStyle(.button)
             .controlSize(.small)
@@ -104,8 +87,7 @@ struct ShelfQuickActionBar: View {
             systemImage: action.systemImage,
             identifier: action.accessibilityIdentifier,
             isEnabled: runner != nil && ShelfActionCatalog.canPerform(action, on: items),
-            firesOnMouseDown: action == .share,
-            usesIslandAppearance: presentationStyle == .island
+            firesOnMouseDown: action == .share
         ) { anchorView in
             runner?.perform(action, on: items, relativeTo: anchorView)
         }
@@ -143,7 +125,6 @@ private struct ShelfActionButton: NSViewRepresentable {
     let identifier: String
     let isEnabled: Bool
     let firesOnMouseDown: Bool
-    let usesIslandAppearance: Bool
     let perform: @MainActor (NSView) -> Void
 
     @MainActor
@@ -198,15 +179,8 @@ private struct ShelfActionButton: NSViewRepresentable {
         applyAppearance(to: button)
     }
 
+    /// The Panel is always dark.
     private func applyAppearance(to button: NSButton) {
-        guard usesIslandAppearance else {
-            button.appearance = nil
-            button.contentTintColor = nil
-            button.bezelColor = nil
-            button.bezelStyle = .rounded
-            button.title = title
-            return
-        }
         let foreground = NSColor.white.withAlphaComponent(button.isEnabled ? 0.92 : 0.42)
         button.appearance = NSAppearance(named: .darkAqua)
         button.attributedTitle = NSAttributedString(

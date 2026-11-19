@@ -1,45 +1,16 @@
 import Foundation
 import ClerestoryModuleCore
 
-/// Side Shelf is parked until its next implementation. Keep its code and
-/// persisted preferences, but expose only the Island in the current app.
-enum SideShelfAvailability {
-    static let isEnabled = false
-}
-
 /// UserDefaults-backed app settings, observable by SwiftUI.
 ///
 /// All keys are prefixed with `Clerestory.` to avoid collisions. Defaults are
 /// registered on init, so reads always return meaningful values. Trigger
-/// settings are consumed by `HotKeyMonitor` /
-/// `EdgeTriggerMonitor` (S7); the settings UI lives in `SettingsView` (S8).
+/// settings are consumed by `HotKeyMonitor` (S7); the settings UI lives in
+/// `SettingsView` (S8).
 @MainActor
 @Observable
 final class SettingsStore {
     // MARK: - Value types
-
-    /// Screen edge the shelf attaches to, or free placement (custom).
-    enum ShelfPosition: String, CaseIterable, Sendable {
-        case left, right
-        /// Free placement (S9): the panel is dragged by its title-bar area and
-        /// the frame persists in `customShelfFrame`.
-        case custom
-    }
-
-    /// Which surface presents the same shelf data. Classic retains the
-    /// existing left/right/custom panel; Island anchors a notch surface to
-    /// the camera housing (or a floating top pill on displays without one).
-    enum ShelfPresentationMode: String, CaseIterable, Sendable {
-        case classic, island
-    }
-
-    /// Which shelf surface the global shelf command controls when both are
-    /// available. Availability is still governed by the independent surface
-    /// toggles below; this value is only a preference and never disables a
-    /// surface by itself.
-    enum PreferredShelfSurface: String, CaseIterable, Sendable {
-        case classic, island
-    }
 
     /// Stable Island placement across multiple displays. `.main` follows the
     /// display designated as main in System Settings, `.automatic` preserves
@@ -76,30 +47,11 @@ final class SettingsStore {
         }
     }
 
-    /// User-facing placement picker. Keeping this separate from
-    /// `ShelfPosition` prevents Island from leaking into edge-only layout and
-    /// trigger switches while still presenting one simple control in Settings.
-    enum ShelfPlacement: String, CaseIterable, Sendable {
-        case left, right, island, custom
-    }
-
     /// What happens to an item after it is dragged out of the shelf.
     enum DragOutRemovalPolicy: String, CaseIterable, Sendable {
         case keep   // keep the item on the shelf
         case remove // remove it after a successful drop
         case ask    // ask every time (NSAlert in DragSessionController, S8)
-    }
-
-    /// What happens when the user starts dragging with the left mouse button
-    /// held (UX batch, task 1/2; Yoink's signature "shelf appears on drag").
-    enum DragAutoAppearMode: String, CaseIterable, Sendable {
-        /// Show the shelf at its configured position as soon as a drag starts.
-        case immediate
-        /// Stay hidden on drag start; reveal when the drag rests at the
-        /// shelf's screen edge (drag version of the edge trigger).
-        case edgeOnly
-        /// No drag-triggered appearance.
-        case off
     }
 
     /// Codable description of the global toggle hot key. Consumed by
@@ -120,20 +72,6 @@ final class SettingsStore {
     }
 
     // MARK: - General
-
-    var appearance: ShelfAppearance {
-        didSet {
-            let normalized = appearance.normalized()
-            if normalized != appearance {
-                appearance = normalized
-            }
-            if let data = try? JSONEncoder().encode(normalized) {
-                defaults.set(data, forKey: Keys.appearance)
-            }
-        }
-    }
-
-    func resetAppearance() { appearance = .default }
 
     var clipboardHistoryEnabled: Bool {
         didSet { defaults.set(clipboardHistoryEnabled, forKey: Keys.clipboardHistoryEnabled) }
@@ -228,25 +166,13 @@ final class SettingsStore {
         }
     }
 
-    /// Edge the shelf attaches to. Default: right.
-    var shelfPosition: ShelfPosition {
-        didSet { defaults.set(shelfPosition.rawValue, forKey: Keys.shelfPosition) }
-    }
-
-    /// The side shelf and Island are independent surfaces over one ShelfStore.
-    /// New installs enable both surfaces and start with Island as the preferred
-    /// entry point. Migration below keeps existing users' explicit choices.
-    var classicShelfEnabled: Bool {
-        didSet { defaults.set(classicShelfEnabled, forKey: Keys.classicShelfEnabled) }
-    }
-
     var showNotch: Bool {
         didSet { defaults.set(showNotch, forKey: Keys.showNotch) }
     }
 
-    var islandEnabled: Bool {
-        didSet { defaults.set(islandEnabled, forKey: Keys.islandEnabled) }
-    }
+    /// The Panel is the app's only surface, so it starts on at every launch. Tests turn it off
+    /// to check the code that depends on it.
+    var islandEnabled = true
 
     var menuBarIconEnabled: Bool {
         didSet { defaults.set(menuBarIconEnabled, forKey: Keys.menuBarIconEnabled) }
@@ -261,90 +187,11 @@ final class SettingsStore {
     }
 
     /// Shelf is an optional Island module. Turning it off never deletes shelf
-    /// contents and doesn't affect the side shelf.
+    /// contents.
     var islandShelfEnabled: Bool {
         didSet {
             defaults.set(islandShelfEnabled, forKey: Keys.islandShelfEnabled)
             syncModuleConfigurationFromLegacy(.shelf, enabled: islandShelfEnabled)
-        }
-    }
-
-    var preferredShelfSurface: PreferredShelfSurface {
-        didSet {
-            defaults.set(preferredShelfSurface.rawValue,
-                         forKey: Keys.preferredShelfSurface)
-        }
-    }
-
-    /// Resolves the user's preferred shelf against currently enabled
-    /// surfaces. The stored preference is intentionally retained while its
-    /// surface is disabled, so re-enabling it restores the previous choice.
-    var effectivePreferredShelfSurface: PreferredShelfSurface? {
-        let islandShelfAvailable = islandEnabled && islandShelfEnabled
-        // The established global "Shelf" command belongs to the side shelf
-        // whenever that surface is enabled. Island remains independently
-        // clickable and drag-addressable; it is only the shortcut fallback
-        // when the side shelf is disabled.
-        if SideShelfAvailability.isEnabled && classicShelfEnabled { return .classic }
-        if islandShelfAvailable { return .island }
-        return nil
-    }
-
-    /// Compatibility façade for pre-dual-surface call sites and stored
-    /// preferences. New code must use the independent booleans above.
-    var shelfPresentationMode: ShelfPresentationMode {
-        get {
-            effectivePreferredShelfSurface == .island ? .island : .classic
-        }
-        set {
-            switch newValue {
-            case .classic:
-                classicShelfEnabled = true
-                islandEnabled = false
-                preferredShelfSurface = .classic
-            case .island:
-                classicShelfEnabled = false
-                islandEnabled = true
-                islandShelfEnabled = true
-                preferredShelfSurface = .island
-            }
-        }
-    }
-
-    /// Combined Settings binding. Selecting Island preserves the last classic
-    /// position so switching back restores the user's previous layout.
-    var shelfPlacement: ShelfPlacement {
-        get {
-            if shelfPresentationMode == .island { return .island }
-            switch shelfPosition {
-            case .left: return .left
-            case .right: return .right
-            case .custom: return .custom
-            }
-        }
-        set {
-            switch newValue {
-            case .island:
-                classicShelfEnabled = false
-                islandEnabled = true
-                islandShelfEnabled = true
-                preferredShelfSurface = .island
-            case .left:
-                shelfPosition = .left
-                classicShelfEnabled = true
-                islandEnabled = false
-                preferredShelfSurface = .classic
-            case .right:
-                shelfPosition = .right
-                classicShelfEnabled = true
-                islandEnabled = false
-                preferredShelfSurface = .classic
-            case .custom:
-                shelfPosition = .custom
-                classicShelfEnabled = true
-                islandEnabled = false
-                preferredShelfSurface = .classic
-            }
         }
     }
 
@@ -369,7 +216,7 @@ final class SettingsStore {
     }
 
     /// Expands the Island Shelf when a file or text drag approaches the top center.
-    /// Independent of pointer hover and Side Shelf drag preferences.
+    /// Independent of pointer hover.
     var islandDragApproachEnabled: Bool {
         didSet {
             defaults.set(islandDragApproachEnabled,
@@ -461,16 +308,6 @@ final class SettingsStore {
         }
     }
 
-    /// Hovering the classic edge tab briefly previews the side shelf. The
-    /// feature is on by default so the shelf stays out of the way until the
-    /// pointer approaches its edge tab; an explicitly saved choice still wins.
-    var classicShelfHoverRevealEnabled: Bool {
-        didSet {
-            defaults.set(classicShelfHoverRevealEnabled,
-                         forKey: Keys.classicShelfHoverRevealEnabled)
-        }
-    }
-
     func isIslandModuleEnabled(_ id: IslandModuleID) -> Bool {
         islandModuleConfiguration.isEnabled(id)
     }
@@ -522,32 +359,6 @@ final class SettingsStore {
         islandModuleConfiguration = configuration
     }
 
-    /// Shelf width in points. Default: 320.
-    var shelfWidth: Double {
-        didSet { defaults.set(shelfWidth, forKey: Keys.shelfWidth) }
-    }
-
-    /// Hide the shelf automatically after a drag-out. Default: false.
-    var autoHide: Bool {
-        didSet { defaults.set(autoHide, forKey: Keys.autoHide) }
-    }
-
-    /// Keep an automatically revealed side shelf open after a successful
-    /// drag-in. This deliberately affects only the drag-in completion path:
-    /// drag-out and empty-shelf auto-hide retain their own settings.
-    /// Default: true, preserving successful-drop behavior for existing users.
-    var keepShelfOpenAfterDrop: Bool {
-        didSet { defaults.set(keepShelfOpenAfterDrop, forKey: Keys.keepShelfOpenAfterDrop) }
-    }
-
-    /// UX6: hide the shelf automatically when its items go from non-empty to
-    /// empty (removal / drag-out). A shelf explicitly summoned while empty
-    /// stays put — the rule only fires on the non-empty → empty transition.
-    /// Default: true.
-    var autoHideWhenEmpty: Bool {
-        didSet { defaults.set(autoHideWhenEmpty, forKey: Keys.autoHideWhenEmpty) }
-    }
-
     /// What happens after an item is dragged out. Default: keep.
     var dragOutRemovalPolicy: DragOutRemovalPolicy {
         didSet { defaults.set(dragOutRemovalPolicy.rawValue, forKey: Keys.dragOutRemovalPolicy) }
@@ -574,84 +385,11 @@ final class SettingsStore {
     /// onboarding'.
     let hadPersistedOnboardingVersion: Bool
 
-    /// EdgeTab: vertical placement of the shelf (and its edge tab) along the
-    /// attached edge — 0 pins to the bottom of the visible area, 1 to the top.
-    /// Default: 0.5 (vertically centered, matching the pre-EdgeTab look).
-    /// No "unset" state needs distinguishing, so it lives in register(defaults:).
-    var shelfEdgeOffset: Double {
-        didSet { defaults.set(shelfEdgeOffset, forKey: Keys.shelfEdgeOffset) }
-    }
-
-    /// EdgeTab: show the edge tab on the shelf's screen edge while the shelf
-    /// is hidden (mutually exclusive model — the tab disappears once the shelf
-    /// opens; collapsing is done via the shelf's own outer-edge hot zone or
-    /// inner chevron handle). Only meaningful for left/right positions —
-    /// custom placement has no attachment edge, so no tab is shown.
-    /// Default: true.
-    var edgeTabEnabled: Bool {
-        didSet { defaults.set(edgeTabEnabled, forKey: Keys.edgeTabEnabled) }
-    }
-
-    var edgeTabIconVisible: Bool {
-        didSet { defaults.set(edgeTabIconVisible, forKey: Keys.edgeTabIconVisible) }
-    }
-
-    var edgeTabIconSize: Double {
-        didSet {
-            let normalized = Self.normalizedEdgeTabIconSize(edgeTabIconSize)
-            if normalized != edgeTabIconSize { edgeTabIconSize = normalized }
-            defaults.set(normalized, forKey: Keys.edgeTabIconSize)
-        }
-    }
-
-    nonisolated static let edgeTabIconSizeRange: ClosedRange<Double> = 6...10
-    nonisolated static let defaultEdgeTabIconSize: Double = 10
-
-    nonisolated static func normalizedEdgeTabIconSize(_ size: Double) -> Double {
-        size.isFinite
-            ? min(edgeTabIconSizeRange.upperBound, max(edgeTabIconSizeRange.lowerBound, size))
-            : defaultEdgeTabIconSize
-    }
-
-    /// Persisted panel frame for the `custom` shelf position (S9), in global
-    /// screen coordinates. nil = no custom placement yet — the first switch to
-    /// custom starts from the right-edge default frame (see
-    /// `ShelfLayoutEngine.targetFrame`). Readers must re-validate against the
-    /// current screens (`ShelfLayoutEngine.validatedCustomFrame`): the screen
-    /// the frame lived on may have been unplugged.
-    var customShelfFrame: CGRect? {
-        didSet {
-            if let customShelfFrame, let data = try? JSONEncoder().encode(customShelfFrame) {
-                defaults.set(data, forKey: Keys.customShelfFrame)
-            } else if customShelfFrame == nil {
-                defaults.removeObject(forKey: Keys.customShelfFrame)
-            }
-        }
-    }
-
     // MARK: - Triggers (wired in S7; settings UI in S8)
 
     /// Global hot key (⌘⇧Space) toggles the shelf. Default: true.
     var hotKeyEnabled: Bool {
         didSet { defaults.set(hotKeyEnabled, forKey: Keys.hotKeyEnabled) }
-    }
-
-    /// Resting the cursor on a screen edge shows the shelf. Default: false.
-    ///
-    /// UX2: legacy pre-UX-batch semantic (hover dwell). The UX batch replaced
-    /// the user-facing control with `dragAutoAppearMode`; this flag is kept
-    /// for persistence compatibility and only feeds the one-time migration in
-    /// `init` (legacy ON → `.edgeOnly`).
-    var edgeTriggerEnabled: Bool {
-        didSet { defaults.set(edgeTriggerEnabled, forKey: Keys.edgeTriggerEnabled) }
-    }
-
-    /// UX1: drag-triggered shelf appearance. Default: `.edgeOnly`, so starting
-    /// a drag does not cover content before the pointer approaches the shelf.
-    /// `.edgeOnly` requires a non-custom shelf position (no attachment edge
-    /// otherwise); `custom` position pauses the edge mechanism while active.
-    var dragAutoAppearMode: DragAutoAppearMode {
-        didSet { defaults.set(dragAutoAppearMode.rawValue, forKey: Keys.dragAutoAppearMode) }
     }
 
     /// UX3: double-pressing the global hot key saves the general pasteboard
@@ -660,13 +398,6 @@ final class SettingsStore {
     /// single presses. Default: true.
     var hotKeyDoublePressSavesClipboard: Bool {
         didSet { defaults.set(hotKeyDoublePressSavesClipboard, forKey: Keys.hotKeyDoublePressSavesClipboard) }
-    }
-
-    /// Edge-trigger sensitivity (three tiers; higher = shorter dwell time and
-    /// wider band). Default: medium. Mapped by `TriggerSensitivity.edgeDwellTime`
-    /// / `.edgeBandWidth`.
-    var edgeTriggerSensitivity: TriggerSensitivity {
-        didSet { defaults.set(edgeTriggerSensitivity.rawValue, forKey: Keys.edgeTriggerSensitivity) }
     }
 
     /// The toggle hot key, or nil when the user cleared it in the recorder
@@ -722,8 +453,6 @@ final class SettingsStore {
 
     private enum Keys {
         private static let prefix = "Clerestory."
-        static let appearance = prefix + "appearance.v1"
-        static let shelfPosition = prefix + "shelfPosition"
         static let clipboardHistoryEnabled = prefix + "clipboardHistoryEnabled"
         static let clipboardHistoryPaused = prefix + "clipboardHistoryPaused"
         static let clipboardHistoryRetentionDays = prefix + "clipboardHistoryRetentionDays"
@@ -733,16 +462,11 @@ final class SettingsStore {
         static let notchModuleID = prefix + "compactModuleID"
         static let notchCycleShortcut = prefix + "compactCycleShortcut"
         static let clipboardHistoryShortcut = prefix + "clipboardHistoryShortcut"
-        static let shelfPresentationMode = prefix + "shelfPresentationMode"
-        static let shelfSurfaceSettingsVersion = prefix + "shelfSurfaceSettingsVersion"
-        static let classicShelfEnabled = prefix + "classicShelfEnabled"
         static let showNotch = prefix + "showCompactIsland"
         static let expandedShortcutsVersion = prefix + "expandedShortcutsVersion"
-        static let islandEnabled = prefix + "islandEnabled"
         static let menuBarIconEnabled = prefix + "menuBarIconEnabled"
         static let islandDisplayTarget = prefix + "islandDisplayTarget"
         static let islandShelfEnabled = prefix + "islandShelfEnabled"
-        static let preferredShelfSurface = prefix + "preferredShelfSurface"
         static let islandHoverRevealEnabled = prefix + "islandHoverRevealEnabled"
         static let islandClickRevealEnabled = prefix + "islandClickRevealEnabled"
         static let islandHoverDelaySeconds = prefix + "islandHoverDelaySeconds"
@@ -760,24 +484,11 @@ final class SettingsStore {
         static let islandModuleConfiguration = prefix + "islandModuleConfiguration"
         static let islandModuleConfigurationCorruptBackup =
             prefix + "islandModuleConfigurationCorruptBackup"
-        static let classicShelfHoverRevealEnabled = prefix + "classicShelfHoverRevealEnabled"
-        static let shelfWidth = prefix + "shelfWidth"
-        static let shelfEdgeOffset = prefix + "shelfEdgeOffset"
-        static let edgeTabEnabled = prefix + "edgeTabEnabled"
-        static let edgeTabIconVisible = prefix + "edgeTabIconVisible"
-        static let edgeTabIconSize = prefix + "edgeTabIconSize"
-        static let autoHide = prefix + "autoHide"
-        static let keepShelfOpenAfterDrop = prefix + "keepShelfOpenAfterDrop"
-        static let autoHideWhenEmpty = prefix + "autoHideWhenEmpty"
         static let dragOutRemovalPolicy = prefix + "dragOutRemovalPolicy"
         static let autoUpdateCheckEnabled = prefix + "autoUpdateCheckEnabled"
         static let onboardingVersion = prefix + "onboardingVersion"
-        static let customShelfFrame = prefix + "customShelfFrame"
         static let hotKeyEnabled = prefix + "hotKeyEnabled"
         static let hotKeyDoublePressSavesClipboard = prefix + "hotKeyDoublePressSavesClipboard"
-        static let edgeTriggerEnabled = prefix + "edgeTriggerEnabled"
-        static let dragAutoAppearMode = prefix + "dragAutoAppearMode"
-        static let edgeTriggerSensitivity = prefix + "edgeTriggerSensitivity"
         static let hotKeyShortcut = prefix + "hotKeyShortcut"
         static let ignoredAppBundleIDs = prefix + "ignoredAppBundleIDs"
     }
@@ -794,54 +505,13 @@ final class SettingsStore {
         // builds may only have the versioned configuration blob.
         let hadPersistedAppSettings = hadPersistedOnboardingVersion
             || persistedModuleConfigurationData != nil
-        // UX1 migration must be read before registering defaults: registering a domain would make 'never
-        // set' and
-        // 'explicitly set immediate' indistinguishable (and NSRegistrationDomain is shared within process,
-        // visible across UserDefaults instances). Old boolean edgeTriggerEnabled (hover trigger switch)
-        // was on and
-        // never persisted dragAutoAppearMode → migrated to .edgeOnly (closest to old intent edge trigger),
-        // and immediately persisted to reflect UI.
-        // Note: dragAutoAppearMode is deliberately not included in register(defaults:) ——
-        // Once registered, nil judgment becomes invalid, and migration will never happen.
-        let legacyEdgeTriggerEnabled = defaults.bool(forKey: Keys.edgeTriggerEnabled)
-        let persistedDragMode = defaults.string(forKey: Keys.dragAutoAppearMode)
-        // Preserve settings written by an earlier development build of the
-        // dual-surface feature, which predates the explicit migration version.
-        // Only inspect the app's real persistent domain for `.standard`;
-        // isolated test/UI suites must not inherit the host app's preferences.
-        let standardPersistentDomain: [String: Any]? = if defaults === UserDefaults.standard,
-                                                          let domain = Bundle.main.bundleIdentifier {
-            defaults.persistentDomain(forName: domain)
-        } else {
-            nil
-        }
-        let persistedClassicShelfEnabled = standardPersistentDomain?[Keys.classicShelfEnabled]
-            as? Bool ?? defaults.object(forKey: Keys.classicShelfEnabled) as? Bool
-        let persistedIslandEnabled = standardPersistentDomain?[Keys.islandEnabled]
-            as? Bool ?? defaults.object(forKey: Keys.islandEnabled) as? Bool
-        let persistedIslandShelfEnabled = standardPersistentDomain?[Keys.islandShelfEnabled]
-            as? Bool ?? defaults.object(forKey: Keys.islandShelfEnabled) as? Bool
-        let persistedPreferredSurface = standardPersistentDomain?[Keys.preferredShelfSurface]
-            as? String ?? defaults.string(forKey: Keys.preferredShelfSurface)
-        let persistedLegacyPresentationMode = defaults.string(
-            forKey: Keys.shelfPresentationMode
-        ).flatMap(ShelfPresentationMode.init(rawValue:))
-        let legacyPresentationMode = persistedLegacyPresentationMode ?? .classic
-        let persistedSurfaceSettingsVersion = defaults.integer(
-            forKey: Keys.shelfSurfaceSettingsVersion
-        )
         defaults.register(defaults: [
             Keys.clipboardHistoryEnabled: false,
             Keys.clipboardHistoryPaused: false,
             Keys.clipboardHistoryRetentionDays: 7,
-            Keys.shelfPosition: ShelfPosition.right.rawValue,
-            Keys.shelfPresentationMode: ShelfPresentationMode.classic.rawValue,
-            Keys.classicShelfEnabled: true,
-            Keys.islandEnabled: true,
             Keys.menuBarIconEnabled: true,
             Keys.islandDisplayTarget: IslandDisplayTarget.main.persistedValue,
             Keys.islandShelfEnabled: true,
-            Keys.preferredShelfSurface: PreferredShelfSurface.island.rawValue,
             Keys.islandHoverRevealEnabled: true,
             Keys.islandClickRevealEnabled: true,
             Keys.islandHoverDelaySeconds: 0.15,
@@ -854,20 +524,10 @@ final class SettingsStore {
             Keys.aiUsageNotchMetric: AIUsageNotchMetric.todayCost.rawValue,
             Keys.aiUsageLimitAlertsEnabled: true,
             Keys.aiUsageServerPort: TokenTrackerClient.defaultPort,
-            Keys.shelfWidth: 320.0,
-            Keys.shelfEdgeOffset: 0.5,
-            Keys.edgeTabEnabled: true,
-            Keys.edgeTabIconVisible: true,
-            Keys.edgeTabIconSize: Self.defaultEdgeTabIconSize,
-            Keys.autoHide: false,
-            Keys.keepShelfOpenAfterDrop: true,
-            Keys.autoHideWhenEmpty: true,
             Keys.dragOutRemovalPolicy: DragOutRemovalPolicy.keep.rawValue,
             Keys.autoUpdateCheckEnabled: true,
             Keys.hotKeyEnabled: true,
             Keys.hotKeyDoublePressSavesClipboard: true,
-            Keys.edgeTriggerEnabled: false,
-            Keys.edgeTriggerSensitivity: TriggerSensitivity.medium.rawValue,
             Keys.ignoredAppBundleIDs: [String](),
         ])
 
@@ -893,79 +553,12 @@ final class SettingsStore {
         if let data = defaults.data(forKey: Keys.notchCycleShortcut) {
             notchCycleShortcut = (try? JSONDecoder().decode(HotKeyShortcut?.self, from: data)) ?? nil
         }
-        shelfPosition = ShelfPosition(rawValue: defaults.string(forKey: Keys.shelfPosition) ?? "")
-            ?? .right
-        let hasPreversionedSurfaceSettings = standardPersistentDomain?[Keys.classicShelfEnabled] != nil
-            || standardPersistentDomain?[Keys.islandEnabled] != nil
-            || standardPersistentDomain?[Keys.islandShelfEnabled] != nil
-            || standardPersistentDomain?[Keys.preferredShelfSurface] != nil
-        let needsSurfaceMigration = persistedSurfaceSettingsVersion < 1
-            && !hasPreversionedSurfaceSettings
-        let resolvedClassicShelfEnabled: Bool
-        let resolvedIslandEnabled: Bool
-        let resolvedIslandShelfEnabled: Bool
-        let resolvedPreferredSurface: PreferredShelfSurface
-        if needsSurfaceMigration {
-            // Registration-domain defaults are process-wide, so a pristine
-            // isolated UserDefaults suite can still appear to contain the
-            // legacy `.classic` value after another SettingsStore is created.
-            // An actual legacy Island choice still overrides that value, while
-            // onboarding persistence identifies an established classic user.
-            let isFreshInstall = !hadPersistedOnboardingVersion
-                && legacyPresentationMode != .island
-            if isFreshInstall {
-                resolvedClassicShelfEnabled = true
-                resolvedIslandEnabled = true
-                resolvedIslandShelfEnabled = true
-                resolvedPreferredSurface = .island
-            } else {
-                resolvedClassicShelfEnabled = legacyPresentationMode == .classic
-                resolvedIslandEnabled = legacyPresentationMode == .island
-                resolvedIslandShelfEnabled = true
-                resolvedPreferredSurface = legacyPresentationMode == .island
-                    ? .island : .classic
-            }
-        } else {
-            resolvedClassicShelfEnabled = persistedClassicShelfEnabled
-                ?? defaults.bool(forKey: Keys.classicShelfEnabled)
-            resolvedIslandEnabled = persistedIslandEnabled
-                ?? defaults.bool(forKey: Keys.islandEnabled)
-            resolvedIslandShelfEnabled = persistedIslandShelfEnabled
-                ?? defaults.bool(forKey: Keys.islandShelfEnabled)
-            resolvedPreferredSurface = PreferredShelfSurface(
-                rawValue: persistedPreferredSurface
-                    ?? defaults.string(forKey: Keys.preferredShelfSurface)
-                    ?? ""
-            ) ?? .classic
-        }
-        classicShelfEnabled = resolvedClassicShelfEnabled
-        // Keep legacy Side Shelf preferences for a future implementation,
-        // while ensuring classic-only users still have a visible surface.
-        let activateIsland = !SideShelfAvailability.isEnabled && hadPersistedOnboardingVersion
-            && resolvedClassicShelfEnabled && !resolvedIslandEnabled
-        // The panel is the primary surface while Side Shelf is unavailable.
-        // Ignore the retired master toggle so an old off preference cannot strand users.
-        islandEnabled = !SideShelfAvailability.isEnabled || resolvedIslandEnabled
         menuBarIconEnabled = defaults.bool(forKey: Keys.menuBarIconEnabled)
         islandDisplayTarget = IslandDisplayTarget(
             persistedValue: defaults.string(forKey: Keys.islandDisplayTarget)
         )
-        islandShelfEnabled = resolvedIslandShelfEnabled || activateIsland
-        preferredShelfSurface = resolvedPreferredSurface
-        if activateIsland {
-            defaults.set(true, forKey: Keys.islandEnabled)
-            defaults.set(true, forKey: Keys.islandShelfEnabled)
-        }
-        if needsSurfaceMigration {
-            defaults.set(resolvedClassicShelfEnabled, forKey: Keys.classicShelfEnabled)
-            defaults.set(resolvedIslandEnabled, forKey: Keys.islandEnabled)
-            defaults.set(resolvedIslandShelfEnabled, forKey: Keys.islandShelfEnabled)
-            defaults.set(resolvedPreferredSurface.rawValue,
-                         forKey: Keys.preferredShelfSurface)
-        }
-        if persistedSurfaceSettingsVersion < 1 {
-            defaults.set(1, forKey: Keys.shelfSurfaceSettingsVersion)
-        }
+        let resolvedIslandShelfEnabled = defaults.bool(forKey: Keys.islandShelfEnabled)
+        islandShelfEnabled = resolvedIslandShelfEnabled
         let resolvedIslandHoverRevealEnabled = defaults.bool(
             forKey: Keys.islandHoverRevealEnabled
         )
@@ -1020,55 +613,13 @@ final class SettingsStore {
                 defaults.set(encoded, forKey: Keys.islandModuleConfiguration)
             }
         }
-        let resolvedClassicShelfHoverRevealEnabled =
-            defaults.object(forKey: Keys.classicShelfHoverRevealEnabled) as? Bool
-            ?? true
-        classicShelfHoverRevealEnabled = resolvedClassicShelfHoverRevealEnabled
-        if defaults.object(forKey: Keys.classicShelfHoverRevealEnabled) == nil {
-            defaults.set(resolvedClassicShelfHoverRevealEnabled,
-                         forKey: Keys.classicShelfHoverRevealEnabled)
-        }
-        shelfWidth = defaults.double(forKey: Keys.shelfWidth)
-        if let data = defaults.data(forKey: Keys.appearance),
-           let decoded = try? JSONDecoder().decode(ShelfAppearance.self, from: data) {
-            appearance = decoded.normalized()
-        } else {
-            appearance = .default
-        }
-        shelfEdgeOffset = defaults.double(forKey: Keys.shelfEdgeOffset)
-        edgeTabEnabled = defaults.bool(forKey: Keys.edgeTabEnabled)
-        edgeTabIconVisible = defaults.bool(forKey: Keys.edgeTabIconVisible)
-        edgeTabIconSize = Self.normalizedEdgeTabIconSize(defaults.double(forKey: Keys.edgeTabIconSize))
-        autoHide = defaults.bool(forKey: Keys.autoHide)
-        keepShelfOpenAfterDrop = defaults.bool(forKey: Keys.keepShelfOpenAfterDrop)
-        autoHideWhenEmpty = defaults.bool(forKey: Keys.autoHideWhenEmpty)
         dragOutRemovalPolicy = DragOutRemovalPolicy(
             rawValue: defaults.string(forKey: Keys.dragOutRemovalPolicy) ?? ""
         ) ?? .keep
         autoUpdateCheckEnabled = defaults.bool(forKey: Keys.autoUpdateCheckEnabled)
         onboardingVersion = defaults.object(forKey: Keys.onboardingVersion) as? Int ?? 0
-        if let data = defaults.data(forKey: Keys.customShelfFrame) {
-            // Decoding failure is treated as no custom position (next time selecting custom starts from
-            // the right edge by default).
-            customShelfFrame = try? JSONDecoder().decode(CGRect.self, from: data)
-        } else {
-            customShelfFrame = nil
-        }
         hotKeyEnabled = defaults.bool(forKey: Keys.hotKeyEnabled)
         hotKeyDoublePressSavesClipboard = defaults.bool(forKey: Keys.hotKeyDoublePressSavesClipboard)
-        edgeTriggerEnabled = defaults.bool(forKey: Keys.edgeTriggerEnabled)
-        if let persistedDragMode {
-            dragAutoAppearMode = DragAutoAppearMode(rawValue: persistedDragMode) ?? .edgeOnly
-        } else if legacyEdgeTriggerEnabled {
-            // Migration: old hover edge trigger on → drag edge trigger.
-            dragAutoAppearMode = .edgeOnly
-            defaults.set(DragAutoAppearMode.edgeOnly.rawValue, forKey: Keys.dragAutoAppearMode)
-        } else {
-            dragAutoAppearMode = .edgeOnly
-        }
-        edgeTriggerSensitivity = TriggerSensitivity(
-            rawValue: defaults.string(forKey: Keys.edgeTriggerSensitivity) ?? ""
-        ) ?? .medium
         if let data = defaults.data(forKey: Keys.hotKeyShortcut) {
             // Explicit do/catch instead of `try? … ?? .default`: try? would flatten
             // 'decoding success as nil' (JSON null = explicit clear) and 'decoding failure'

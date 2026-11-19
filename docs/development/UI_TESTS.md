@@ -20,7 +20,7 @@ Results, screenshots, failure hierarchies, and screen recordings are in that dir
 
 `CLERESTORY_UI_TESTING=1` selects a reset defaults suite and a fresh temporary application-support directory for each app process. The unique directory is selected before services initialize, so a previous test cannot leak in-memory Shelf items into the next launch. It also suppresses onboarding, updates, and global trigger registration. Normal Island presentation and event handling remain active. Tests temporarily take over the app's bundle identity, so relaunch your development build after the suite.
 
-- `--ui-testing-show-shelf` opens the production expanded Island with keyboard focus, not the disabled side shelf.
+- `--ui-testing-show-shelf` opens the production expanded Island with keyboard focus.
 - `--ui-testing-open-settings` opens General settings.
 - `--ui-testing-hover` starts collapsed with hover reveal enabled in the isolated preferences.
 - `--ui-testing-shelf-files` seeds two synthetic text files for keyboard and Quick Look coverage (Debug only).

@@ -131,19 +131,13 @@ struct ShelfItemCard: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
-    @Environment(\.shelfPresentationStyle) private var presentationStyle
     @Environment(\.shelfSelectionMode) private var selectionMode
-    @Environment(SettingsStore.self) private var settings
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
-    private var cardCornerRadius: CGFloat {
-        presentationStyle == .classic ? settings.appearance.cardCornerRadius : Self.cornerRadius
-    }
+    private var cardCornerRadius: CGFloat { Self.cornerRadius }
 
     static let cornerRadius: CGFloat = 12
-    /// Thumbnail area height (points); width follows grid columns (~88pt).
-    static let thumbnailHeight: CGFloat = 52
-    private var previewHeight: CGFloat { presentationStyle == .island ? 76 : Self.thumbnailHeight }
+    /// Thumbnail area height (points).
+    private let previewHeight: CGFloat = 76
 
     init(item: ShelfItem,
          isSelected: Bool,
@@ -172,8 +166,7 @@ struct ShelfItemCard: View {
             if item.availability == .available {
                 thumbnailArea
                     .overlay(alignment: .bottomTrailing) {
-                        if presentationStyle == .island,
-                           let status = ShelfCardVisualStatus.resolve(item: item, transferStatus: transferStatus) {
+                        if let status = ShelfCardVisualStatus.resolve(item: item, transferStatus: transferStatus) {
                             Image(systemName: status.symbolName)
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(status.tint)
@@ -188,21 +181,13 @@ struct ShelfItemCard: View {
                 availabilityArea
             }
             nameRow
-            if presentationStyle == .classic,
-               let status = ShelfCardVisualStatus.resolve(item: item,
-                                                          transferStatus: transferStatus) {
-                statusRow(status)
-            }
         }
         .padding(6)
         .frame(maxWidth: .infinity)
-        .foregroundStyle(presentationStyle == .island
-                         ? Color.white.opacity(0.90)
-                         : Color.primary)
+        .foregroundStyle(Color.white.opacity(0.90))
         .background { surface }
         .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius))
         .contentShape(RoundedRectangle(cornerRadius: cardCornerRadius))
-        .overlay { availabilityBorder }
         .overlay { keyboardFocusRing }
         .overlay(alignment: selectionMode ? .topTrailing : .topLeading) { selectionBadge }
         // A transparent NSView covers the card and handles left-button events. It records
@@ -210,25 +195,23 @@ struct ShelfItemCard: View {
         // mouse-up selects the card or opens Quick Look on double-click. SwiftUI still handles
         // right-click and scrolling.
         .overlay {
-            if item.availability == .available || presentationStyle == .island {
-                CardDragSourceBridge(
-                    itemID: item.id,
-                    onClick: { additive in activateCard(additive: additive) },
-                    onDoubleClick: {
-                        guard !selectionMode, item.availability == .available else { return }
-                        quickLookCoordinator?.toggle(contextItem: item)
-                    },
-                    onDragBegin: { sourceView, event in
-                        guard item.availability == .available, let dragOutController else { return }
-                        let contents = dragContentsProvider?(item)
-                            ?? DragOutContents(items: [item], topLevelIDs: [item.id])
-                        dragOutController.beginDrag(contents: contents,
-                                                    originatingItemID: item.id,
-                                                    from: sourceView,
-                                                    event: event)
-                    }
-                )
-            }
+            CardDragSourceBridge(
+                itemID: item.id,
+                onClick: { additive in activateCard(additive: additive) },
+                onDoubleClick: {
+                    guard !selectionMode, item.availability == .available else { return }
+                    quickLookCoordinator?.toggle(contextItem: item)
+                },
+                onDragBegin: { sourceView, event in
+                    guard item.availability == .available, let dragOutController else { return }
+                    let contents = dragContentsProvider?(item)
+                        ?? DragOutContents(items: [item], topLevelIDs: [item.id])
+                    dragOutController.beginDrag(contents: contents,
+                                                originatingItemID: item.id,
+                                                from: sourceView,
+                                                event: event)
+                }
+            )
         }
         // UX4: Hover ✕ Remove button. The z-order is above the drag-out event layer —— hit testing reaches
         // SwiftUI Button first, so clicks on ✕ will not trigger selection or drag-out; when not hovered,
@@ -292,15 +275,11 @@ struct ShelfItemCard: View {
                 Button("Remove from Shelf", action: onRemove)
             }
         }
-        .simultaneousGesture(TapGesture().onEnded {
-            guard presentationStyle == .classic, item.availability != .available else { return }
-            onSelect(selectionMode || NSEvent.modifierFlags.contains(.command))
-        })
         .task(id: item) { await loadAssets() }
     }
 
     private func activateCard(additive: Bool) {
-        if presentationStyle == .island, item.availability != .available,
+        if item.availability != .available,
            !selectionMode, !additive, !NSEvent.modifierFlags.contains(.shift),
            let onRecover {
             onRecover()
@@ -318,23 +297,12 @@ struct ShelfItemCard: View {
             Button(action: onRemove) {
                 Image(systemName: "xmark")
                     .font(.system(size: 8, weight: .semibold))
-                    .foregroundStyle(presentationStyle == .island
-                                     ? Color.white.opacity(0.88)
-                                     : Color.secondary)
+                    .foregroundStyle(Color.white.opacity(0.88))
                     .frame(width: 18, height: 18)
-                    .background {
-                        if presentationStyle == .island {
-                            Circle().fill(Color(white: 0.22))
-                        } else {
-                            Circle().fill(.regularMaterial)
-                        }
-                    }
+                    .background { Circle().fill(Color(white: 0.22)) }
                     .overlay {
                         Circle()
-                            .strokeBorder(presentationStyle == .island
-                                          ? Color.white.opacity(0.14)
-                                          : Color.primary.opacity(0.12),
-                                          lineWidth: 0.5)
+                            .strokeBorder(Color.white.opacity(0.14), lineWidth: 0.5)
                     }
                     .frame(width: 28, height: 28)
                     .contentShape(Rectangle())
@@ -464,10 +432,9 @@ struct ShelfItemCard: View {
         }
         .overlay(alignment: .bottomTrailing) {
             Image(systemName: "quote.opening")
-                .font(.system(size: presentationStyle == .island ? 9 : 7, weight: .bold))
+                .font(.system(size: 9, weight: .bold))
                 .foregroundStyle(.white)
-                .frame(width: presentationStyle == .island ? 18 : 14,
-                       height: presentationStyle == .island ? 18 : 14)
+                .frame(width: 18, height: 18)
                 .background(Color(white: 0.20), in: Circle())
                 .overlay { Circle().strokeBorder(Color.black.opacity(0.8), lineWidth: 1.5) }
                 .offset(x: 4, y: 2)
@@ -484,15 +451,11 @@ struct ShelfItemCard: View {
             if let host = item.urlString.flatMap({ URL(string: $0)?.host() }) {
                 Text(host)
                     .font(.caption2)
-                    .foregroundStyle(presentationStyle == .island
-                                     ? Color.white.opacity(0.46)
-                                     : Color.secondary.opacity(0.72))
+                    .foregroundStyle(Color.white.opacity(0.46))
                     .lineLimit(1)
             }
         }
-        .foregroundStyle(presentationStyle == .island
-                         ? Color.white.opacity(0.62)
-                         : Color.secondary)
+        .foregroundStyle(Color.white.opacity(0.62))
         .anchorPreference(key: ShelfThumbnailBoundsKey.self, value: .bounds) { $0 }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -500,10 +463,8 @@ struct ShelfItemCard: View {
     /// Placeholder before thumbnail loading (symbol taken by kind).
     private var kindPlaceholder: some View {
         Image(systemName: placeholderSymbolName)
-            .font(.system(size: presentationStyle == .island ? 38 : 26))
-            .foregroundStyle(presentationStyle == .island
-                             ? Color.white.opacity(0.38)
-                             : Color.secondary.opacity(0.72))
+            .font(.system(size: 38))
+            .foregroundStyle(Color.white.opacity(0.38))
             .anchorPreference(key: ShelfThumbnailBoundsKey.self, value: .bounds) { $0 }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -521,44 +482,21 @@ struct ShelfItemCard: View {
 
     // MARK: - Availability
 
-    @ViewBuilder
     private var availabilityArea: some View {
-        if presentationStyle == .island {
-            Image(systemName: item.kind == .folder ? "folder.fill" : "doc.fill")
-                .font(.system(size: 48, weight: .regular))
-                .foregroundStyle(Color.white.opacity(0.25))
-                .overlay(alignment: .bottomTrailing) {
-                    Image(systemName: "exclamationmark.circle.fill")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.65), Color.black)
-                        .offset(x: 5, y: 2)
-                }
-                .anchorPreference(key: ShelfThumbnailBoundsKey.self, value: .bounds) { $0 }
-                .frame(maxWidth: .infinity)
-                .frame(height: previewHeight)
-                .help(availabilityActionHint)
-                .accessibilityHidden(true)
-        } else {
-            VStack(spacing: 2) {
-                Label(availabilityStatusText, systemImage: availabilitySymbolName)
-                    .font(.caption2.weight(.semibold))
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                if let onRecover {
-                    Button(availabilityActionTitle, action: onRecover)
-                        .buttonStyle(.borderless)
-                        .controlSize(.small)
-                        .frame(minHeight: 24)
-                        .accessibilityIdentifier("shelf.item.\(item.id.uuidString).recover")
-                        .accessibilityHint(Text(availabilityActionHint))
-                }
+        Image(systemName: item.kind == .folder ? "folder.fill" : "doc.fill")
+            .font(.system(size: 48, weight: .regular))
+            .foregroundStyle(Color.white.opacity(0.25))
+            .overlay(alignment: .bottomTrailing) {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.white.opacity(0.65), Color.black)
+                    .offset(x: 5, y: 2)
             }
-            .foregroundStyle(.primary)
             .anchorPreference(key: ShelfThumbnailBoundsKey.self, value: .bounds) { $0 }
             .frame(maxWidth: .infinity)
-            .frame(minHeight: previewHeight)
-        }
+            .frame(height: previewHeight)
+            .help(availabilityActionHint)
+            .accessibilityHidden(true)
     }
 
     private var availabilityStatusText: String {
@@ -615,41 +553,24 @@ struct ShelfItemCard: View {
                 if item.kind == .text {
                     // Reserve the same two-line name height as neighboring file tiles.
                     Text(item.displayName)
-                        .lineLimit(2, reservesSpace: presentationStyle == .island)
+                        .lineLimit(2, reservesSpace: true)
                         .hidden()
                     Text(item.displayName)
                         .lineLimit(1)
                         .truncationMode(.tail)
                 } else {
                     Text(item.displayName)
-                        .lineLimit(2, reservesSpace: presentationStyle == .island)
+                        .lineLimit(2, reservesSpace: true)
                         .truncationMode(.middle)
                 }
             }
                 .font(.caption)
-                .foregroundStyle(presentationStyle == .island
-                                 ? Color.white.opacity(0.90)
-                                 : Color.primary)
-                .multilineTextAlignment(presentationStyle == .island ? .center : .leading)
+                .foregroundStyle(Color.white.opacity(0.90))
+                .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
                 .help(item.displayName)
         }
         .frame(maxWidth: .infinity)
-    }
-
-    /// One concise semantic state line. Active transfer/failure takes
-    /// precedence over the persistent managed-copy label; completed transfers
-    /// return to the quiet ready state.
-    private func statusRow(_ status: ShelfCardVisualStatus) -> some View {
-        Label(status.title, systemImage: status.symbolName)
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(status.tint)
-            .lineLimit(2)
-            .multilineTextAlignment(.leading)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityHidden(true)
-            .accessibilityIdentifier("shelf.item.\(item.id.uuidString).status")
     }
 
     // MARK: - Surfaces & badges
@@ -667,36 +588,16 @@ struct ShelfItemCard: View {
             }
             .overlay {
                 RoundedRectangle(cornerRadius: cardCornerRadius)
-                    .strokeBorder(cardBorder,
-                                  lineWidth: isSelected ? (presentationStyle == .island ? 1 : 2) : 0.5)
+                    .strokeBorder(cardBorder, lineWidth: isSelected ? 1 : 0.5)
             }
     }
 
     private var cardFill: Color {
-        return presentationStyle == .island
-            ? Color.white.opacity(isHovering ? 0.06 : 0)
-            : Color(nsColor: .controlBackgroundColor)
-                .opacity(reduceTransparency ? 1 : settings.appearance.cardOpacity)
+        Color.white.opacity(isHovering ? 0.06 : 0)
     }
 
     private var cardBorder: Color {
-        if isSelected { return Color.accentColor.opacity(presentationStyle == .island ? 0.60 : 0.95) }
-        return presentationStyle == .island
-            ? Color.clear
-            : Color.primary.opacity(0.08)
-    }
-
-    /// Classic Shelf retains its outlined recovery presentation.
-    @ViewBuilder
-    private var availabilityBorder: some View {
-        if presentationStyle == .classic, item.availability != .available {
-            RoundedRectangle(cornerRadius: cardCornerRadius)
-                .strokeBorder(
-                    Color.primary.opacity(0.48),
-                    style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
-                )
-                .allowsHitTesting(false)
-        }
+        isSelected ? Color.accentColor.opacity(0.60) : Color.clear
     }
 
     @ViewBuilder
@@ -783,9 +684,9 @@ struct ShelfItemCard: View {
     private func loadAssets() async {
         thumbnail = await ThumbnailLoader.thumbnail(
             for: thumbnailItem ?? item,
-            pointSize: CGSize(width: presentationStyle == .island ? previewHeight : 88, height: previewHeight),
+            pointSize: CGSize(width: previewHeight, height: previewHeight),
             bookmarkService: bookmarkService,
-            iconMode: presentationStyle == .island
+            iconMode: true
         )
         sourceAppIcon = ThumbnailLoader.sourceAppIcon(bundleID: item.sourceApp?.bundleID)
     }
@@ -1087,5 +988,4 @@ final class CardDragSourceAnchorView: NSView {
     }
     .padding()
     .frame(width: 320)
-    .environment(SettingsStore())
 }

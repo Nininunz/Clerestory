@@ -27,11 +27,11 @@ final class ShelfFrameTransitionTests: XCTestCase {
         XCTAssertFalse(transition.request(expanded, currentFrame: expanded))
     }
 
-    func testRepeatedLayoutRequestDoesNotInterruptEitherEdgeSlide() {
-        for position in [SettingsStore.ShelfPosition.left, .right] {
-            let target = CGRect(x: position == .left ? 0 : 1120,
+    func testRepeatedLayoutRequestDoesNotInterruptASlideInEitherDirection() {
+        for direction in [CGFloat(-1), 1] {
+            let target = CGRect(x: direction < 0 ? 0 : 1120,
                                 y: 200, width: 320, height: 500)
-            let hidden = ShelfLayoutEngine.hiddenFrame(for: target, position: position)
+            let hidden = target.offsetBy(dx: direction * target.width, dy: 0)
             var transition = ShelfFrameTransitionState()
             XCTAssertTrue(transition.request(target, currentFrame: hidden))
 
@@ -64,7 +64,7 @@ final class ShelfFrameTransitionTests: XCTestCase {
         transition.reset()
         XCTAssertNil(transition.targetFrame)
 
-        let hidden = ShelfLayoutEngine.hiddenFrame(for: target, position: .right)
+        let hidden = target.offsetBy(dx: target.width, dy: 0)
         XCTAssertTrue(transition.request(target, currentFrame: hidden))
         XCTAssertFalse(transition.request(target, currentFrame: hidden))
     }

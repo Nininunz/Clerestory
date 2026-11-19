@@ -41,7 +41,6 @@ final class IslandModuleChromeTests: XCTestCase {
                         isSelected: false, onSelect: { _ in }, transferStatus: status
                     )
                     .environment(settings)
-                    .environment(\.shelfPresentationStyle, .island)
                     .frame(width: width)
                     heights.insert(try render(card).pixelsHigh)
                 }
@@ -64,7 +63,6 @@ final class IslandModuleChromeTests: XCTestCase {
                     item.availability = availability
                     let card = ShelfItemCard(item: item, isSelected: false, onSelect: { _ in }, onRecover: {})
                         .environment(settings)
-                        .environment(\.shelfPresentationStyle, .island)
                         .frame(width: width)
                     tileHeights.insert(try render(card).pixelsHigh)
                     let grid = LazyVGrid(columns: [GridItem(.fixed(width), alignment: .top)], spacing: 12) {

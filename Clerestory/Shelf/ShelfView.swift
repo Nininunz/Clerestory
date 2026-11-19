@@ -1,15 +1,6 @@
 import AppKit
 import SwiftUI
 
-enum ShelfPresentationStyle: Sendable, Equatable {
-    case classic
-    case island
-}
-
-private struct ShelfPresentationStyleEnvironmentKey: EnvironmentKey {
-    static let defaultValue: ShelfPresentationStyle = .classic
-}
-
 private struct ShelfSelectionModeEnvironmentKey: EnvironmentKey {
     static let defaultValue = false
 }
@@ -18,15 +9,7 @@ private struct ShelfFocusActionEnvironmentKey: EnvironmentKey {
     static var defaultValue: (@MainActor () -> Void)? { nil }
 }
 
-private struct ShelfUserRemovalActionEnvironmentKey: EnvironmentKey {
-    static var defaultValue: (@MainActor (@MainActor () -> Void) -> Void)? { nil }
-}
-
 extension EnvironmentValues {
-    var shelfUserRemovalAction: (@MainActor (@MainActor () -> Void) -> Void)? {
-        get { self[ShelfUserRemovalActionEnvironmentKey.self] }
-        set { self[ShelfUserRemovalActionEnvironmentKey.self] = newValue }
-    }
     var shelfFocusAction: (@MainActor () -> Void)? {
         get { self[ShelfFocusActionEnvironmentKey.self] }
         set { self[ShelfFocusActionEnvironmentKey.self] = newValue }
@@ -35,64 +18,10 @@ extension EnvironmentValues {
         get { self[ShelfSelectionModeEnvironmentKey.self] }
         set { self[ShelfSelectionModeEnvironmentKey.self] = newValue }
     }
-    var shelfPresentationStyle: ShelfPresentationStyle {
-        get { self[ShelfPresentationStyleEnvironmentKey.self] }
-        set { self[ShelfPresentationStyleEnvironmentKey.self] = newValue }
-    }
 }
 
-private struct ShelfIconButtonStyle: ButtonStyle {
-    var active = false
-    var expanded = false
-    var destructive = false
-
-    func makeBody(configuration: Configuration) -> some View {
-        HoverContent(configuration: configuration, active: active,
-                     expanded: expanded, destructive: destructive)
-    }
-
-    private struct HoverContent: View {
-        let configuration: Configuration
-        let active: Bool
-        let expanded: Bool
-        let destructive: Bool
-        @State private var isHovering = false
-        @Environment(\.isEnabled) private var isEnabled
-        @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-        var body: some View {
-            configuration.label
-                .foregroundStyle(foregroundColor)
-                .background {
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(active ? Color.accentColor.opacity(0.14) :
-                              expanded ? Color.primary.opacity(0.07) : Color.clear)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                .fill(Color.primary.opacity(isEnabled && configuration.isPressed ? 0.16 :
-                                                           isEnabled && isHovering ? 0.09 : 0))
-                        }
-                }
-                .contentShape(Rectangle())
-                .onHover { isHovering = $0 }
-                .animation(reduceMotion ? nil : .easeInOut(duration: 0.12), value: isHovering)
-        }
-
-        private var foregroundColor: Color {
-            guard isEnabled else { return Color.primary.opacity(0.25) }
-            if active { return .accentColor }
-            if destructive && (isHovering || configuration.isPressed) { return .red }
-            return Color.primary.opacity(isHovering ? 0.95 : 0.72)
-        }
-    }
-}
-
-/// Shelf root view (S3: real content rendering).
-///
-/// Visual guidelines (implementation plan §3): vibrancy bottom (.hudWindow material) + 16pt corner radius
-/// + 1pt inner stroke (white 8%); equal width grid (column width ~88pt, spacing 12pt) with vertical
-/// scrolling; top minimal title bar (name + item count); show `ShelfEmptyState` when empty. Projection is
-/// still handled by the window layer (`ShelfPanel.hasShadow`), no redraw here.
+/// The Shelf module's content in the Panel: search, an equal-width card grid with vertical
+/// scrolling, and a footer with selection actions.
 ///
 /// Interactions: single tap for single selection, ⌘ tap to toggle multiple selection, click on empty area
 /// to clear selection and collapse Stack; click on Stack card to expand overlay (only one expanded at a
@@ -105,19 +34,11 @@ private struct ShelfIconButtonStyle: ButtonStyle {
 /// mouse position to row/column insertion index. Shelf notices are posted through `shelfMessenger` and
 /// shown in the shared notice pill.
 struct ShelfView: View {
-    let presentationStyle: ShelfPresentationStyle
-
-    init(presentationStyle: ShelfPresentationStyle = .classic) {
-        self.presentationStyle = presentationStyle
-    }
-
     @Environment(ShelfStore.self) private var store
 
     /// S4: Drag-in hover highlight and insertion indicator line position is driven by DragContainerView
     /// (NSDraggingDestination bridging).
     @Environment(DropTargetState.self) private var dropTargetState
-    /// S9: Custom position mode determination + frame persistence after dragging ends (customShelfFrame).
-    @Environment(SettingsStore.self) private var settings
     /// S6: Quick Look session; synchronize open preview when selection changes (nil is no-op).
     @Environment(\.quickLookCoordinator) private var quickLookCoordinator
     @Environment(\.bookmarkService) private var bookmarkService
@@ -125,37 +46,24 @@ struct ShelfView: View {
     @Environment(ShelfGridGeometry.self) private var gridGeometry
     /// Posts Shelf notices to the notice pill (nil in previews).
     @Environment(\.shelfMessenger) private var shelfMessenger
-    @Environment(\.shelfRevealState) private var reveal
     /// v1.2: runtime-only asynchronous batch status.
     @Environment(TransferStore.self) private var transferStore
     @Environment(ShelfInteractionState.self) private var interaction
     /// v1.2: unavailable-item actions (external reconnect vs managed recovery).
     @Environment(\.itemRecoveryController) private var itemRecoveryController
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.colorScheme) private var systemColorScheme
-    /// Task three: The action of folding the edge handle (ShelfWindowController injection; Preview is nil
-    /// no-op).
-    @Environment(\.shelfHideAction) private var shelfHideAction
     @Environment(\.shelfFocusAction) private var shelfFocusAction
-    @Environment(\.shelfUserRemovalAction) private var shelfUserRemovalAction
-    @State private var showsManagementActions = false
     @State private var duplicateHighlightIDs: Set<UUID> = []
     @FocusState private var searchFocused: Bool
 
     /// Card insertion/waymaking animation (§3: spring, response 0.35, damping 0.7).
     static let cardAnimation = Animation.spring(response: 0.35, dampingFraction: 0.7)
-    static let cornerRadius: CGFloat = 16
     static let gridSpacing: CGFloat = 12
-    /// Grid column width baseline (adjusted to narrow when handle folds to 84: handle 10pt + 2pt gap no
-    /// longer overlaps with first column card; `ShelfLayoutEngine.gridColumnMinimum` synchronized).
-    static let columnWidth: CGFloat = 84
 
     var body: some View {
         presentedSurface
             .environment(\.shelfSelectionMode, interaction.isSelecting)
-            .environment(\.colorScheme, presentationStyle == .classic
-                         ? (settings.appearance.theme.colorScheme ?? systemColorScheme) : .dark)
-            .environment(\.shelfPresentationStyle, presentationStyle)
+            .environment(\.colorScheme, .dark)
             .onChange(of: store.items) {
                 dropTargetState.reset()
                 interaction.normalize(for: store.visibleItems)
@@ -172,59 +80,29 @@ struct ShelfView: View {
                     duplicateHighlightIDs = []
                 }
             }
-            .onDisappear { showsManagementActions = false }
             .onChange(of: store.searchQuery) { normalizeSearch() }
             .onChange(of: store.contentFilter) { normalizeSearch() }
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("shelf.root")
     }
 
-    @ViewBuilder
     private var presentedSurface: some View {
-        if presentationStyle == .classic {
-            ShelfInteractiveGlassSurface(appearance: settings.appearance,
-                                         onBackgroundTap: clearSelectionAndCollapse) {
-                Color.clear
-                    .overlay { content }
-                    .overlay { dropTargetHighlight }
-                    .overlay { expandedStackOverlay }
-                    .overlay(alignment: .bottom) { dropModeHint }
-            }
+        Color.clear
+            .overlay { content }
+            .overlay { expandedStackOverlay }
+            .overlay(alignment: .bottom) { dropModeHint }
             .animation(reduceMotion ? nil : Self.cardAnimation,
                        value: interaction.expandedStackID)
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.2),
                        value: transferStore.hasVisibleActivity)
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.2),
                        value: dropTargetState.mode)
-            .padding(8)
-            // The invisible fold handle area is attached after padding (in window content coordinate
-            // system): the original position of the handle is 14pt from the panel edge —— attaching before
-            // padding would be inset by 8pt, causing misalignment (real device click misses), must be
-            // attached to the actual panel edge.
-            .overlay(alignment: outerCollapseStripAlignment == .trailing ? .topTrailing : .topLeading) {
-                outerCollapseStrip
-            }
-        } else {
-            Color.clear
-                .overlay { content }
-                .overlay { expandedStackOverlay }
-                .overlay(alignment: .bottom) { dropModeHint }
-                .animation(reduceMotion ? nil : Self.cardAnimation,
-                           value: interaction.expandedStackID)
-                .animation(reduceMotion ? nil : .easeInOut(duration: 0.2),
-                           value: transferStore.hasVisibleActivity)
-                .animation(reduceMotion ? nil : .easeInOut(duration: 0.2),
-                           value: dropTargetState.mode)
-        }
     }
 
     // MARK: - Content
 
     private var content: some View {
         VStack(spacing: 4) {
-            if presentationStyle == .classic {
-                header
-            }
             searchControls
             // No transfer strip while a shelf drag is in flight: inserting it
             // re-lays out the grid and clears card geometry mid-reorder, which
@@ -241,69 +119,39 @@ struct ShelfView: View {
                 .overlay { duplicateDropOverlay }
                 .animation(reduceMotion ? nil : .easeInOut(duration: 0.18),
                            value: showsDuplicateDropOverlay)
-            if presentationStyle == .island {
-                shelfFooter
-                    .padding(.top, IslandModuleLayout.headerSpacing - 4)
-            } else if shouldShowTopLevelQuickActions {
-                ShelfQuickActionBar(items: topLevelActionItems)
-                    .transition(reduceMotion
-                        ? .opacity
-                        : .opacity.combined(with: .move(edge: .bottom)))
-            }
+            shelfFooter
+                .padding(.top, IslandModuleLayout.headerSpacing - 4)
         }
-        .padding(presentationStyle == .classic ? 8 : 0)
         .background {
             // Clicking the blank area clears the selection and collapses the Stack; card clicks are
-            // handled by the card's own event layer. Classic mode is now handled by the glass surface hit
-            // layer (geometry does not follow the height spring animation).
-            if presentationStyle != .classic {
-                Color.clear
-                    .contentShape(Rectangle())
-                    .onTapGesture(perform: clearSelectionAndCollapse)
-            }
+            // handled by the card's own event layer.
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture(perform: clearSelectionAndCollapse)
         }
     }
 
-    @ViewBuilder
+    /// Keeps the search bar and footer in place when the grid becomes a message.
     private var resultsViewport: some View {
-        if presentationStyle == .island {
-            // Keep the search bar and footer in place when the grid becomes a message.
-            Color.clear.overlay { results }
-        } else {
-            results
-        }
+        Color.clear.overlay { results }
     }
 
     @ViewBuilder
     private var results: some View {
         if store.items.isEmpty {
-            Group {
-                if presentationStyle == .island {
-                    IslandEmptyState(title: "Drop files here",
-                                     message: "Hold ⌘ while dropping to move the original here",
-                                     systemImage: "tray.and.arrow.down")
-                        .accessibilityElement(children: .combine)
-                        .accessibilityIdentifier("shelf.emptyState")
-                } else {
-                    ShelfEmptyState(shortcut: settings.hotKeyEnabled
-                        ? settings.hotKeyShortcut.map(ShortcutRecorderLogic.displayString(for:)) : nil)
-                }
-            }
-            .contentShape(Rectangle())
-            .onTapGesture(perform: clearSelectionAndCollapse)
+            IslandEmptyState(title: "Drop files here",
+                             message: "Hold ⌘ while dropping to move the original here",
+                             systemImage: "tray.and.arrow.down")
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("shelf.emptyState")
+                .contentShape(Rectangle())
+                .onTapGesture(perform: clearSelectionAndCollapse)
         } else if store.visibleItems.isEmpty {
-            Group {
-                if presentationStyle == .island {
-                    IslandModuleState(title: "No Results", message: "Try a different search or filter.",
-                                      systemImage: "magnifyingglass") {
-                        Button("Clear Search and Filters") {
-                            store.searchQuery = ""
-                            store.contentFilter = .all
-                        }
-                    }
-                } else {
-                    Text("No Results").foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+            IslandModuleState(title: "No Results", message: "Try a different search or filter.",
+                              systemImage: "magnifyingglass") {
+                Button("Clear Search and Filters") {
+                    store.searchQuery = ""
+                    store.contentFilter = .all
                 }
             }
             .contentShape(Rectangle())
@@ -314,7 +162,7 @@ struct ShelfView: View {
     }
 
     private var showsDuplicateDropOverlay: Bool {
-        ShelfDuplicateFeedback.usesFileOverlay && presentationStyle == .island
+        ShelfDuplicateFeedback.usesFileOverlay
             && ShelfDuplicateFeedback.isDuplicateTarget(dropTargetState)
     }
 
@@ -343,51 +191,6 @@ struct ShelfView: View {
                 .accessibilityIdentifier("shelf.duplicateDrop")
                 .transition(.opacity)
         }
-    }
-
-    /// Top minimal title bar: shelf name + item count (displays 'Selected/Total' when multiple items are
-    /// selected). S9: in custom position mode, the entire title bar covers the WindowDragHandle (drag
-    /// handle), with a grip symbol added before the title to indicate drag capability; the final frame
-    /// after dragging is persisted to customShelfFrame.
-    private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
-            if isCustomPosition {
-                Image(systemName: "line.3.horizontal")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .accessibilityLabel(Text("Drag to move"))
-            }
-            // Left edge alignment: buttons are placed before the title (on the side of the screen), with
-            // the arrow and position aligned in the same direction.
-            if collapseHandleSide == .trailing {
-                collapseButton(side: .trailing)
-                    .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 5 }
-            }
-            Text("Shelf")
-                .font(.headline)
-            Spacer()
-            Text(countCaption)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-            if collapseHandleSide == .leading {
-                collapseButton(side: .leading)
-                    .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 5 }
-            }
-        }
-        .padding(.horizontal, 8)
-        .padding(.top, 4)
-        .overlay {
-            if isCustomPosition {
-                WindowDragHandle { frame in
-                    settings.customShelfFrame = frame
-                }
-            }
-        }
-    }
-
-    private var isCustomPosition: Bool {
-        settings.shelfPosition == .custom
     }
 
     private var searchControls: some View {
@@ -428,17 +231,6 @@ struct ShelfView: View {
                     }
             }
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: searchFocused)
-            if presentationStyle == .classic {
-                HStack {
-                    Picker("Content Type", selection: $store.contentFilter) {
-                        ForEach(ShelfContentFilter.allCases) { Text($0.title).tag($0) }
-                    }
-                    .labelsHidden()
-                    .controlSize(.small)
-                    Spacer(minLength: 2)
-                    managementMenu
-                }
-            }
         }.font(.caption).buttonStyle(.plain)
     }
 
@@ -512,95 +304,6 @@ struct ShelfView: View {
         }
     }
 
-    private var managementMenu: some View {
-        HStack(spacing: 0) {
-            HStack(spacing: 0) {
-                managementAction("Batch Selection", symbol: interaction.isSelecting ? "checkmark.circle.fill" : "checkmark.circle",
-                                 identifier: "shelf.selection.toggle", enabled: !store.items.isEmpty,
-                                 active: interaction.isSelecting) {
-                    setSelectionMode(!interaction.isSelecting)
-                }
-                managementAction(allVisibleItemsSelected ? "Deselect All" : "Select All",
-                                 symbol: allVisibleItemsSelected ? "checkmark.rectangle.stack.fill" : "checkmark.rectangle.stack",
-                                 identifier: "shelf.selection.all", enabled: !store.visibleItems.isEmpty) {
-                    if allVisibleItemsSelected {
-                        store.clearSelection()
-                    } else {
-                        setSelectionMode(true)
-                        store.selectAllVisible()
-                    }
-                }
-                managementDivider
-                managementAction("Remove Selected", symbol: "trash",
-                                 identifier: "shelf.selection.remove", enabled: !visibleSelection.isEmpty,
-                                 destructive: true) {
-                    removeShelfItems(ids: visibleSelection)
-                }
-                managementAction("Clear Shelf", symbol: "xmark.bin",
-                                 identifier: "shelf.clear", enabled: !store.items.isEmpty,
-                                 destructive: true) {
-                    removeShelfItems(ids: Set(store.items.map(\.id)))
-                }
-                managementDivider
-                managementAction("Undo Remove", symbol: "arrow.uturn.backward",
-                                 identifier: "shelf.undoRemoval", enabled: store.canUndoRemoval) {
-                    _ = store.undoLastRemoval()
-                }
-            }
-            .fixedSize()
-            .frame(width: showsManagementActions ? 130 : 0, alignment: .trailing)
-            .clipped()
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.28),
-                       value: showsManagementActions)
-            .allowsHitTesting(showsManagementActions)
-            .accessibilityHidden(!showsManagementActions)
-            Button {
-                shelfFocusAction?()
-                showsManagementActions.toggle()
-            } label: {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: 13, weight: .semibold))
-                    .frame(width: 28, height: 26)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(ShelfIconButtonStyle(active: interaction.isSelecting,
-                                              expanded: showsManagementActions))
-            .help(Text("Manage Shelf"))
-            .accessibilityLabel("Manage Shelf")
-            .accessibilityIdentifier("shelf.manage")
-        }
-    }
-
-    private var managementDivider: some View {
-        Rectangle()
-            .fill(Color.primary.opacity(0.14))
-            .frame(width: 1, height: 12)
-            .padding(.horizontal, 2)
-            .accessibilityHidden(true)
-    }
-
-    private func managementAction(_ title: LocalizedStringKey, symbol: String,
-                                  identifier: String, enabled: Bool, active: Bool = false,
-                                  destructive: Bool = false, help: LocalizedStringKey? = nil,
-                                  action: @escaping () -> Void) -> some View {
-        Button {
-            searchFocused = false
-            shelfFocusAction?()
-            action()
-        } label: {
-            Image(systemName: symbol)
-                .font(.system(size: 13, weight: .medium))
-                .frame(width: 24, height: 26)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(ShelfIconButtonStyle(active: active, destructive: destructive))
-        .disabled(!enabled)
-        .help(Text(help ?? title))
-        .accessibilityLabel(Text(title))
-        .accessibilityValue(active ? Text("Selected") : Text(""))
-        .accessibilityIdentifier(identifier)
-    }
-
     private func setSelectionMode(_ enabled: Bool) {
         if enabled {
             collapseStack()
@@ -614,21 +317,14 @@ struct ShelfView: View {
     }
 
     private func removeShelfItems(ids: Set<UUID>) {
-        let remove: @MainActor () -> Void = {
-            do {
-                let removed = try store.removeBatchForUser(ids: ids)
-                guard !removed.isEmpty else { return }
-                interaction.normalize(for: store.visibleItems)
-                quickLookCoordinator?.refreshPreview(contextItem: nil)
-                shelfMessenger?.post(.removed)
-            } catch {
-                shelfMessenger?.post(.removalFailed)
-            }
-        }
-        if let shelfUserRemovalAction {
-            shelfUserRemovalAction(remove)
-        } else {
-            remove()
+        do {
+            let removed = try store.removeBatchForUser(ids: ids)
+            guard !removed.isEmpty else { return }
+            interaction.normalize(for: store.visibleItems)
+            quickLookCoordinator?.refreshPreview(contextItem: nil)
+            shelfMessenger?.post(.removed)
+        } catch {
+            shelfMessenger?.post(.removalFailed)
         }
     }
 
@@ -638,12 +334,6 @@ struct ShelfView: View {
         interaction.normalize(for: visible)
         gridGeometry.cardFrames = gridGeometry.cardFrames.filter { frame in visible.contains { $0.id == frame.key } }
         dropTargetState.reset()
-    }
-
-    private var countCaption: String {
-        store.selection.isEmpty
-            ? "\(store.items.count)"
-            : String(localized: "\(store.selection.count) of \(store.items.count)")
     }
 
     // MARK: - Grid
@@ -657,53 +347,25 @@ struct ShelfView: View {
                 repeating: GridItem(.flexible(minimum: 0), spacing: Self.gridSpacing, alignment: .top),
                 count: ShelfLayoutEngine.gridColumnCount(for: viewport.size.width)
             )
-            let fits = presentationStyle == .classic
-                && ShelfLayoutEngine.gridFits(itemCount: store.visibleItems.count,
-                                              viewport: viewport.size)
-            Group {
-                if presentationStyle == .island {
-                    ScrollViewReader { proxy in
-                        IslandModuleScrollView {
-                            cardGrid(columns: gridColumns)
-                        }
-                        .onChange(of: interaction.focusedItemID) { _, id in
-                            if let id { proxy.scrollTo(id) }
-                        }
-                        .onChange(of: store.duplicateDrop) { _, drop in
-                            if let id = store.visibleItems.first(where: { drop?.cardIDs.contains($0.id) == true })?.id {
-                                proxy.scrollTo(id)
-                            }
-                        }
-                    }
-                } else if fits {
+            ScrollViewReader { proxy in
+                IslandModuleScrollView {
                     cardGrid(columns: gridColumns)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                } else {
-                    scrollingGrid(columns: gridColumns)
+                }
+                .onChange(of: interaction.focusedItemID) { _, id in
+                    if let id { proxy.scrollTo(id) }
+                }
+                .onChange(of: store.duplicateDrop) { _, drop in
+                    if let id = store.visibleItems.first(where: { drop?.cardIDs.contains($0.id) == true })?.id {
+                        proxy.scrollTo(id)
+                    }
                 }
             }
             // The grid container keeps the pre-selection bounds for a few frames
-            // while the quick-action row animates in, so it swallows clicks on
+            // while the selection footer changes, so it swallows clicks on
             // the empty area below the cards. Treat a tap here as a background
             // tap; card clicks are owned by their AppKit event layer.
             .contentShape(Rectangle())
             .onTapGesture(perform: clearSelectionAndCollapse)
-            // Change the container immediately; do not keep an outgoing grid
-            // alive with the same card IDs and shared drag/selection geometry.
-            .animation(nil, value: fits)
-        }
-    }
-
-    private func scrollingGrid(columns: [GridItem]) -> some View {
-        ScrollViewReader { proxy in
-            ScrollView(.vertical) {
-                cardGrid(columns: columns)
-            }
-            .scrollIndicators(presentationStyle == .island ? .automatic : .hidden)
-            .scrollBounceBehavior(.basedOnSize)
-            .onChange(of: interaction.focusedItemID) { _, id in
-                if let id { proxy.scrollTo(id) }
-            }
         }
     }
 
@@ -760,7 +422,7 @@ struct ShelfView: View {
                 item: item,
                 isSelected: store.selection.contains(item.id),
                 isKeyboardFocused: interaction.focusedItemID == item.id
-                    && (presentationStyle == .classic || interaction.showsKeyboardFocus),
+                    && interaction.showsKeyboardFocus,
                 isExpanded: interaction.expandedStackID == item.id,
                 onSelect: { additive in select(item.id, additive: additive) },
                 onToggleExpanded: { toggleStackExpansion(item.id) },
@@ -781,7 +443,7 @@ struct ShelfView: View {
                 item: item,
                 isSelected: store.selection.contains(item.id),
                 isKeyboardFocused: interaction.focusedItemID == item.id
-                    && (presentationStyle == .classic || interaction.showsKeyboardFocus),
+                    && interaction.showsKeyboardFocus,
                 onSelect: { additive in select(item.id, additive: additive) },
                 onRemove: { store.removeForUser(ids: [item.id]) },
                 onRecover: { itemRecoveryController?.recover(item) },
@@ -817,29 +479,7 @@ struct ShelfView: View {
             .allowsHitTesting(false)
     }
 
-    // MARK: - Drop highlight (S4 reserved)
-
-    /// S4: when DragContainerView is hovered over during drag-in, `dropTargetState.isTargeted == true`,
-    /// the entire panel is outlined with a light fill to indicate the drop area. F-05: the accent color
-    /// changes based on the drag-in mode — copy and reference use accent, ⌘ cut and move use orange (same
-    /// color as the card's scissors badge, consistent in semantics).
-    @ViewBuilder
-    private var dropTargetHighlight: some View {
-        if dropTargetState.isTargeted, !dropTargetState.isReordering {
-            RoundedRectangle(cornerRadius: settings.appearance.cornerRadius)
-                .strokeBorder(dropModeTint, lineWidth: 2)
-                .background {
-                    RoundedRectangle(cornerRadius: settings.appearance.cornerRadius)
-                        .fill(dropModeTint.opacity(0.12))
-                }
-                .allowsHitTesting(false)
-        }
-    }
-
-    /// F-05: accent color for drag-in mode.
-    private var dropModeTint: Color {
-        dropTargetState.mode == .move ? .orange : .accentColor
-    }
+    // MARK: - Drop hint
 
     /// F-05: mode hint during hover (capsule at the bottom of the panel). Only show a hint for reordering
     /// or moving the original file.
@@ -856,85 +496,6 @@ struct ShelfView: View {
                 .padding(.bottom, 10)
                 .transition(.opacity)
                 .allowsHitTesting(false)
-        }
-    }
-
-    // MARK: - Collapse button (issue #10)
-
-    /// Collapse direction (pure logic in `ShelfLayoutEngine.innerEdgeHandleSide`); custom free position
-    /// mode is nil — collapse button is not displayed.
-    private var collapseHandleSide: ShelfLayoutEngine.InnerEdgeHandleSide? {
-        guard presentationStyle == .classic else { return nil }
-        return ShelfLayoutEngine.innerEdgeHandleSide(for: settings.shelfPosition)
-    }
-
-    /// Title bar collapse button. Previously, it was a full chevron column attached to the panel's inner
-    /// edge, with single-side widened margins and isolated arrows breaking the panel's left-right symmetry
-    /// (issue #10); now it is aligned with the '⋯' management button below, in the same column and style,
-    /// with the chevron pointing toward the attached screen edge (the direction of the pull handle).
-    private func collapseButton(side: ShelfLayoutEngine.InnerEdgeHandleSide) -> some View {
-        Button {
-            shelfHideAction?()
-        } label: {
-            Image(systemName: side == .leading ? "chevron.right" : "chevron.left")
-                .font(.system(size: 11, weight: .semibold))
-                .frame(width: 28, height: 22)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(ShelfIconButtonStyle())
-        // Offset the title bar's 8pt horizontal padding: when right-aligned, it aligns with the '⋯' button
-        // (28pt wide, attached to the right content edge); when left-aligned, it aligns with the left
-        // content edge, matching the 'All' filter below.
-        .padding(side == .leading ? .trailing : .leading, -8)
-        .padding(.vertical, -3)
-        .help(Text("Hide Shelf"))
-        .accessibilityLabel(Text("Hide Shelf"))
-        .accessibilityIdentifier("shelf.hide.handle")
-    }
-
-    // MARK: - Invisible edge area (exclusive model)
-
-    /// Hot zone attached to the side = panel**attached to the screen edge side** (opposite to the inner
-    /// edge handle): right anchor → trailing, left anchor → leading; custom is nil (not displayed). This
-    /// is where the handle originally was —
-    /// the handle appears only when the shelf is hidden, and when the user taps the same point after the
-    /// shelf is expanded, it collapses
-    /// (Real device verification: 'After tapping the handle to expand, tapping the same location again
-    /// does not collapse it').
-    private var outerCollapseStripSide: ShelfLayoutEngine.InnerEdgeHandleSide? {
-        switch collapseHandleSide {
-        case .leading: return .trailing
-        case .trailing: return .leading
-        case nil: return nil
-        }
-    }
-
-    private var outerCollapseStripAlignment: Alignment {
-        outerCollapseStripSide == .trailing ? .trailing : .leading
-    }
-
-    /// Fully invisible hot zone (user explicitly does not want extra visual elements), retains tooltip and
-    /// VoiceOver label; width matches the handle (≤ panel margin band 16pt), does not occupy grid width.
-    /// Note: Use 0.001 white instead of `Color.clear` —— in practice, clear does not receive hit in this
-    /// context
-    /// (the inner edge handle works because it has real glyph content).
-    @ViewBuilder
-    private var outerCollapseStrip: some View {
-        if outerCollapseStripSide != nil {
-            Button {
-                shelfHideAction?()
-            } label: {
-                Color.white.opacity(0.001)
-            }
-            .buttonStyle(.plain)
-            .frame(width: ShelfLayoutEngine.innerEdgeHandleWidth)
-            // The window may be taller than the glass surface (bottom transparent), the hot zone only
-            // covers the glass surface portion.
-            .frame(maxHeight: reveal?.surfaceHeight.map { $0 + 16 } ?? .infinity)
-            .contentShape(Rectangle())
-            .accessibilityLabel(Text("Hide Shelf"))
-            .accessibilityIdentifier("shelf.hide.edge")
-            .help(Text("Hide Shelf"))
         }
     }
 
@@ -997,22 +558,6 @@ struct ShelfView: View {
 
     // MARK: - Selection
 
-    private var topLevelActionItems: [ShelfItem] {
-        ShelfActionSelectionResolver.explicitItems(
-            topLevelItems: store.items,
-            topLevelSelection: store.selection,
-            expandedStackID: nil,
-            childSelection: []
-        )
-    }
-
-    private var shouldShowTopLevelQuickActions: Bool {
-        !interaction.isSelecting
-            && interaction.expandedStackID == nil
-            && !dropTargetState.isTargeted
-            && ShelfActionCatalog.hasAnyAction(for: topLevelActionItems)
-    }
-
     private func select(_ id: UUID, additive: Bool) {
         searchFocused = false
         shelfFocusAction?()
@@ -1026,7 +571,6 @@ struct ShelfView: View {
     private func clearSelectionAndCollapse() {
         searchFocused = false
         shelfFocusAction?()
-        showsManagementActions = false
         collapseStack()
         interaction.clearActiveSelection(in: store)
         interaction.showsKeyboardFocus = false

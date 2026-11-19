@@ -71,7 +71,6 @@ final class SettingsNavigationTests: XCTestCase {
 
     func testSidebarSeparatesPanelNotchAndModules() {
         XCTAssertEqual(Array(SettingsPane.visibleCases.prefix(5)), [.general, .panel, .notch, .modules, .storage])
-        XCTAssertFalse(SettingsPane.visibleCases.contains(.appearance))
     }
 
     func testArrowsDoNotWrapAtSidebarBoundaries() {

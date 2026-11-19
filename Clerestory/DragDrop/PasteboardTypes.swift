@@ -99,7 +99,7 @@ enum PasteboardTypes {
     /// (item only declares `public.data` and has payload, content is not lost).
     static let genericFallbackTypes: [NSPasteboard.PasteboardType] = [data, item, content, fileContents]
 
-    /// All drag-in types registered by `DragContainerView` / `EdgeTabView`.
+    /// All drag-in types registered by `DragContainerView`.
     /// Task 1 expands: main chain types + URL variants/unconformed specific types + generic fallback.
     static let dragInTypes: [NSPasteboard.PasteboardType] =
         filePromiseTypes + [fileURL] + imageTypes + [url] + textTypes

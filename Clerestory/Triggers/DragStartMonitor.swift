@@ -60,95 +60,15 @@ struct DragGestureTracker: Sendable, Equatable {
     }
 }
 
-/// UX1/2: Decision on shelf auto-show/hide during a drag session (pure logic, decoupled from AppKit).
-///
-/// Semantics (user confirmation):
-/// - When drag triggers shelf appearance, mark as `shownAutomatically` (only if shelf was not visible
-/// before drag — if it was visible before, it was user-initiated, so do not change this session);
-/// - If content successfully drops into shelf during this drag (`DropImportCoordinator.onImportHandled`) →
-/// `noteImport()` resets the 'no drop' assumption;
-/// - Drag ends: if no drop, shelf retracts; if successful drop, shelf remains expanded by default, can be
-/// closed by user.
-/// - Wait for AppKit's drop result when entering local receiving area, rather than guessing callback
-/// delay.
-struct DragAutoShowSession: Sendable, Equatable {
-    /// Whether this session is in a confirmed drag (mouseDown threshold crossed → mouseUp).
-    private(set) var isDragging = false
-    /// Whether this drag triggered automatic shelf appearance (shelf was originally invisible).
-    private(set) var shownAutomatically = false
-    /// Whether content has successfully dropped into shelf during this drag.
-    private(set) var receivedImport = false
-    private var destinationSequenceNumber: Int?
-    private var destinationDidEnd = false
-    private var destinationAccepted = false
-    private var keepAfterDrop = true
-
-    /// Drag started (threshold crossed): start new session, clear all previous markers.
-    mutating func dragBegan() {
-        self = Self()
-        isDragging = true
-    }
-
-    /// Mark 'this display is triggered by drag-driven auto-show'. Ignore when not in a drag session (e.g.,
-    /// triggered by shortcut key, clipboard save trigger) — those are explicit intents and do not
-    /// participate in auto-retract.
-    mutating func markShownAutomatically() {
-        guard isDragging else { return }
-        shownAutomatically = true
-    }
-
-    /// This round has content successfully entered the shelf (synchronous import or already dispatched
-    /// asynchronous materialization).
-    mutating func noteImport() {
-        receivedImport = true
-    }
-
-    /// A real AppKit destination owns completion once it has seen this drag.
-    /// Keep the identity after exit: draggingEnded also covers cancellation or
-    /// a drop elsewhere. A late callback from an older drag cannot close a new one.
-    mutating func destinationEntered(sequenceNumber: Int) {
-        guard isDragging,
-              destinationSequenceNumber == nil || destinationSequenceNumber == sequenceNumber else { return }
-        destinationSequenceNumber = sequenceNumber
-    }
-
-    /// Returns a hide decision only after BOTH mouse-up and destination completion.
-    mutating func destinationEnded(sequenceNumber: Int, accepted: Bool) -> Bool {
-        guard destinationSequenceNumber == sequenceNumber, !destinationDidEnd else { return false }
-        destinationDidEnd = true
-        destinationAccepted = accepted
-        return isDragging ? false : finish()
-    }
-
-    /// Explicit show/hide takes ownership away from automatic presentation.
-    mutating func cancelAutomaticHide() {
-        shownAutomatically = false
-    }
-
-    mutating func dragEnded(keepShelfOpenAfterDrop: Bool = true) -> Bool {
-        guard isDragging else { return false }
-        isDragging = false
-        keepAfterDrop = keepShelfOpenAfterDrop
-        if destinationSequenceNumber != nil && !destinationDidEnd { return false }
-        return finish()
-    }
-
-    private mutating func finish() -> Bool {
-        defer { self = Self() }
-        let accepted = destinationSequenceNumber == nil ? receivedImport : destinationAccepted
-        return shownAutomatically && !(accepted && keepAfterDrop)
-    }
-}
-
 /// Decides when a Panel opened by a drag learns how that drag ended (pure logic, decoupled from
 /// AppKit).
 ///
 /// `DragStartMonitor` reports mouse-up from the global event stream, and AppKit can call
 /// `performDragOperation` on the Panel after that, so the import may not have happened at
 /// mouse-up. Once a Panel drop destination has seen the drag, the decision waits for both
-/// mouse-up and that destination's completion, the same way `DragAutoShowSession` waits for
-/// the classic Shelf. A drag no Panel destination saw decides at mouse-up. If the destination
-/// never reports, `destinationTimedOut(generation:)` decides with what is known.
+/// mouse-up and that destination's completion. A drag no Panel destination saw decides at
+/// mouse-up. If the destination never reports, `destinationTimedOut(generation:)` decides with
+/// what is known.
 struct IslandDragEndSession: Sendable, Equatable {
     /// How long to wait for a Panel destination after mouse-up.
     static let destinationTimeout: Duration = .seconds(1)
@@ -253,6 +173,63 @@ struct IslandDragEndSession: Sendable, Equatable {
     }
 }
 
+/// Associates drag-pasteboard content with the current mouse gesture.
+///
+/// `NSPasteboard.Name.drag` retains the previous drag after that gesture ends.
+/// Window moves or text selection can therefore leave stale content from an
+/// earlier drag visible to an out-of-session type check.
+/// A content drag is eligible only after the pasteboard change count advances
+/// beyond the value captured for this gesture's mouse-down event.
+struct DragPasteboardTracker: Sendable, Equatable {
+    private var mouseDownChangeCount: Int?
+    private var observedChangeCount: Int?
+    private(set) var hasFreshContent = false
+
+    mutating func mouseDown(changeCount: Int) {
+        mouseDownChangeCount = changeCount
+        observedChangeCount = changeCount
+        hasFreshContent = false
+    }
+
+    mutating func mouseDragged(changeCount: Int, hasEligibleContent: Bool) -> Bool {
+        guard let mouseDownChangeCount else { return false }
+        guard observedChangeCount != changeCount else { return hasFreshContent }
+
+        observedChangeCount = changeCount
+        if changeCount != mouseDownChangeCount {
+            hasFreshContent = hasEligibleContent
+        }
+        return hasFreshContent
+    }
+
+    mutating func mouseUp() {
+        reset()
+    }
+
+    mutating func reset() {
+        mouseDownChangeCount = nil
+        observedChangeCount = nil
+        hasFreshContent = false
+    }
+}
+
+struct DragPasteboardSnapshot: Sendable {
+    let changeCount: Int
+    let typeIdentifiers: [String]
+
+    var types: [NSPasteboard.PasteboardType] {
+        typeIdentifiers.map { NSPasteboard.PasteboardType($0) }
+    }
+
+    nonisolated static func current() -> DragPasteboardSnapshot {
+        let pasteboard = NSPasteboard(name: .drag)
+        return DragPasteboardSnapshot(
+            changeCount: pasteboard.changeCount,
+            typeIdentifiers: pasteboard.types?.map(\.rawValue) ?? []
+        )
+    }
+}
+
 /// Global Shelf-content drag monitor. A fresh drag pasteboard change establishes the
 /// session; a common-run-loop poll fills gaps in AppKit mouse event delivery.
 ///
@@ -267,18 +244,17 @@ struct IslandDragEndSession: Sendable, Equatable {
 /// - `onDragStart`: First detection of new file or text drag (ignores drag if suppressed by
 /// `shouldSuppress` when not in the foreground list);
 /// - `onDragEnd`: Left mouse button lifted after confirmed drag (not suppressed — suppression means no
-/// session, safe for `DragAutoShowSession` to idle).
+/// session).
 ///
-/// EdgeTab: `isDragInProgress` is an observable 'drag in progress' state (set when threshold is confirmed,
-/// not affected by `shouldSuppress` — suppression only blocks show, does not change the fact that dragging
-/// is happening), used for highliting in edge pull ring; reset on lift or `stop()`.
+/// `isDragInProgress` is set when the threshold is confirmed, whether or not `shouldSuppress` blocks
+/// the session, and resets on lift or `stop()`.
 @MainActor
 @Observable
 final class DragStartMonitor {
     /// Whether the event monitors are currently registered.
     private(set) var isMonitoring = false
 
-    /// EdgeTab: Confirmed drag session is in progress (threshold crossed → lift).
+    /// Confirmed drag session is in progress (threshold crossed → lift).
     private(set) var isDragInProgress = false
 
     private var gestureTracker = DragGestureTracker()

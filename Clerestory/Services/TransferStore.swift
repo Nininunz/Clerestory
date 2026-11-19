@@ -123,10 +123,6 @@ final class TransferStore {
     private(set) var tasks: [TransferTask] = []
     private(set) var visibleTaskIDs: Set<UUID> = []
 
-    /// ShelfWindowController uses this only to recalculate compact height when
-    /// the strip appears or disappears. SwiftUI observes the task values.
-    @ObservationIgnored var onVisibilityDidChange: (@MainActor () -> Void)?
-
     @ObservationIgnored private var failuresByTaskID: [UUID: [TransferFailure]] = [:]
     @ObservationIgnored private var exportProgressByTaskID: [UUID: ExportProgress] = [:]
     @ObservationIgnored private var dismissalTasks: [UUID: Task<Void, Never>] = [:]
@@ -202,7 +198,6 @@ final class TransferStore {
             }
             return id
         }
-        let wasVisible = hasVisibleActivity
         tasks.append(TransferTask(
             id: id,
             direction: .importIntoShelf,
@@ -215,7 +210,6 @@ final class TransferStore {
         visibleTaskIDs.insert(id)
         failuresByTaskID[id] = []
         trimHistory()
-        notifyVisibilityChange(ifPreviously: wasVisible)
         completeIfReady(id: id)
         return id
     }
@@ -235,7 +229,6 @@ final class TransferStore {
         }
         guard !uniqueItemIDs.isEmpty else { return id }
 
-        let wasVisible = hasVisibleActivity
         tasks.append(TransferTask(
             id: id,
             direction: .exportFromShelf,
@@ -249,7 +242,6 @@ final class TransferStore {
         failuresByTaskID[id] = []
         exportProgressByTaskID[id] = ExportProgress(expectedItemIDs: uniqueItemIDs)
         trimHistory()
-        notifyVisibilityChange(ifPreviously: wasVisible)
         return id
     }
 
@@ -402,9 +394,7 @@ final class TransferStore {
     func dismiss(taskID: UUID) {
         dismissalTasks[taskID]?.cancel()
         dismissalTasks[taskID] = nil
-        let wasVisible = hasVisibleActivity
         visibleTaskIDs.remove(taskID)
-        notifyVisibilityChange(ifPreviously: wasVisible)
     }
 
     // MARK: - State reduction
@@ -488,9 +478,7 @@ final class TransferStore {
     }
 
     private func makeVisible(_ id: UUID) {
-        let wasVisible = hasVisibleActivity
         visibleTaskIDs.insert(id)
-        notifyVisibilityChange(ifPreviously: wasVisible)
     }
 
     private func scheduleSuccessDismissal(taskID: UUID) {
@@ -503,12 +491,6 @@ final class TransferStore {
             }
             guard !Task.isCancelled else { return }
             self?.dismiss(taskID: taskID)
-        }
-    }
-
-    private func notifyVisibilityChange(ifPreviously wasVisible: Bool) {
-        if wasVisible != hasVisibleActivity {
-            onVisibilityDidChange?()
         }
     }
 

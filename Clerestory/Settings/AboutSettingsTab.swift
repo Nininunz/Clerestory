@@ -20,7 +20,7 @@ struct AboutSettingsTab: View {
             }
 
             Section("Acknowledgments") {
-                Text("Clerestory is based on OpenYoink by weijue and contributors. Bundled third-party components are Sparkle (MIT) for updates and mediaremote-adapter (BSD 3-Clause) for the optional local Now Playing module. The glass edge highlights adapt liquid-glass-react (MIT). A complete attribution record is available in THIRD_PARTY_NOTICES.md in the source repository.")
+                Text("Clerestory is based on OpenYoink by weijue and contributors. Bundled third-party components are Sparkle (MIT) for updates and mediaremote-adapter (BSD 3-Clause) for the optional local Now Playing module. A complete attribution record is available in THIRD_PARTY_NOTICES.md in the source repository.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

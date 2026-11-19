@@ -31,7 +31,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private let startup = AppDelegate.makeStartupSettings()
-    private let appState = AppState()
     /// Persists Shelf changes as atomic JSON writes with a 500 ms debounce.
     private let persistence = PersistenceController()
     /// Creates and resolves security-scoped bookmarks and manages access for thumbnails and opening files.
@@ -117,8 +116,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Help, voluntary issue reporting and privacy-safe local diagnostics.
     lazy var supportController = SupportController(settings: settingsStore)
 
-    private lazy var shelfWindowController: ShelfWindowController = ShelfWindowController(appState: appState,
-                                                                   store: shelfStore,
+    private lazy var shelfWindowController: ShelfWindowController = ShelfWindowController(store: shelfStore,
                                                                    importCoordinator: dropImportCoordinator,
                                                                    messages: messages,
                                                                    tempFileService: tempFileService,
@@ -222,29 +220,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         onPress: { [weak self] in self?.clipboardHistoryWindowController.show() },
         onDoublePress: {}
     )
-    /// A short dwell at the screen edge opens Shelf during a left-button drag.
-    /// Repeated edge contact leaves Shelf open so the user can drop items there.
-    /// The shortcut, menu, and end of an empty drag session can dismiss it.
-    /// Custom placement has no attached edge. Dragging the EdgeTab to reposition it
-    /// also suppresses the trigger.
-    private lazy var edgeTriggerMonitor = EdgeTriggerMonitor(shouldSuppress: { [weak self] in
-        guard let self else { return true }
-        return self.appState.isShelfVisible
-            || self.appState.isEdgeTabBeingDragged
-            || IgnoreListService.frontmostAppIsIgnored(in: self.settingsStore.ignoredAppBundleIDs)
-    }, onTrigger: { [weak self] in
-        guard let self, !self.appState.isShelfVisible else { return }
-        // Track edge-triggered reveals so an empty drag session can dismiss Shelf.
-        self.shelfPresentationCoordinator.showClassic(animated: true)
-        self.dragAutoShowSession.markShownAutomatically()
-    })
     /// Tracks drag start after pointer travel crosses the threshold and drag end on mouse-up.
-    /// Keep it registered when any drag reveal can run or when EdgeTab needs drop cues.
-    /// Dragging EdgeTab updates drag state, while isEdgeTabBeingDragged suppresses Shelf reveal.
+    /// It stays registered while the Panel can open for a drag.
     private lazy var dragStartMonitor = DragStartMonitor(shouldSuppress: { [weak self] in
         guard let self else { return false }
-        return self.appState.isEdgeTabBeingDragged
-            || IgnoreListService.frontmostAppIsIgnored(in: self.settingsStore.ignoredAppBundleIDs)
+        return IgnoreListService.frontmostAppIsIgnored(in: self.settingsStore.ignoredAppBundleIDs)
     }, onDragStart: { [weak self] in
         self?.handleDragStart()
     }, onPotentialDragChange: { [weak self] active in
@@ -254,31 +234,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }, onDragEnd: { [weak self] in
         self?.handleDragEnd()
     })
-    /// Tracks drag-triggered Shelf reveals and decides when to dismiss them.
-    private var dragAutoShowSession = DragAutoShowSession()
     /// Decides when a Panel the drag opened learns how the drag ended.
     private var islandDragEndSession = IslandDragEndSession()
     private var islandDragEndTimeout: Task<Void, Never>?
     private var noticeRevisionBeforeDrag: UInt64 = 0
-
-    /// The edge tab opens Shelf on click, accepts drops, and can be dragged along the edge.
-    /// Shelf hides the tab while open. A transparent hit area along the same edge closes Shelf.
-    private lazy var edgeTabController = EdgeTabController(
-        appState: appState,
-        settings: settingsStore,
-        store: shelfStore,
-        importCoordinator: dropImportCoordinator,
-        dragStartMonitor: dragStartMonitor,
-        onToggleShelf: { [weak self] in
-            self?.shelfPresentationCoordinator.toggleClassic(animated: true)
-        },
-        onShowShelf: { [weak self] in
-            self?.shelfPresentationCoordinator.showClassic(animated: true)
-        },
-        onPreviewSuppressed: { [weak self] in
-            self?.shelfWindowController.suppressClassicHoverPreview()
-        }
-    )
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         if isUITesting {
@@ -295,17 +254,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let hasLegacyInstallEvidence = legacyInstallEvidence()
         _ = menuBarController
         if !isUITesting && settingsStore.experimentalModulesEnabled { clipboardHistoryStore.start() }
-        // Install EdgeTab immediately while Shelf is still hidden.
-        if SideShelfAvailability.isEnabled { _ = edgeTabController }
         // Start Sparkle after applying the automatic update preference. Startup is idempotent.
         if !isUITesting {
             updateController.start()
         }
-        // Count successful drops and clipboard saves so an automatic reveal stays open after import.
+        // Count successful drops and clipboard saves so a Panel the drag opened stays open after import.
         dropImportCoordinator.onImportHandled = { [weak self] in
-            self?.dragAutoShowSession.noteImport()
             self?.islandDragEndSession.noteImport()
-            self?.shelfWindowController.promoteClassicHoverPreviewIfNeeded()
         }
         shelfWindowController.onIslandDestinationEntered = { [weak self] sequenceNumber in
             self?.islandDragEndSession.destinationEntered(sequenceNumber: sequenceNumber)
@@ -315,19 +270,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.applyIslandDragEnd(
                 self.islandDragEndSession.destinationEnded(sequenceNumber: sequenceNumber, accepted: accepted)
             )
-        }
-        shelfWindowController.onClassicDestinationEntered = { [weak self] sequenceNumber in
-            self?.dragAutoShowSession.destinationEntered(sequenceNumber: sequenceNumber)
-        }
-        shelfWindowController.onClassicDestinationEnded = { [weak self] sequenceNumber, accepted in
-            guard let self else { return }
-            if self.dragAutoShowSession.destinationEnded(sequenceNumber: sequenceNumber, accepted: accepted),
-               self.appState.isShelfVisible {
-                self.shelfPresentationCoordinator.hideClassic(animated: true)
-            }
-        }
-        shelfWindowController.onClassicPresentationRequested = { [weak self] in
-            self?.dragAutoShowSession.cancelAutomaticHide()
         }
         if !isUITesting {
             applyTriggerSettings()
@@ -427,7 +369,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         clipboardHotKeyMonitor.setEnabled(false)
         notchCycleHotKeyMonitor.setEnabled(false)
         notchReverseCycleHotKeyMonitor.setEnabled(false)
-        edgeTriggerMonitor.stop()
         dragStartMonitor.stop()
     }
 
@@ -453,22 +394,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         shelfPresentationCoordinator.toggleForKeyboard(animated: true)
     }
 
-    // MARK: - UX1/UX2 drag-driven appearance
+    // MARK: - Drag-driven Panel
 
     /// Start tracking a confirmed drag after it crosses the movement threshold.
-    /// Immediate mode opens a hidden Shelf and marks it as automatic. A visible Shelf stays
-    /// as it is. Edge-only mode tracks the drag and delegates opening to the edge trigger.
     private func handleDragStart() {
         // End a Panel drag still waiting for its destination before the notice baseline moves.
         applyIslandDragEnd(islandDragEndSession.dragBegan())
         noticeRevisionBeforeDrag = messages.noticeRevision(for: .shelf)
-        dragAutoShowSession.dragBegan()
-        guard settingsStore.effectivePreferredShelfSurface == .classic else { return }
-        guard settingsStore.classicShelfEnabled else { return }
-        guard settingsStore.dragAutoAppearMode == .immediate else { return }
-        guard !appState.isShelfVisible else { return }
-        shelfPresentationCoordinator.showClassic(animated: true)
-        dragAutoShowSession.markShownAutomatically()
     }
 
     private func handleDragUpdate(at point: CGPoint) {
@@ -479,20 +411,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Dismiss an automatic reveal after an empty drop. A successful drop stays open by default.
-    /// The state machine waits for the receiver because its callback can arrive after mouse-up.
-    ///
-    /// DragStartMonitor clears isDragInProgress before delivering onDragEnd, so this path
-    /// dismisses only after mouse-up. Successful imports, including queued materialization,
-    /// are recorded through onImportHandled and noteImport. The setting controls whether Shelf
-    /// stays open. EmptyShelfAutoHideRule also checks isDragInProgress before dismissing.
+    /// Mouse-up ends the drag. Successful imports, including queued materialization, are
+    /// recorded through onImportHandled and noteImport.
     private func handleDragEnd() {
-        let shouldHideClassic = dragAutoShowSession.dragEnded(
-            keepShelfOpenAfterDrop: settingsStore.keepShelfOpenAfterDrop
-        )
         applyIslandDragEnd(islandDragEndSession.mouseUp())
-        guard shouldHideClassic, appState.isShelfVisible else { return }
-        shelfPresentationCoordinator.hideClassic(animated: true)
     }
 
     /// Ends the drag for a Panel the drag opened once mouse-up and any Panel destination that
@@ -544,7 +466,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.shelfStore.add(item)
         }
         guard result.handled else {
-            if appState.isShelfVisible {
+            if shelfPresentationCoordinator.isExpanded {
                 shelfMessenger.post(.clipboardEmpty)
             }
             return
@@ -797,11 +719,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Apply trigger settings at startup and after defaults changes. Monitors ignore identical
     /// configurations so unrelated preference changes cannot register duplicate listeners.
-    ///
-    /// Immediate mode reveals Shelf on drag confirmation. Edge-only mode uses a short edge
-    /// dwell, and off disables both reveal paths. Custom placement has no attached edge.
-    /// Keep drag tracking active when either reveal path is available or when an enabled edge tab
-    /// needs isDragInProgress for drop cues.
+    /// Drag tracking runs while the Panel's Shelf can open for a drag.
     private func applyTriggerSettings() {
         if !isUITesting && settingsStore.experimentalModulesEnabled {
             clipboardHistoryStore.start()
@@ -839,31 +757,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ? String(localized: "Choose a notch shortcut whose forward and reverse combinations differ from the shelf and clipboard shortcuts.")
             : notchCycleHotKeyMonitor.registrationError ?? notchReverseCycleHotKeyMonitor.registrationError
 
-        let classicActive = SideShelfAvailability.isEnabled && settingsStore.classicShelfEnabled
-        let edgeActive = classicActive
-            && settingsStore.dragAutoAppearMode == .edgeOnly
-            && settingsStore.shelfPosition != .custom
-        if edgeActive {
-            edgeTriggerMonitor.start(
-                side: settingsStore.shelfPosition,
-                dwellTime: settingsStore.edgeTriggerSensitivity.edgeDwellTime,
-                bandWidth: settingsStore.edgeTriggerSensitivity.edgeBandWidth
-            )
-        } else {
-            edgeTriggerMonitor.stop()
-        }
-
-        // Keep drag tracking active whenever EdgeTab is enabled and can attach to an edge.
-        let edgeTabActive = classicActive
-            && settingsStore.edgeTabEnabled
-            && settingsStore.shelfPosition != .custom
         let islandDragActive = settingsStore.islandEnabled
             && settingsStore.islandShelfEnabled
             && !IslandScreenCatalog.options().isEmpty
-        let classicImmediateActive = settingsStore.effectivePreferredShelfSurface == .classic
-            && settingsStore.dragAutoAppearMode == .immediate
-        if classicImmediateActive
-            || edgeActive || edgeTabActive || islandDragActive {
+        if islandDragActive {
             dragStartMonitor.start()
         } else {
             dragStartMonitor.stop()

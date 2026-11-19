@@ -1,6 +1,6 @@
 # Third-Party Notices & Clean-Implementation Record
 
-Clerestory is based on Open-Yoink, which is a **clean-room implementation**. We referred to the **publicly observable behavior and architectural ideas** of several open-source projects, but did not copy their source code, UI assets, or proprietary implementations. This file records the third-party code that is included and its licenses (Sparkle, mediaremote-adapter, liquid-glass-react), as well as the sources of behavioral reference; if more third-party code or resources are introduced, they will be added here.
+Clerestory is based on Open-Yoink, which is a **clean-room implementation**. We referred to the **publicly observable behavior and architectural ideas** of several open-source projects, but did not copy their source code, UI assets, or proprietary implementations. This file records the third-party code that is included and its licenses (Sparkle and mediaremote-adapter), as well as the sources of behavioral reference; if more third-party code or resources are introduced, they will be added here.
 
 > Original statement from OpenYoink (Chinese):
 >
@@ -214,7 +214,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ## Confirmation Statement for the Current Version
 
-**Clerestory includes Sparkle (MIT) and mediaremote-adapter (BSD 3-Clause), and adapts the appearance design of liquid-glass-react (MIT) (see below); apart from these, it contains no other third-party code, libraries, images, or fonts.** The other projects listed in the "Behavioral References" table are behavior-level references only; none of their code or assets has entered this repository. If a future version introduces more third-party code or resources, their license texts and copyright attributions will be appended to this file.
+**Clerestory includes Sparkle (MIT) and mediaremote-adapter (BSD 3-Clause); apart from these, it contains no other third-party code, libraries, images, or fonts.** The other projects listed in the "Behavioral References" table are behavior-level references only; none of their code or assets has entered this repository. If a future version introduces more third-party code or resources, their license texts and copyright attributions will be appended to this file.
 
 ## Trademark Notice
 
@@ -223,18 +223,3 @@ POSSIBILITY OF SUCH DAMAGE.
 ## Apple Platform
 
 This application is developed using Apple public APIs (AppKit, SwiftUI, UniformTypeIdentifiers, Quick Look, and others) and follows the Apple Developer Program License Agreement.
-
-
-## Local Appearance customization — liquid-glass-react
-
-The local Appearance build adapts the layered edge-highlight design and decorative elastic response from https://github.com/rdev/liquid-glass-react (local reference version 1.1.1). Native macOS glass provides the optical backdrop; React, SVG displacement maps and the shader generator are not bundled. The original MIT notice is included in the application as `LiquidGlassReact-LICENSE.txt`.
-
-```
-Copyright 2025 MAX ROVENSKY
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-```
