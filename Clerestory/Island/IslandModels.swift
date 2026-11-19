@@ -308,7 +308,7 @@ final class IslandActivityCoordinator {
     /// actually left the notch surface. Without this latch, the mouse-move
     /// monitor immediately schedules another expansion while the click is
     /// still resting on the notch, which can look like the click selected the
-    /// current activity's module instead of collapsing.
+    /// notch's module instead of collapsing.
     private(set) var isHoverRevealSuppressed = false
     var shortcutSwipeDirection = 1
     var shortcutSwipeOffset: CGFloat = 0
@@ -372,13 +372,10 @@ final class IslandActivityCoordinator {
             onStateDidChange?()
         }
     }
-    private(set) var activities: [String: IslandActivity] = [:]
+    /// A file or text drag toward Shelf is in progress. The notch shows the drop arrow.
+    private(set) var isDragInProgress = false
     private var stateBeforeDrag: IslandSurfaceState?
     private var moduleBeforeDrag: IslandModuleID?
-    @ObservationIgnored private var expiryTask: Task<Void, Never>?
-    @ObservationIgnored private var spotlightTask: Task<Void, Never>?
-    @ObservationIgnored private var firstPublishedAt: [String: Date] = [:]
-    private var spotlightRevision: UInt64 = 0
 
     var onSurfaceStateWillChange: (@MainActor (
         IslandSurfaceState,
@@ -465,145 +462,24 @@ final class IslandActivityCoordinator {
         setSurfaceState(.hidden)
     }
 
-    func publish(_ activity: IslandActivity?, at date: Date = Date()) {
-        guard let activity else { return }
-        if activities[activity.id] == nil {
-            // Republishing an alert with fresh numbers must not restart its
-            // spotlight, or a recurring warning could hold the notch forever.
-            firstPublishedAt[activity.id] = date
-        }
-        activities[activity.id] = activity
-        scheduleExpiry()
-        scheduleSpotlightEnd(at: date)
-        onStateDidChange?()
-    }
-
-    func removeActivity(id: String) {
-        guard activities.removeValue(forKey: id) != nil else { return }
-        firstPublishedAt[id] = nil
-        scheduleExpiry()
-        onStateDidChange?()
-    }
-
-    func removeActivities(for moduleID: IslandModuleID) {
-        let previousCount = activities.count
-        activities = activities.filter { $0.value.moduleID != moduleID }
-        if activities.count != previousCount {
-            forgetRemovedActivities()
-            scheduleExpiry()
-            onStateDidChange?()
-        }
-    }
-
-    /// Advisory alerts (AI limits, system load, power changes) announce
-    /// themselves in the notch display for this long, then hand it back to
-    /// Now Playing. They stay published, so the module still shows them and
-    /// they return to the notch once media goes away. Critical battery,
-    /// finished timers, transfers and drags keep outranking media.
-    static let advisorySpotlightDuration: TimeInterval = 8
-
-    func primaryActivity(at date: Date = Date()) -> IslandActivity? {
-        rankedActivity(at: date, filterSelectedModule: true)
-    }
-
-    func notchPrimaryActivity(at date: Date = Date()) -> IslandActivity? {
-        rankedActivity(at: date, filterSelectedModule: false)
-    }
-
-    private func rankedActivity(at date: Date, filterSelectedModule: Bool) -> IslandActivity? {
-        // Read so SwiftUI re-evaluates when a spotlight ends, which changes the
-        // answer without any activity changing.
-        _ = spotlightRevision
-        let candidates = activities.values
-            .filter { $0.isActive(at: date) }
-            .filter { activity in
-                !filterSelectedModule || activity.priority != .selectedModule
-                    || activity.moduleID == selectedModule
-            }
-        let hasMedia = candidates.contains { $0.priority == .nowPlaying }
-        func rank(_ activity: IslandActivity) -> Int {
-            guard hasMedia, isAdvisory(activity), !isInSpotlight(activity, at: date) else {
-                return activity.priority.rawValue
-            }
-            return IslandActivityPriority.nowPlaying.rawValue - 1
-        }
-        return candidates.max { lhs, rhs in
-            let lhsRank = rank(lhs), rhsRank = rank(rhs)
-            if lhsRank != rhsRank { return lhsRank < rhsRank }
-            return lhs.id < rhs.id
-        }
-    }
-
-    func pruneExpired(at date: Date = Date()) {
-        let previousCount = activities.count
-        activities = activities.filter { $0.value.isActive(at: date) }
-        forgetRemovedActivities()
-        scheduleExpiry()
-        if activities.count != previousCount { onStateDidChange?() }
-    }
-
-    private func isAdvisory(_ activity: IslandActivity) -> Bool {
-        activity.priority == .powerChange || activity.priority == .systemWarning
-    }
-
-    private func isInSpotlight(_ activity: IslandActivity, at date: Date) -> Bool {
-        guard let start = firstPublishedAt[activity.id] else { return false }
-        return date.timeIntervalSince(start) < Self.advisorySpotlightDuration
-    }
-
-    private func forgetRemovedActivities() {
-        firstPublishedAt = firstPublishedAt.filter { activities[$0.key] != nil }
-    }
-
-    private func scheduleSpotlightEnd(at date: Date) {
-        spotlightTask?.cancel()
-        let pendingEnds = activities.values
-            .filter(isAdvisory)
-            .compactMap { firstPublishedAt[$0.id] }
-            .map { $0.addingTimeInterval(Self.advisorySpotlightDuration) }
-            .filter { $0 > date }
-        guard let nextEnd = pendingEnds.min() else {
-            spotlightTask = nil
-            return
-        }
-        let delay = nextEnd.timeIntervalSince(date)
-        spotlightTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(delay))
-            guard !Task.isCancelled, let self else { return }
-            self.spotlightRevision &+= 1
-            self.scheduleSpotlightEnd(at: Date())
-            self.onStateDidChange?()
-        }
-    }
-
-    private func scheduleExpiry() {
-        expiryTask?.cancel()
-        guard let nextExpiry = activities.values.compactMap(\.expiresAt).min() else {
-            expiryTask = nil
-            return
-        }
-        let delay = max(0, nextExpiry.timeIntervalSinceNow)
-        expiryTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(delay))
-            guard !Task.isCancelled else { return }
-            self?.pruneExpired()
-        }
-    }
-
     func beginDrag() {
         if stateBeforeDrag == nil {
             stateBeforeDrag = surfaceState
             moduleBeforeDrag = selectedModule
         }
         selectedModule = .shelf
-        publish(.init(id: "drag", moduleID: .shelf, priority: .userDrag,
-                      title: String(localized: "Drop into Clerestory"), detail: nil,
-                      systemImage: "arrow.down.to.line", expiresAt: nil))
+        if !isDragInProgress {
+            isDragInProgress = true
+            onStateDidChange?()
+        }
         setSurfaceState(.expanded)
     }
 
     func endDrag(imported: Bool, hasPendingNotice: Bool = false) {
-        removeActivity(id: "drag")
+        if isDragInProgress {
+            isDragInProgress = false
+            onStateDidChange?()
+        }
         defer {
             stateBeforeDrag = nil
             moduleBeforeDrag = nil

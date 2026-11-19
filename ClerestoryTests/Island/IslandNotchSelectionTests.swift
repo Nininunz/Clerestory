@@ -162,7 +162,7 @@ final class IslandNotchSelectionTests: XCTestCase {
         XCTAssertNil(SettingsStore(defaults: defaults).notchCycleShortcut)
     }
 
-    func testCycleDoesNotChangeExpandedSelectionAndActivitiesDoNotChangeChoice() throws {
+    func testCycleDoesNotChangeExpandedSelectionAndStatusesDoNotChangeChoice() throws {
         let suite = "Clerestory.NotchSelectionTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -172,8 +172,10 @@ final class IslandNotchSelectionTests: XCTestCase {
         let coordinator = IslandActivityCoordinator()
         coordinator.show(module: .system)
         settings.notchModuleID = .battery
-        coordinator.publish(.init(id: "timer", moduleID: .timer, priority: .timerFinished,
-                                  title: "Timer finished", detail: nil, systemImage: "timer", expiresAt: nil))
+        let messages = IslandMessageCenter.forTesting()
+        messages.moduleDidStart(.timer)
+        messages.messenger(for: .timer).setStatus(.init(key: "finished", title: "Timer finished",
+                                                        systemImage: "timer", tone: .warning))
         XCTAssertEqual(IslandNotchDisplay.selected(settings.notchModuleID,
             enabled: settings.islandModuleConfiguration.enabledModuleIDs), .battery)
         settings.cycleNotchModule()

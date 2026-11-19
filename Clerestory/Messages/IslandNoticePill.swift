@@ -9,7 +9,7 @@ struct IslandNoticePill: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 8) {
-            Image(systemName: symbol)
+            Image(systemName: notice.symbol)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(tint)
                 .frame(width: 15)
@@ -52,15 +52,6 @@ struct IslandNoticePill: View {
     /// The button's title, from the notice's action. `nil` when the pill shows no button.
     var actionTitle: String? {
         onPerformAction == nil ? nil : notice.action?.title
-    }
-
-    private var symbol: String {
-        if let systemImage = notice.systemImage { return systemImage }
-        return switch notice.tone {
-        case .success: "checkmark.circle.fill"
-        case .info: "info.circle"
-        case .warning, .error: "exclamationmark.triangle.fill"
-        }
     }
 
     private var tint: Color {

@@ -91,6 +91,8 @@ final class IslandNoticePanelController: NSObject {
         NotificationCenter.default.removeObserver(self)
         // Without a presenter nobody can see a notice, so its time does not count.
         messages.setNoticeClockRunning(false)
+        messages.setVisibleNotice(nil)
+        messages.setShownModule(nil, othersWait: false)
         panel.orderOut(nil)
     }
 
@@ -118,13 +120,21 @@ final class IslandNoticePanelController: NSObject {
 
     private func refresh() {
         guard !stopped else { return }
+        let context = self.context
+        // The center's queue follows the same shown-module rule, so feed it first: it can
+        // change which notice is current. With the Panel disabled nothing waits for it.
+        messages.setShownModule(context.isEnabled ? context.shownModule : nil,
+                                othersWait: context.othersWaitForClose)
         let current = messages.currentNotice
         phase = presentation.update(noticeID: current?.id, from: current?.moduleID, context: context)
-        guard phase == .visible, let anchor, let notice = current?.notice else {
+        guard phase == .visible, let anchor, let current else {
+            messages.setVisibleNotice(nil)
             dismiss()
             updatePointer(at: pointerLocation())
             return
         }
+        messages.setVisibleNotice(current.id)
+        let notice = current.notice
         updateContent(notice)
         // During a transition the Island window still contains the visible surface.
         let usesSurfaceFrame = coordinator.surfaceState.isExpanded || coordinator.isSurfaceTransitionPending

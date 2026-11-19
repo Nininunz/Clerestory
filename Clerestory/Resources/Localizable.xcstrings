@@ -2372,6 +2372,30 @@
         }
       }
     },
+    "%@ · %@" : {
+      "extractionState" : "manual",
+      "comment" : "Notice pill text: a title and its value, such as Battery low · 15%.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · %@"
+          }
+        }
+      }
+    },
+    "%@, %@" : {
+      "extractionState" : "manual",
+      "comment" : "VoiceOver text that joins a title and its value, such as Battery low, 15%.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@, %@"
+          }
+        }
+      }
+    },
     "(Default)" : {
       "localizations" : {
         "en" : {

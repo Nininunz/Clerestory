@@ -12,7 +12,7 @@ final class IslandPresentationControllerTests: XCTestCase {
         let coordinator = IslandActivityCoordinator(defaults: defaults)
         let registry = IslandModuleRegistry()
         registry.apply(settings: settings)
-        let modules = IslandModuleContainer(registrations: [], coordinator: coordinator)
+        let modules = IslandModuleContainer(registrations: [], messages: .forTesting())
         var screen = geometry(notched: true)
         var roles: [IslandWindowRole] = []
         let presentation = IslandPresentationController(
@@ -99,7 +99,7 @@ final class IslandPresentationControllerTests: XCTestCase {
                 let screen = geometry(notched: notched)
                 let presentation = IslandPresentationController(
                     settings: settings, coordinator: coordinator, registry: registry,
-                    modules: IslandModuleContainer(registrations: [], coordinator: coordinator),
+                    modules: IslandModuleContainer(registrations: [], messages: .forTesting()),
                     notices: { nil }, collapse: { _ in coordinator.collapse() },
                     makePanel: { _ in
                         ShelfPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel],
@@ -141,7 +141,7 @@ final class IslandPresentationControllerTests: XCTestCase {
         var builtInConnected = true
         let presentation = IslandPresentationController(
             settings: settings, coordinator: coordinator, registry: registry,
-            modules: IslandModuleContainer(registrations: [], coordinator: coordinator),
+            modules: IslandModuleContainer(registrations: [], messages: .forTesting()),
             notices: { nil }, collapse: { _ in coordinator.collapse() },
             makePanel: { _ in
                 let panel = ShelfPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel],

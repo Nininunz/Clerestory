@@ -125,6 +125,9 @@ final class IslandNoticePanelTests: XCTestCase {
         XCTAssertTrue(controller.panel.isVisible, "A repeat updates the visible pill in place")
         messages.messenger(for: .battery).post(IslandNotice(key: "power", title: "Power connected"))
         await clock.advance(by: IslandMessageCenter.handoffDuration)
+        XCTAssertEqual(messages.currentNotice?.moduleID, .shelf,
+                       "Battery's notice could not appear in the open panel, so it does not cut Shelf's short")
+        await clock.advance(by: IslandMessageCenter.defaultDuration - IslandMessageCenter.handoffDuration)
         XCTAssertEqual(messages.currentNotice?.moduleID, .battery)
         try await Task.sleep(for: .milliseconds(300))
         XCTAssertFalse(controller.panel.isVisible, "Another module's notice waits for the panel to close")
@@ -328,6 +331,54 @@ final class IslandNoticePanelTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(300))
         XCTAssertTrue(controller.panel.isVisible, "The panel shows Shelf, so its notice appears right away")
         XCTAssertTrue(messages.isNoticeClockRunning)
+    }
+
+    /// The controller feeds the center the module the panel shows, so the center's queue and
+    /// the presentation agree: the shown module's notice is not stuck behind a held one, and
+    /// a raised status of the shown module shows no pill.
+    func testControllerFeedsTheShownModuleToTheQueue() async throws {
+        let context = PreviewContext()
+        defer { context.cleanUp() }
+        let settings = context.settings()
+        settings.islandEnabled = true
+        let coordinator = IslandActivityCoordinator()
+        let layout = try liveLayout()
+        coordinator.currentLayout = layout
+        coordinator.show(module: .timer)
+        coordinator.completeSurfaceTransition(coordinator.surfaceTransitionID)
+        let anchor = NSWindow(contentRect: layout.expandedFrame, styleMask: [.borderless], backing: .buffered, defer: false)
+        anchor.isReleasedWhenClosed = false
+        anchor.orderFront(nil)
+        defer { anchor.close() }
+        let messages = makeMessages()
+        let controller = makeController(anchor: anchor, messages: messages,
+            coordinator: coordinator, settings: settings)
+        defer { controller.stop() }
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(messages.shownModule, .timer)
+        XCTAssertTrue(messages.othersWaitForShownModule)
+
+        messages.messenger(for: .battery).post(IslandNotice(key: "power", title: "Power connected"))
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertFalse(controller.panel.isVisible, "Battery waits for the panel to close")
+        messages.messenger(for: .timer).post(IslandNotice(key: "done", title: "Done"))
+        try await Task.sleep(for: .milliseconds(300))
+        XCTAssertEqual(messages.currentNotice?.moduleID, .timer)
+        XCTAssertTrue(controller.panel.isVisible, "Timer's notice goes ahead and appears")
+        XCTAssertEqual(messages.waitingNotices.map(\.moduleID), [.battery])
+
+        messages.moduleDidStart(.timer)
+        messages.messenger(for: .timer).setStatus(.init(key: "finished", title: "Timer finished",
+                                                        systemImage: "timer", tone: .warning))
+        XCTAssertFalse(messages.waitingNotices.contains { $0.raisedStatusKey != nil },
+                       "The panel shows Timer, so its raised status shows no pill")
+
+        coordinator.setPinned(true)
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertFalse(messages.othersWaitForShownModule)
+        coordinator.collapse()
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertNil(messages.shownModule)
     }
 
     func testButtonTitleComesFromTheAction() {
