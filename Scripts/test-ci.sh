@@ -24,6 +24,7 @@ common=(
   -scheme Clerestory
   -destination "platform=macOS,arch=$(uname -m)"
   -derivedDataPath "$output_dir/DerivedData"
+  -onlyUsePackageVersionsFromResolvedFile
   CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES
 )
 

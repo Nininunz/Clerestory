@@ -38,7 +38,8 @@ if previous == candidate:
 def latest_build(data):
     namespaces = {"sparkle": "http://www.andymatuschak.org/xml-namespaces/sparkle"}
     root = ET.fromstring(data)
-    return int(root.findtext("./channel/item/sparkle:version", namespaces=namespaces))
+    # A feed with no releases (for example after the 2026-11-18 reset) has no build yet.
+    return int(root.findtext("./channel/item/sparkle:version", default="0", namespaces=namespaces))
 
 build = latest_build(candidate)
 if previous is not None and build <= latest_build(previous):
