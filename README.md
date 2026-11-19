@@ -49,10 +49,11 @@ A moved item's card and sandbox copy are deleted only after it has been dropped 
 | -------------------------------- | --------------------------------------------------------- |
 | Files and folders                | A sandbox bookmark to the original location; no copy      |
 | Plain text and links             | Directly in the shelf data                                |
-| Images, HTML, RTF                | As files inside the app sandbox                           |
+| Images                           | As files inside the app sandbox                           |
+| HTML, RTF                        | As files inside the app sandbox when there's no plain-text version; otherwise as plain text in the shelf data, without formatting |
 | Contacts, events, mail messages  | As `.vcf`, `.ics`, `.eml` when the source app provides them |
 
-If an original is moved, deleted, or sits on a disconnected drive, its card shows as unavailable and comes back once the file can be found again.
+If an original is moved or renamed, Clerestory follows it. If it can't be found (deleted from the Trash, or on a disconnected drive), its card shows as unavailable. The card comes back on its own when the file can be reached again, or use **Locate Original…** on the card to reconnect it. A missing ⌘-dropped copy points you to **Settings → Storage** instead.
 
 Text and links live with their cards and disappear when the card is removed. Files generated for images, rich text and mail are usually cleaned up on the next launch after their cards are gone; you can also review and clear them in **Settings → Storage**.
 
@@ -62,24 +63,24 @@ Regular file drags provide both a file URL and a filename Chromium understands. 
 
 ## Privacy and permissions
 
-- No account, no analytics, no telemetry. Everything stays in the local sandbox under `Application Support/Clerestory`.
+- No account, no analytics, no telemetry. Everything stays in Clerestory's sandbox container: your shelf, clipboard history and other data under `Application Support/Clerestory`, and your settings in the container's `Library/Preferences`.
 - App Sandbox is on, so Clerestory can only touch files you drag in or pick yourself. Everyday use needs neither Accessibility nor Input Monitoring.
 - The only background network traffic is checking for and downloading updates from GitHub Pages / Releases, and you can turn that off.
 - AI Usage only talks to TokenTracker on your own Mac (`localhost:7680`). It never goes online and doesn't read TokenTracker's files.
 - Now Playing never goes online. It reads playback info through a local helper first, and falls back to AppleScript for Apple Music / Spotify, which may trigger an Automation permission prompt. If the module breaks, the shelf keeps working.
-- Quick Access only remembers the folders you add. Removing one doesn't delete the folder, and macOS decides which app opens it.
+- Quick Access only remembers the folders you add. Removing one doesn't delete the folder. **Open** uses the folder's default app; **Open With** lets you pick another app for that one open, and the choice isn't saved.
 
 ### Clipboard history
 
-Clipboard recording is off by default. To use it, turn on **Experimental Modules** under **Settings → Modules**, then turn on **Record Clipboard** in the Clipboard History settings there. Until you turn it on, the clipboard is read only at the moment you double-press the shortcut to park it. Once on, only newly copied text, HTTP(S) links and images are recorded — nothing from before. Images are kept as PNG or TIFF; one over 5 MiB is re-encoded as PNG or JPEG to fit. If it still doesn't fit, the copy's text or link is kept instead, when there is one. Copied files are never opened or recorded. When an app copies an image together with a link to its file, as WeChat does, only the image is kept.
+Clipboard recording is off by default. To use it, turn on **Experimental Modules** under **Settings → Modules**, then turn on **Record Clipboard** in the Clipboard History settings there. Until you turn it on, the clipboard is read only at the moment you double-press the shortcut to park it. Once on, only newly copied text and HTTP(S) links up to 256 KiB, and images up to 16,384 px per side and 32 megapixels, are recorded — nothing from before. Anything larger is skipped without notice. Images are kept as PNG or TIFF; one over 5 MiB is re-encoded as PNG or JPEG to fit. If it still doesn't fit, the copy's text or link is kept instead, when there is one. Copied files are never opened or recorded. When an app copies an image together with a link to its file, as WeChat does, only the image is kept.
 
 History is stored as plain text on this Mac and is never uploaded or synced. Keep 30, 100 or 300 entries (default 30) for 1, 7 or 30 days (default 7), plus up to 30 favorites that never expire, all within 20 MiB. Turning recording off keeps what's already there; clearing it deletes it.
 
-Items marked private by common password managers, and apps you've set to ignore, are skipped — but not every secret can be detected. Pause recording before you copy a password or token.
+Items marked private by common password managers are skipped. Nothing is recorded while an app on the **Ignored Apps** list (**Settings → Panel**) is the frontmost app, but a copy an ignored app makes in the background is still recorded. Not every secret can be detected, so pause recording before you copy a password or token.
 
 ## Build from source
 
-You'll need macOS 15+ and Xcode 27.2, the version CI uses.
+You'll need macOS 15+ and Xcode 26 or later. CI uses Xcode 27.2, so use that version to get the same results as CI.
 
 ```bash
 git clone https://github.com/Nininunz/Clerestory.git
@@ -115,7 +116,7 @@ Run `Scripts/doctor.sh` to check the active Xcode, macOS SDK, and local build an
 
 Something feels off, broke, or could be better? Open an [issue](https://github.com/Nininunz/Clerestory/issues). For bugs, your macOS version, Clerestory version and steps to reproduce help a lot — and please keep private files and clipboard contents out of screenshots.
 
-Pull requests are welcome. For bigger changes, open an issue first so we can talk it through, and run the full unit test suite before submitting.
+Pull requests are welcome. For bigger changes, open an issue first so we can talk it through. Before submitting, run `Scripts/test-ci.sh`, which runs the same checks CI requires: the identity check, the module-core package tests, the Release build and the unit tests. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Credits and license
 
