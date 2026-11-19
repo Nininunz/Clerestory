@@ -18,6 +18,7 @@ final class MenuBarController: NSObject {
     /// Open the settings window (provided by AppDelegate's SettingsWindowController).
     private let onShowSettings: () -> Void
     private let onShowClipboardHistory: () -> Void
+    private let onAddClipboardImage: () -> Void
     /// Two-step real drag-and-drop practice that can be replayed.
     private let onShowQuickStart: () -> Void
     /// Open public usage help; does not change app state.
@@ -46,7 +47,8 @@ final class MenuBarController: NSObject {
          onReportIssue: @escaping () -> Void,
          onCheckForUpdates: @escaping () -> Void,
          onOpenManualUpdate: @escaping () -> Void,
-         onShowClipboardHistory: @escaping () -> Void = {}) {
+         onShowClipboardHistory: @escaping () -> Void = {},
+         onAddClipboardImage: @escaping () -> Void = {}) {
         self.settings = settings
         self.isShelfExpanded = isShelfExpanded
         self.recents = recents
@@ -54,6 +56,7 @@ final class MenuBarController: NSObject {
         self.onReaddRecent = onReaddRecent
         self.onShowSettings = onShowSettings
         self.onShowClipboardHistory = onShowClipboardHistory
+        self.onAddClipboardImage = onAddClipboardImage
         self.onShowQuickStart = onShowQuickStart
         self.onOpenHelp = onOpenHelp
         self.onReportIssue = onReportIssue
@@ -121,6 +124,12 @@ final class MenuBarController: NSObject {
                                        action: #selector(showClipboardHistory(_:)), keyEquivalent: "")
         clipboardItem.target = self
         menu.addItem(clipboardItem)
+
+        // Works with Clipboard History off: adds a just-copied image (a screenshot, for example).
+        let clipboardImageItem = NSMenuItem(title: String(localized: "Add Clipboard Image to Shelf"),
+                                            action: #selector(addClipboardImage(_:)), keyEquivalent: "")
+        clipboardImageItem.target = self
+        menu.addItem(clipboardImageItem)
 
         menu.addItem(.separator())
 
@@ -191,6 +200,10 @@ final class MenuBarController: NSObject {
 
     @objc private func showClipboardHistory(_ sender: Any?) {
         onShowClipboardHistory()
+    }
+
+    @objc private func addClipboardImage(_ sender: Any?) {
+        onAddClipboardImage()
     }
 
     @objc private func showQuickStart(_ sender: Any?) {

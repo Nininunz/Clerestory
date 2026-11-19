@@ -408,6 +408,68 @@ final class DropImportCoordinatorTests: XCTestCase {
         XCTAssertEqual(item.kind, .text)
     }
 
+    // MARK: - Add Clipboard Image to Shelf (ported from MuQY1818/OpenYoink@219e1d1)
+
+    func testClipboardImage_usesImageEvenWhenOtherTypesArePresent() async throws {
+        let context = makeContext()
+        defer { context.cleanup() }
+        let pasteboard = makePasteboard()
+        let pngData = try makePNGData()
+        let mixed = NSPasteboardItem()
+        mixed.setString("https://example.com/image", forType: .URL)
+        mixed.setData(pngData, forType: .png)
+        pasteboard.clearContents()
+        XCTAssertTrue(pasteboard.writeObjects([mixed]))
+
+        let itemReady = expectation(description: "clipboard image added")
+        var received: ShelfItem?
+        let count = context.coordinator.importClipboardImages(from: pasteboard) { item in
+            received = item
+            itemReady.fulfill()
+        }
+        XCTAssertEqual(count, 1)
+        await fulfillment(of: [itemReady], timeout: 5)
+
+        let item = try XCTUnwrap(received)
+        XCTAssertEqual(item.kind, .image)
+        XCTAssertEqual(item.displayName, String(localized: "Clipboard Image.png"))
+        XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: XCTUnwrap(item.path))), pngData)
+        XCTAssertEqual(context.coordinator.transferStore.currentTask?.phase, .delivered)
+    }
+
+    func testClipboardImage_doesNotFallBackToFileURLOrText() throws {
+        var context = makeContext()
+        defer { context.cleanup() }
+        let file = try makeTempFile(in: &context, named: "notes.txt")
+        let pasteboard = makePasteboard()
+        let text = NSPasteboardItem()
+        text.setString("copied text", forType: .string)
+        pasteboard.clearContents()
+        XCTAssertTrue(pasteboard.writeObjects([file as NSURL, text]))
+        context.coordinator.onImportHandled = { XCTFail("nothing should be imported") }
+
+        XCTAssertEqual(context.coordinator.importClipboardImages(from: pasteboard,
+                                                                 onItemReady: ignoringAsyncItems()), 0)
+        XCTAssertNil(context.coordinator.transferStore.currentTask)
+    }
+
+    /// Copying a file in Finder can carry its icon as a bitmap; that is not an image to add.
+    func testClipboardImage_skipsCopiedFileIcons() throws {
+        let context = makeContext()
+        defer { context.cleanup() }
+        let pasteboard = makePasteboard()
+        let fileCopy = NSPasteboardItem()
+        fileCopy.setString(URL(fileURLWithPath: "/tmp/photo.png").absoluteString, forType: PasteboardTypes.fileURL)
+        fileCopy.setData(try makePNGData(), forType: .png)
+        fileCopy.setData(Data([0x69, 0x63, 0x6E, 0x73]), forType: .init("com.apple.icns"))
+        pasteboard.clearContents()
+        XCTAssertTrue(pasteboard.writeObjects([fileCopy]))
+
+        XCTAssertEqual(context.coordinator.importClipboardImages(from: pasteboard,
+                                                                 onItemReady: ignoringAsyncItems()), 0)
+        XCTAssertNil(context.coordinator.transferStore.currentTask)
+    }
+
     // MARK: - URL
 
     func testImport_publicURL_producesURLItem() throws {

@@ -186,6 +186,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         },
         onShowClipboardHistory: { [weak self] in
             self?.clipboardHistoryWindowController.show()
+        },
+        onAddClipboardImage: { [weak self] in
+            self?.addClipboardImageToShelf()
         }
     )
 
@@ -480,6 +483,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: - UX3 clipboard save
+
+    /// "Add Clipboard Image to Shelf" adds only the clipboard's image and reveals Shelf, so the
+    /// result or the "no image" notice is visible.
+    private func addClipboardImageToShelf() {
+        let scheduled = dropImportCoordinator.importClipboardImages(from: .general) { [weak self] item in
+            self?.shelfStore.add(item)
+        }
+        shelfPresentationCoordinator.show(animated: true)
+        if scheduled == 0 {
+            shelfNotice.show(.clipboardHasNoImage)
+        }
+    }
 
     /// A double press uses the drop import pipeline for clipboard files, images, URLs, and text.
     /// A successful import reveals Shelf. If there is nothing to import, show the existing notice

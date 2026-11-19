@@ -16,6 +16,7 @@ enum ShelfNoticeMessage: String, CaseIterable {
     case moveAwaitingSave = "move-awaiting-save"
     case receivedAwaitingRecovery = "received-awaiting-recovery"
     case clipboardEmpty = "clipboard-empty"
+    case clipboardHasNoImage = "clipboard-has-no-image"
     case moveRecoveryNeedsAttention = "move-recovery-needs-attention"
     case moveRecovered = "move-recovered"
     case partialMoveRecoveryNeedsAttention = "partial-move-recovery-needs-attention"
@@ -39,6 +40,7 @@ enum ShelfNoticeMessage: String, CaseIterable {
         case .moveAwaitingSave: String(localized: "The moved item is being kept for recovery because the shelf could not be saved immediately.")
         case .receivedAwaitingRecovery: String(localized: "The received file was kept safely. Open Recovery to finish importing it.")
         case .clipboardEmpty: String(localized: "Clipboard is empty or has nothing the shelf can hold.")
+        case .clipboardHasNoImage: String(localized: "No supported image on the clipboard.")
         case .moveRecoveryNeedsAttention: String(localized: "Managed move recovery data needs attention. Automatic cleanup is disabled.")
         case .moveRecovered: String(localized: "Recovered an interrupted managed move.")
         case .partialMoveRecoveryNeedsAttention: String(localized: "Some managed move recovery data needs attention. Automatic cleanup is disabled.")
@@ -80,6 +82,9 @@ enum ShelfNoticeMessage: String, CaseIterable {
             recovery = .openStorageRecovery
         case .clipboardEmpty:
             summary = String(localized: "Nothing to add from the clipboard.")
+            kind = .info
+        case .clipboardHasNoImage:
+            summary = String(localized: "No image to add.")
             kind = .info
         case .moveRecoveryNeedsAttention, .importRecoveryNeedsAttention:
             summary = String(localized: "Recovery needs attention.")
