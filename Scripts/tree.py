@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Print the checkout layout, respecting Git's ignore rules."""
+"""Print the checkout layout, respecting Git's ignore rules.
+
+Each folder is followed by its contents. At every level, folders come before
+files and names sort case-insensitively, as in GitHub's file browser.
+"""
 
 import argparse
 import json
@@ -30,18 +34,28 @@ def main():
         return result.returncode
 
     paths = set()
+    folders = set()
     for entry in result.stdout.split(b"\0"):
         if not entry:
             continue
         path = PurePosixPath(os.fsdecode(entry))
         if os.path.lexists(root / path):
             paths.add(path)
-            paths.update(parent for parent in path.parents if parent.parts)
+            parents = [parent for parent in path.parents if parent.parts]
+            paths.update(parents)
+            folders.update(parents)
 
     if scope.parts and scope not in paths:
         parser.error(f"path has no visible entries: {scope.as_posix()!r}")
 
-    for path in sorted(paths):
+    def order(path):
+        # Compare one level at a time so a folder's contents follow it directly.
+        return [
+            (PurePosixPath(*path.parts[: index + 1]) not in folders, part.casefold(), part)
+            for index, part in enumerate(path.parts)
+        ]
+
+    for path in sorted(paths, key=order):
         if path != scope and scope not in path.parents:
             continue
         if args.depth is not None and len(path.parts) - len(scope.parts) > args.depth:

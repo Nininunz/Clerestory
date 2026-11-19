@@ -239,7 +239,7 @@ final class IslandModuleRegistry {
         .init(id: .shelf, title: String(localized: "Shelf"),
               systemImage: "tray.full", order: 0, isCore: true, supportsExtendedHeight: true),
         .init(id: .transfers, title: String(localized: "Transfers"),
-              systemImage: "arrow.up.arrow.down", order: 1, isCore: true),
+              systemImage: "arrow.up.arrow.down", order: 1, isCore: false),
         .init(id: .timer, title: String(localized: "Timer"),
               systemImage: "timer", order: 2, isCore: false),
         .init(id: .battery, title: String(localized: "Battery"),

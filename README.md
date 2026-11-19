@@ -107,7 +107,7 @@ Releases are built with [`Scripts/make-release.sh`](Scripts/make-release.sh), ei
 
 See the [documentation index](docs/README.md) for architecture, testing, previews, and release guides.
 
-Run `python3 Scripts/tree.py` from the repository root to list the source layout, including new files that Git does not ignore. The output omits ignored build artifacts and local configuration.
+Run `python3 Scripts/tree.py` from the repository root to list the source layout, including new files that Git does not ignore. As in GitHub's file browser, folders come before files and names sort case-insensitively. The output omits ignored build artifacts and local configuration.
 
 Use `python3 Scripts/tree.py Clerestory/Island --depth 2` to show one directory and up to two levels beneath it. Paths in the output stay relative to the repository root.
 

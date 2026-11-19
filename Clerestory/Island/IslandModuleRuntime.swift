@@ -100,7 +100,7 @@ final class TransfersModuleRuntime: IslandModuleRuntime {
         title: String(localized: "Transfers"),
         systemImage: "arrow.up.arrow.down",
         order: 1,
-        isCore: true
+        isCore: false
     )
     let events: AsyncStream<IslandModuleEvent>
 
