@@ -44,28 +44,12 @@ final class ShelfInteractionState {
         self.stacksEnabled = stacksEnabled
     }
 
-    var isSelecting = false {
-        didSet {
-            if oldValue != isSelecting { onActionSelectionDidChange?() }
-        }
-    }
+    var isSelecting = false
     var showsKeyboardFocus = false
     var selectionAnchorID: UUID?
     var focusedItemID: UUID?
-    var expandedStackID: UUID? {
-        didSet {
-            if oldValue != expandedStackID { onActionSelectionDidChange?() }
-        }
-    }
-    var childSelection: Set<UUID> = [] {
-        didSet {
-            if oldValue != childSelection { onActionSelectionDidChange?() }
-        }
-    }
-
-    /// Expanded-stack selection also controls quick-action visibility. The
-    /// controller uses this callback solely for compact-height recalculation.
-    var onActionSelectionDidChange: (@MainActor () -> Void)?
+    var expandedStackID: UUID?
+    var childSelection: Set<UUID> = []
 
     func moveSelection(in items: [ShelfItem], from current: Int, to destination: Int,
                        extending: Bool, store: ShelfStore) {

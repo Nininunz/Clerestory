@@ -13,12 +13,8 @@ final class SupportController {
         let build: String
         let operatingSystem: String
         let architecture: String
-        let shelfPosition: SettingsStore.ShelfPosition
-        let dragAutoAppearMode: SettingsStore.DragAutoAppearMode
-        let edgeTabEnabled: Bool
         let hotKeyEnabled: Bool
         let autoHide: Bool
-        let autoHideWhenEmpty: Bool
         let dragOutRemovalPolicy: SettingsStore.DragOutRemovalPolicy
         let autoUpdateCheckEnabled: Bool
     }
@@ -95,12 +91,8 @@ final class SupportController {
             build: info?["CFBundleVersion"] as? String ?? "Unknown",
             operatingSystem: ProcessInfo.processInfo.operatingSystemVersionString,
             architecture: Self.architecture,
-            shelfPosition: settings.shelfPosition,
-            dragAutoAppearMode: settings.dragAutoAppearMode,
-            edgeTabEnabled: settings.edgeTabEnabled,
             hotKeyEnabled: settings.hotKeyEnabled,
             autoHide: settings.autoHide,
-            autoHideWhenEmpty: settings.autoHideWhenEmpty,
             dragOutRemovalPolicy: settings.dragOutRemovalPolicy,
             autoUpdateCheckEnabled: settings.autoUpdateCheckEnabled
         )

@@ -22,7 +22,7 @@ struct IslandShelfModuleView: View {
             ) {
                 contentFilterMenu
             }
-            ShelfView(presentationStyle: .island)
+            ShelfView()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

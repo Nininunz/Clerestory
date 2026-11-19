@@ -169,26 +169,6 @@ final class ShelfActionTests: XCTestCase {
         XCTAssertNil(ItemActions.resolveFileURL(for: item, bookmarkService: bookmarks))
     }
 
-    func testSelectionCallbacksOnlyFireForRealVisibilityChanges() {
-        let item = ShelfItem(kind: .text, displayName: "Text", text: "hello")
-        let store = ShelfStore(items: [item])
-        var storeChanges = 0
-        store.onSelectionDidChange = { storeChanges += 1 }
-
-        store.select(item.id)
-        store.select(item.id)
-        store.clearSelection()
-        XCTAssertEqual(storeChanges, 2)
-
-        let interaction = ShelfInteractionState()
-        var childChanges = 0
-        interaction.onActionSelectionDidChange = { childChanges += 1 }
-        interaction.childSelection = [item.id]
-        interaction.childSelection = [item.id]
-        interaction.expandedStackID = UUID()
-        XCTAssertEqual(childChanges, 2)
-    }
-
     func testUserCancelledShareIsSilent() {
         let messages = IslandMessageCenter.forTesting()
         let runner = ShelfActionRunner(bookmarkService: bookmarks, messenger: messages.messenger(for: .shelf))

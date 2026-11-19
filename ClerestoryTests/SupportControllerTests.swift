@@ -9,12 +9,8 @@ final class SupportControllerTests: XCTestCase {
         build: "14",
         operatingSystem: "macOS 26.5 (Build 25F70)",
         architecture: "arm64",
-        shelfPosition: .right,
-        dragAutoAppearMode: .immediate,
-        edgeTabEnabled: true,
         hotKeyEnabled: true,
         autoHide: false,
-        autoHideWhenEmpty: true,
         dragOutRemovalPolicy: .keep,
         autoUpdateCheckEnabled: true
     )
@@ -25,8 +21,6 @@ final class SupportControllerTests: XCTestCase {
         XCTAssertTrue(summary.contains("Version: 1.1.9 (14)"))
         XCTAssertTrue(summary.contains("macOS: macOS 26.5 (Build 25F70)"))
         XCTAssertTrue(summary.contains("Architecture: arm64"))
-        XCTAssertFalse(summary.contains("Shelf position:"))
-        XCTAssertFalse(summary.contains("Edge tab:"))
         XCTAssertFalse(summary.contains("/Users/"))
         XCTAssertFalse(summary.localizedCaseInsensitiveContains("clipboard:"))
         XCTAssertFalse(summary.localizedCaseInsensitiveContains("file name:"))

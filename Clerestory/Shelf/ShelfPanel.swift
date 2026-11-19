@@ -1,14 +1,12 @@
 import AppKit
 import SwiftUI
 
-/// Borderless, nonactivating Shelf window that floats above other windows,
+/// Borderless, nonactivating window for the Panel and Notch that floats above other windows,
 /// joins all Spaces, and can appear alongside full-screen windows.
-/// `ShelfView` draws the rounded, translucent surface.
 @MainActor
 final class ShelfPanel: NSPanel {
     /// Allow top-edge surfaces to use their requested frame. AppKit otherwise
     /// constrains shallow windows to `visibleFrame`, below the menu bar.
-    /// The classic Shelf keeps AppKit's standard screen constraints.
     var allowsTopEdgeOverlap = false
     var acceptsKeyboardFocus = true
     /// Drawing room for a SwiftUI shadow is not part of the interactive surface.

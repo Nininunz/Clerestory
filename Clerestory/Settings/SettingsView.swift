@@ -127,12 +127,6 @@ struct SettingsView: View {
             ModulesSettingsTab()
         case .clipboard:
             ClipboardSettingsTab()
-        case .appearance:
-            if SideShelfAvailability.isEnabled {
-                AppearanceSettingsTab()
-            } else {
-                GeneralSettingsTab()
-            }
         case .storage:
             StorageSettingsTab()
         case .debug:
@@ -154,7 +148,6 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     case shelf
     case modules
     case clipboard
-    case appearance
     case triggers
     case ignoredApps
     case storage
@@ -163,9 +156,9 @@ enum SettingsPane: String, CaseIterable, Identifiable {
 
     static var visibleCases: [SettingsPane] {
         #if DEBUG
-        allCases.filter { $0 != .triggers && $0 != .ignoredApps && $0 != .shelf && $0 != .clipboard && (SideShelfAvailability.isEnabled || $0 != .appearance) }
+        allCases.filter { $0 != .triggers && $0 != .ignoredApps && $0 != .shelf && $0 != .clipboard }
         #else
-        allCases.filter { $0 != .triggers && $0 != .ignoredApps && $0 != .shelf && $0 != .clipboard && (SideShelfAvailability.isEnabled || $0 != .appearance) && $0 != .debug }
+        allCases.filter { $0 != .triggers && $0 != .ignoredApps && $0 != .shelf && $0 != .clipboard && $0 != .debug }
         #endif
     }
 
@@ -179,7 +172,6 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .shelf: "Shelf"
         case .modules: "Modules"
         case .clipboard: "Clipboard"
-        case .appearance: "Appearance"
         case .triggers: "Triggers"
         case .ignoredApps: "Ignored Apps"
         case .storage: "Storage"
@@ -196,7 +188,6 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .shelf: "tray"
         case .modules: "square.grid.2x2"
         case .clipboard: "doc.on.clipboard"
-        case .appearance: "paintpalette"
         case .triggers: "keyboard"
         case .ignoredApps: "hand.raised"
         case .storage: "externaldrive"

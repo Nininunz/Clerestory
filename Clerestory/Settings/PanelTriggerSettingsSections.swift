@@ -7,14 +7,6 @@ struct PanelTriggerSettingsSections: View {
     var body: some View {
         @Bindable var settings = settings
         Group {
-            if SideShelfAvailability.isEnabled {
-            Section("Side Shelf Reveal") {
-                Toggle("Preview side shelf on hover", isOn: $settings.classicShelfHoverRevealEnabled)
-                    .disabled(!settings.classicShelfEnabled)
-                Text("Drag the edge tab to reposition it. File drag reveal is configured below.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            }
             Section("Opening and Closing") {
                 Toggle("Open panel on hover", isOn: $settings.islandHoverRevealEnabled)
                     .disabled(!settings.islandEnabled)
@@ -80,52 +72,6 @@ struct PanelTriggerSettingsSections: View {
                         .foregroundStyle(.orange)
                 }
             }
-
-            // UX1/2: Drag auto-appear (Yoink core interaction). Three-level single control: immediate
-            // appear /
-            // Drag to edge to trigger / no action. Edge sensitivity uses the same three-level setting as
-            // the old edge trigger.
-            if SideShelfAvailability.isEnabled {
-            Section("When Dragging Files") {
-                Picker("When Dragging Files", selection: $settings.dragAutoAppearMode) {
-                    Text("Show immediately").tag(SettingsStore.DragAutoAppearMode.immediate)
-                    Text("Show at screen edge").tag(SettingsStore.DragAutoAppearMode.edgeOnly)
-                    Text("Do nothing").tag(SettingsStore.DragAutoAppearMode.off)
-                }
-                .pickerStyle(.radioGroup)
-                .labelsHidden()
-
-                Picker("Sensitivity", selection: $settings.edgeTriggerSensitivity) {
-                    Text("Low").tag(TriggerSensitivity.low)
-                    Text("Medium").tag(TriggerSensitivity.medium)
-                    Text("High").tag(TriggerSensitivity.high)
-                }
-                .disabled(settings.dragAutoAppearMode != .edgeOnly)
-
-                Text(dragModeFootnote)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text("Drag triggers stay silent while an ignored app is frontmost.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            }
-        }
-    }
-
-    /// UX1/2: Explanation text that changes with mode (immediate requires no edge; edgeOnly unavailable in
-    /// custom
-    /// position).
-    private var dragModeFootnote: String {
-        switch settings.dragAutoAppearMode {
-        case .immediate:
-            String(localized: "The shelf appears at its configured position as soon as you start dragging — no need to reach the screen edge.")
-        case .edgeOnly:
-            String(localized: "While dragging, hold the cursor at the shelf's screen edge for a moment to reveal it. Not available in custom position mode.")
-        case .off:
-            String(localized: "The shelf won't appear automatically while dragging.")
         }
     }
 }
-

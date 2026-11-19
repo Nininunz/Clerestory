@@ -142,8 +142,7 @@ final class DragOutController {
                 }
             ),
             cardPreviewImage: flattenedPreviewItems.count == 1
-                ? Self.makeCardPreview(for: flattenedPreviewItems[0],
-                                       appearance: settings.appearance)
+                ? Self.makeCardPreview(for: flattenedPreviewItems[0])
                 : nil
         )
         guard !represented.isEmpty else { return }
@@ -176,8 +175,7 @@ final class DragOutController {
     /// Draws the drag preview at the same size the item occupies in the shelf:
     /// the card's thumbnail area is a fixed 52pt-high box with aspect-fit, so a
     /// portrait image stays narrow and a document keeps its square icon.
-    private static func makeCardPreview(for item: ShelfItem,
-                                        appearance: ShelfAppearance) -> NSImage? {
+    private static func makeCardPreview(for item: ShelfItem) -> NSImage? {
         let thumbnail = thumbnailImage(for: item)
         let aspect = thumbnail.flatMap { image -> CGFloat? in
             guard image.size.width > 0, image.size.height > 0 else { return nil }
@@ -205,8 +203,7 @@ final class DragOutController {
         ) else { return nil }
         representation.size = size
 
-        let isDark = appearance.theme.colorScheme.map { $0 == .dark }
-            ?? (NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua)
+        let isDark = NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
 
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: representation)
