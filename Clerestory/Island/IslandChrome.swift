@@ -47,13 +47,15 @@ struct IslandModuleScrollView<Content: View>: View {
     @ViewBuilder var content: Content
     var body: some View {
         GeometryReader { viewport in
+            // The surface height around this viewport (header, padding). Read here, on the main
+            // actor: the measuring closure below must be Sendable, so it captures only this value.
+            let chromeHeight = (surfaceHeight ?? 0) - viewport.size.height
             ScrollView(.vertical) {
                 content
                     .frame(maxWidth: .infinity, alignment: .top)
                     .onGeometryChange(for: CGFloat.self) { geometry in
                         // Measure before fillsViewport adds artificial empty space.
-                        ceil(geometry.size.height + 2
-                             + (surfaceHeight ?? 0) - viewport.size.height)
+                        ceil(geometry.size.height + 2 + chromeHeight)
                     } action: { height in
                         if surfaceHeight != nil { extensionContext?.reportHeight(height) }
                     }
