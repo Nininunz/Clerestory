@@ -60,9 +60,9 @@ enum ClipboardController {
         )
     }
 
-    static func notice(for result: Result) -> ShelfNoticeContent {
-        ShelfNoticeContent(message: statusMessage(for: result),
-                           kind: !result.didWrite ? .error : (result.skippedCount > 0 ? .warning : .success))
+    static func notice(for result: Result) -> IslandNotice {
+        IslandNotice(key: "clipboard-copy", title: statusMessage(for: result),
+                     tone: !result.didWrite ? .error : (result.skippedCount > 0 ? .warning : .success))
     }
 
     static func copy(_ items: [ShelfItem],

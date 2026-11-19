@@ -17,16 +17,16 @@ final class DropImportCoordinatorTests: XCTestCase {
         let existing = ShelfItem(kind: .file, path: "/tmp/existing.txt", displayName: "existing.txt")
         let fresh = ShelfItem(kind: .file, path: "/tmp/new.txt", displayName: "new.txt")
         let store = ShelfStore(items: [existing])
-        XCTAssertNil(context.coordinator.noticeCenter.current)
+        XCTAssertNil(context.messages.current)
         context.coordinator.addDroppedItems([existing, fresh], to: store)
         XCTAssertEqual(store.items.count, 2)
-        XCTAssertEqual(context.coordinator.noticeCenter.current, ShelfNoticeMessage.alreadyOnShelf.presentation)
-        context.coordinator.noticeCenter.show(.reconnected)
+        XCTAssertEqual(context.messages.current?.notice, ShelfNotice.alreadyOnShelf.notice)
+        context.coordinator.messenger.post(.reconnected)
         context.coordinator.addDroppedItems([], to: store)
-        XCTAssertEqual(context.coordinator.noticeCenter.current, ShelfNoticeMessage.reconnected.presentation,
-                       "Old duplicate state must not produce another toast")
+        XCTAssertEqual(context.messages.current?.notice, ShelfNotice.reconnected.notice,
+                       "Old duplicate state must not produce another notice")
         context.coordinator.addDroppedItems([existing], to: store)
-        XCTAssertEqual(context.coordinator.noticeCenter.current, ShelfNoticeMessage.alreadyOnShelf.presentation)
+        XCTAssertEqual(context.messages.current?.notice, ShelfNotice.alreadyOnShelf.notice)
         XCTAssertEqual(store.items.count, 2)
     }
 
@@ -38,6 +38,7 @@ final class DropImportCoordinatorTests: XCTestCase {
     private struct Context {
         let bookmarkService = BookmarkService()
         let tempFileService: TempFileService
+        let messages = IslandMessageCenter()
         let coordinator: DropImportCoordinator
         var temporaryURLs: [URL] = []
 
@@ -45,7 +46,8 @@ final class DropImportCoordinatorTests: XCTestCase {
             let materializedDir = FileManager.default.temporaryDirectory
                 .appendingPathComponent("ClerestoryTests-Materialized-\(UUID().uuidString)", isDirectory: true)
             tempFileService = TempFileService(directoryURL: materializedDir)
-            coordinator = DropImportCoordinator(bookmarkService: bookmarkService, tempFileService: tempFileService)
+            coordinator = DropImportCoordinator(bookmarkService: bookmarkService, tempFileService: tempFileService,
+                                                messenger: messages.messenger(for: .shelf))
             temporaryURLs.append(materializedDir)
         }
 

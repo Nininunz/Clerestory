@@ -63,10 +63,10 @@ final class ShelfScenarioFixture {
     let interaction: ShelfInteractionState
     let dropTarget = DropTargetState()
     let transfers: TransferStore
-    let notices: ShelfNoticeModel
+    let messages: IslandMessageCenter
 
-    init(_ scenario: ShelfScenario, notice: ShelfNoticeContent? = nil, transfer: ShelfTransferSample? = nil) throws {
-        notices = .preview(notice: notice)
+    init(_ scenario: ShelfScenario, notice: IslandNotice? = nil, transfer: ShelfTransferSample? = nil) throws {
+        messages = .preview(notice: notice)
         // Dormant stack fixtures still exercise the retained implementation in unit tests.
         interaction = ShelfInteractionState(stacksEnabled:
             scenario == .expandedStack || scenario == .stackSelection || ShelfStackAvailability.isEnabled)
@@ -115,7 +115,8 @@ final class ShelfScenarioFixture {
 
     func view(settings: SettingsStore) -> AnyView {
         AnyView(IslandShelfModuleView().environment(store).environment(settings)
-            .environment(dropTarget).environment(ShelfGridGeometry()).environment(notices)
+            .environment(dropTarget).environment(ShelfGridGeometry())
+            .environment(\.shelfMessenger, messages.messenger(for: .shelf))
             .environment(interaction).environment(transfers))
     }
 }

@@ -14,7 +14,7 @@ struct ModuleScenario {
 struct ModuleScenarioContent {
     let view: AnyView
     var dropTarget: DropTargetState? = nil
-    var notices: ShelfNoticeModel? = nil
+    var messages: IslandMessageCenter? = nil
 }
 
 /// Explicit lifetime for isolated preferences used by rendered views.

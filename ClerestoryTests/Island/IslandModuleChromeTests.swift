@@ -354,9 +354,9 @@ final class IslandModuleChromeTests: XCTestCase {
         }
     }
 
-    func testToastShadowFadesBeforeWindowEdges() throws {
-        for message in [ShelfNoticeMessage.reconnected, .receivedAwaitingRecovery] {
-            let bitmap = try render(ShelfNoticePanelContent(notice: message.presentation, onRecovery: { _ in }))
+    func testPillShadowFadesBeforeWindowEdges() throws {
+        for message in [ShelfNotice.reconnected, .receivedAwaitingRecovery] {
+            let bitmap = try render(IslandNoticePanelContent(notice: message.notice, onAction: { _ in }))
             var edgeAlpha: CGFloat = 0
             for x in 0..<bitmap.pixelsWide {
                 edgeAlpha = max(edgeAlpha, try XCTUnwrap(bitmap.colorAt(x: x, y: 0)).alphaComponent)
@@ -370,12 +370,12 @@ final class IslandModuleChromeTests: XCTestCase {
         }
     }
 
-    func testShelfNoticesFitNotchToastAtBothModuleWidths() throws {
+    func testShelfNoticesFitNoticePillAtBothModuleWidths() throws {
         for sample in ShelfFeedbackScenario.notices {
             for width in [CGFloat(260), 464] {
-                let toast = ShelfNoticeToast(notice: sample.notice, onPerformRecovery: { _ in })
+                let pill = IslandNoticePill(notice: sample.notice, onPerformAction: { _ in })
                     .frame(width: width)
-                let bitmap = try render(toast)
+                let bitmap = try render(pill)
                 XCTAssertEqual(bitmap.pixelsWide, Int(width * 2), sample.id)
                 XCTAssertLessThanOrEqual(bitmap.pixelsHigh, 150, sample.id)
             }

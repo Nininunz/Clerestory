@@ -4,7 +4,7 @@ Clerestory is a sandboxed macOS 15+ menu bar app (SwiftUI and AppKit) with a Pan
 
 ## Layout
 
-- `Clerestory/`: the app, by area: `App`, `Island` (Panel, Notch and modules), `Shelf`, `DragDrop`, `Clipboard`, `Settings`, `Services`, `Resources`.
+- `Clerestory/`: the app, by area: `App`, `Island` (Panel, Notch and modules), `Messages` (the shared notice pill and message center), `Shelf`, `DragDrop`, `Clipboard`, `Settings`, `Services`, `Resources`.
 - `ClerestoryTests/` and `ClerestoryUITests/`: unit tests and native UI tests.
 - `Packages/ClerestoryModuleCore/`: the Foundation-only module model shared by the app.
 - `Helpers/LowPowerMode/`: the optional privileged helper ([guide](docs/LOW_POWER_MODE_HELPER.md)).

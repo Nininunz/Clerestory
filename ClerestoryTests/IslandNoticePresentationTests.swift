@@ -1,14 +1,14 @@
 import XCTest
 @testable import Clerestory
 
-final class ShelfNoticePresentationTests: XCTestCase {
+final class IslandNoticePresentationTests: XCTestCase {
     private func context(_ surface: IslandSurfaceState = .collapsed, transitioning: Bool = false,
-                         dragging: Bool = false, enabled: Bool = true) -> ShelfNoticePresentation.Context {
+                         dragging: Bool = false, enabled: Bool = true) -> IslandNoticePresentation.Context {
         .init(isEnabled: enabled, surface: surface, isTransitioning: transitioning, isDragging: dragging)
     }
 
     func testNewNoticeWaitsForReleaseAndCompletedClose() {
-        var state = ShelfNoticePresentation()
+        var state = IslandNoticePresentation()
         XCTAssertEqual(state.update(revision: nil, context: context(.expanded)), .idle)
         XCTAssertEqual(state.update(revision: 1, context: context(.expanded, dragging: true)), .waiting)
         XCTAssertEqual(state.update(revision: 1, context: context(.expanded)), .waiting)
@@ -17,14 +17,14 @@ final class ShelfNoticePresentationTests: XCTestCase {
     }
 
     func testPinnedNoticeStillWaitsForReleaseAndOpeningAnimation() {
-        var state = ShelfNoticePresentation()
+        var state = IslandNoticePresentation()
         XCTAssertEqual(state.update(revision: 1, context: context(.pinned, dragging: true)), .waiting)
         XCTAssertEqual(state.update(revision: 1, context: context(.pinned, transitioning: true)), .waiting)
         XCTAssertEqual(state.update(revision: 1, context: context(.pinned)), .visible)
     }
 
     func testDisplayedNoticeFollowsReopeningButReplacementWaitsAgain() {
-        var state = ShelfNoticePresentation()
+        var state = IslandNoticePresentation()
         XCTAssertEqual(state.update(revision: 1, context: context()), .visible)
         XCTAssertEqual(state.update(revision: 1, context: context(.expanded, transitioning: true)), .visible)
         XCTAssertEqual(state.update(revision: 1, context: context(.expanded)), .visible)
@@ -33,7 +33,7 @@ final class ShelfNoticePresentationTests: XCTestCase {
     }
 
     func testDragSuspensionRetainsDisplayedStateAndExpiryClearsIt() {
-        var state = ShelfNoticePresentation()
+        var state = IslandNoticePresentation()
         XCTAssertEqual(state.update(revision: 1, context: context()), .visible)
         XCTAssertEqual(state.update(revision: 1, context: context(.expanded, dragging: true)), .waiting)
         XCTAssertEqual(state.update(revision: 1, context: context(.expanded)), .visible)
@@ -42,7 +42,7 @@ final class ShelfNoticePresentationTests: XCTestCase {
     }
 
     func testDisabledPresentationNeverHoldsOrDisplaysFeedback() {
-        var state = ShelfNoticePresentation()
+        var state = IslandNoticePresentation()
         XCTAssertEqual(state.update(revision: 1, context: context(.expanded, dragging: true, enabled: false)), .idle)
         XCTAssertEqual(state.update(revision: 1, context: context(.expanded)), .waiting)
         XCTAssertEqual(state.update(revision: 1, context: context(.hidden)), .visible)

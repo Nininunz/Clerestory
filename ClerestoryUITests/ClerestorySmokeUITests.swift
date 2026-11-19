@@ -413,7 +413,7 @@ final class ClerestorySmokeUITests: XCTestCase {
         XCTAssertTrue(panel.waitForNonExistence(timeout: 3))
         drag(source, to: target)
         let duplicate = app.descendants(matching: .any).matching(
-            NSPredicate(format: "identifier == 'shelf.notice' AND label CONTAINS 'Already on Shelf'")
+            NSPredicate(format: "identifier == 'island.notice' AND label CONTAINS 'Already on Shelf'")
         ).firstMatch
         XCTAssertTrue(duplicate.waitForExistence(timeout: 5))
         XCTAssertTrue(panel.waitForNonExistence(timeout: 3))
@@ -467,7 +467,7 @@ final class ClerestorySmokeUITests: XCTestCase {
         assertValue("pinned", of: pin)
         drag(source, to: panel.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)))
         let duplicate = app.descendants(matching: .any).matching(
-            NSPredicate(format: "identifier == 'shelf.notice' AND label CONTAINS 'Already on Shelf'")
+            NSPredicate(format: "identifier == 'island.notice' AND label CONTAINS 'Already on Shelf'")
         ).firstMatch
         XCTAssertTrue(duplicate.waitForExistence(timeout: 5))
         XCTAssertTrue(panel.exists)

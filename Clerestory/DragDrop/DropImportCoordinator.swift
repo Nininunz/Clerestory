@@ -115,10 +115,8 @@ final class DropImportCoordinator {
     /// Shared bookmark service (ShelfWindowController injects it into SwiftUI environment,
     /// For card thumbnails/open operations to resolve file access rights via bookmark parsing).
     let bookmarkService: BookmarkService
-    /// D10: Inline prompt center for failed drag and drop/materialization (ShelfWindowController injects
-    /// it into SwiftUI environment,
-    /// ShelfView renders the transient capsule below the title bar).
-    let noticeCenter: ShelfNoticeModel
+    /// Posts Shelf notices, such as failed drag and drop or materialization, to the notice pill.
+    let messenger: ModuleMessenger
     /// F-05: ⌘+drag (cut mode) transfer orchestration (copy → validation → trash → isCut item).
     let cutMoveService: CutMoveService
     /// Record recovery transactions for managed moves. Only call `markManagedMoveCommitted` to remove a
@@ -135,14 +133,14 @@ final class DropImportCoordinator {
 
     init(bookmarkService: BookmarkService,
          tempFileService: TempFileService,
-         noticeCenter: ShelfNoticeModel = ShelfNoticeModel(),
+         messenger: ModuleMessenger = .inert,
          managedMoveJournal: ManagedMoveJournal? = nil,
          pendingImportJournal: PendingImportJournal? = nil,
          transferStore: TransferStore? = nil,
          cutMoveService: CutMoveService? = nil) {
         self.bookmarkService = bookmarkService
         self.tempFileService = tempFileService
-        self.noticeCenter = noticeCenter
+        self.messenger = messenger
         self.transferStore = transferStore ?? TransferStore()
         let journal = managedMoveJournal
             ?? cutMoveService?.managedMoveJournal
@@ -170,7 +168,7 @@ final class DropImportCoordinator {
         store.add(contentsOf: items, at: index)
         if !ShelfDuplicateFeedback.usesFileOverlay,
            store.duplicateDrop?.id != previousDuplicate {
-            noticeCenter.show(.alreadyOnShelf)
+            messenger.post(.alreadyOnShelf)
         }
     }
 
@@ -335,7 +333,7 @@ final class DropImportCoordinator {
                                       onAsyncItemReady: onAsyncItemReady)
         guard !fallback.items.isEmpty || fallback.pending > 0 else {
             logger.warning("Drop contained no importable content; declared types: \(types.map(\.rawValue), privacy: .public)")
-            noticeCenter.show(.unsupportedContent)
+            messenger.post(.unsupportedContent)
             return .unhandled
         }
         // A heterogeneous fallback drop can contain synchronous rich text/URL
@@ -482,7 +480,7 @@ final class DropImportCoordinator {
                                            logger: logger)
         } catch {
             logger.error("Failed to materialize dropped rich text: \(error.localizedDescription, privacy: .public)")
-            noticeCenter.show(.importFailed)
+            messenger.post(.importFailed)
             return nil
         }
     }
@@ -752,8 +750,8 @@ final class DropImportCoordinator {
                                                        logger: logger)
                     await reportSuccess(item)
                 } catch {
-                    // Fail without crashing or being silent: log + D10 inline prompt, drag-and-drop is
-                    // still considered as handled.
+                    // Fail without crashing or being silent: log + record the failure in TransferStore
+                    // (shown in the Shelf activity strip); drag-and-drop is still considered as handled.
                     logger.error("Failed to materialize dropped image data: \(error.localizedDescription, privacy: .public)")
                     await reportFailure(source.displayName(for: payload.type))
                 }

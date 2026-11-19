@@ -154,7 +154,7 @@ final class ShelfActionRunner: NSObject {
     }
 
     private let bookmarkService: BookmarkService
-    private let notices: ShelfNoticeModel
+    private let messenger: ModuleMessenger
     private let pasteboard: NSPasteboard
     private let fileExists: (String) -> Bool
     private let revealFiles: ([URL]) -> Void
@@ -162,7 +162,7 @@ final class ShelfActionRunner: NSObject {
 
     init(
         bookmarkService: BookmarkService,
-        notices: ShelfNoticeModel,
+        messenger: ModuleMessenger,
         pasteboard: NSPasteboard = .general,
         fileExists: @escaping (String) -> Bool = FileManager.default.fileExists(atPath:),
         revealFiles: @escaping ([URL]) -> Void = {
@@ -170,7 +170,7 @@ final class ShelfActionRunner: NSObject {
         }
     ) {
         self.bookmarkService = bookmarkService
-        self.notices = notices
+        self.messenger = messenger
         self.pasteboard = pasteboard
         self.fileExists = fileExists
         self.revealFiles = revealFiles
@@ -186,7 +186,7 @@ final class ShelfActionRunner: NSObject {
         switch action {
         case .share:
             guard let anchorView else {
-                notices.show(.shareUnavailable)
+                messenger.post(.shareUnavailable)
                 return Result(state: .unavailable, succeededCount: 0,
                               skippedCount: DragPayloadBuilder.flattenedItems(items).count)
             }
@@ -203,7 +203,7 @@ final class ShelfActionRunner: NSObject {
         defer { stopAccessing(batch.accessedURLs) }
 
         guard !batch.urls.isEmpty else {
-            notices.show(.copyPathsFailed)
+            messenger.post(.copyPathsFailed)
             return Result(state: .unavailable, succeededCount: 0,
                           skippedCount: batch.skippedCount)
         }
@@ -212,12 +212,12 @@ final class ShelfActionRunner: NSObject {
         pasteboard.clearContents()
         let didWrite = pasteboard.setString(paths, forType: PasteboardTypes.plainText)
         guard didWrite else {
-            notices.show(.copyPathsFailed)
+            messenger.post(.copyPathsFailed)
             return Result(state: .unavailable, succeededCount: 0,
                           skippedCount: batch.skippedCount + batch.urls.count)
         }
 
-        notices.show(Self.pathCopyNotice(copied: batch.urls.count, skipped: batch.skippedCount))
+        messenger.post(Self.pathCopyNotice(copied: batch.urls.count, skipped: batch.skippedCount))
         return Result(state: .completed, succeededCount: batch.urls.count,
                       skippedCount: batch.skippedCount)
     }
@@ -227,20 +227,20 @@ final class ShelfActionRunner: NSObject {
         defer { stopAccessing(batch.accessedURLs) }
 
         guard !batch.urls.isEmpty else {
-            notices.show(.revealFailed)
+            messenger.post(.revealFailed)
             return Result(state: .unavailable, succeededCount: 0,
                           skippedCount: batch.skippedCount)
         }
 
         revealFiles(batch.urls)
-        notices.show(Self.revealNotice(shown: batch.urls.count, skipped: batch.skippedCount))
+        messenger.post(Self.revealNotice(shown: batch.urls.count, skipped: batch.skippedCount))
         return Result(state: .completed, succeededCount: batch.urls.count,
                       skippedCount: batch.skippedCount)
     }
 
     private func presentShare(_ items: [ShelfItem], relativeTo anchorView: NSView) -> Result {
         guard activeShare == nil else {
-            notices.show(.shareInProgress)
+            messenger.post(.shareInProgress)
             return Result(state: .busy, succeededCount: 0, skippedCount: 0)
         }
 
@@ -267,7 +267,7 @@ final class ShelfActionRunner: NSObject {
 
         guard !payload.isEmpty else {
             stopAccessing(accessedURLs)
-            notices.show(.shareUnavailable)
+            messenger.post(.shareUnavailable)
             return Result(state: .unavailable, succeededCount: 0,
                           skippedCount: flattened.count)
         }
@@ -292,7 +292,7 @@ final class ShelfActionRunner: NSObject {
             guard let action = menuItem.action,
                   NSApp.sendAction(action, to: menuItem.target, from: menuItem) else {
                 finishShare(success: false)
-                notices.show(.shareUnavailable)
+                messenger.post(.shareUnavailable)
                 return Result(state: .unavailable, succeededCount: 0,
                               skippedCount: flattened.count)
             }
@@ -344,13 +344,13 @@ final class ShelfActionRunner: NSObject {
         activeShare = nil
         stopAccessing(share.accessedURLs)
         if success {
-            notices.show(Self.shareNotice(shared: share.sharedCount, skipped: share.skippedCount))
+            messenger.post(Self.shareNotice(shared: share.sharedCount, skipped: share.skippedCount))
         }
     }
 
-    nonisolated static func pathCopyNotice(copied: Int, skipped: Int) -> ShelfNoticeContent {
-        ShelfNoticeContent(message: pathCopyStatus(copied: copied, skipped: skipped),
-                           kind: skipped > 0 ? .warning : .success)
+    nonisolated static func pathCopyNotice(copied: Int, skipped: Int) -> IslandNotice {
+        IslandNotice(key: "copy-paths", title: pathCopyStatus(copied: copied, skipped: skipped),
+                     tone: skipped > 0 ? .warning : .success)
     }
 
     nonisolated static func pathCopyStatus(copied: Int, skipped: Int) -> String {
@@ -366,9 +366,9 @@ final class ShelfActionRunner: NSObject {
         )
     }
 
-    nonisolated static func revealNotice(shown: Int, skipped: Int) -> ShelfNoticeContent {
-        ShelfNoticeContent(message: revealStatus(shown: shown, skipped: skipped),
-                           kind: skipped > 0 ? .warning : .success)
+    nonisolated static func revealNotice(shown: Int, skipped: Int) -> IslandNotice {
+        IslandNotice(key: "reveal", title: revealStatus(shown: shown, skipped: skipped),
+                     tone: skipped > 0 ? .warning : .success)
     }
 
     nonisolated static func revealStatus(shown: Int, skipped: Int) -> String {
@@ -384,9 +384,9 @@ final class ShelfActionRunner: NSObject {
         )
     }
 
-    nonisolated static func shareNotice(shared: Int, skipped: Int) -> ShelfNoticeContent {
-        ShelfNoticeContent(message: shareStatus(shared: shared, skipped: skipped),
-                           kind: skipped > 0 ? .warning : .success)
+    nonisolated static func shareNotice(shared: Int, skipped: Int) -> IslandNotice {
+        IslandNotice(key: "share", title: shareStatus(shared: shared, skipped: skipped),
+                     tone: skipped > 0 ? .warning : .success)
     }
 
     nonisolated static func shareStatus(shared: Int, skipped: Int) -> String {
@@ -433,7 +433,7 @@ extension ShelfActionRunner: @preconcurrency NSSharingServicePickerDelegate,
            cocoaError.code == CocoaError.Code.userCancelled.rawValue {
             return
         }
-        notices.show(.shareFailed)
+        messenger.post(.shareFailed)
     }
 }
 

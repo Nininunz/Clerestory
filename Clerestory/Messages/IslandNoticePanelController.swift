@@ -2,37 +2,34 @@ import AppKit
 import Observation
 import SwiftUI
 
-/// Owns the independent notice window; presentation policy lives in ShelfNoticePresentation.
+/// Owns the independent notice pill window; presentation policy lives in IslandNoticePresentation.
 @MainActor
-final class ShelfNoticePanelController: NSObject {
+final class IslandNoticePanelController: NSObject {
     private weak var anchor: NSWindow?
-    private let notices: ShelfNoticeModel
+    private let messages: IslandMessageCenter
     private let coordinator: IslandActivityCoordinator
     private let settings: SettingsStore
     private let dropTarget: DropTargetState
-    private let onRecovery: (RecoveryAction) -> Void
     let panel = NSPanel(contentRect: .zero,
                         styleMask: [.borderless, .nonactivatingPanel],
                         backing: .buffered, defer: false)
 
-    private var presentation = ShelfNoticePresentation()
-    private var hostingView: NSHostingView<ShelfNoticePanelContent>?
-    private var renderedNotice: ShelfNoticeContent?
+    private var presentation = IslandNoticePresentation()
+    private var hostingView: NSHostingView<IslandNoticePanelContent>?
+    private var renderedNotice: IslandNotice?
     private var pillSize = CGSize.zero
     private var lastTargetFrame: CGRect?
     private var isShowing = false
     private var animationGeneration = 0
     private var stopped = false
 
-    init(anchor: NSWindow, notices: ShelfNoticeModel, coordinator: IslandActivityCoordinator,
-         settings: SettingsStore, dropTarget: DropTargetState,
-         onRecovery: @escaping (RecoveryAction) -> Void) {
+    init(anchor: NSWindow, messages: IslandMessageCenter, coordinator: IslandActivityCoordinator,
+         settings: SettingsStore, dropTarget: DropTargetState) {
         self.anchor = anchor
-        self.notices = notices
+        self.messages = messages
         self.coordinator = coordinator
         self.settings = settings
         self.dropTarget = dropTarget
-        self.onRecovery = onRecovery
         super.init()
         panel.isReleasedWhenClosed = false
         panel.isOpaque = false
@@ -52,7 +49,7 @@ final class ShelfNoticePanelController: NSObject {
 
     var interactionFrame: CGRect? {
         guard isShowing, panel.isVisible else { return nil }
-        return panel.frame.insetBy(dx: ShelfNoticePlacement.shadowInset, dy: ShelfNoticePlacement.shadowInset)
+        return panel.frame.insetBy(dx: IslandNoticePlacement.shadowInset, dy: IslandNoticePlacement.shadowInset)
     }
 
     func contains(_ point: CGPoint) -> Bool {
@@ -62,7 +59,7 @@ final class ShelfNoticePanelController: NSObject {
 
     /// The larger shadow canvas must not intercept clicks meant for the Island.
     func updatePointer(at point: CGPoint) {
-        panel.ignoresMouseEvents = renderedNotice?.recoveryAction == nil || !contains(point)
+        panel.ignoresMouseEvents = renderedNotice?.action == nil || !contains(point)
     }
 
     func stop() {
@@ -70,11 +67,11 @@ final class ShelfNoticePanelController: NSObject {
         animationGeneration += 1
         isShowing = false
         NotificationCenter.default.removeObserver(self)
-        notices.setPresentationDeferred(false)
+        messages.setPresentationDeferred(false)
         panel.orderOut(nil)
     }
 
-    private var context: ShelfNoticePresentation.Context {
+    private var context: IslandNoticePresentation.Context {
         .init(isEnabled: settings.islandEnabled,
               surface: coordinator.surfaceState,
               isTransitioning: coordinator.isSurfaceTransitionPending,
@@ -84,8 +81,8 @@ final class ShelfNoticePanelController: NSObject {
     private func observe() {
         guard !stopped else { return }
         withObservationTracking {
-            _ = notices.current
-            _ = notices.revision
+            _ = messages.current
+            _ = messages.revision
             _ = context
             _ = coordinator.currentLayout
         } onChange: { [weak self] in
@@ -98,10 +95,10 @@ final class ShelfNoticePanelController: NSObject {
 
     private func refresh() {
         guard !stopped else { return }
-        let phase = presentation.update(revision: notices.current == nil ? nil : notices.revision,
+        let phase = presentation.update(revision: messages.current == nil ? nil : messages.revision,
                                         context: context)
-        notices.setPresentationDeferred(phase == .waiting)
-        guard phase == .visible, let anchor, let notice = notices.current else {
+        messages.setPresentationDeferred(phase == .waiting)
+        guard phase == .visible, let anchor, let notice = messages.current?.notice else {
             dismiss()
             return
         }
@@ -111,17 +108,19 @@ final class ShelfNoticePanelController: NSObject {
         let anchorFrame = usesSurfaceFrame && anchor.isVisible
             ? (anchor as? ShelfPanel)?.interactionFrame ?? anchor.frame
             : coordinator.currentLayout?.closedNoticeAnchor ?? anchor.frame
-        let target = ShelfNoticePlacement.frame(below: anchorFrame, pillSize: pillSize)
+        let target = IslandNoticePlacement.frame(below: anchorFrame, pillSize: pillSize)
         panel.level = anchor.level
         if isShowing { move(to: target) } else { show(at: target) }
         lastTargetFrame = target
         updatePointer(at: NSEvent.mouseLocation)
     }
 
-    private func updateContent(_ notice: ShelfNoticeContent) {
+    private func updateContent(_ notice: IslandNotice) {
         guard renderedNotice != notice else { return }
-        let content = ShelfNoticePanelContent(notice: notice, onRecovery: onRecovery)
-        let host: NSHostingView<ShelfNoticePanelContent>
+        let content = IslandNoticePanelContent(notice: notice) { [weak messages] action in
+            messages?.perform(action)
+        }
+        let host: NSHostingView<IslandNoticePanelContent>
         if let hostingView {
             host = hostingView
             host.rootView = content
@@ -130,7 +129,7 @@ final class ShelfNoticePanelController: NSObject {
             hostingView = host
             panel.contentView = host
         }
-        pillSize = ShelfNoticePlacement.pillSize(in: host.fittingSize)
+        pillSize = IslandNoticePlacement.pillSize(in: host.fittingSize)
         renderedNotice = notice
         updatePointer(at: NSEvent.mouseLocation)
     }

@@ -16,17 +16,17 @@ final class IslandPresentationController: NSObject {
     private let islandActivityCoordinator: IslandActivityCoordinator
     private let islandModuleRegistry: IslandModuleRegistry
     private let islandModuleContainer: IslandModuleContainer
-    private let notices: () -> ShelfNoticePanelController?
+    private let notices: () -> IslandNoticePanelController?
     private let collapse: (Bool) -> Void
     private let islandLogger = Logger(subsystem: "com.nininunz.Clerestory", category: "IslandPresentation")
     let expanded: IslandExpandedWindowController
     let notch: IslandNotchWindowController
     private var islandPanel: ShelfPanel { expanded.panel }
-    private var islandNoticePanel: ShelfNoticePanelController? { notices() }
+    private var islandNoticePanel: IslandNoticePanelController? { notices() }
 
     init(settings: SettingsStore, coordinator: IslandActivityCoordinator,
          registry: IslandModuleRegistry, modules: IslandModuleContainer,
-         notices: @escaping () -> ShelfNoticePanelController?,
+         notices: @escaping () -> IslandNoticePanelController?,
          collapse: @escaping (Bool) -> Void,
          makePanel: @escaping (IslandWindowRole) -> ShelfPanel,
          screenGeometry: ((CGPoint) -> IslandGeometryResolver.ScreenGeometry?)? = nil,
