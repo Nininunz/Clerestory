@@ -4,7 +4,7 @@
 
 | Topic | Guide |
 | --- | --- |
-| Setup and contributions | [Build from source](../README.md#build-from-source) and [contributor guide](../CONTRIBUTING.md). |
+| Setup and contributions | [Build from source](../README.md#build-from-source), [contributor guide](../CONTRIBUTING.md), and [project conventions](../AGENTS.md). |
 | App architecture | [Panel and Notch](PANEL_ARCHITECTURE.md) covers display placement, settings, and window ownership. |
 | Builds and unit tests | [macOS CI](development/CI.md) covers the required check and how to reproduce it locally. |
 | Native UI tests | [UI tests](development/UI_TESTS.md) covers running the suite on a logged-in Mac. |
