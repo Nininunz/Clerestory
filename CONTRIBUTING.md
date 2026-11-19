@@ -9,7 +9,7 @@
 - Branch from `main` and keep the PR focused on one change. Use an imperative title such as “Keep Shelf search controls fixed.”
 - Write commit messages the same way: a short imperative subject, then a body that explains what changed and why.
 - Write new code comments and internal developer documentation in English.
-- Clerestory is English-only. Add new user-facing text to `Clerestory/Resources/Localizable.xcstrings` as an English entry; don't add other languages.
+- Clerestory is English-only for now; more languages are planned later. Keep user-facing text localizable and add each new string to `Clerestory/Resources/Localizable.xcstrings` as an English entry. A new language needs a native-speaker reviewer; discuss it in an issue first.
 - Explain the change and why it matters. Use `Closes #123` if the PR fully resolves an issue or `Refs #123` if work remains.
 - List the checks you ran and their results. Add screenshots or a recording for visible changes when helpful. For display and drag-and-drop changes, record what you verified on physical hardware or in simulation.
 - Pull requests are merged with a merge commit.

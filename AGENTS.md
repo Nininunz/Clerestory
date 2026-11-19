@@ -38,7 +38,7 @@ Clerestory is a sandboxed macOS 15+ menu bar app (SwiftUI and AppKit) with a Pan
 
 - Swift 6. Follow the isolation patterns already in the file you are changing (`@MainActor` types, `nonisolated` helpers and AppKit bridge classes).
 - Write code comments and developer docs in English.
-- The app is English-only. Write user-facing text with `String(localized:)` or SwiftUI string literals, and add a manual `en` entry for each new string to `Clerestory/Resources/Localizable.xcstrings` in the same change. Do not add other localizations.
+- English is the only language for now; localization is planned but low priority (#16). Keep all user-facing text localizable so adding a language later is only translation work: use `String(localized:)` or SwiftUI string literals, and add a manual `en` entry for each new string to `Clerestory/Resources/Localizable.xcstrings` in the same change. Don't add a language without a native-speaker reviewer who can keep it up to date.
 - Do not add dependencies without discussing it first. Package versions are pinned in `Clerestory.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`; update them through Xcode and run `Scripts/test-ci.sh`.
 - Keep the README and `docs/` accurate in the same PR that changes the behavior they describe.
 
