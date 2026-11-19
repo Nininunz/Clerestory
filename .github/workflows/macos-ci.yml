@@ -11,8 +11,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: macos-ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # A newer PR commit replaces that PR's older run. Every run on main gets its
+  # own group, so none is cancelled or dropped from the queue: each merge gets
+  # the full Release build.
+  group: macos-ci-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   changes:
@@ -23,6 +26,7 @@ jobs:
       pull-requests: read
     outputs:
       code: ${{ steps.filter.outputs.code }}
+      release_build: ${{ steps.filter.outputs.release_build }}
     steps:
       - name: Classify changed files
         id: filter
@@ -33,9 +37,10 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
-          # Pushes to main and manual runs always build.
+          # Pushes to main and manual runs always build, with the full Release build.
           if [ "$EVENT_NAME" != "pull_request" ]; then
             echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "release_build=full" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -49,6 +54,9 @@ jobs:
           # Scripts/check-identity.py, and TestFixtures/ holds Markdown test input,
           # so changes there still build.
           code=false
+          # PRs get a fast unoptimized Release compile, unless they change build
+          # settings, packages, or CI, which get the full optimized universal build.
+          release_build=fast
           while IFS= read -r path; do
             case "$path" in
               docs/appcast.xml) code=true ;;
@@ -58,19 +66,40 @@ jobs:
               *.md) ;;
               *) code=true ;;
             esac
+            case "$path" in
+              Clerestory.xcodeproj/*|*.xcconfig|*/Package.swift|.github/workflows/*|Scripts/test-ci.sh)
+                release_build=full ;;
+            esac
           done < changed-files.txt
 
           # An empty file list is unexpected; build rather than skip.
-          [ -s changed-files.txt ] || code=true
+          [ -s changed-files.txt ] || { code=true; release_build=full; }
           echo "code=$code" | tee -a "$GITHUB_OUTPUT"
+          echo "release_build=$release_build" | tee -a "$GITHUB_OUTPUT"
 
-  build-and-unit-tests:
-    # Keep this name fixed: the main-branch ruleset requires it. A skipped job
-    # reports success, so documentation-only PRs can merge without a macOS run.
-    name: Build and unit tests (Xcode 27)
+  # The build jobs run when code changed, and also when change detection
+  # failed, so a broken filter can never skip them.
+
+  package-checks:
+    name: Package tests and identity check
     needs: changes
-    # Build when code changed, and also when change detection failed, so a
-    # broken filter can never skip the required check.
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Check app identity and update ownership
+        run: Scripts/test-ci.sh identity
+      - name: Test ClerestoryModuleCore
+        env:
+          CLERESTORY_CI_OUTPUT: ${{ runner.temp }}/clerestory-ci
+        run: Scripts/test-ci.sh module-core
+
+  release-build:
+    name: Release build (Xcode 27)
+    needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
     runs-on: xcode-27
     timeout-minutes: 30
@@ -80,17 +109,85 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - name: Build Release and run unit tests
+      - name: Build Release
         env:
           CLERESTORY_CI_OUTPUT: ${{ runner.temp }}/clerestory-ci
-        run: Scripts/test-ci.sh
+          CLERESTORY_RELEASE_BUILD: ${{ needs.changes.outputs.release_build || 'full' }}
+        run: Scripts/test-ci.sh release
+      - name: Upload build logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ci-release-build-xcode-27.2
+          path: ${{ runner.temp }}/clerestory-ci/*.log
+          if-no-files-found: warn
+          retention-days: 14
+
+  unit-tests:
+    name: Unit tests (Xcode 27)
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
+    runs-on: xcode-27
+    timeout-minutes: 30
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Build Debug and run unit tests
+        env:
+          CLERESTORY_CI_OUTPUT: ${{ runner.temp }}/clerestory-ci
+        run: Scripts/test-ci.sh unit-tests
       - name: Upload logs and test results
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: macos-ci-results-xcode-27.2
+          name: ci-unit-tests-xcode-27.2
           path: |
             ${{ runner.temp }}/clerestory-ci/*.log
             ${{ runner.temp }}/clerestory-ci/unit-tests.xcresult
           if-no-files-found: warn
           retention-days: 14
+
+  gate:
+    # Keep this name fixed: the main-branch ruleset requires it. The gate runs
+    # even when a job above fails or is cancelled, so it can never be skipped
+    # (a skipped required check would count as passing). A failed change
+    # detection only means every check ran; the check results decide.
+    name: Build and unit tests (Xcode 27)
+    needs: [changes, package-checks, release-build, unit-tests]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every check to pass
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          CODE: ${{ needs.changes.outputs.code }}
+          PACKAGE: ${{ needs.package-checks.result }}
+          RELEASE: ${{ needs.release-build.result }}
+          TESTS: ${{ needs.unit-tests.result }}
+        run: |
+          set -euo pipefail
+          echo "changes=$CHANGES code=${CODE:-unknown} package=$PACKAGE release=$RELEASE tests=$TESTS"
+          if [ "$CHANGES" != success ]; then
+            echo "::warning::Change detection did not succeed, so every check ran."
+          fi
+          for result in "$PACKAGE" "$RELEASE" "$TESTS"; do
+            if [ "$result" = failure ] || [ "$result" = cancelled ]; then
+              echo "::error::A CI job failed or was cancelled."
+              exit 1
+            fi
+          done
+          if [ "$CHANGES" = success ] && [ "$CODE" = false ]; then
+            echo "Documentation-only change: build and test jobs were skipped."
+            exit 0
+          fi
+          for result in "$PACKAGE" "$RELEASE" "$TESTS"; do
+            if [ "$result" != success ]; then
+              echo "::error::Code changed but a build or test job did not run."
+              exit 1
+            fi
+          done
+          echo "All CI jobs passed."
