@@ -1,6 +1,6 @@
 import CoreGraphics
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// ShelfLayoutEngine (S9) pure logic unit tests: edge attachment, hidden sliding direction, frame
 /// grabbing, target screen backtracking (mouse screen is pulled → main screen), custom frame validation

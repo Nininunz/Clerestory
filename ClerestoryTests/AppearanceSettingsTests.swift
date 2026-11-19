@@ -1,10 +1,10 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 @MainActor
 final class AppearanceSettingsTests: XCTestCase {
     private func withStore(_ body: (SettingsStore, UserDefaults) throws -> Void) throws {
-        let name = "OpenYoinkAppearanceTests-\(UUID().uuidString)"
+        let name = "ClerestoryAppearanceTests-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
         defer { defaults.removePersistentDomain(forName: name) }
         try body(SettingsStore(defaults: defaults), defaults)
@@ -162,7 +162,7 @@ final class AppearanceSettingsTests: XCTestCase {
         try withStore { store, defaults in
             store.showNotch = false
             store.shelfWidth = 400
-            defaults.set(Data("not JSON".utf8), forKey: "OpenYoink.appearance.v1")
+            defaults.set(Data("not JSON".utf8), forKey: "Clerestory.appearance.v1")
             let reloaded = SettingsStore(defaults: defaults)
             XCTAssertEqual(reloaded.appearance, .default)
             XCTAssertFalse(reloaded.showNotch)
@@ -181,7 +181,7 @@ final class AppearanceSettingsTests: XCTestCase {
             let encoded = try JSONEncoder().encode(legacy)
             var json = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
             json.removeValue(forKey: "backgroundOpacity")
-            defaults.set(try JSONSerialization.data(withJSONObject: json), forKey: "OpenYoink.appearance.v1")
+            defaults.set(try JSONSerialization.data(withJSONObject: json), forKey: "Clerestory.appearance.v1")
             let loaded = SettingsStore(defaults: defaults)
             XCTAssertEqual(loaded.appearance, legacy)
             XCTAssertEqual(loaded.appearance.backgroundOpacity, 1)

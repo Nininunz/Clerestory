@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 @MainActor
 final class IslandNotchSelectionTests: XCTestCase {
@@ -8,11 +8,11 @@ final class IslandNotchSelectionTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let shortcut = SettingsStore.HotKeyShortcut(keyCode: 18, command: true, shift: false, option: true, control: false)
-        defaults.set(false, forKey: "OpenYoink.showCompactIsland")
-        defaults.set(["battery", "shelf"], forKey: "OpenYoink.compactModuleOrder")
-        defaults.set("battery", forKey: "OpenYoink.compactModuleID")
-        defaults.set(try JSONEncoder().encode(shortcut), forKey: "OpenYoink.compactCycleShortcut")
-        defaults.set("todayTokens", forKey: "OpenYoink.aiUsageCompactMetric")
+        defaults.set(false, forKey: "Clerestory.showCompactIsland")
+        defaults.set(["battery", "shelf"], forKey: "Clerestory.compactModuleOrder")
+        defaults.set("battery", forKey: "Clerestory.compactModuleID")
+        defaults.set(try JSONEncoder().encode(shortcut), forKey: "Clerestory.compactCycleShortcut")
+        defaults.set("todayTokens", forKey: "Clerestory.aiUsageCompactMetric")
 
         let settings = SettingsStore(defaults: defaults)
         XCTAssertFalse(settings.showNotch)
@@ -26,10 +26,10 @@ final class IslandNotchSelectionTests: XCTestCase {
         settings.notchModuleID = .timer
         settings.notchCycleShortcut = nil
         settings.aiUsageNotchMetric = .tightestLimit
-        XCTAssertTrue(defaults.bool(forKey: "OpenYoink.showCompactIsland"))
-        XCTAssertEqual(defaults.stringArray(forKey: "OpenYoink.compactModuleOrder"), ["timer", "shelf"])
-        XCTAssertEqual(defaults.string(forKey: "OpenYoink.compactModuleID"), "timer")
-        XCTAssertEqual(defaults.string(forKey: "OpenYoink.aiUsageCompactMetric"), "tightestLimit")
+        XCTAssertTrue(defaults.bool(forKey: "Clerestory.showCompactIsland"))
+        XCTAssertEqual(defaults.stringArray(forKey: "Clerestory.compactModuleOrder"), ["timer", "shelf"])
+        XCTAssertEqual(defaults.string(forKey: "Clerestory.compactModuleID"), "timer")
+        XCTAssertEqual(defaults.string(forKey: "Clerestory.aiUsageCompactMetric"), "tightestLimit")
         let reloaded = SettingsStore(defaults: defaults)
         XCTAssertNil(reloaded.notchCycleShortcut)
         XCTAssertEqual(reloaded.notchModuleOrder, [.timer, .shelf])
@@ -37,12 +37,12 @@ final class IslandNotchSelectionTests: XCTestCase {
         XCTAssertEqual(reloaded.aiUsageNotchMetric, .tightestLimit)
         XCTAssertTrue(reloaded.showNotch)
         for key in ["showNotch", "notchModuleOrder", "notchModuleID", "notchCycleShortcut", "aiUsageNotchMetric"] {
-            XCTAssertNil(defaults.object(forKey: "OpenYoink.\(key)"), "Must retain the legacy storage key")
+            XCTAssertNil(defaults.object(forKey: "Clerestory.\(key)"), "Must retain the legacy storage key")
         }
     }
 
     func testCustomNotchOrderPersistsAndRemainsIndependentOfExpandedSlots() throws {
-        let suite = "OpenYoink.NotchOrder.\(UUID().uuidString)"
+        let suite = "Clerestory.NotchOrder.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = SettingsStore(defaults: defaults)
@@ -93,7 +93,7 @@ final class IslandNotchSelectionTests: XCTestCase {
     }
 
     func testReverseShortcutAndDirection() throws {
-        let suite = "OpenYoink.ReverseCycleTests.\(UUID().uuidString)"
+        let suite = "Clerestory.ReverseCycleTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = SettingsStore(defaults: defaults)
@@ -144,7 +144,7 @@ final class IslandNotchSelectionTests: XCTestCase {
     }
 
     func testChoiceAndShortcutPersistAndClearingShortcutStaysCleared() throws {
-        let suite = "OpenYoink.NotchSelectionTests.\(UUID().uuidString)"
+        let suite = "Clerestory.NotchSelectionTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = SettingsStore(defaults: defaults)
@@ -161,7 +161,7 @@ final class IslandNotchSelectionTests: XCTestCase {
     }
 
     func testCycleDoesNotChangeExpandedSelectionAndActivitiesDoNotChangeChoice() throws {
-        let suite = "OpenYoink.NotchSelectionTests.\(UUID().uuidString)"
+        let suite = "Clerestory.NotchSelectionTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = SettingsStore(defaults: defaults)
@@ -180,7 +180,7 @@ final class IslandNotchSelectionTests: XCTestCase {
     }
 
     func testConflictsWithExistingShortcuts() throws {
-        let suite = "OpenYoink.NotchSelectionTests.\(UUID().uuidString)"
+        let suite = "Clerestory.NotchSelectionTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = SettingsStore(defaults: defaults)

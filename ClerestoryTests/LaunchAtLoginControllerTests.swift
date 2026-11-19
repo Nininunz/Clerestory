@@ -1,6 +1,6 @@
 import XCTest
 import ServiceManagement
-@testable import OpenYoink
+@testable import Clerestory
 
 @MainActor
 final class LaunchAtLoginControllerTests: XCTestCase {

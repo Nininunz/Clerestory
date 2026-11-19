@@ -11,14 +11,14 @@ The script uses local ad-hoc signing, verifies the app, runner, and drag helper 
 By default, each invocation creates a temporary DerivedData directory and prints its path. To reuse a successful build directory:
 
 ```sh
-OPENYOINK_UI_DERIVED_DATA=/tmp/openyoink-ui-signed Scripts/test-ui.sh
+CLERESTORY_UI_DERIVED_DATA=/tmp/clerestory-ui-signed Scripts/test-ui.sh
 ```
 
 Results, screenshots, failure hierarchies, and screen recordings are in that directory's `Logs/Test/*.xcresult` bundles. A failed test must remain a failure; runner startup failure is not a skipped or passed test. If macOS has rejected an old runner, cancel its alert and use a fresh build directory.
 
 ## Isolation and launch controls
 
-`OPENYOINK_UI_TESTING=1` selects a reset defaults suite and a fresh temporary application-support directory for each app process. The unique directory is selected before services initialize, so a previous test cannot leak in-memory Shelf items into the next launch. It also suppresses onboarding, updates, and global trigger registration. Normal Island presentation and event handling remain active. Tests temporarily take over the app's bundle identity, so relaunch your development build after the suite.
+`CLERESTORY_UI_TESTING=1` selects a reset defaults suite and a fresh temporary application-support directory for each app process. The unique directory is selected before services initialize, so a previous test cannot leak in-memory Shelf items into the next launch. It also suppresses onboarding, updates, and global trigger registration. Normal Island presentation and event handling remain active. Tests temporarily take over the app's bundle identity, so relaunch your development build after the suite.
 
 - `--ui-testing-show-shelf` opens the production expanded Island with keyboard focus, not the disabled side shelf.
 - `--ui-testing-open-settings` opens General settings.
@@ -26,7 +26,7 @@ Results, screenshots, failure hierarchies, and screen recordings are in that dir
 - `--ui-testing-shelf-files` seeds two synthetic text files for keyboard and Quick Look coverage (Debug only).
 - `--ui-testing-drag-source` enables the production drag monitor (Debug only). The tests launch the separate `ClerestoryUITestDragSource` helper app, which creates disposable file/text payloads and starts native mouse drag sessions. Drops use the production receiver, import pipeline, and duplicate handling; internal-drag rejection stays unchanged. The helper is a UI-test target dependency with `SKIP_INSTALL=YES`, not part of the shipped app.
 - `--ui-testing-hide-compact` suppresses the optional companion in the isolated preferences.
-- `-OpenYoinkSimulateNoNotch YES` overrides notch detection for that process through the argument domain, without changing the saved debug preference.
+- `-ClerestorySimulateNoNotch YES` overrides notch detection for that process through the argument domain, without changing the saved debug preference.
 
 The app exposes `island.window.expanded` and `island.window.compact`. Query by identifier across accessibility element types: AppKit exposes these borderless panels as dialogs, so `app.windows` misses them. Expanded controls have stable `island.pin`, `island.collapse`, and `island.module.<moduleID>` identifiers.
 

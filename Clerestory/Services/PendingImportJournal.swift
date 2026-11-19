@@ -5,7 +5,7 @@ import OSLog
 ///
 /// A promised file exists only after the source application has finished
 /// writing it into a staging directory. Before moving that file to its final
-/// managed URL, OpenYoink records both locations here. The record is removed
+/// managed URL, Clerestory records both locations here. The record is removed
 /// only after the resulting ShelfItem has been synchronously written to
 /// `shelf.json`, which makes every crash window retryable.
 final class PendingImportJournal: @unchecked Sendable {

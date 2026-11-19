@@ -280,7 +280,7 @@ final class IslandModuleRegistry {
 @Observable
 final class IslandActivityCoordinator {
     @ObservationIgnored private let extensionDefaults: UserDefaults?
-    private static let extendedModulesKey = "OpenYoink.extendedModuleIDs"
+    private static let extendedModulesKey = "Clerestory.extendedModuleIDs"
 
     init(defaults: UserDefaults? = nil) {
         extensionDefaults = defaults

@@ -1,6 +1,6 @@
 import Foundation
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// DeliveryCoordinator's delivery confirmation state machine: normal direct drag-out is confirmed by
 /// session result; hosted cut items require 'target accepts × promise delivery'. Override reverse, cancel,
@@ -18,7 +18,7 @@ final class DeliveryCoordinatorTests: XCTestCase {
 
         init(items: [ShelfItem] = []) {
             let root = FileManager.default.temporaryDirectory
-                .appendingPathComponent("OpenYoinkTests-CutDelivery-\(UUID().uuidString)", isDirectory: true)
+                .appendingPathComponent("ClerestoryTests-CutDelivery-\(UUID().uuidString)", isDirectory: true)
             tempFileService = TempFileService(directoryURL: root.appendingPathComponent("Materialized", isDirectory: true))
             recents = RecentItemsService(directoryURL: root)
             store = ShelfStore(items: items)

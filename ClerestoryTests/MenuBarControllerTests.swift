@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// S10/C8: Feasibility decision to re-add the 'Recent Projects' menu bar item
 /// (MenuBarController.canReadd).
@@ -8,7 +8,7 @@ final class MenuBarControllerTests: XCTestCase {
 
     override func setUpWithError() throws {
         temporaryFileURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkTests-\(UUID().uuidString)")
+            .appendingPathComponent("ClerestoryTests-\(UUID().uuidString)")
         try Data("fixture".utf8).write(to: temporaryFileURL)
     }
 

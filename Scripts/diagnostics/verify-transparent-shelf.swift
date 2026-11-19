@@ -1,8 +1,8 @@
 // Run from the repository root in a logged-in macOS desktop session:
 // xcrun swiftc -parse-as-library Clerestory/Appearance/ShelfAppearance.swift \
 //   Clerestory/Appearance/ShelfGlassSurface.swift Clerestory/Shelf/ShelfRevealState.swift \
-//   Scripts/diagnostics/verify-transparent-shelf.swift -o /tmp/openyoink-hit-region
-// /tmp/openyoink-hit-region
+//   Scripts/diagnostics/verify-transparent-shelf.swift -o /tmp/clerestory-hit-region
+// /tmp/clerestory-hit-region
 // This briefly displays two owned windows without moving the pointer or
 // changing app preferences. A view-only hitTest cannot detect this regression:
 // WindowServer may select the window underneath before AppKit sees the event.

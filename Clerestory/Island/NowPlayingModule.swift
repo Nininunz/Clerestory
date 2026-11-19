@@ -223,7 +223,7 @@ final class NowPlayingModuleStore: IslandModule {
         isEnabled = true
         if resourceToken == nil {
             _ = ResourceUsageState.shared
-            resourceToken = NotificationCenter.default.addObserver(forName: .openYoinkResourcePolicyDidChange,
+            resourceToken = NotificationCenter.default.addObserver(forName: .clerestoryResourcePolicyDidChange,
                                                                    object: nil, queue: .main) { [weak self] _ in
                 Task { @MainActor in
                     guard let self, self.isEnabled else { return }

@@ -1,10 +1,10 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 @MainActor
 final class WorkflowUpgradeTests: XCTestCase {
     func testDragRetainsFileAccessUntilEveryCompletionPath() throws {
-        let suite = "OpenYoinkExportAccess-\(UUID().uuidString)"
+        let suite = "ClerestoryExportAccess-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
         defer {
@@ -93,7 +93,7 @@ final class WorkflowUpgradeTests: XCTestCase {
     }
 
     func testWorkflowPresetsPreservePrivacyDataAndUnknownModules() throws {
-        let suite = "OpenYoinkWorkflowTests-\(UUID().uuidString)"
+        let suite = "ClerestoryWorkflowTests-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = SettingsStore(defaults: defaults)
@@ -173,7 +173,7 @@ final class WorkflowUpgradeTests: XCTestCase {
     }
 
     func testFolderCopyAcceptanceBypassesDragOutRemovalPolicy() throws {
-        let suite = "OpenYoinkInternalCopy-\(UUID().uuidString)"
+        let suite = "ClerestoryInternalCopy-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = SettingsStore(defaults: defaults)

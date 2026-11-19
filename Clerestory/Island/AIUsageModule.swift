@@ -5,7 +5,7 @@ import Observation
 
 // AI usage module. Token usage, spend and plan limits come from TokenTracker
 // (https://github.com/xiufengsun/TokenTracker, MIT), which serves a local API
-// on localhost:7680 from its menu bar app or `tokentracker serve`. OpenYoink
+// on localhost:7680 from its menu bar app or `tokentracker serve`. Clerestory
 // only reads that API. It never parses tool logs itself (the sandbox cannot
 // read them anyway) and never triggers a sync.
 
@@ -623,7 +623,7 @@ final class AIUsageModuleStore: IslandModuleRuntime {
         isRunning = true
         _ = ResourceUsageState.shared
         policyToken = NotificationCenter.default.addObserver(
-            forName: .openYoinkResourcePolicyDidChange, object: nil, queue: .main
+            forName: .clerestoryResourcePolicyDidChange, object: nil, queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.restartPolling() }
         }

@@ -1,6 +1,6 @@
 import AppKit
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 @MainActor
 final class ClipboardHistoryTests: XCTestCase {
@@ -14,7 +14,7 @@ final class ClipboardHistoryTests: XCTestCase {
     private var ignored = false
 
     override func setUp() async throws {
-        suite = "OpenYoinkClipboardTests-\(UUID().uuidString)"
+        suite = "ClerestoryClipboardTests-\(UUID().uuidString)"
         defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -76,7 +76,7 @@ final class ClipboardHistoryTests: XCTestCase {
         XCTAssertTrue(reloaded.clipboardHistoryEnabled)
         XCTAssertTrue(reloaded.clipboardHistoryPaused)
         XCTAssertEqual(reloaded.clipboardHistoryRetentionDays, 30)
-        defaults.set(-1, forKey: "OpenYoink.clipboardHistoryRetentionDays")
+        defaults.set(-1, forKey: "Clerestory.clipboardHistoryRetentionDays")
         XCTAssertEqual(SettingsStore(defaults: defaults).clipboardHistoryRetentionDays, 7)
     }
 

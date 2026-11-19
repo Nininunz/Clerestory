@@ -1,10 +1,10 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 final class OnboardingSessionStoreTests: XCTestCase {
     private func makeStore() -> (OnboardingSessionStore, URL) {
         let root = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkTests-Tutorial-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("ClerestoryTests-Tutorial-\(UUID().uuidString)", isDirectory: true)
         return (OnboardingSessionStore(rootURL: root), root)
     }
 
@@ -53,7 +53,7 @@ final class OnboardingSessionStoreTests: XCTestCase {
 
     func testDiscardRemovesSessionButNeverParentDirectory() throws {
         let parent = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkTests-TutorialParent-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("ClerestoryTests-TutorialParent-\(UUID().uuidString)", isDirectory: true)
         let root = parent.appendingPathComponent("Tutorial", isDirectory: true)
         let sentinel = parent.appendingPathComponent("keep.txt")
         try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
@@ -102,9 +102,9 @@ final class OnboardingPolicyAndLayoutTests: XCTestCase {
 
     func testExistingEvidenceExcludesTutorialOnlyAndIncludesOldData() {
         XCTAssertFalse(OnboardingLaunchPolicy.hasExistingInstallation(
-            preferences: ["OpenYoink.onboardingVersion": 0], supportEntries: ["Tutorial"]))
+            preferences: ["Clerestory.onboardingVersion": 0], supportEntries: ["Tutorial"]))
         XCTAssertTrue(OnboardingLaunchPolicy.hasExistingInstallation(
-            preferences: ["OpenYoink.language": "english"], supportEntries: []))
+            preferences: ["Clerestory.language": "english"], supportEntries: []))
         XCTAssertTrue(OnboardingLaunchPolicy.hasExistingInstallation(
             preferences: [:], supportEntries: ["shelf.json"]))
     }

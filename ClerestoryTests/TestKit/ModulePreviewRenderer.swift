@@ -1,18 +1,18 @@
 import AppKit
 import SwiftUI
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// Owns the outer layout, capture handshake, gallery, and manifest.
 @MainActor
 final class ModulePreviewRenderer {
     private var configuration: [String: Any] = [:]
-    var output = URL(fileURLWithPath: "/tmp/openyoink-module-previews", isDirectory: true)
+    var output = URL(fileURLWithPath: "/tmp/clerestory-module-previews", isDirectory: true)
     private var manifest: [[String: String]] = []
     private var sheets: [(String, String)] = []
 
     init() throws {
-        if let data = try? Data(contentsOf: URL(fileURLWithPath: "/tmp/openyoink-preview-request.json")) {
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: "/tmp/clerestory-preview-request.json")) {
             configuration = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
             if let path = configuration["output"] as? String { output = URL(fileURLWithPath: path, isDirectory: true) }
         }
@@ -25,9 +25,9 @@ final class ModulePreviewRenderer {
                 .write(to: output.appendingPathComponent("samples.json"), options: .atomic)
         }
         let html = """
-        <!doctype html><meta charset="utf-8"><title>OpenYoink module state previews</title>
+        <!doctype html><meta charset="utf-8"><title>Clerestory module state previews</title>
         <style>body{background:#171717;color:#eee;font:16px system-ui;margin:32px}img{max-width:100%;height:auto}nav a{color:#aaa;margin-right:18px}section{margin:48px 0}</style>
-        <h1>OpenYoink module state previews</h1><p>Actual module views with isolated sample data. Buttons are the real controls; these images are static. Each panel shows the initial scroll position. No invented loading/error screens.</p>
+        <h1>Clerestory module state previews</h1><p>Actual module views with isolated sample data. Buttons are the real controls; these images are static. Each panel shows the initial scroll position. No invented loading/error screens.</p>
         <nav>\(sheets.map { "<a href='#\($0.0)'>\($0.1)</a>" }.joined())</nav>
         \(sheets.map { "<section id='\($0.0)'><h2>\($0.1)</h2><img loading='lazy' src='\($0.0).png'></section>" }.joined())
         """

@@ -1,5 +1,5 @@
 import SwiftUI
-@testable import OpenYoink
+@testable import Clerestory
 
 /// IDs are part of the CLI/manifest contract; labels can change independently.
 @MainActor
@@ -23,7 +23,7 @@ final class PreviewContext {
     private var suites: [String] = []
 
     func defaults() -> UserDefaults {
-        let name = "OpenYoink.TestKit.\(UUID().uuidString)"
+        let name = "Clerestory.TestKit.\(UUID().uuidString)"
         suites.append(name)
         return UserDefaults(suiteName: name)!
     }

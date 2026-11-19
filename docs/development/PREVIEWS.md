@@ -26,7 +26,7 @@ Module slugs: `battery`, `timer`, `now-playing`, `ai-usage`, `clipboard`, `quick
 
 The default `window` capture briefly displays each preview window and captures it with macOS's compositor, preserving blur and material backgrounds. Screen Recording permission may be required for the invoking terminal/app. `snapshot` captures offscreen without that permission, but blur and translucent materials may be missing. Captures reserve the navigation band; they don't reproduce live shortcut controls or the live controller's drag detection. Static images do not demonstrate animation or scrolling.
 
-Each run defaults to a new `/tmp/openyoink-previews-*` directory with `index.html`, paginated per-module contact sheets, named scenario PNGs, `manifest.json`, and `build.log`. Explicit output directories can retain older files; the manifest/gallery identify this run's results. One runner may execute at a time. The runner removes its temporary request configuration on exit.
+Each run defaults to a new `/tmp/clerestory-previews-*` directory with `index.html`, paginated per-module contact sheets, named scenario PNGs, `manifest.json`, and `build.log`. Explicit output directories can retain older files; the manifest/gallery identify this run's results. One runner may execute at a time. The runner removes its temporary request configuration on exit.
 
 Add Shelf cases to `ClerestoryTests/TestKit/Shelf/ShelfScenario.swift` using real state/store inputs. Other modules still use the compatibility adapter in `IslandModulePreviewTests.swift`. Enabled cases automatically appear in listing, filtering, the manifest, and the gallery. Shelf includes empty, populated, selected, search-empty, importing, duplicate-drop, file-drag, long-name, large-grid, and keyboard-focus samples.
 
@@ -45,7 +45,7 @@ To add a Shelf scenario, give its enum case an explicit stable ID, add a label, 
 
 Example: `--module shelf --scenario populated` produces `shelf-populated-regular.png` and `shelf-populated-extended.png`. Modules that support extension (Shelf and Quick Settings) automatically capture both height modes. Manifest entries contain the capture `id`, stable `scenarioID`, `scenario` label, `heightMode`, and measured dimensions. Other modules retain label-derived IDs until migrated.
 
-Shelf generates six real sample files/folders in a fresh `openyoink-sample-files-*` directory under the test process’s temporary directory: two PNG illustrations, a formatted RTF brief, TXT meeting notes, a CSV budget, and a folder containing palette notes. Their locations appear in the runner output and `samples.json`; you can drag these files into the app manually. They contain only synthetic data. One deliberately missing document remains to exercise recovery UI. Samples are disposable and retained for manual testing; remove their directory when finished. All rendered screens use current app components. Capture success validates export, not visual correctness; there are no automatic pixel baselines.
+Shelf generates six real sample files/folders in a fresh `clerestory-sample-files-*` directory under the test process’s temporary directory: two PNG illustrations, a formatted RTF brief, TXT meeting notes, a CSV budget, and a folder containing palette notes. Their locations appear in the runner output and `samples.json`; you can drag these files into the app manually. They contain only synthetic data. One deliberately missing document remains to exercise recovery UI. Samples are disposable and retained for manual testing; remove their directory when finished. All rendered screens use current app components. Capture success validates export, not visual correctness; there are no automatic pixel baselines.
 
 The live app and previews now share `IslandModuleHost`, including extension bindings and content-height reporting. Preview windows use the production coordinator, `IslandExpandedSurface`, and geometry resolver, with a fixed 1512×982 notched-screen fixture. Extended height follows measured content and the same screen cap as the app; short states can remain the same height. The shortcut navigation band is still reserved rather than rendered, and previews do not simulate the live controller's drag/hover/window lifecycle.
 
@@ -69,7 +69,7 @@ See [Panel and Notch architecture](../PANEL_ARCHITECTURE.md) for the display and
 
 ```sh
 Scripts/render-module-previews.sh --module shelf --module quick-settings \
-  --capture snapshot --output /tmp/openyoink-unified-panel-review --no-open
+  --capture snapshot --output /tmp/clerestory-unified-panel-review --no-open
 ```
 
 Expanded presentation is identical on notched and notchless displays. The fixed notched-screen fixture affects placement and the height cap, not a different panel shape or shortcut layout.

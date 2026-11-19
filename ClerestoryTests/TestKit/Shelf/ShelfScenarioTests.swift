@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 import CryptoKit
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 @MainActor
 final class ShelfScenarioTests: XCTestCase {

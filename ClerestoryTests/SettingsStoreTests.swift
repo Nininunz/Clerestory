@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// S8 face of SettingsStore: persistent round-trip for general settings, clearable shortcuts (Optional:
 /// key missing → default; persistent null → clear explicitly), and ignore list editing helper
@@ -8,7 +8,7 @@ import XCTest
 final class SettingsStoreTests: XCTestCase {
     /// Independent UserDefaults suite to avoid polluting the app's own settings.
     private func makeSuite() throws -> (defaults: UserDefaults, name: String) {
-        let name = "OpenYoinkTests-\(UUID().uuidString)"
+        let name = "ClerestoryTests-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
         return (defaults, name)
     }
@@ -16,7 +16,7 @@ final class SettingsStoreTests: XCTestCase {
     // MARK: - General settings persistence
 
     func testRestoreShortcutDefaultsPreservesEnabledModulesAndPersistsPositions() throws {
-        let suite = "OpenYoink.ShortcutDefaults.\(UUID().uuidString)"
+        let suite = "Clerestory.ShortcutDefaults.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = SettingsStore(defaults: defaults)
@@ -59,7 +59,7 @@ final class SettingsStoreTests: XCTestCase {
             XCTAssertEqual(store.edgeTabIconSize, expected)
             XCTAssertEqual(SettingsStore(defaults: defaults).edgeTabIconSize, expected)
         }
-        defaults.set(100, forKey: "OpenYoink.edgeTabIconSize")
+        defaults.set(100, forKey: "Clerestory.edgeTabIconSize")
         XCTAssertEqual(SettingsStore(defaults: defaults).edgeTabIconSize, 10)
     }
 
@@ -87,7 +87,7 @@ final class SettingsStoreTests: XCTestCase {
     func testExplicitHoverOptOutSurvivesDefaultChange() throws {
         let (defaults, name) = try makeSuite()
         defer { defaults.removePersistentDomain(forName: name) }
-        defaults.set(false, forKey: "OpenYoink.islandHoverRevealEnabled")
+        defaults.set(false, forKey: "Clerestory.islandHoverRevealEnabled")
         XCTAssertFalse(SettingsStore(defaults: defaults).islandHoverRevealEnabled)
     }
 
@@ -135,8 +135,8 @@ final class SettingsStoreTests: XCTestCase {
     func testExistingUserKeepsSuccessfulDropBehaviorWithoutNewPreference() throws {
         let (defaults, name) = try makeSuite()
         defer { defaults.removePersistentDomain(forName: name) }
-        defaults.set(1, forKey: "OpenYoink.onboardingVersion")
-        defaults.set(true, forKey: "OpenYoink.autoHide")
+        defaults.set(1, forKey: "Clerestory.onboardingVersion")
+        defaults.set(true, forKey: "Clerestory.autoHide")
         let store = SettingsStore(defaults: defaults)
         XCTAssertTrue(store.keepShelfOpenAfterDrop)
         XCTAssertTrue(store.autoHide, "Drag-out preference remains independent")
@@ -156,11 +156,11 @@ final class SettingsStoreTests: XCTestCase {
     func testExistingUserMigratesLegacyModuleOrderWithoutEnablingSystem() throws {
         let (defaults, name) = try makeSuite()
         defer { defaults.removePersistentDomain(forName: name) }
-        defaults.set(1, forKey: "OpenYoink.onboardingVersion")
-        defaults.set(true, forKey: "OpenYoink.islandShelfEnabled")
-        defaults.set(true, forKey: "OpenYoink.islandMediaEnabled")
-        defaults.set(true, forKey: "OpenYoink.islandTimerEnabled")
-        defaults.set(false, forKey: "OpenYoink.islandBatteryEnabled")
+        defaults.set(1, forKey: "Clerestory.onboardingVersion")
+        defaults.set(true, forKey: "Clerestory.islandShelfEnabled")
+        defaults.set(true, forKey: "Clerestory.islandMediaEnabled")
+        defaults.set(true, forKey: "Clerestory.islandTimerEnabled")
+        defaults.set(false, forKey: "Clerestory.islandBatteryEnabled")
 
         let store = SettingsStore(defaults: defaults)
         XCTAssertEqual(store.islandModuleConfiguration.enabledModuleIDs,
@@ -180,7 +180,7 @@ final class SettingsStoreTests: XCTestCase {
             pinnedModuleIDs: [unknown, .shelf]
         )
         defaults.set(try JSONEncoder().encode(configuration),
-                     forKey: "OpenYoink.islandModuleConfiguration")
+                     forKey: "Clerestory.islandModuleConfiguration")
 
         let store = SettingsStore(defaults: defaults)
         store.setIslandModuleEnabled(true, id: .timer)
@@ -197,8 +197,8 @@ final class SettingsStoreTests: XCTestCase {
         store.setIslandModuleEnabled(false, id: .timer)
         store.setIslandModuleEnabled(true, id: .media)
 
-        XCTAssertFalse(defaults.bool(forKey: "OpenYoink.islandTimerEnabled"))
-        XCTAssertTrue(defaults.bool(forKey: "OpenYoink.islandMediaEnabled"))
+        XCTAssertFalse(defaults.bool(forKey: "Clerestory.islandTimerEnabled"))
+        XCTAssertTrue(defaults.bool(forKey: "Clerestory.islandMediaEnabled"))
     }
 
     func testLoadingPrimaryConfigurationRefreshesLegacyShadowKeys() throws {
@@ -208,27 +208,27 @@ final class SettingsStoreTests: XCTestCase {
             enabledModuleIDs: [.transfers, .media], pinnedModuleIDs: [.media]
         )
         defaults.set(try JSONEncoder().encode(configuration),
-                     forKey: "OpenYoink.islandModuleConfiguration")
-        defaults.set(true, forKey: "OpenYoink.islandTimerEnabled")
-        defaults.set(false, forKey: "OpenYoink.islandMediaEnabled")
+                     forKey: "Clerestory.islandModuleConfiguration")
+        defaults.set(true, forKey: "Clerestory.islandTimerEnabled")
+        defaults.set(false, forKey: "Clerestory.islandMediaEnabled")
 
         _ = SettingsStore(defaults: defaults)
 
-        XCTAssertFalse(defaults.bool(forKey: "OpenYoink.islandTimerEnabled"))
-        XCTAssertTrue(defaults.bool(forKey: "OpenYoink.islandMediaEnabled"))
+        XCTAssertFalse(defaults.bool(forKey: "Clerestory.islandTimerEnabled"))
+        XCTAssertTrue(defaults.bool(forKey: "Clerestory.islandMediaEnabled"))
     }
 
     func testCorruptModuleConfigurationIsBackedUpWithoutBeingOverwritten() throws {
         let (defaults, name) = try makeSuite()
         defer { defaults.removePersistentDomain(forName: name) }
         let corrupt = Data([0x00, 0xCA, 0xFE])
-        defaults.set(corrupt, forKey: "OpenYoink.islandModuleConfiguration")
+        defaults.set(corrupt, forKey: "Clerestory.islandModuleConfiguration")
 
         let store = SettingsStore(defaults: defaults)
 
         XCTAssertFalse(store.islandModuleConfiguration.enabledModuleIDs.isEmpty)
-        XCTAssertEqual(defaults.data(forKey: "OpenYoink.islandModuleConfiguration"), corrupt)
-        XCTAssertEqual(defaults.data(forKey: "OpenYoink.islandModuleConfigurationCorruptBackup"),
+        XCTAssertEqual(defaults.data(forKey: "Clerestory.islandModuleConfiguration"), corrupt)
+        XCTAssertEqual(defaults.data(forKey: "Clerestory.islandModuleConfigurationCorruptBackup"),
                        corrupt)
     }
 
@@ -297,10 +297,10 @@ final class SettingsStoreTests: XCTestCase {
     func testRetiredPanelToggleCannotDisablePanelOnRelaunch() throws {
         let (defaults, name) = try makeSuite()
         defer { defaults.removePersistentDomain(forName: name) }
-        defaults.set(1, forKey: "OpenYoink.shelfSurfaceSettingsVersion")
-        defaults.set(false, forKey: "OpenYoink.islandEnabled")
-        defaults.set(false, forKey: "OpenYoink.classicShelfEnabled")
-        defaults.set(false, forKey: "OpenYoink.showCompactIsland")
+        defaults.set(1, forKey: "Clerestory.shelfSurfaceSettingsVersion")
+        defaults.set(false, forKey: "Clerestory.islandEnabled")
+        defaults.set(false, forKey: "Clerestory.classicShelfEnabled")
+        defaults.set(false, forKey: "Clerestory.showCompactIsland")
 
         let store = SettingsStore(defaults: defaults)
         XCTAssertTrue(store.islandEnabled)
@@ -335,7 +335,7 @@ final class SettingsStoreTests: XCTestCase {
     func testLegacyIslandModeMigratesToIndependentSurfaceSettings() throws {
         let (defaults, name) = try makeSuite()
         defer { defaults.removePersistentDomain(forName: name) }
-        defaults.set("island", forKey: "OpenYoink.shelfPresentationMode")
+        defaults.set("island", forKey: "Clerestory.shelfPresentationMode")
 
         let store = SettingsStore(defaults: defaults)
         XCTAssertFalse(store.classicShelfEnabled)
@@ -354,7 +354,7 @@ final class SettingsStoreTests: XCTestCase {
     func testExistingClassicUserDoesNotInheritFreshInstallIslandDefault() throws {
         let (defaults, name) = try makeSuite()
         defer { defaults.removePersistentDomain(forName: name) }
-        defaults.set(1, forKey: "OpenYoink.onboardingVersion")
+        defaults.set(1, forKey: "Clerestory.onboardingVersion")
 
         let store = SettingsStore(defaults: defaults)
 
@@ -433,7 +433,7 @@ final class SettingsStoreTests: XCTestCase {
         let (defaults, name) = try makeSuite()
         defer { defaults.removePersistentDomain(forName: name) }
 
-        defaults.set(Data([0x00, 0x01]), forKey: "OpenYoink.customShelfFrame")
+        defaults.set(Data([0x00, 0x01]), forKey: "Clerestory.customShelfFrame")
         XCTAssertNil(SettingsStore(defaults: defaults).customShelfFrame)
     }
 

@@ -1,6 +1,6 @@
 import AppKit
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 @MainActor
 final class FavoriteFoldersModuleTests: XCTestCase {
@@ -179,7 +179,7 @@ final class FavoriteFoldersModuleTests: XCTestCase {
 
     private func makeTemporaryDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(
-            "OpenYoink-FavoriteFoldersTests-\(UUID().uuidString)",
+            "Clerestory-FavoriteFoldersTests-\(UUID().uuidString)",
             isDirectory: true
         )
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)

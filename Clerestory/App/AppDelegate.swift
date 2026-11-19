@@ -5,7 +5,7 @@ import OSLog
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let uiTestingDefaultsSuite = "com.nininunz.Clerestory.UITests"
     private static var isUITestingEnvironment: Bool {
-        ProcessInfo.processInfo.environment["OPENYOINK_UI_TESTING"] == "1"
+        ProcessInfo.processInfo.environment["CLERESTORY_UI_TESTING"] == "1"
     }
 
     private static func makeSettingsDefaults() -> UserDefaults {

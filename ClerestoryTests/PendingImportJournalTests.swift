@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 final class PendingImportJournalTests: XCTestCase {
     private struct Context {
@@ -9,7 +9,7 @@ final class PendingImportJournalTests: XCTestCase {
 
         init() {
             root = FileManager.default.temporaryDirectory
-                .appendingPathComponent("OpenYoinkTests-PendingImport-\(UUID().uuidString)",
+                .appendingPathComponent("ClerestoryTests-PendingImport-\(UUID().uuidString)",
                                         isDirectory: true)
             managed = root.appendingPathComponent("Materialized", isDirectory: true)
             journal = PendingImportJournal(directoryURL: root, managedDirectoryURL: managed)

@@ -6,7 +6,7 @@ enum ShelfSampleFiles {
     static private(set) var generatedDirectory: URL?
     static let shared = Result {
         let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("openyoink-sample-files-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("clerestory-sample-files-\(UUID().uuidString)", isDirectory: true)
         let urls = try create(in: directory)
         generatedDirectory = directory
         return urls

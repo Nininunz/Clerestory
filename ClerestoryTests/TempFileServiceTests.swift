@@ -1,6 +1,6 @@
 import Foundation
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// Age-based staging cleanup of TempFileService (review P1: promise shared staging is not cleaned in
 /// callbacks,
@@ -8,7 +8,7 @@ import XCTest
 final class TempFileServiceTests: XCTestCase {
     private func makeTempDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkTests-TFS-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("ClerestoryTests-TFS-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
     }

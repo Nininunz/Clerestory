@@ -1,12 +1,12 @@
 import Foundation
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 @MainActor
 final class ShelfRemovalRecoveryTests: XCTestCase {
     private func makeRoot() throws -> URL {
         let root = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkTests-Removal-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("ClerestoryTests-Removal-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         return root
     }

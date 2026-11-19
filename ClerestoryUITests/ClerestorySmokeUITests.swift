@@ -2,7 +2,7 @@ import AppKit
 import XCTest
 
 @MainActor
-final class OpenYoinkSmokeUITests: XCTestCase {
+final class ClerestorySmokeUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         // Both fork and upstream builds can intercept the test's drops.
@@ -17,8 +17,8 @@ final class OpenYoinkSmokeUITests: XCTestCase {
 
     func testFreshLaunchShowsOnboardingAndSkipClosesIt() throws {
         let app = XCUIApplication()
-        app.launchEnvironment["OPENYOINK_UI_TESTING"] = "1"
-        app.launchArguments = ["--ui-testing-onboarding", "-OpenYoink.autoUpdateCheckEnabled", "NO",
+        app.launchEnvironment["CLERESTORY_UI_TESTING"] = "1"
+        app.launchArguments = ["--ui-testing-onboarding", "-Clerestory.autoUpdateCheckEnabled", "NO",
                                "-AppleLanguages", "(en)"]
         addTeardownBlock { @MainActor in app.terminate() }
         app.launch()
@@ -131,7 +131,7 @@ final class OpenYoinkSmokeUITests: XCTestCase {
 
                 // XCTest includes the disabled, system-generated Touch Bar
                 // container in the app hierarchy on Touch Bar Macs even when
-                // OpenYoink defines no Touch Bar content.
+                // Clerestory defines no Touch Bar content.
                 if issue.auditType.contains(.sufficientElementDescription),
                    let element = issue.element,
                    element.elementType == .touchBar,
@@ -310,7 +310,7 @@ final class OpenYoinkSmokeUITests: XCTestCase {
         let helper = launchDragSource()
         XCTAssertTrue(element("uitest.drag.file", in: helper).waitForExistence(timeout: 5))
         XCTAssertEqual(NSWorkspace.shared.frontmostApplication?.bundleIdentifier, "com.nininunz.ClerestoryUITestDragSource")
-        // Anchor to the foreground helper so XCTest cannot activate OpenYoink
+        // Anchor to the foreground helper so XCTest cannot activate Clerestory
         // before the click and conceal a broken cross-application focus handoff.
         let source = element("uitest.drag.file", in: helper)
         let origin = source.coordinate(withNormalizedOffset: .zero)
@@ -500,7 +500,7 @@ final class OpenYoinkSmokeUITests: XCTestCase {
     func testHoverReentryCancelsPendingDismissal() throws {
         try requireNotchedDisplay()
         let app = launch(surface: "--ui-testing-hover",
-                         fixtures: ["-OpenYoink.islandHoverLeaveDelaySeconds", "1"])
+                         fixtures: ["-Clerestory.islandHoverLeaveDelaySeconds", "1"])
         let notch = element("island.window.compact", in: app)
         XCTAssertTrue(notch.waitForExistence(timeout: 3))
         let wing = notch.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
@@ -581,12 +581,12 @@ final class OpenYoinkSmokeUITests: XCTestCase {
     private func launch(surface: String, hideNotch: Bool = false, simulateNoNotch: Bool = false,
                         fixtures: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchEnvironment["OPENYOINK_UI_TESTING"] = "1"
+        app.launchEnvironment["CLERESTORY_UI_TESTING"] = "1"
         app.launchArguments = [
-            "-OpenYoink.onboardingVersion", "1",
-            "-OpenYoink.autoUpdateCheckEnabled", "NO",
+            "-Clerestory.onboardingVersion", "1",
+            "-Clerestory.autoUpdateCheckEnabled", "NO",
             "-AppleLanguages", "(en)",
-            "-OpenYoinkSimulateNoNotch", simulateNoNotch ? "YES" : "NO",
+            "-ClerestorySimulateNoNotch", simulateNoNotch ? "YES" : "NO",
             surface,
         ] + (hideNotch ? ["--ui-testing-hide-compact"] : []) + fixtures
         addTeardownBlock { @MainActor in app.terminate() }

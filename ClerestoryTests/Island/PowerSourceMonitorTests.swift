@@ -1,6 +1,6 @@
 import IOKit.ps
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 @MainActor
 final class PowerSourceMonitorTests: XCTestCase {
@@ -15,13 +15,13 @@ final class PowerSourceMonitorTests: XCTestCase {
         monitor.start()
         XCTAssertEqual(reads, 0)
         allowed = true
-        NotificationCenter.default.post(name: .openYoinkResourcePolicyDidChange, object: nil)
+        NotificationCenter.default.post(name: .clerestoryResourcePolicyDidChange, object: nil)
         for _ in 0..<20 where reads == 0 { await Task.yield() }
         XCTAssertEqual(reads, 1)
         XCTAssertTrue(monitor.snapshot.hasBattery)
         monitor.stop()
         monitor.refresh()
-        NotificationCenter.default.post(name: .openYoinkResourcePolicyDidChange, object: nil)
+        NotificationCenter.default.post(name: .clerestoryResourcePolicyDidChange, object: nil)
         for _ in 0..<20 { await Task.yield() }
         XCTAssertEqual(reads, 1)
         XCTAssertFalse(monitor.isRunning)

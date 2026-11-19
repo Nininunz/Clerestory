@@ -16,7 +16,7 @@ struct DragSourceApp {
 @MainActor
 final class DragSourceDelegate: NSObject, NSApplicationDelegate {
     private var sourceWindow: NSWindow?
-    private let directory = FileManager.default.temporaryDirectory.appendingPathComponent("OpenYoinkDragSource-" + UUID().uuidString)
+    private let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ClerestoryDragSource-" + UUID().uuidString)
     private var file: URL { directory.appendingPathComponent("Northline brief.txt") }
 
     func applicationDidFinishLaunching(_ notification: Notification) {

@@ -1,5 +1,5 @@
 import SwiftUI
-@testable import OpenYoink
+@testable import Clerestory
 
 @MainActor
 struct ModulePreviewCapture {

@@ -1,7 +1,7 @@
 import AppKit
 import Carbon
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// Pure logic of HotKeyMonitor: Shortcut → Carbon modifier key mapping. (Carbon RegisterEventHotKey
 /// registration and NSEvent global event dispatch depend on running WindowServer / application event loop,

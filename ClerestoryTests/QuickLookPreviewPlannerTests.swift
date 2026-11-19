@@ -1,6 +1,6 @@
 import AppKit
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// S6: Quick Look preview collection parsing rules (`QuickLookPreviewPlanner`, pure logic).
 final class QuickLookPreviewPlannerTests: XCTestCase {

@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 @MainActor
 final class ShelfStoreTests: XCTestCase {
@@ -84,7 +84,7 @@ final class ShelfStoreTests: XCTestCase {
     /// are nonisolated and cannot touch MainActor state).
     private func makeTempDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkTests-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("ClerestoryTests-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
     }
@@ -216,7 +216,7 @@ final class ShelfStoreTests: XCTestCase {
     }
 
     func testAcceptedShelfReorder_doesNotApplyDragOutRemovalPolicy() throws {
-        let suiteName = "OpenYoinkTests-\(UUID().uuidString)"
+        let suiteName = "ClerestoryTests-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let settings = SettingsStore(defaults: defaults)
@@ -244,7 +244,7 @@ final class ShelfStoreTests: XCTestCase {
     }
 
     func testTutorialItem_cannotBeReorderedOnShelf() throws {
-        let suiteName = "OpenYoinkTests-\(UUID().uuidString)"
+        let suiteName = "ClerestoryTests-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let settings = SettingsStore(defaults: defaults)

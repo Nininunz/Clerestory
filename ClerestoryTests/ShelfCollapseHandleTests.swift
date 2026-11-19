@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// Task three: shelf inner edge handle side logic (ShelfLayoutEngine.innerEdgeHandleSide). The handle is
 /// always on the inner edge of the shelf facing the screen center; custom free position has no attached

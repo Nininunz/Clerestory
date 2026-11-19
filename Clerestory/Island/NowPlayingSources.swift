@@ -366,7 +366,7 @@ final class AppleScriptNowPlayingSource: NowPlayingSource {
         guard pollingTask == nil else { return }
         self.onSnapshot = onSnapshot
         self.onFailure = onFailure
-        resourceToken = NotificationCenter.default.addObserver(forName: .openYoinkResourcePolicyDidChange,
+        resourceToken = NotificationCenter.default.addObserver(forName: .clerestoryResourcePolicyDidChange,
                                                                object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in self?.restartPolling() }
         }

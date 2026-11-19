@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// Append / limit / persistence round trip for RecentItemsService.
 ///
@@ -12,7 +12,7 @@ final class RecentItemsServiceTests: XCTestCase {
 
     private func makeTempDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkTests-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("ClerestoryTests-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
     }

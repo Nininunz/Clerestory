@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 final class BookmarkServiceTests: XCTestCase {
     private var service: BookmarkService!
@@ -26,7 +26,7 @@ final class BookmarkServiceTests: XCTestCase {
     /// which exercises the same security-scoped code path.
     private func makeTempFile(named name: String = "sample.txt") throws -> URL {
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkTests-\(UUID().uuidString)-\(name)")
+            .appendingPathComponent("ClerestoryTests-\(UUID().uuidString)-\(name)")
         try "sample content".write(to: url, atomically: true, encoding: .utf8)
         temporaryURLs.append(url)
         return url
@@ -51,7 +51,7 @@ final class BookmarkServiceTests: XCTestCase {
 
     func testCreateBookmark_forNonexistentFile_throwsCreationFailed() {
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkTests-\(UUID().uuidString).txt")
+            .appendingPathComponent("ClerestoryTests-\(UUID().uuidString).txt")
 
         XCTAssertThrowsError(try service.createBookmark(for: url)) { error in
             guard case .creationFailed(let failingURL, _) = error as? BookmarkError else {

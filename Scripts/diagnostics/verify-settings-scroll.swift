@@ -1,7 +1,7 @@
 // Run from the repository root in a logged-in macOS desktop session:
-// xcrun swiftc -parse-as-library Clerestory/Settings/SettingsScroll.swift Scripts/diagnostics/verify-settings-scroll.swift -o /tmp/openyoink-settings-scroll
-// /tmp/openyoink-settings-scroll
-// Briefly opens an owned test window; no OpenYoink preferences or shelf data are read.
+// xcrun swiftc -parse-as-library Clerestory/Settings/SettingsScroll.swift Scripts/diagnostics/verify-settings-scroll.swift -o /tmp/clerestory-settings-scroll
+// /tmp/clerestory-settings-scroll
+// Briefly opens an owned test window; no Clerestory preferences or shelf data are read.
 import AppKit
 import Observation
 import SwiftUI

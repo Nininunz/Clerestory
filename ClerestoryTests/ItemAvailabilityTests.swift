@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 final class ItemAvailabilityTests: XCTestCase {
     private let bookmarks = BookmarkService()

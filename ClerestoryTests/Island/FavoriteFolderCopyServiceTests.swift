@@ -1,9 +1,9 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 final class FavoriteFolderCopyServiceTests: XCTestCase {
     private func makeDirectory() throws -> URL {
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("OpenYoinkCopyTests-\(UUID().uuidString)")
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("ClerestoryCopyTests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
     }
@@ -25,7 +25,7 @@ final class FavoriteFolderCopyServiceTests: XCTestCase {
         XCTAssertEqual(try String(contentsOf: target.appendingPathComponent("note.txt"), encoding: .utf8), "existing")
         XCTAssertEqual(try String(contentsOf: target.appendingPathComponent("note (2).txt"), encoding: .utf8), "new")
         XCTAssertTrue(FileManager.default.fileExists(atPath: file.path))
-        XCTAssertFalse(try FileManager.default.contentsOfDirectory(atPath: target.path).contains { $0.hasPrefix(".openyoink-copy-") })
+        XCTAssertFalse(try FileManager.default.contentsOfDirectory(atPath: target.path).contains { $0.hasPrefix(".clerestory-copy-") })
     }
     func testSkipAndCancelKeepSourceAndDestination() async throws {
         let root = try makeDirectory()

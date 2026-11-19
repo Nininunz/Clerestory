@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// Issue #10: Pull ring ↔ panel deformation start point (glass face local coordinates, top-left origin).
 final class ShelfRevealGeometryTests: XCTestCase {

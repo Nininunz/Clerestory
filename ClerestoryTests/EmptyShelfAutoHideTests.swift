@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// UX6 Empty Shelf Auto Hide Rule (EmptyShelfAutoHideRule, pure logic):
 /// Trigger based on 'non-empty → empty' transition; manually summoned empty shelf (no transition) is

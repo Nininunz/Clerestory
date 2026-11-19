@@ -596,7 +596,7 @@ final class SystemStatusModuleStore: IslandModuleRuntime {
         }
         _ = ResourceUsageState.shared
         notificationTokens.append(NotificationCenter.default.addObserver(
-            forName: .openYoinkResourcePolicyDidChange, object: nil, queue: .main
+            forName: .clerestoryResourcePolicyDidChange, object: nil, queue: .main
         ) { [weak self] _ in
             Task { @MainActor in self?.restartSampling() }
         })

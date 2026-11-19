@@ -73,7 +73,7 @@ struct IslandExpandedView: View {
     }
 
     private func samplingContextChanged() {
-        NotificationCenter.default.post(name: .openYoinkResourcePolicyDidChange, object: nil)
+        NotificationCenter.default.post(name: .clerestoryResourcePolicyDidChange, object: nil)
         if coordinator.surfaceState.isExpanded, coordinator.selectedModule == .media {
             nowPlayingStore.refresh()
         }

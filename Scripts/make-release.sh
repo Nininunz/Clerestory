@@ -62,7 +62,7 @@ APP_PATH="export/Clerestory.app"
 DMG_PATH="export/Clerestory-$VERSION.dmg"
 APPCAST="docs/appcast.xml"
 # Candidate builds keep unpublished update metadata out of the deployable feed.
-if [ "${OPENYOINK_RELEASE_CANDIDATE:-0}" = "1" ]; then
+if [ "${CLERESTORY_RELEASE_CANDIDATE:-0}" = "1" ]; then
     mkdir -p export
     cp "$APPCAST" export/appcast-candidate.xml
     APPCAST="export/appcast-candidate.xml"
@@ -344,7 +344,7 @@ PYEOF
 
 # Refresh the local README badge snapshots.
 echo "==> Update README badges"
-if [ "${OPENYOINK_RELEASE_CANDIDATE:-0}" != "1" ]; then
+if [ "${CLERESTORY_RELEASE_CANDIDATE:-0}" != "1" ]; then
     node "$REPO_ROOT/Scripts/update-readme-badges.mjs" --version "$SHORT_VERSION"
 else
     echo "Candidate build: skipping public release badges."
@@ -362,7 +362,7 @@ echo "==> Done"
 echo "    DMG:     $DMG_PATH"
 echo "    appcast: $APPCAST"
 echo "    mode:    $RELEASE_MODE"
-if [ "${OPENYOINK_RELEASE_CANDIDATE:-0}" = "1" ]; then
+if [ "${CLERESTORY_RELEASE_CANDIDATE:-0}" = "1" ]; then
     echo "Local candidate only. Public feed and badges are unchanged; nothing was published."
 else
     echo "    badges:  docs/badges/"

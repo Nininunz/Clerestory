@@ -1,7 +1,7 @@
 import AppKit
 import Synchronization
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 /// Write logic of FilePromiseProvider: Use temporary directory real files to directly call `writeCopy` and
 /// delegate methods for verification. Real drag-and-drop session chain (target app triggers
@@ -17,7 +17,7 @@ final class FilePromiseProviderTests: XCTestCase {
 
     private func makeTempDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkTests-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("ClerestoryTests-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
     }
@@ -125,7 +125,7 @@ final class FilePromiseProviderTests: XCTestCase {
         let bookmarkService = BookmarkService()
         defer { bookmarkService.stopAccessingAll() }
         let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OpenYoinkTests-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("ClerestoryTests-\(UUID().uuidString)", isDirectory: true)
         let payload = makePayload(sourceURL: directory.appendingPathComponent("nonexistent.txt"))
 
         XCTAssertThrowsError(try FilePromiseProvider.writeCopy(
@@ -250,9 +250,9 @@ final class FilePromiseProviderTests: XCTestCase {
     // MARK: - Direct file writer / promise-only provider
 
     func testDirectFileWriter_serializesFileURLAndChromiumFilenameList() {
-        let source = URL(fileURLWithPath: "/tmp/OpenYoink 示例.txt")
+        let source = URL(fileURLWithPath: "/tmp/Clerestory 示例.txt")
         let writer = DirectFilePasteboardWriter(fileURL: source)
-        let pasteboard = NSPasteboard(name: NSPasteboard.Name("OpenYoinkTests-\(UUID().uuidString)"))
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("ClerestoryTests-\(UUID().uuidString)"))
 
         XCTAssertEqual(writer.writableTypes(for: pasteboard), [
             PasteboardTypes.fileURL,
@@ -272,7 +272,7 @@ final class FilePromiseProviderTests: XCTestCase {
             fileURL: URL(fileURLWithPath: "/tmp/tutorial.txt"),
             tutorialSessionToken: token
         )
-        let pasteboard = NSPasteboard(name: NSPasteboard.Name("OpenYoinkTests-\(UUID().uuidString)"))
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("ClerestoryTests-\(UUID().uuidString)"))
 
         XCTAssertTrue(pasteboard.writeObjects([writer]))
         XCTAssertTrue(pasteboard.types?.contains(PasteboardTypes.tutorialSession) == true)
@@ -289,7 +289,7 @@ final class FilePromiseProviderTests: XCTestCase {
                 return expected
             }
         )
-        let pasteboard = NSPasteboard(name: NSPasteboard.Name("OpenYoinkTests-\(UUID().uuidString)"))
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("ClerestoryTests-\(UUID().uuidString)"))
 
         XCTAssertTrue(pasteboard.writeObjects([writer]))
         XCTAssertEqual(requestCount.withLock { $0 }, 0,
@@ -304,7 +304,7 @@ final class FilePromiseProviderTests: XCTestCase {
             payload: makePayload(sourceURL: URL(fileURLWithPath: "/tmp/hello.txt")),
             bookmarkService: BookmarkService()
         )
-        let pasteboard = NSPasteboard(name: NSPasteboard.Name("OpenYoinkTests-\(UUID().uuidString)"))
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("ClerestoryTests-\(UUID().uuidString)"))
         let types = provider.writableTypes(for: pasteboard)
 
         XCTAssertFalse(types.contains(.fileURL))

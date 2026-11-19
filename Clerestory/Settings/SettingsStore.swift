@@ -9,7 +9,7 @@ enum SideShelfAvailability {
 
 /// UserDefaults-backed app settings, observable by SwiftUI.
 ///
-/// All keys are prefixed with `OpenYoink.` to avoid collisions. Defaults are
+/// All keys are prefixed with `Clerestory.` to avoid collisions. Defaults are
 /// registered on init, so reads always return meaningful values. Trigger
 /// settings are consumed by `HotKeyMonitor` /
 /// `EdgeTriggerMonitor` (S7); the settings UI lives in `SettingsView` (S8).
@@ -736,7 +736,7 @@ final class SettingsStore {
     var defaultsStore: UserDefaults { defaults }
 
     private enum Keys {
-        private static let prefix = "OpenYoink."
+        private static let prefix = "Clerestory."
         static let appearance = prefix + "appearance.v1"
         static let shelfPosition = prefix + "shelfPosition"
         static let clipboardHistoryEnabled = prefix + "clipboardHistoryEnabled"

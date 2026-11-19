@@ -1,7 +1,7 @@
 import Foundation
 import OSLog
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 final class FilePromiseReceiverRecoveryTests: XCTestCase {
     private struct Context {
@@ -14,7 +14,7 @@ final class FilePromiseReceiverRecoveryTests: XCTestCase {
 
         init() {
             root = FileManager.default.temporaryDirectory
-                .appendingPathComponent("OpenYoinkTests-PromiseRecovery-\(UUID().uuidString)",
+                .appendingPathComponent("ClerestoryTests-PromiseRecovery-\(UUID().uuidString)",
                                         isDirectory: true)
             materialized = root.appendingPathComponent("Materialized", isDirectory: true)
             temp = TempFileService(directoryURL: materialized)

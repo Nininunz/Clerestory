@@ -1,5 +1,5 @@
 import XCTest
-@testable import OpenYoink
+@testable import Clerestory
 
 final class ManagedMoveJournalTests: XCTestCase {
     private struct Context {
@@ -8,7 +8,7 @@ final class ManagedMoveJournalTests: XCTestCase {
 
         init() {
             root = FileManager.default.temporaryDirectory
-                .appendingPathComponent("OpenYoinkTests-ManagedMoveJournal-\(UUID().uuidString)",
+                .appendingPathComponent("ClerestoryTests-ManagedMoveJournal-\(UUID().uuidString)",
                                         isDirectory: true)
             journal = ManagedMoveJournal(directoryURL: root)
         }

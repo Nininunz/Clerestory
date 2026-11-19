@@ -10,7 +10,7 @@ struct IslandScreenSelectionCandidate: Equatable {
 }
 
 enum IslandDebugMode {
-    private static let simulateNoNotchKey = "OpenYoinkSimulateNoNotch"
+    private static let simulateNoNotchKey = "ClerestorySimulateNoNotch"
 
     static var simulatesNoNotch: Bool {
         #if DEBUG
@@ -113,8 +113,8 @@ enum IslandScreenCatalog {
     static func geometry(for screen: NSScreen)
         -> IslandGeometryResolver.ScreenGeometry {
         // Lets a notched Mac exercise the floating (no-notch) Island:
-        // `open Clerestory.app --args -OpenYoinkSimulateNoNotch YES`
-        // or `defaults write com.nininunz.Clerestory OpenYoinkSimulateNoNotch -bool YES`.
+        // `open Clerestory.app --args -ClerestorySimulateNoNotch YES`
+        // or `defaults write com.nininunz.Clerestory ClerestorySimulateNoNotch -bool YES`.
         if IslandDebugMode.simulatesNoNotch {
             return IslandGeometryResolver.ScreenGeometry(
                 frame: screen.frame,

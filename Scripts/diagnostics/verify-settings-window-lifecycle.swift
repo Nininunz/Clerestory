@@ -1,7 +1,7 @@
 // Run from the repository root in a logged-in macOS desktop session:
-// xcrun swiftc -parse-as-library Clerestory/Settings/SettingsWindowVisibility.swift Scripts/diagnostics/verify-settings-window-lifecycle.swift -o /tmp/openyoink-settings-lifecycle
-// /tmp/openyoink-settings-lifecycle
-// Briefly opens an owned test window; no OpenYoink preferences or shelf data are read.
+// xcrun swiftc -parse-as-library Clerestory/Settings/SettingsWindowVisibility.swift Scripts/diagnostics/verify-settings-window-lifecycle.swift -o /tmp/clerestory-settings-lifecycle
+// /tmp/clerestory-settings-lifecycle
+// Briefly opens an owned test window; no Clerestory preferences or shelf data are read.
 import AppKit
 import SwiftUI
 
