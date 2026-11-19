@@ -10,7 +10,7 @@ When the Notch is unavailable or hidden on the triggering display, the top-cente
 
 ## Settings and shortcuts
 
-- **General** contains startup, menu bar icon, language, and update settings.
+- **General** contains startup, menu bar icon, and update settings.
 - **Panel** contains hover, click, and drag behavior, delay controls, the Shelf shortcut, shortcut positions, and ignored apps.
 - **Notch** contains companion visibility, the cycling shortcut, and module inclusion and order.
 - **Modules** contains the experimental feature gate, module enablement, and module-specific settings. **Storage**, **About**, and **Debug** (in debug builds) have dedicated pages.
