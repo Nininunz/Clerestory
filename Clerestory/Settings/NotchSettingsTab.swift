@@ -15,13 +15,9 @@ struct NotchSettingsTab: View {
             }
             Section("Cycling Shortcut") {
                 LabeledContent("Cycle notch modules") {
-                    HStack(spacing: 8) {
-                        ShortcutRecorderView(shortcut: $settings.notchCycleShortcut)
-                        Button("Restore Default") { settings.notchCycleShortcut = .notchCycle }
-                            .disabled(settings.notchCycleShortcut == .notchCycle)
-                    }
+                    ShortcutRecorderView(shortcut: $settings.notchCycleShortcut)
                 }
-                Text("Hold Shift with the shortcut to cycle backward (release Shift if it is already part of your shortcut). Your choice is remembered independently of the panel module. Clear the shortcut to disable both directions.")
+                Text("No shortcut is set by default. Hold Shift with the shortcut to cycle backward (release Shift if it is already part of your shortcut). Your choice is remembered independently of the panel module. Clear the shortcut to disable both directions.")
                     .font(.caption).foregroundStyle(.secondary)
                 if let error = settings.notchCycleShortcutError {
                     Label(error, systemImage: "exclamationmark.triangle.fill")

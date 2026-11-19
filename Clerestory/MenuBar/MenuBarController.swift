@@ -303,8 +303,8 @@ extension MenuBarController: NSMenuDelegate {
         toggleItem.isHidden = IslandScreenCatalog.options().isEmpty
         let isVisible = isShelfExpanded()
         toggleItem.title = isVisible
-            ? String(localized: "Hide Island")
-            : String(localized: "Show Island")
+            ? String(localized: "Hide Panel")
+            : String(localized: "Show Panel")
         toggleItem.state = isVisible ? .on : .off
         rebuildRecentSubmenu()
     }

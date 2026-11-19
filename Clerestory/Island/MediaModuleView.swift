@@ -21,7 +21,7 @@ struct IslandNowPlayingView: View {
                 if store.availability == .disabled {
                     IslandModuleState(
                         title: "Enable Now Playing",
-                        message: "Show album artwork, playback progress, and media controls in the Island.",
+                        message: "Show album artwork, playback progress, and media controls in the panel.",
                         systemImage: "music.note"
                     ) {
                         Button("Enable") { settings.islandMediaEnabled = true }
@@ -40,7 +40,7 @@ struct IslandNowPlayingView: View {
                 } else {
                     IslandEmptyState(
                         title: "Now Playing unavailable",
-                        message: "Clerestory could not read the current player. Other Island features still work normally.",
+                        message: "Clerestory could not read the current player. Other panel features still work normally.",
                         systemImage: "play.slash"
                     )
                 }

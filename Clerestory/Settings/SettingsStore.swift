@@ -118,9 +118,6 @@ final class SettingsStore {
         var option: Bool
         var control: Bool
 
-        /// Control–Option–Space cycles the notch display independently.
-        static let notchCycle = HotKeyShortcut(keyCode: 49, command: false, shift: false, option: true, control: true)
-
         /// ⌘⇧Space
         static let `default` = HotKeyShortcut(
             keyCode: 49, command: true, shift: true, option: false, control: false
@@ -203,7 +200,9 @@ final class SettingsStore {
     var notchModuleID: IslandModuleID = .shelf {
         didSet { defaults.set(notchModuleID.rawValue, forKey: Keys.notchModuleID) }
     }
-    var notchCycleShortcut: HotKeyShortcut? = .notchCycle {
+    /// Off by default: any default would also claim its Shift variant for
+    /// reverse cycling, and Control–Option–Space is macOS's input-source switch.
+    var notchCycleShortcut: HotKeyShortcut? = nil {
         didSet {
             if let data = try? JSONEncoder().encode(notchCycleShortcut) {
                 defaults.set(data, forKey: Keys.notchCycleShortcut)

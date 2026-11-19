@@ -1,6 +1,60 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Show Panel" : {
+      "extractionState" : "manual", "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Show Panel" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "显示面板" } }
+      }
+    },
+    "Hide Panel" : {
+      "extractionState" : "manual", "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Hide Panel" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "隐藏面板" } }
+      }
+    },
+    "Close Panel" : {
+      "extractionState" : "manual", "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Close Panel" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "关闭面板" } }
+      }
+    },
+    "Pin Panel" : {
+      "extractionState" : "manual", "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Pin Panel" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "固定面板" } }
+      }
+    },
+    "Unpin Panel" : {
+      "extractionState" : "manual", "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unpin Panel" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消固定面板" } }
+      }
+    },
+    "Show album artwork, playback progress, and media controls in the panel." : {
+      "extractionState" : "manual", "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Show album artwork, playback progress, and media controls in the panel." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "在面板中显示专辑封面、播放进度和媒体控制。" } }
+      }
+    },
+    "Clerestory could not read the current player. Other panel features still work normally." : {
+      "extractionState" : "manual", "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory could not read the current player. Other panel features still work normally." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory 暂时无法读取当前播放器，其他面板功能仍可正常使用。" } }
+      }
+    },
+    "With Side Shelf enabled, the shelf shortcut controls it. Otherwise it opens the panel." : {
+      "extractionState" : "manual", "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "With Side Shelf enabled, the shelf shortcut controls it. Otherwise it opens the panel." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "启用侧边暂存架时，暂存架快捷键控制侧边架；否则打开面板。" } }
+      }
+    },
+    "No shortcut is set by default. Hold Shift with the shortcut to cycle backward (release Shift if it is already part of your shortcut). Your choice is remembered independently of the panel module. Clear the shortcut to disable both directions." : {
+      "extractionState" : "manual", "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No shortcut is set by default. Hold Shift with the shortcut to cycle backward (release Shift if it is already part of your shortcut). Your choice is remembered independently of the panel module. Clear the shortcut to disable both directions." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "默认未设置快捷键。按快捷键时按住 Shift 可反向切换（若快捷键已包含 Shift，则松开它）。所选模块独立于面板模块保存。清除快捷键可禁用双向切换。" } }
+      }
+    },
     "The optional notch display stays on the built-in screen. Configure it in Notch." : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "The optional notch display stays on the built-in screen. Configure it in Notch."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "可选的刘海显示固定在内置屏幕上。可在“刘海”中配置。"}}}},
     "The panel opens on the display where you trigger it and stays there until dismissed." : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "The panel opens on the display where you trigger it and stays there until dismissed."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "面板在触发它的显示器上打开，并停留至关闭。"}}}},
     "Displays" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Displays"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "显示器"}}}},
@@ -195,12 +249,6 @@
       }
     },
 
-    "Hold Shift with the shortcut to cycle backward (release Shift if it is already part of your shortcut). Your choice is remembered independently of the panel module. Clear the shortcut to disable both directions." : {
-      "localizations" : {
-        "en" : {"stringUnit": {"state": "translated", "value": "Hold Shift with the shortcut to cycle backward (release Shift if it is already part of your shortcut). Your choice is remembered independently of the panel module. Clear the shortcut to disable both directions."}},
-        "zh-Hans" : {"stringUnit": {"state": "translated", "value": "按快捷键时按住 Shift 可反向切换（若快捷键已包含 Shift，则松开它）。所选模块独立于面板模块保存。清除快捷键可禁用双向切换。"}}
-      }
-    },
     "Inclusion here controls cycling, not whether a module is enabled. Enable modules in Modules. These choices are shared with Quick Settings." : {
       "localizations" : {
         "en" : {"stringUnit": {"state": "translated", "value": "Inclusion here controls cycling, not whether a module is enabled. Enable modules in Modules. These choices are shared with Quick Settings."}},
@@ -1740,54 +1788,6 @@
         }
       }
     },
-    "Use the side shelf for files. Island and its background modules are turned off.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Use the side shelf for files. Island and its background modules are turned off."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "使用侧边暂存架收放文件，关闭灵动岛及其后台模块。"
-          }
-        }
-      }
-    },
-    "Enable the side shelf and Island with Shelf, Transfers and Clipboard History. Recording stays under your control.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enable the side shelf and Island with Shelf, Transfers and Clipboard History. Recording stays under your control."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "开启侧边暂存架和灵动岛，启用暂存架、传输和剪贴板历史模块。剪贴板记录仍由你单独决定。"
-          }
-        }
-      }
-    },
-    "Enable all built-in Island modules. Clipboard recording stays under your control.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enable all built-in Island modules. Clipboard recording stays under your control."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "启用所有内置灵动岛模块，剪贴板记录仍由你单独决定。"
-          }
-        }
-      }
-    },
     "Presets change modules and reveal behavior. Your files, history and recording choice are kept.": {
       "localizations": {
         "en": {
@@ -1836,22 +1836,6 @@
         }
       }
     },
-    "Configure side shelf and Island reveal behavior in Triggers.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Configure side shelf and Island reveal behavior in Triggers."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "侧边暂存架和灵动岛的展开方式可在“触发器”中设置。"
-          }
-        }
-      }
-    },
     "Side Shelf Reveal": {
       "localizations": {
         "en": {
@@ -1896,38 +1880,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "拖动侧边拉环可调整位置，文件拖拽展开在下方设置。"
-          }
-        }
-      }
-    },
-    "Island Reveal": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Island Reveal"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "灵动岛展开"
-          }
-        }
-      }
-    },
-    "Top drag reveal is off by default to keep browser tabs unobstructed. Clicking Island always works.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Top drag reveal is off by default to keep browser tabs unobstructed. Clicking Island always works."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "顶部拖拽展开默认关闭，避免挡住浏览器标签页。随时可以点击灵动岛展开。"
           }
         }
       }
@@ -2492,12 +2444,6 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "磁盘空间不足" } }
       }
     },
-    "Drag pinned rows to reorder the Island shortcuts." : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Drag pinned rows to reorder the Island shortcuts." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "拖动已固定模块行可调整岛顶部快捷方式的顺序。" } }
-      }
-    },
     "Enabled in the module library" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Enabled in the module library" } },
@@ -2606,12 +2552,6 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "打开完整设置" } }
       }
     },
-    "Open the Island module library to reorder pinned shortcuts." : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open the Island module library to reorder pinned shortcuts." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请在岛的模块库中拖动调整已固定快捷方式的顺序。" } }
-      }
-    },
     "Performance may be reduced" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Performance may be reduced" } },
@@ -2628,12 +2568,6 @@
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Pin module" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "固定模块" } }
-      }
-    },
-    "Pinned in the Island strip" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinned in the Island strip" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已固定到岛顶部" } }
       }
     },
     "Read-only Mac status" : {
@@ -4855,22 +4789,10 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在检查媒体访问…" } }
       }
     },
-    "Collapse Island" : {
-      "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Collapse Island" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "收起灵动岛" } }
-      }
-    },
     "Connected to power" : {
       "extractionState" : "manual", "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Connected to power" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已接通电源" } }
-      }
-    },
-    "Control playback without expanding the Island" : {
-      "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Control playback without expanding the Island" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无需展开灵动岛即可控制播放" } }
       }
     },
     "Custom: %lld min" : {
@@ -4891,18 +4813,6 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "启用实验性正在播放功能？" } }
       }
     },
-    "Expand Island on hover" : {
-      "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Expand Island on hover" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "悬停时展开灵动岛" } }
-      }
-    },
-    "Expand Island when dragging files near the top" : {
-      "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Expand Island when dragging files near the top" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "拖拽文件靠近顶部时展开灵动岛" } }
-      }
-    },
     "Experimental media support may stop working after a macOS update. It stays off unless you enable it." : {
       "extractionState" : "manual", "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Experimental media support may stop working after a macOS update. It stays off unless you enable it." } },
@@ -4913,24 +4823,6 @@
       "extractionState" : "manual", "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Hover waits briefly before expanding. Click, drag to the top, and the global shortcut always remain available." } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "悬停会短暂等待后再展开；点击、拖到屏幕顶部和全局快捷键始终可用。" } }
-      }
-    },
-    "Island Beta" : {
-      "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Island Beta" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "刘海 Beta" } }
-      }
-    },
-    "Island Modules" : {
-      "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Island Modules" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "灵动岛模块" } }
-      }
-    },
-    "Island uses the built-in camera housing when available. Displays without a notch use a floating pill below the menu bar." : {
-      "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Island uses the built-in camera housing when available. Displays without a notch use a floating pill below the menu bar." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "有刘海时会与摄像头区域融合；无刘海显示器会在菜单栏下方显示悬浮胶囊。" } }
       }
     },
     "New imports and deliveries appear here." : {
@@ -5015,12 +4907,6 @@
       "extractionState" : "manual", "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Pause" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "暂停" } }
-      }
-    },
-    "Pin Island" : {
-      "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Pin Island" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "固定灵动岛" } }
       }
     },
     "Play" : {
@@ -5251,22 +5137,10 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已关闭" } }
       }
     },
-    "Clerestory could not read the current player. Other Island features still work normally." : {
-      "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory could not read the current player. Other Island features still work normally." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Clerestory 暂时无法读取当前播放器，其他灵动岛功能仍可正常使用。" } }
-      }
-    },
     "Playing" : {
       "extractionState" : "manual", "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Playing" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在播放" } }
-      }
-    },
-    "Show album artwork, playback progress, and media controls in the Island." : {
-      "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Show album artwork, playback progress, and media controls in the Island." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "在灵动岛中显示专辑封面、播放进度和媒体控制。" } }
       }
     },
     "Shows artwork and controls from the active media player. Processing stays on this Mac; compatibility can vary after macOS updates." : {
@@ -5305,12 +5179,6 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "主暂存架" } }
       }
     },
-    "Island Shelf" : {
-      "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Island Shelf" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "灵动岛暂存架" } }
-      }
-    },
     "The shortcut and automatic drag reveal use the primary shelf. The other surface stays available independently." : {
       "extractionState" : "manual", "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "The shortcut and automatic drag reveal use the primary shelf. The other surface stays available independently." } },
@@ -5333,12 +5201,6 @@
       "extractionState" : "manual", "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Click is always available. Hover waits briefly before expanding." } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "始终可以点击展开；悬停会在短暂延迟后展开。" } }
-      }
-    },
-    "The Island Shelf and Side Shelf use the same items. Turning this module off never deletes them." : {
-      "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "The Island Shelf and Side Shelf use the same items. Turning this module off never deletes them." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "灵动岛暂存架与侧边暂存架共享同一批项目；关闭此模块不会删除任何内容。" } }
       }
     },
     "Ready" : {
@@ -5449,12 +5311,6 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "专注时长" } }
       }
     },
-    "With Side Shelf enabled, the shelf shortcut controls it. Otherwise the shortcut opens Island Shelf." : {
-      "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "With Side Shelf enabled, the shelf shortcut controls it. Otherwise the shortcut opens Island Shelf." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "启用侧边暂存架时，暂存架快捷键控制侧边架；关闭后快捷键才会打开灵动岛暂存架。" } }
-      }
-    },
     "Display" : {
       "extractionState" : "manual", "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Display" } },
@@ -5483,36 +5339,6 @@
       "extractionState" : "manual", "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Current Main" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前主屏" } }
-      }
-    },
-    "Island stays on the display chosen as main in System Settings." : {
-      "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Island stays on the display chosen as main in System Settings." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "灵动岛会固定在“系统设置”中选定的主显示器上。" } }
-      }
-    },
-    "Island follows the pointer and active drag across displays." : {
-      "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Island follows the pointer and active drag across displays." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "灵动岛会跟随鼠标和正在进行的拖拽切换显示器。" } }
-      }
-    },
-    "This display is unavailable. Island is temporarily using the main display and will return when it reconnects." : {
-      "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "This display is unavailable. Island is temporarily using the main display and will return when it reconnects." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "此显示器当前不可用。灵动岛会暂时使用主显示器，并在重新连接后自动返回。" } }
-      }
-    },
-    "Island stays on this display until you choose another." : {
-      "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Island stays on this display until you choose another." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "灵动岛会固定在这块显示器上，直到你更改选择。" } }
-      }
-    },
-    "Unpin Island" : {
-      "extractionState" : "manual", "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unpin Island" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消固定灵动岛" } }
       }
     }
   },

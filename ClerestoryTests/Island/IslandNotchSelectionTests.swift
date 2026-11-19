@@ -98,7 +98,9 @@ final class IslandNotchSelectionTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suite) }
         let settings = SettingsStore(defaults: defaults)
         settings.experimentalModulesEnabled = true
-        var reverse = SettingsStore.HotKeyShortcut.notchCycle
+        let forward = SettingsStore.HotKeyShortcut(keyCode: 49, command: false, shift: false, option: true, control: true)
+        settings.notchCycleShortcut = forward
+        var reverse = forward
         reverse.shift = true
         XCTAssertEqual(settings.notchReverseCycleShortcut, reverse)
         settings.clipboardHistoryShortcut = reverse
@@ -110,7 +112,7 @@ final class IslandNotchSelectionTests: XCTestCase {
         settings.hotKeyEnabled = false
         XCTAssertFalse(settings.notchCycleShortcutConflicts)
         settings.notchCycleShortcut = reverse
-        XCTAssertEqual(settings.notchReverseCycleShortcut, .notchCycle)
+        XCTAssertEqual(settings.notchReverseCycleShortcut, forward)
         settings.notchCycleShortcut = nil
         XCTAssertNil(settings.notchReverseCycleShortcut)
         for id in IslandNotchDisplay.cycleOrder { settings.setIslandModuleEnabled(true, id: id) }
@@ -150,7 +152,7 @@ final class IslandNotchSelectionTests: XCTestCase {
         let settings = SettingsStore(defaults: defaults)
         settings.experimentalModulesEnabled = true
         XCTAssertEqual(settings.notchModuleID, .shelf)
-        XCTAssertEqual(settings.notchCycleShortcut, .notchCycle)
+        XCTAssertNil(settings.notchCycleShortcut, "No cycling shortcut is set by default")
         settings.notchModuleID = .battery
         settings.notchCycleShortcut = .init(keyCode: 17, command: true, shift: false, option: true, control: false)
         let restored = SettingsStore(defaults: defaults)

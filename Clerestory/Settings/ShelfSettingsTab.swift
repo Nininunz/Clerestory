@@ -70,7 +70,7 @@ struct ShelfSettingsSections: View {
 
         Section("Shelf Behavior") {
             if SideShelfAvailability.isEnabled && settings.classicShelfEnabled && settings.islandEnabled {
-                Text("With Side Shelf enabled, the shelf shortcut controls it. Otherwise the shortcut opens Island Shelf.")
+                Text("With Side Shelf enabled, the shelf shortcut controls it. Otherwise it opens the panel.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
