@@ -127,6 +127,6 @@ Clerestory 基于 weijue 和贡献者开发的 [OpenYoink](https://github.com/Mu
 
 <div align="center">
 
-© 2026 weijue · MIT License
+© 2026 weijue, Nicholas Nunziata · MIT License
 
 </div>
