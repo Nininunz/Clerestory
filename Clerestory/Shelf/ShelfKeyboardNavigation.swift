@@ -175,3 +175,30 @@ final class ShelfInteractionState {
         self.focusedItemID = nil
     }
 }
+
+extension ShelfInteractionState {
+    /// Focuses and selects an item that is still on the Shelf after a failed drag-out, so the user can
+    /// drag it out again ("Select Item" recovery). An item inside a stack opens that stack when stacks
+    /// are enabled; otherwise the stack itself is focused. Returns false when the item is gone.
+    @discardableResult
+    func focusRetainedItem(_ itemID: UUID, in store: ShelfStore) -> Bool {
+        if store.item(withID: itemID) != nil {
+            exitStack()
+            focusedItemID = itemID
+            store.select(itemID)
+            return true
+        }
+        guard let stack = store.items.first(where: {
+            $0.kind == .stack && ($0.children ?? []).contains { $0.id == itemID }
+        }) else { return false }
+        store.select(stack.id)
+        guard stacksEnabled else {
+            focusedItemID = stack.id
+            return true
+        }
+        enterStack(stack)
+        focusedItemID = itemID
+        childSelection = [itemID]
+        return true
+    }
+}

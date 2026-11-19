@@ -1069,31 +1069,12 @@ struct ShelfView: View {
         case .openStorageRecovery, .locateExternalFile:
             itemRecoveryController?.perform(action)
         case .retryByDraggingOut(let itemID):
-            focusRetainedItem(itemID)
+            interaction.focusRetainedItem(itemID, in: store)
         case .dragAgainFromSource, .dismiss:
             break
         }
     }
 
-    private func focusRetainedItem(_ itemID: UUID) {
-        if store.item(withID: itemID) != nil {
-            interaction.exitStack()
-            interaction.focusedItemID = itemID
-            store.select(itemID)
-            return
-        }
-        guard let stack = store.items.first(where: {
-            $0.kind == .stack && ($0.children ?? []).contains { $0.id == itemID }
-        }) else { return }
-        store.select(stack.id)
-        guard ShelfStackAvailability.isEnabled else {
-            interaction.focusedItemID = stack.id
-            return
-        }
-        interaction.enterStack(stack)
-        interaction.focusedItemID = itemID
-        interaction.childSelection = [itemID]
-    }
 
     // MARK: - Transient feedback
 

@@ -239,7 +239,7 @@ final class ShelfWindowController: NSObject {
             IslandNotchView()
         } else {
             IslandExpandedView(
-                onPerformRecovery: { [weak self] in self?.itemRecoveryController.perform($0) },
+                onPerformRecovery: { [weak self] in self?.performRecovery($0) },
                 onOpenSettings: { [weak self] in self?.onOpenSettings() })
         }
     }
@@ -391,7 +391,7 @@ final class ShelfWindowController: NSObject {
                 anchor: panel, notices: importCoordinator.noticeCenter,
                 coordinator: islandActivityCoordinator, settings: settings,
                 dropTarget: islandDropTargetState,
-                onRecovery: { [weak self] in self?.itemRecoveryController.perform($0) })
+                onRecovery: { [weak self] in self?.performRecovery($0) })
         }
         return panel
     }
@@ -769,6 +769,19 @@ final class ShelfWindowController: NSObject {
             }
         case nil:
             break
+        }
+    }
+
+    /// The one handler for recovery actions offered in the panel: the Shelf activity strip, the
+    /// Transfers module, and Shelf notices. "Select Item" focuses the retained item and shows the
+    /// Shelf so the user can drag it out again; other actions go to `ItemRecoveryController`.
+    func performRecovery(_ action: RecoveryAction) {
+        switch action {
+        case .retryByDraggingOut(let itemID):
+            guard interaction.focusRetainedItem(itemID, in: store) else { return }
+            showPreferredShelf(animated: true, takeKeyboardFocus: true)
+        case .openStorageRecovery, .locateExternalFile, .dragAgainFromSource, .dismiss:
+            itemRecoveryController.perform(action)
         }
     }
 
