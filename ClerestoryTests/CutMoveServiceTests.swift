@@ -271,7 +271,7 @@ final class CutMoveServiceTests: XCTestCase {
         let movable = try makeSourceFile(in: &context, named: "movable.txt")
         let stuck = try makeSourceFile(in: &context, named: "stuck.txt")
         struct TrashRefused: Error {}
-        let noticeCenter = ShelfNoticeModel()
+        let messages = IslandMessageCenter()
         let service = CutMoveService(
             tempFileService: context.tempFileService,
             bookmarkService: context.bookmarkService,
@@ -286,7 +286,7 @@ final class CutMoveServiceTests: XCTestCase {
         let coordinator = DropImportCoordinator(
             bookmarkService: context.bookmarkService,
             tempFileService: context.tempFileService,
-            noticeCenter: noticeCenter,
+            messenger: messages.messenger(for: .shelf),
             cutMoveService: service
         )
         let pasteboard = NSPasteboard(name: NSPasteboard.Name("ClerestoryTests-\(UUID().uuidString)"))
@@ -326,7 +326,7 @@ final class CutMoveServiceTests: XCTestCase {
         XCTAssertEqual(successCount, 2, "Both the move and the safe fallback reference landed on the shelf")
         XCTAssertEqual(failures.count, 1)
         XCTAssertEqual(failures[0].reason, .managedMoveFellBackToReference)
-        XCTAssertNil(noticeCenter.message, "ActivityStrip alone presents batch status, avoiding duplicate notices")
+        XCTAssertNil(messages.current, "ActivityStrip alone presents batch status, avoiding duplicate notices")
     }
 
     func testImport_copyMode_neverCuts() throws {

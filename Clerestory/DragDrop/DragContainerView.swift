@@ -465,7 +465,7 @@ final class DragContainerView: NSView {
             return true
         } catch {
             store.add(item)
-            coordinator.noticeCenter.show(.moveAwaitingSave)
+            coordinator.messenger.post(.moveAwaitingSave)
             return false
         }
     }
@@ -479,7 +479,7 @@ final class DragContainerView: NSView {
             try store.addAndPersistNow(item)
             return true
         } catch {
-            coordinator.noticeCenter.show(.receivedAwaitingRecovery)
+            coordinator.messenger.post(.receivedAwaitingRecovery)
             return false
         }
     }

@@ -55,6 +55,9 @@ final class ShelfWindowController: NSObject {
     private var isUserRemovalInProgress = false
     /// Converts dropped pasteboard data into Shelf items for DragContainerView.
     private let importCoordinator: DropImportCoordinator
+    /// Holds the notice the notice pill shows; Shelf writes to it through `shelfMessenger`.
+    private let messages: IslandMessageCenter
+    private var shelfMessenger: ModuleMessenger { messages.messenger(for: .shelf) }
     /// DragContainerView updates drop feedback and insertion position for ShelfView to render.
     private let classicDropTargetState = DropTargetState()
     private let islandDropTargetState = DropTargetState()
@@ -156,7 +159,7 @@ final class ShelfWindowController: NSObject {
         dragOutController: classicDragOutController
     )
 
-    private var islandNoticePanel: ShelfNoticePanelController?
+    private var islandNoticePanel: IslandNoticePanelController?
     private lazy var islandPresentation = IslandPresentationController(
         settings: settings, coordinator: islandActivityCoordinator,
         registry: islandModuleRegistry, modules: islandModuleContainer,
@@ -277,7 +280,7 @@ final class ShelfWindowController: NSObject {
                 .environment(settings)
                 .environment(gridGeometry)
                 .environment(interaction)
-                .environment(importCoordinator.noticeCenter)
+                .environment(\.shelfMessenger, shelfMessenger)
                 .environment(importCoordinator.transferStore)
                 .environment(islandActivityCoordinator)
                 .environment(islandModuleRegistry)
@@ -387,11 +390,11 @@ final class ShelfWindowController: NSObject {
             }
         }
         if presentationStyle == .island && islandRole == .expanded {
-            islandNoticePanel = ShelfNoticePanelController(
-                anchor: panel, notices: importCoordinator.noticeCenter,
+            islandNoticePanel = IslandNoticePanelController(
+                anchor: panel, messages: messages,
                 coordinator: islandActivityCoordinator, settings: settings,
-                dropTarget: islandDropTargetState,
-                onRecovery: { [weak self] in self?.performRecovery($0) })
+                dropTarget: islandDropTargetState)
+            messages.routeAction = { [weak self] in self?.performNoticeAction($0) }
         }
         return panel
     }
@@ -415,6 +418,7 @@ final class ShelfWindowController: NSObject {
     init(appState: AppState,
          store: ShelfStore,
          importCoordinator: DropImportCoordinator,
+         messages: IslandMessageCenter,
          tempFileService: TempFileService,
          settings: SettingsStore,
          recents: RecentItemsService,
@@ -428,6 +432,7 @@ final class ShelfWindowController: NSObject {
         self.appState = appState
         self.store = store
         self.importCoordinator = importCoordinator
+        self.messages = messages
         self.tempFileService = tempFileService
         self.settings = settings
         self.clipboardHistoryStore = clipboardHistoryStore
@@ -602,12 +607,12 @@ final class ShelfWindowController: NSObject {
         self.itemRecoveryController = ItemRecoveryController(
             store: store,
             bookmarkService: importCoordinator.bookmarkService,
-            notices: importCoordinator.noticeCenter,
+            messenger: messages.messenger(for: .shelf),
             openStorageRecovery: onOpenStorageRecovery
         )
         self.shelfActionRunner = ShelfActionRunner(
             bookmarkService: importCoordinator.bookmarkService,
-            notices: importCoordinator.noticeCenter
+            messenger: messages.messenger(for: .shelf)
         )
         super.init()
         islandPresentation.connect()
@@ -773,7 +778,7 @@ final class ShelfWindowController: NSObject {
     }
 
     /// The one handler for recovery actions offered in the panel: the Shelf activity strip, the
-    /// Transfers module, and Shelf notices. "Select Item" focuses the retained item and shows the
+    /// Transfers module, and the notice pill's Open Recovery button. "Select Item" focuses the retained item and shows the
     /// Shelf so the user can drag it out again; other actions go to `ItemRecoveryController`.
     func performRecovery(_ action: RecoveryAction) {
         switch action {
@@ -782,6 +787,17 @@ final class ShelfWindowController: NSObject {
             showPreferredShelf(animated: true, takeKeyboardFocus: true)
         case .openStorageRecovery, .locateExternalFile, .dragAgainFromSource, .dismiss:
             itemRecoveryController.perform(action)
+        }
+    }
+
+    /// Routes the notice pill's button.
+    private func performNoticeAction(_ action: IslandNoticeAction) {
+        switch action {
+        case .openStorageRecovery:
+            performRecovery(.openStorageRecovery)
+        case .openModule(let moduleID):
+            islandActivityCoordinator.show(module: moduleID,
+                                           pinned: islandActivityCoordinator.surfaceState == .pinned)
         }
     }
 
@@ -1467,7 +1483,7 @@ final class ShelfWindowController: NSObject {
             items,
             bookmarkService: importCoordinator.bookmarkService
         )
-        importCoordinator.noticeCenter.show(ClipboardController.notice(for: result))
+        shelfMessenger.post(ClipboardController.notice(for: result))
         return true
     }
 
@@ -1521,7 +1537,7 @@ final class ShelfWindowController: NSObject {
             do {
                 try store.removeBatchForUser(ids: ids)
             } catch {
-                importCoordinator.noticeCenter.show(.removalFailed)
+                shelfMessenger.post(.removalFailed)
                 return true
             }
         }

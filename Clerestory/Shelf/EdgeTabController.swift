@@ -351,7 +351,7 @@ final class EdgeTabController: NSObject {
                     return true
                 } catch {
                     store.add(item)
-                    importCoordinator.noticeCenter.show(.moveAwaitingSave)
+                    importCoordinator.messenger.post(.moveAwaitingSave)
                     return false
                 }
             },
@@ -360,7 +360,7 @@ final class EdgeTabController: NSObject {
                     try store.addAndPersistNow(item)
                     return true
                 } catch {
-                    importCoordinator.noticeCenter.show(.receivedAwaitingRecovery)
+                    importCoordinator.messenger.post(.receivedAwaitingRecovery)
                     return false
                 }
             }

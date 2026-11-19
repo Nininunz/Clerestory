@@ -1,15 +1,9 @@
 import Foundation
+import SwiftUI
 
-struct ShelfNoticeContent: Equatable {
-    enum Kind: Equatable { case success, info, warning, error }
-    let message: String
-    let kind: Kind
-    var details: String? = nil
-    var recoveryAction: RecoveryAction? = nil
-}
-
-/// Shared wording for runtime notices and the preview catalog.
-enum ShelfNoticeMessage: String, CaseIterable {
+/// Shelf's wording catalog for runtime notices and the preview catalog. Raw values are the
+/// notice keys and the `notice-*` preview ids.
+enum ShelfNotice: String, CaseIterable {
     case alreadyOnShelf = "already-on-shelf"
     case reconnected = "reconnected"
     case reconnectFailed = "reconnect-failed"
@@ -58,74 +52,85 @@ enum ShelfNoticeMessage: String, CaseIterable {
         }
     }
 
-    var presentation: ShelfNoticeContent {
+    var notice: IslandNotice {
         let summary: String
-        let kind: ShelfNoticeContent.Kind
-        var recovery: RecoveryAction?
+        let tone: IslandNotice.Tone
+        var action: IslandNoticeAction?
         switch self {
         case .alreadyOnShelf:
             summary = String(localized: "Already on Shelf")
-            kind = .warning
+            tone = .warning
         case .reconnected:
             summary = String(localized: "File reconnected.")
-            kind = .success
+            tone = .success
         case .reconnectFailed:
             summary = String(localized: "Couldn't reconnect. Original item kept.")
-            kind = .error
+            tone = .error
         case .moveAwaitingSave:
             summary = String(localized: "Item kept safely for recovery.")
-            kind = .warning
-            recovery = .openStorageRecovery
+            tone = .warning
+            action = .openStorageRecovery
         case .receivedAwaitingRecovery, .interruptedImportRecovered:
             summary = String(localized: "File saved. Finish importing in Recovery.")
-            kind = .warning
-            recovery = .openStorageRecovery
+            tone = .warning
+            action = .openStorageRecovery
         case .clipboardEmpty:
             summary = String(localized: "Nothing to add from the clipboard.")
-            kind = .info
+            tone = .info
         case .clipboardHasNoImage:
             summary = String(localized: "No image to add.")
-            kind = .info
+            tone = .info
         case .moveRecoveryNeedsAttention, .importRecoveryNeedsAttention:
             summary = String(localized: "Recovery needs attention.")
-            kind = .warning
-            recovery = .openStorageRecovery
+            tone = .warning
+            action = .openStorageRecovery
         case .partialMoveRecoveryNeedsAttention:
             summary = String(localized: "Some items need recovery.")
-            kind = .warning
-            recovery = .openStorageRecovery
+            tone = .warning
+            action = .openStorageRecovery
         case .moveRecovered:
             summary = String(localized: "Interrupted move recovered.")
-            kind = .success
+            tone = .success
         case .unsupportedContent:
             summary = String(localized: "This content isn't supported yet.")
-            kind = .warning
+            tone = .warning
         case .importFailed:
             summary = String(localized: "Couldn't add this item.")
-            kind = .error
+            tone = .error
         case .removed:
             summary = String(localized: "Removed from Shelf. Undo with ⌘Z.")
-            kind = .success
+            tone = .success
         case .removalFailed:
             summary = String(localized: "Nothing removed. Couldn't save a recovery copy.")
-            kind = .error
+            tone = .error
         case .shareUnavailable:
             summary = String(localized: "Couldn't share the selected items.")
-            kind = .error
+            tone = .error
         case .copyPathsFailed:
             summary = String(localized: "Couldn't copy the selected paths.")
-            kind = .error
+            tone = .error
         case .revealFailed:
             summary = String(localized: "Couldn't show the items in Finder.")
-            kind = .error
+            tone = .error
         case .shareInProgress:
             summary = String(localized: "Sharing is already in progress.")
-            kind = .info
+            tone = .info
         case .shareFailed:
             summary = String(localized: "Sharing failed. Items kept on Shelf.")
-            kind = .error
+            tone = .error
         }
-        return ShelfNoticeContent(message: summary, kind: kind, details: text, recoveryAction: recovery)
+        return IslandNotice(key: rawValue, title: summary, detail: text, tone: tone, action: action)
     }
+}
 
+private struct ShelfMessengerEnvironmentKey: EnvironmentKey {
+    static let defaultValue: ModuleMessenger? = nil
+}
+
+extension EnvironmentValues {
+    /// Posts Shelf notices from Shelf views (ShelfWindowController injection; previews leave it nil).
+    var shelfMessenger: ModuleMessenger? {
+        get { self[ShelfMessengerEnvironmentKey.self] }
+        set { self[ShelfMessengerEnvironmentKey.self] = newValue }
+    }
 }

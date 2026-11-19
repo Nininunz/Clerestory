@@ -12,17 +12,17 @@ import UniformTypeIdentifiers
 final class ItemRecoveryController {
     private let store: ShelfStore
     private let bookmarkService: BookmarkService
-    private let notices: ShelfNoticeModel
+    private let messenger: ModuleMessenger
     private let openStorageRecovery: @MainActor () -> Void
     private var activePanel: NSOpenPanel?
 
     init(store: ShelfStore,
          bookmarkService: BookmarkService,
-         notices: ShelfNoticeModel,
+         messenger: ModuleMessenger,
          openStorageRecovery: @escaping @MainActor () -> Void) {
         self.store = store
         self.bookmarkService = bookmarkService
-        self.notices = notices
+        self.messenger = messenger
         self.openStorageRecovery = openStorageRecovery
     }
 
@@ -110,9 +110,9 @@ final class ItemRecoveryController {
                 bookmark: bookmark
             ) else { return }
             guard try store.updateRecursivelyAndPersistNow(relocated) else { return }
-            notices.show(.reconnected)
+            messenger.post(.reconnected)
         } catch {
-            notices.show(.reconnectFailed)
+            messenger.post(.reconnectFailed)
         }
     }
 }

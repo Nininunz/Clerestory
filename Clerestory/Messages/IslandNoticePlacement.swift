@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 /// Screen-space placement is independent of the Island's content and hitbox.
-enum ShelfNoticePlacement {
+enum IslandNoticePlacement {
     static let gap: CGFloat = 10
     static let shadowRadius: CGFloat = 8
     static let shadowOffsetY: CGFloat = 3
@@ -24,8 +24,8 @@ enum ShelfNoticePlacement {
 
     /// Used by static preview hosts; the live panel caches its own measurement.
     @MainActor
-    static func pillSize(for notice: ShelfNoticeContent) -> CGSize {
-        let view = NSHostingView(rootView: ShelfNoticePanelContent(notice: notice, onRecovery: { _ in }))
+    static func pillSize(for notice: IslandNotice) -> CGSize {
+        let view = NSHostingView(rootView: IslandNoticePanelContent(notice: notice, onAction: { _ in }))
         return pillSize(in: view.fittingSize)
     }
 }

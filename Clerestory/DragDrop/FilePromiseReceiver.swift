@@ -155,7 +155,8 @@ final class FilePromiseReceiver {
     /// Background materialization completion handling (OperationQueue context, non-isolated).
     /// Success: Move to the top level of the materialization directory → kind inference + bookmark →
     /// completion.
-    /// Failure: Log the error + failure callback (D10 inline prompt).
+    /// Failure: Log the error + failure callback (recorded in TransferStore, shown in the Shelf
+    /// activity strip).
     /// Callbacks are triggered per file, hence **do not touch shared staging directory** (cleared by
     /// age-based cleanup at startup).
     nonisolated static func handleMaterializedPromise(

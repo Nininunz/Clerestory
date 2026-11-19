@@ -1,5 +1,5 @@
 /// Presentation policy independent of AppKit windows, animations, and timers.
-struct ShelfNoticePresentation {
+struct IslandNoticePresentation {
     struct Context {
         var isEnabled: Bool
         var surface: IslandSurfaceState

@@ -18,7 +18,7 @@ struct ModulePreviewHost: View {
     let coordinator: IslandActivityCoordinator
     let content: AnyView
     var dropTarget: DropTargetState? = nil
-    var notices: ShelfNoticeModel? = nil
+    var messages: IslandMessageCenter? = nil
 
     static let screen = IslandGeometryResolver.ScreenGeometry(
         frame: CGRect(x: 0, y: 0, width: 1512, height: 982),
@@ -34,30 +34,30 @@ struct ModulePreviewHost: View {
 
     var surfaceSize: CGSize { layout.expandedFrame.size }
 
-    private var notice: ShelfNoticeContent? {
-        var presentation = ShelfNoticePresentation()
-        let phase = presentation.update(revision: notices?.current == nil ? nil : notices?.revision,
+    private var notice: IslandNotice? {
+        var presentation = IslandNoticePresentation()
+        let phase = presentation.update(revision: messages?.current == nil ? nil : messages?.revision,
             context: .init(isEnabled: true, surface: .pinned, isTransitioning: false,
                            isDragging: dropTarget?.isTargeted == true))
-        return phase == .visible ? notices?.current : nil
+        return phase == .visible ? messages?.current?.notice : nil
     }
 
     var size: CGSize {
         var result = surfaceSize
         if let notice {
-            result.height += ShelfNoticePlacement.gap + ShelfNoticePlacement.pillSize(for: notice).height
-                + ShelfNoticePlacement.shadowInset
+            result.height += IslandNoticePlacement.gap + IslandNoticePlacement.pillSize(for: notice).height
+                + IslandNoticePlacement.shadowInset
         }
         return result
     }
 
     var body: some View {
-        VStack(spacing: ShelfNoticePlacement.gap) {
+        VStack(spacing: IslandNoticePlacement.gap) {
             surface
             if let notice {
-                ShelfNoticeToast(notice: notice, onPerformRecovery: { _ in })
-                    .frame(width: ShelfNoticePlacement.width)
-                    .padding(.bottom, ShelfNoticePlacement.shadowInset)
+                IslandNoticePill(notice: notice, onPerformAction: { _ in })
+                    .frame(width: IslandNoticePlacement.width)
+                    .padding(.bottom, IslandNoticePlacement.shadowInset)
             }
         }
         .frame(width: size.width, height: size.height, alignment: .top)

@@ -46,8 +46,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var pendingImportJournal = PendingImportJournal(
         managedDirectoryURL: tempFileService.directoryURL
     )
-    /// Shows a temporary inline notice when a drop or materialization fails.
-    private let shelfNotice = ShelfNoticeModel()
+    /// Holds the notice shown in the notice pill. It lives here because the drop import pipeline
+    /// and the startup recovery notices need it before ShelfWindowController exists.
+    private let messages = IslandMessageCenter()
+    private var shelfMessenger: ModuleMessenger { messages.messenger(for: .shelf) }
     /// Share the active tutorial item token without coupling the lazy Shelf and onboarding objects.
     private let onboardingDragContext = OnboardingDragContext()
     private let logger = Logger(subsystem: "com.nininunz.Clerestory", category: "App")
@@ -60,10 +62,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Owns the Shelf item store that is injected into ShelfView.
     private lazy var shelfStore = ShelfStore(items: initialShelfLoadResult.items,
                                              persistence: persistence)
-    /// Dispatches pasteboard data to Shelf items and reports failures through shelfNotice.
+    /// Dispatches pasteboard data to Shelf items and reports failures as Shelf notices.
     private lazy var dropImportCoordinator = DropImportCoordinator(bookmarkService: bookmarkService,
                                                                    tempFileService: tempFileService,
-                                                                   noticeCenter: shelfNotice,
+                                                                   messenger: shelfMessenger,
                                                                    managedMoveJournal: managedMoveJournal,
                                                                    pendingImportJournal: pendingImportJournal)
     /// User settings shared with drag-session policy and injected into the SwiftUI Settings scene.
@@ -118,6 +120,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var shelfWindowController: ShelfWindowController = ShelfWindowController(appState: appState,
                                                                    store: shelfStore,
                                                                    importCoordinator: dropImportCoordinator,
+                                                                   messages: messages,
                                                                    tempFileService: tempFileService,
                                                                    settings: settingsStore,
                                                                    recents: recentItemsService,
@@ -441,7 +444,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Immediate mode opens a hidden Shelf and marks it as automatic. A visible Shelf stays
     /// as it is. Edge-only mode tracks the drag and delegates opening to the edge trigger.
     private func handleDragStart() {
-        noticeRevisionBeforeDrag = shelfNotice.revision
+        noticeRevisionBeforeDrag = messages.revision
         dragAutoShowSession.dragBegan()
         guard settingsStore.effectivePreferredShelfSurface == .classic else { return }
         guard settingsStore.classicShelfEnabled else { return }
@@ -474,7 +477,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if islandDragWasActivated {
             shelfPresentationCoordinator.dragEnded(
                 imported: imported,
-                hasPendingNotice: shelfNotice.current != nil && shelfNotice.revision != noticeRevisionBeforeDrag
+                hasPendingNotice: messages.current != nil && messages.revision != noticeRevisionBeforeDrag
             )
             islandDragWasActivated = false
         }
@@ -492,7 +495,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         shelfPresentationCoordinator.show(animated: true)
         if scheduled == 0 {
-            shelfNotice.show(.clipboardHasNoImage)
+            shelfMessenger.post(.clipboardHasNoImage)
         }
     }
 
@@ -505,7 +508,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         guard result.handled else {
             if appState.isShelfVisible {
-                shelfNotice.show(.clipboardEmpty)
+                shelfMessenger.post(.clipboardEmpty)
             }
             return
         }
@@ -595,7 +598,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let loadResult = managedMoveJournal.loadResult()
         guard case .loaded(let records) = loadResult, !records.isEmpty else {
             if loadResult == .failed {
-                shelfNotice.show(.moveRecoveryNeedsAttention)
+                shelfMessenger.post(.moveRecoveryNeedsAttention)
             }
             return
         }
@@ -656,7 +659,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 for record in resolved {
                     try? managedMoveJournal.remove(id: record.id)
                 }
-                shelfNotice.show(.moveRecovered)
+                shelfMessenger.post(.moveRecovered)
             } catch {
                 logger.error("Failed to persist recovered managed moves: \(error.localizedDescription, privacy: .public)")
                 unresolvedCount += resolved.count
@@ -664,7 +667,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         if unresolvedCount > 0 {
-            shelfNotice.show(.partialMoveRecoveryNeedsAttention)
+            shelfMessenger.post(.partialMoveRecoveryNeedsAttention)
         }
     }
 
@@ -699,10 +702,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
             if remainingCount > 0 {
-                shelfNotice.show(.interruptedImportRecovered)
+                shelfMessenger.post(.interruptedImportRecovered)
             }
         case .failed:
-            shelfNotice.show(.importRecoveryNeedsAttention)
+            shelfMessenger.post(.importRecoveryNeedsAttention)
         case .missing:
             break
         }

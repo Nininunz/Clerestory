@@ -4,11 +4,11 @@ import SwiftUI
 /// Runtime message formatters and models, without executing clipboard, file, or recovery actions.
 @MainActor
 enum ShelfFeedbackScenario {
-    static var notices: [(id: String, label: String, notice: ShelfNoticeContent)] {
-        var result = ShelfNoticeMessage.allCases.map {
+    static var notices: [(id: String, label: String, notice: IslandNotice)] {
+        var result = ShelfNotice.allCases.map {
             (id: "notice-" + $0.rawValue,
              label: "Notice / " + $0.rawValue.replacingOccurrences(of: "-", with: " ").capitalized,
-             notice: $0.presentation)
+             notice: $0.notice)
         }
         result += [
             ("notice-copy-success", "Notice / Copied", ClipboardController.notice(for: .init(copiedCount: 3, skippedCount: 0, didWrite: true))),
@@ -28,13 +28,13 @@ enum ShelfFeedbackScenario {
         notices.map { notice in
             ModuleScenario(id: notice.id, label: notice.label) {
                 let fixture = try ShelfScenarioFixture(.populated, notice: notice.notice)
-                return ModuleScenarioContent(view: fixture.view(settings: context.settings()), dropTarget: fixture.dropTarget, notices: fixture.notices)
+                return ModuleScenarioContent(view: fixture.view(settings: context.settings()), dropTarget: fixture.dropTarget, messages: fixture.messages)
             }
         } + ShelfTransferSample.allCases.map { sample in
             ModuleScenario(id: "transfer-" + sample.rawValue,
                            label: "Transfer / " + sample.rawValue.replacingOccurrences(of: "-", with: " ").capitalized) {
                 let fixture = try ShelfScenarioFixture(.populated, transfer: sample)
-                return ModuleScenarioContent(view: fixture.view(settings: context.settings()), dropTarget: fixture.dropTarget, notices: fixture.notices)
+                return ModuleScenarioContent(view: fixture.view(settings: context.settings()), dropTarget: fixture.dropTarget, messages: fixture.messages)
             }
         }
     }

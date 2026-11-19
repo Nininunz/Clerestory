@@ -95,9 +95,9 @@ final class ShelfActionTests: XCTestCase {
             try? FileManager.default.removeItem(at: secondURL.deletingLastPathComponent())
         }
         let pasteboard = makePasteboard()
-        let notices = ShelfNoticeModel()
+        let messages = IslandMessageCenter()
         let runner = ShelfActionRunner(bookmarkService: bookmarks,
-                                       notices: notices,
+                                       messenger: messages.messenger(for: .shelf),
                                        pasteboard: pasteboard)
         let stack = ShelfItem(
             kind: .stack,
@@ -114,7 +114,7 @@ final class ShelfActionTests: XCTestCase {
         XCTAssertEqual(result, .init(state: .completed, succeededCount: 2, skippedCount: 1))
         XCTAssertEqual(pasteboard.string(forType: PasteboardTypes.plainText),
                        "\(firstURL.path)\n\(secondURL.path)")
-        XCTAssertNotNil(notices.message)
+        XCTAssertNotNil(messages.current)
     }
 
     func testCopyPathFailurePreservesExistingClipboard() {
@@ -122,7 +122,7 @@ final class ShelfActionTests: XCTestCase {
         pasteboard.clearContents()
         pasteboard.setString("keep", forType: PasteboardTypes.plainText)
         let runner = ShelfActionRunner(bookmarkService: bookmarks,
-                                       notices: ShelfNoticeModel(),
+                                       messenger: .inert,
                                        pasteboard: pasteboard)
         let missing = ShelfItem(kind: .file, path: "/definitely/missing/file",
                                 displayName: "missing")
@@ -143,7 +143,7 @@ final class ShelfActionTests: XCTestCase {
         var revealCalls: [[URL]] = []
         let runner = ShelfActionRunner(
             bookmarkService: bookmarks,
-            notices: ShelfNoticeModel(),
+            messenger: .inert,
             revealFiles: { revealCalls.append($0) }
         )
         let items = [
@@ -190,8 +190,8 @@ final class ShelfActionTests: XCTestCase {
     }
 
     func testUserCancelledShareIsSilent() {
-        let notices = ShelfNoticeModel()
-        let runner = ShelfActionRunner(bookmarkService: bookmarks, notices: notices)
+        let messages = IslandMessageCenter()
+        let runner = ShelfActionRunner(bookmarkService: bookmarks, messenger: messages.messenger(for: .shelf))
         let service = NSSharingService(
             title: "Test",
             image: NSImage(),
@@ -206,12 +206,12 @@ final class ShelfActionTests: XCTestCase {
                            code: CocoaError.Code.userCancelled.rawValue)
         )
 
-        XCTAssertNil(notices.message)
+        XCTAssertNil(messages.current)
     }
 
     func testRealShareFailureShowsNonDestructiveNotice() {
-        let notices = ShelfNoticeModel()
-        let runner = ShelfActionRunner(bookmarkService: bookmarks, notices: notices)
+        let messages = IslandMessageCenter()
+        let runner = ShelfActionRunner(bookmarkService: bookmarks, messenger: messages.messenger(for: .shelf))
         let service = NSSharingService(
             title: "Test",
             image: NSImage(),
@@ -226,7 +226,7 @@ final class ShelfActionTests: XCTestCase {
         )
 
         XCTAssertEqual(
-            notices.message,
+            messages.current?.notice.fullText,
             String(localized: "Sharing failed. The selected items remain on the shelf.")
         )
     }

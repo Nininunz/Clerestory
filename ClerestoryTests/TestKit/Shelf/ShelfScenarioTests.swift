@@ -7,22 +7,25 @@ import XCTest
 @MainActor
 final class ShelfScenarioTests: XCTestCase {
     func testNoticeSemanticsAndRecoveryActions() {
-        XCTAssertEqual(ShelfNoticeMessage.reconnected.presentation.kind, .success)
-        XCTAssertEqual(ShelfNoticeMessage.clipboardEmpty.presentation.kind, .info)
-        XCTAssertEqual(ShelfNoticeMessage.importFailed.presentation.kind, .error)
-        for message in [ShelfNoticeMessage.moveAwaitingSave, .receivedAwaitingRecovery,
+        XCTAssertEqual(ShelfNotice.reconnected.notice.tone, .success)
+        XCTAssertEqual(ShelfNotice.clipboardEmpty.notice.tone, .info)
+        XCTAssertEqual(ShelfNotice.importFailed.notice.tone, .error)
+        for message in [ShelfNotice.moveAwaitingSave, .receivedAwaitingRecovery,
                         .moveRecoveryNeedsAttention, .partialMoveRecoveryNeedsAttention,
                         .interruptedImportRecovered, .importRecoveryNeedsAttention] {
-            XCTAssertEqual(message.presentation.kind, .warning)
-            XCTAssertEqual(message.presentation.recoveryAction, .openStorageRecovery)
-            XCTAssertEqual(message.presentation.details, message.text)
+            XCTAssertEqual(message.notice.tone, .warning)
+            XCTAssertEqual(message.notice.action, .openStorageRecovery)
+            XCTAssertEqual(message.notice.detail, message.text)
         }
-        XCTAssertEqual(ClipboardController.notice(for: .init(copiedCount: 3, skippedCount: 0, didWrite: true)).kind, .success)
-        XCTAssertEqual(ClipboardController.notice(for: .init(copiedCount: 2, skippedCount: 1, didWrite: true)).kind, .warning)
-        XCTAssertEqual(ClipboardController.notice(for: .init(copiedCount: 0, skippedCount: 3, didWrite: false)).kind, .error)
+        for message in ShelfNotice.allCases {
+            XCTAssertEqual(message.notice.key, message.rawValue)
+        }
+        XCTAssertEqual(ClipboardController.notice(for: .init(copiedCount: 3, skippedCount: 0, didWrite: true)).tone, .success)
+        XCTAssertEqual(ClipboardController.notice(for: .init(copiedCount: 2, skippedCount: 1, didWrite: true)).tone, .warning)
+        XCTAssertEqual(ClipboardController.notice(for: .init(copiedCount: 0, skippedCount: 3, didWrite: false)).tone, .error)
         for make in [ShelfActionRunner.pathCopyNotice, ShelfActionRunner.revealNotice, ShelfActionRunner.shareNotice] {
-            XCTAssertEqual(make(3, 0).kind, .success)
-            XCTAssertEqual(make(2, 1).kind, .warning)
+            XCTAssertEqual(make(3, 0).tone, .success)
+            XCTAssertEqual(make(2, 1).tone, .warning)
         }
     }
 
@@ -134,10 +137,10 @@ final class ShelfScenarioTests: XCTestCase {
         let context = PreviewContext()
         defer { context.cleanUp() }
         let ids = Set(ShelfScenario.catalog(context: context).map(\.id))
-        for notice in ShelfNoticeMessage.allCases {
+        for notice in ShelfNotice.allCases {
             XCTAssertTrue(ids.contains("notice-" + notice.rawValue))
-            let fixture = try ShelfScenarioFixture(.populated, notice: notice.presentation)
-            XCTAssertEqual(fixture.notices.message, notice.text)
+            let fixture = try ShelfScenarioFixture(.populated, notice: notice.notice)
+            XCTAssertEqual(fixture.messages.current?.notice.fullText, notice.text)
         }
         for sample in ShelfTransferSample.allCases {
             XCTAssertTrue(ids.contains("transfer-" + sample.rawValue))
@@ -182,13 +185,13 @@ final class ShelfScenarioTests: XCTestCase {
     }
 
     func testPreviewFeedbackDoesNotExpireButRuntimeNoticesStillDo() async throws {
-        let preview = try ShelfScenarioFixture(.populated, notice: ShelfNoticeMessage.removed.presentation,
+        let preview = try ShelfScenarioFixture(.populated, notice: ShelfNotice.removed.notice,
                                                transfer: .importDelivered)
-        let runtime = ShelfNoticeModel()
-        runtime.show(.removed)
-        try await Task.sleep(for: .seconds(ShelfNoticeModel.displayDuration + 0.3))
-        XCTAssertNil(runtime.message)
-        XCTAssertEqual(preview.notices.message, ShelfNoticeMessage.removed.text)
+        let runtime = IslandMessageCenter()
+        runtime.messenger(for: .shelf).post(.removed)
+        try await Task.sleep(for: .seconds(IslandMessageCenter.displayDuration + 0.3))
+        XCTAssertNil(runtime.current)
+        XCTAssertEqual(preview.messages.current?.notice.fullText, ShelfNotice.removed.text)
         XCTAssertEqual(preview.transfers.currentTask?.phase, .delivered)
     }
 

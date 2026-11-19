@@ -102,8 +102,8 @@ private struct ShelfIconButtonStyle: ButtonStyle {
 /// `@Environment(DropTargetState.self)` (DragContainerView drives the highlight and insertion indicator
 /// line); the card insertion animation modifier (spring, response 0.35, damping 0.7) is in place. C6: Card
 /// frame is reported via `ShelfGridGeometry` (window .global coordinates), DragContainerView maps the
-/// mouse position to row/column insertion index. D10: Inline prompt for failed drag-in/materialization
-/// (`ShelfNoticeModel`) is rendered below the title bar.
+/// mouse position to row/column insertion index. Shelf notices are posted through `shelfMessenger` and
+/// shown in the shared notice pill.
 struct ShelfView: View {
     let presentationStyle: ShelfPresentationStyle
 
@@ -123,8 +123,8 @@ struct ShelfView: View {
     @Environment(\.bookmarkService) private var bookmarkService
     /// C5/C6: Card grid geometry (frame reporting + selection hit + drag-in insertion positioning shared).
     @Environment(ShelfGridGeometry.self) private var gridGeometry
-    /// D10: Inline prompt for failed drag-in/materialization.
-    @Environment(ShelfNoticeModel.self) private var notices
+    /// Posts Shelf notices to the notice pill (nil in previews).
+    @Environment(\.shelfMessenger) private var shelfMessenger
     @Environment(\.shelfRevealState) private var reveal
     /// v1.2: runtime-only asynchronous batch status.
     @Environment(TransferStore.self) private var transferStore
@@ -197,8 +197,6 @@ struct ShelfView: View {
             .animation(reduceMotion ? nil : Self.cardAnimation,
                        value: interaction.expandedStackID)
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.2),
-                       value: notices.message != nil)
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2),
                        value: transferStore.hasVisibleActivity)
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.2),
                        value: dropTargetState.mode)
@@ -217,8 +215,6 @@ struct ShelfView: View {
                 .overlay(alignment: .bottom) { dropModeHint }
                 .animation(reduceMotion ? nil : Self.cardAnimation,
                            value: interaction.expandedStackID)
-                .animation(reduceMotion ? nil : .easeInOut(duration: 0.2),
-                           value: notices.message != nil)
                 .animation(reduceMotion ? nil : .easeInOut(duration: 0.2),
                            value: transferStore.hasVisibleActivity)
                 .animation(reduceMotion ? nil : .easeInOut(duration: 0.2),
@@ -247,9 +243,6 @@ struct ShelfView: View {
                 .blur(radius: showsDuplicateDropOverlay ? 6 : 0)
                 .clipped()
                 .overlay { duplicateDropOverlay }
-                .overlay(alignment: .bottom) {
-                    if presentationStyle == .classic { noticeBanner }
-                }
                 .animation(reduceMotion ? nil : .easeInOut(duration: 0.18),
                            value: showsDuplicateDropOverlay)
             if presentationStyle == .island {
@@ -631,9 +624,9 @@ struct ShelfView: View {
                 guard !removed.isEmpty else { return }
                 interaction.normalize(for: store.visibleItems)
                 quickLookCoordinator?.refreshPreview(contextItem: nil)
-                notices.show(.removed)
+                shelfMessenger?.post(.removed)
             } catch {
-                notices.show(.removalFailed)
+                shelfMessenger?.post(.removalFailed)
             }
         }
         if let shelfUserRemovalAction {
@@ -852,8 +845,8 @@ struct ShelfView: View {
         dropTargetState.mode == .move ? .orange : .accentColor
     }
 
-    /// F-05: mode hint during hover (capsule at the bottom of the panel; notice banner at the top, not
-    /// overlapping). Only show a hint for reordering or moving the original file.
+    /// F-05: mode hint during hover (capsule at the bottom of the panel). Only show a hint for reordering
+    /// or moving the original file.
     @ViewBuilder
     private var dropModeHint: some View {
         if dropTargetState.isTargeted && (dropTargetState.isReordering || dropTargetState.mode == .move) {
@@ -1045,7 +1038,7 @@ struct ShelfView: View {
 
     private func copyToClipboard(_ items: [ShelfItem]) {
         let result = ClipboardController.copy(items, bookmarkService: bookmarkService)
-        notices.show(ClipboardController.notice(for: result))
+        shelfMessenger?.post(ClipboardController.notice(for: result))
     }
 
     private func stackTransferStatus(for stack: ShelfItem) -> TransferItemAccessibilityStatus? {
@@ -1074,20 +1067,6 @@ struct ShelfView: View {
             break
         }
     }
-
-
-    // MARK: - Transient feedback
-
-    @ViewBuilder
-    private var noticeBanner: some View {
-        if let notice = notices.current, !dropTargetState.isTargeted {
-            ShelfNoticeToast(notice: notice, onPerformRecovery: performRecovery)
-                .padding(.horizontal, 12)
-                .padding(.bottom, 8)
-                .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom)))
-        }
-    }
-
 }
 
 // MARK: - Preview fixtures
@@ -1173,7 +1152,6 @@ enum ShelfPreviewFixtures {
         .environment(DropTargetState())
         .environment(SettingsStore())
         .environment(ShelfGridGeometry())
-        .environment(ShelfNoticeModel())
         .environment(TransferStore())
         .frame(width: 320, height: 600)
 }
@@ -1201,7 +1179,6 @@ private struct ShelfCardGeometryReporter: ViewModifier {
         .environment(DropTargetState())
         .environment(SettingsStore())
         .environment(ShelfGridGeometry())
-        .environment(ShelfNoticeModel())
         .environment(TransferStore())
         .frame(width: 320, height: 600)
 }

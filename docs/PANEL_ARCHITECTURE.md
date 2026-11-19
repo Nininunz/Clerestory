@@ -26,8 +26,9 @@ Panel shortcuts use a single left-to-right layout with up to eight positions. Vi
 | [IslandExpandedView](../Clerestory/Island/IslandModuleViews.swift) and [IslandNotchView](../Clerestory/Island/IslandNotchView.swift) | Render Panel content and the Notch companion. |
 | [IslandSurfaceAnimationHost](../Clerestory/Island/IslandSurfaceAnimationHost.swift) | Drives surface reveal and keeps content mounted until closing completes. Reopening invalidates a pending close. |
 | [ShelfWindowController](../Clerestory/Shelf/ShelfWindowController.swift) | Shelf imports, keyboard and Quick Look routing, and the shared drag-host factory. |
+| [IslandMessageCenter](../Clerestory/Messages/IslandMessageCenter.swift) and [IslandNoticePanelController](../Clerestory/Messages/IslandNoticePanelController.swift) | Hold the current notice, which modules post through a `ModuleMessenger`, and show it in the notice pill's own window. |
 
-The visible Panel surface defines the hit area. Native hit testing and the drag outline use the same rounded geometry as the surface. Shadow margins stay transparent to clicks and file drops. File drags show a complete blue outline, and duplicate drags show a red one. Detached Shelf notices anchor to the visible surface, below its bottom edge.
+The visible Panel surface defines the hit area. Native hit testing and the drag outline use the same rounded geometry as the surface. Shadow margins stay transparent to clicks and file drops. File drags show a complete blue outline, and duplicate drags show a red one. The notice pill anchors to the visible surface, below its bottom edge.
 
 ## Previews and validation
 
