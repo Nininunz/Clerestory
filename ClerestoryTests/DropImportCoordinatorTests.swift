@@ -81,7 +81,7 @@ final class DropImportCoordinatorTests: XCTestCase {
         return url
     }
 
-    /// 1×1 PNG。
+    /// 1×1 PNG.
     private func makePNGData() throws -> Data {
         let rep = try XCTUnwrap(NSBitmapImageRep(
             bitmapDataPlanes: nil, pixelsWide: 1, pixelsHigh: 1,

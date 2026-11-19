@@ -9,7 +9,7 @@
   Open this file directly in Safari / Chrome / Firefox via file:// and drag
   items out of the Clerestory shelf onto the zones below.
 
-  What to verify / 验证点:
+  What to verify:
   1. File Zone: a shelf file/folder dropped here must appear in the log with
      name/size/type — proves the browser accepted either the fileURL mapping
      or the file promise (DataTransfer.files non-empty).
@@ -42,32 +42,32 @@
 </style>
 </head>
 <body>
-<h1>Clerestory Drag-Out Test Page / 拖出测试页</h1>
+<h1>Clerestory Drag-Out Test Page</h1>
 <p>Drag items from the Clerestory shelf into the zones. Nothing is uploaded anywhere.
-   把 shelf 里的项目拖到下面各区域即可，本页不联网。</p>
+   This page makes no network requests.</p>
 
-<h2>1. File Upload Zone / 文件上传区</h2>
+<h2>1. File Upload Zone</h2>
 <div class="zone" id="fileZone">
-  Drop files here（模拟上传区）
-  <small>Accepts files — checks DataTransfer.files（fileURL 映射或 file promise 任一成功即可）</small>
+  Drop files here (simulated upload zone)
+  <small>Accepts files — checks DataTransfer.files (passes if either the fileURL mapping or the file promise succeeds)</small>
   <div id="fileList"></div>
 </div>
 <input type="file" id="realInput" multiple style="display:none">
 
-<h2>2. Type Inspector / 表示层检查器</h2>
+<h2>2. Type Inspector</h2>
 <div class="zone" id="typeZone">
   Drop anything here to inspect advertised types
-  <small>显示 e.dataTransfer.types 与 items（对照 Clerestory 应广播的表示）</small>
+  <small>Shows e.dataTransfer.types and items (compare against the representations Clerestory should advertise)</small>
   <div id="typeLog"></div>
 </div>
 
-<h2>3. Rich Text Zone / 富文本区</h2>
+<h2>3. Rich Text Zone</h2>
 <div class="zone rich" id="richZone" contenteditable="true">
-  Drop a text item here — 文本项应插入到此处
+  Drop a text item here — the text should be inserted here
 </div>
 
-<h2>4. Plain Text Area / 纯文本框</h2>
-<textarea id="plainZone" placeholder="Drop a text or URL item here — 文本/URL 项应插入字符串"></textarea>
+<h2>4. Plain Text Area</h2>
+<textarea id="plainZone" placeholder="Drop a text or URL item here — a string should be inserted"></textarea>
 
 <script>
 const fileList = document.getElementById('fileList');

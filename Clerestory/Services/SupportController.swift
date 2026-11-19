@@ -13,7 +13,6 @@ final class SupportController {
         let build: String
         let operatingSystem: String
         let architecture: String
-        let language: SettingsStore.LanguagePreference
         let shelfPosition: SettingsStore.ShelfPosition
         let dragAutoAppearMode: SettingsStore.DragAutoAppearMode
         let edgeTabEnabled: Bool
@@ -24,7 +23,7 @@ final class SupportController {
         let autoUpdateCheckEnabled: Bool
     }
 
-    static let helpURL = URL(string: "https://github.com/Nininunz/Clerestory/blob/main/README.en.md#quick-start")!
+    static let helpURL = URL(string: "https://github.com/Nininunz/Clerestory/blob/main/README.md#quick-start")!
     private static let newIssueURL = URL(string: "https://github.com/Nininunz/Clerestory/issues/new")!
 
     private let settings: SettingsStore
@@ -57,7 +56,6 @@ final class SupportController {
         Version: \(snapshot.version) (\(snapshot.build))
         macOS: \(snapshot.operatingSystem)
         Architecture: \(snapshot.architecture)
-        Language: \(snapshot.language.rawValue)
         Global shortcut: \(enabled(snapshot.hotKeyEnabled))
         Drag-out policy: \(snapshot.dragOutRemovalPolicy.rawValue)
         Automatic update checks: \(enabled(snapshot.autoUpdateCheckEnabled))
@@ -97,7 +95,6 @@ final class SupportController {
             build: info?["CFBundleVersion"] as? String ?? "Unknown",
             operatingSystem: ProcessInfo.processInfo.operatingSystemVersionString,
             architecture: Self.architecture,
-            language: settings.language,
             shelfPosition: settings.shelfPosition,
             dragAutoAppearMode: settings.dragAutoAppearMode,
             edgeTabEnabled: settings.edgeTabEnabled,

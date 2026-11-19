@@ -82,17 +82,10 @@ final class AIUsageParsingTests: XCTestCase {
 }
 
 final class AIUsageFormatTests: XCTestCase {
-    func testTokensUseChineseUnits() {
-        XCTAssertEqual(AIUsageFormat.tokens(125_161_550, chinese: true), "1.25 亿")
-        XCTAssertEqual(AIUsageFormat.tokens(23_036_671_104, chinese: true), "230 亿")
-        XCTAssertEqual(AIUsageFormat.tokens(56_000, chinese: true), "5.6 万")
-        XCTAssertEqual(AIUsageFormat.tokens(950, chinese: true), "950")
-    }
-
     func testTokensUseEnglishUnits() {
-        XCTAssertEqual(AIUsageFormat.tokens(125_161_550, chinese: false), "125M")
-        XCTAssertEqual(AIUsageFormat.tokens(5_047_855_233, chinese: false), "5.05B")
-        XCTAssertEqual(AIUsageFormat.tokens(1_500, chinese: false), "1.5K")
+        XCTAssertEqual(AIUsageFormat.tokens(125_161_550), "125M")
+        XCTAssertEqual(AIUsageFormat.tokens(5_047_855_233), "5.05B")
+        XCTAssertEqual(AIUsageFormat.tokens(1_500), "1.5K")
     }
 
     func testCostFormats() {

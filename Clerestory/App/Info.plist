@@ -35,19 +35,21 @@
 	<string>Copyright © 2026 weijue and Nicholas Nunziata. MIT License.</string>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>When experimental Now Playing is enabled and the compatibility helper is unavailable, Clerestory can read and control Apple Music or Spotify.</string>
-	<!-- Sparkle 2 自动更新。Feed 托管在 GitHub Pages（docs/appcast.xml）。 -->
+	<!-- Sparkle 2 automatic updates. The feed is hosted on GitHub Pages (docs/appcast.xml). -->
 	<key>SUFeedURL</key>
 	<string>https://nininunz.github.io/Clerestory/appcast.xml</string>
-	<!-- EdDSA 公钥（私钥存登录钥匙串，条目 "Private key for signing Sparkle updates"）。 -->
+	<!-- EdDSA public key (the private key is stored in the login keychain, item "Private key for signing Sparkle updates"). -->
 	<key>SUPublicEDKey</key>
 	<string>9FwNUDtPRvp+rmGcGlv6jXBhVeCE3NuBshjbN2r5s0o=</string>
-	<!-- 沙箱下必须启用 Installer XPC 服务才能替换自身，依据 Sparkle 沙箱文档：
+	<!-- In the sandbox, the Installer XPC Service must be enabled for the app to replace itself,
+	     per the Sparkle sandboxing docs:
 	     "The Installer XPC Service is required for Sandboxed applications. …
 	     you must set SUEnableInstallerLauncherService boolean to `YES` in your
 	     application's Info.plist."
 	     — https://sparkle-project.org/documentation/sandboxing/
-	     XPC 服务随 Sparkle.framework（SwiftPM binary target）内嵌，
-	     由 Sparkle 从框架包内加载（SPUUpdater 校验逻辑亦如此要求）。 -->
+	     The XPC service ships embedded in Sparkle.framework (SwiftPM binary target) and is
+	     loaded by Sparkle from inside the framework bundle (SPUUpdater's validation logic
+	     also requires this). -->
 	<key>SUEnableInstallerLauncherService</key>
 	<true/>
 </dict>

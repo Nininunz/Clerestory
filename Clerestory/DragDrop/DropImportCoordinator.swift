@@ -281,7 +281,7 @@ final class DropImportCoordinator {
             }
         }
 
-        // 4. URL。
+        // 4. URL.
         if PasteboardTypes.supports(.url, types: types) {
             let items = urlItems(from: pasteboard)
             if !items.isEmpty {

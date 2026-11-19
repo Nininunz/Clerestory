@@ -1,85 +1,85 @@
 # Clerestory
 
-**Mac 上的模块化面板。**
+**A modular panel for your Mac.**
 
-Clerestory 将暂存架和可配置的快捷入口集中在屏幕顶部的面板中，支持内置和外接显示器。配有实体刘海的 Mac 还可以显示独立的刘海入口，用来打开面板或查看模块状态。
+Clerestory puts a file shelf and configurable shortcuts in a panel at the top of your display. Use it on any display. On a Mac with a built-in notch, an optional Notch companion gives you a compact way to open the panel and see module activity.
 
-[下载 Clerestory](https://github.com/Nininunz/Clerestory/releases/latest) · [快速上手](#快速上手) · [English](README.en.md)
+[Download Clerestory](https://github.com/Nininunz/Clerestory/releases/latest) · [Quick start](#quick-start)
 
-## 安装
+## Install
 
-Clerestory 支持运行 macOS 15 或更新版本的 Apple 芯片和 Intel Mac。从[最新版本](https://github.com/Nininunz/Clerestory/releases/latest)打开已签名并通过 Apple 公证的 DMG，将应用拖入「应用程序」。
+Clerestory supports macOS 15 and later on Apple silicon and Intel. Open the signed and notarized DMG from the [latest release](https://github.com/Nininunz/Clerestory/releases/latest) and drag the app to Applications.
 
-如需更新，请从菜单栏图标选择 **检查更新…**。
+To update, choose **Check for Updates…** from the menu bar icon.
 
-## 快速上手
+## Quick start
 
-| 操作 | 方法 |
+| To… | Do this |
 | --- | --- |
-| 打开面板 | 将指针移到屏幕顶部中央，点击触发区域，按 `⌘⇧Space`，或使用菜单栏图标。 |
-| 添加内容 | 将文件或选中的文本拖向屏幕顶部中央，再放入暂存架。 |
-| 移入文件 | 按住 `⌘` 后放下文件。请先阅读[文件安全与生命周期](#文件安全与生命周期)。 |
-| 暂存剪贴板 | 启用双按暂存剪贴板后，连按两次 `⌘⇧Space`。 |
-| 搜索 | 点击暂存架的搜索框，或在暂存架获得键盘焦点后按 `⌘F`。 |
-| 预览 | 点击选中后按空格，或双击条目。 |
-| 多选 | 点击「选择」，或按住 `⌘` 逐个切换选中状态。 |
-| 移除 | 悬停后点击 **×**、按 Delete，或使用右键菜单。按 `⌘Z` 可撤销手动移除。 |
+| Open the Panel | Move to the top center of your display, click the trigger area, press `⌘⇧Space`, or use the menu bar icon. |
+| Add to Shelf | Drag a file or selected text toward the top center, then drop it into Shelf. |
+| Move a file into Shelf | Hold `⌘` while dropping. Read [File safety and lifecycle](#file-safety-and-lifecycle) first. |
+| Park the clipboard | Press `⌘⇧Space` twice with **Double-press saves clipboard** enabled. |
+| Search Shelf | Click **Search Shelf** or press `⌘F` while Shelf has keyboard focus. |
+| Preview an item | Click it and press Space, or double-click it. |
+| Select multiple items | Click **Select**, or use `⌘`-click to toggle individual items. |
+| Remove an item | Hover and click **×**, press Delete, or use the item's context menu. Use `⌘Z` to undo manual removal. |
 
-默认开启悬停、点击和拖拽唤出。可以在 **设置 → 面板** 中调整悬停延迟或关闭各项触发方式。拖拽唤出有独立开关。点击面板的图钉可让面板在指针移开后继续保持打开。
+Hover, click, and drag-to-open are enabled by default. Adjust the hover delays or turn off individual triggers in **Settings → Panel**. Drag-to-open has its own switch. Use the panel's pin button to keep it open when you move the pointer away.
 
-## 面板、刘海与模块
+## Panel, Notch, and modules
 
-- **面板**在触发它的显示器上打开，关闭前会留在该显示器。可在 **设置 → 面板 → 快捷入口位置** 或 **快捷设置** 中排列模块快捷入口。
-- **刘海**是配有实体刘海的内置屏幕上的可选入口。默认开启。在 **设置 → 刘海** 中调整开关、模块顺序和循环快捷键（默认未设置）。按住 Shift 再使用循环快捷键可反向切换。
-- 默认可使用**暂存架**和**快捷设置**。其他模块可在 **设置 → 模块** 中打开**实验性模块**后使用：传输、计时器、电池和系统状态会立即开启，其余模块需单独开启。实验性模块包括传输、计时器、电池、正在播放、系统状态、快速访问、剪贴板历史和 AI 用量。
+- **Panel.** Opens on the display where you trigger it and stays on that display until dismissed. Use **Settings → Panel → Shortcut Positions** or **Quick Settings** to arrange module shortcuts.
+- **Notch.** An optional companion on the built-in display of a Mac with a physical notch. It is on by default. Use **Settings → Notch** to turn it off, choose its module order, and set a cycling shortcut (none is set by default). Hold Shift with that shortcut to cycle backward.
+- **Shelf** and **Quick Settings** are available by default. To use other modules, turn on **Experimental Modules** under **Settings → Modules**. Transfers, Timer, Battery and System Status turn on right away; turn on the others individually. Experimental modules include Transfers, Timer, Battery, Now Playing, System Status, Quick Access, Clipboard, and AI Usage.
 
-## 文件安全与生命周期
+## File safety and lifecycle
 
-直接拖进来的文件，Clerestory 只记住它在哪，不会移动它。移除卡片，或在 **设置 → 模块 → 暂存架** 中把 **拖出后** 设为 **移除**，都不会删掉原文件。拖到 Finder 时只是请求复制一份，收不收由目标应用决定。
+A regular drop only remembers where the file is; nothing gets moved. Removing a card, or setting **After dragging out** to **Remove** in **Settings → Modules → Shelf**, never deletes the original. Dropping onto Finder asks for a copy, and the destination decides whether to take it.
 
 > [!WARNING]
-> 按住 `⌘` 拖进来是"移入"：先把文件复制到应用自己的沙箱里，确认副本完好后，再把原文件挪进废纸篓。中途出错就保留原文件，按普通方式暂存。清空废纸篓之前，原文件都还能找回来。
+> Holding `⌘` while dropping is a **move**: Clerestory copies the file into its own sandbox, checks the copy, and then moves the original to the Trash. If anything goes wrong, the original stays where it was and the item is kept as a regular reference. You can get the original back until you empty the Trash.
 
-移入的东西要等成功拖到目的地后，卡片和沙箱里的副本才会删掉，和 **拖出后** 设置无关。拖出被取消或失败时会原样保留，下次再试。
+A moved item's card and sandbox copy are deleted only after it has been dropped somewhere successfully, regardless of the **After dragging out** setting. If the drop is cancelled or fails, both stay so you can try again.
 
 <details>
-<summary>各类内容存在哪、什么时候清理</summary>
+<summary>Where each kind of item is stored, and when it's cleaned up</summary>
 
-| 内容                   | Clerestory 怎么存                                        |
-| ---------------------- | ------------------------------------------------------- |
-| 文件、文件夹           | 记住原文件的位置和访问授权（sandbox bookmark），不复制  |
-| 纯文本、链接           | 直接存在暂存架的数据里                                  |
-| 图片、HTML、RTF        | 在应用沙箱里存成文件                                    |
-| 联系人、日历事件、邮件 | 来源应用给得出数据时，存成 `.vcf`、`.ics`、`.eml`       |
+| Item                             | How Clerestory stores it                                   |
+| -------------------------------- | --------------------------------------------------------- |
+| Files and folders                | A sandbox bookmark to the original location; no copy      |
+| Plain text and links             | Directly in the shelf data                                |
+| Images, HTML, RTF                | As files inside the app sandbox                           |
+| Contacts, events, mail messages  | As `.vcf`, `.ics`, `.eml` when the source app provides them |
 
-原文件被挪走、删掉，或者所在的硬盘没接上，卡片会显示为不可用，等能重新找到文件时会自动恢复。
+If an original is moved, deleted, or sits on a disconnected drive, its card shows as unavailable and comes back once the file can be found again.
 
-文本和链接跟着卡片走，卡片删了它们也就没了。图片、富文本、邮件这类生成出来的文件，一般在卡片移除后的下次启动时清掉；也可以去 **设置 → 存储** 手动看看、清理。
+Text and links live with their cards and disappear when the card is removed. Files generated for images, rich text and mail are usually cleaned up on the next launch after their cards are gone; you can also review and clear them in **Settings → Storage**.
 
-普通文件拖出去时，会同时提供文件路径和 Chromium 认得的文件名；移入的文件用 file promise，等目的地确认写好了才从架子上撤下来。具体能不能拖成功，最终还是看目标应用或网站。
+Regular file drags provide both a file URL and a filename Chromium understands. Moved items use a file promise and leave the shelf only after the destination confirms the write. Whether a particular app or website accepts the drop is ultimately up to it.
 
 </details>
 
-## 隐私与权限
+## Privacy and permissions
 
-- 不用注册账号，不收集统计数据。东西都存在本机沙箱里的 `Application Support/Clerestory`。
-- 开启了 App Sandbox，只能碰你自己拖进来或选中的文件。日常使用不需要辅助功能或输入监控权限。
-- 唯一的后台联网是检查和下载更新（访问 GitHub Pages / Releases），可以在设置里关掉。
-- 正在播放模块不联网。它优先用本地 helper 读取播放信息，退而用 AppleScript 控制 Apple Music / Spotify，这时系统可能会问你要"自动化"权限。这个模块出问题不会影响暂存架。
-- AI 用量模块只访问本机的 TokenTracker（`localhost:7680`），不连外网，也不读它的文件。
-- 快速访问只记住你添加的文件夹位置。取消收藏不会删除文件夹，用什么打开交给 macOS 决定。
+- No account, no analytics, no telemetry. Everything stays in the local sandbox under `Application Support/Clerestory`.
+- App Sandbox is on, so Clerestory can only touch files you drag in or pick yourself. Everyday use needs neither Accessibility nor Input Monitoring.
+- The only background network traffic is checking for and downloading updates from GitHub Pages / Releases, and you can turn that off.
+- AI Usage only talks to TokenTracker on your own Mac (`localhost:7680`). It never goes online and doesn't read TokenTracker's files.
+- Now Playing never goes online. It reads playback info through a local helper first, and falls back to AppleScript for Apple Music / Spotify, which may trigger an Automation permission prompt. If the module breaks, the shelf keeps working.
+- Quick Access only remembers the folders you add. Removing one doesn't delete the folder, and macOS decides which app opens it.
 
-### 剪贴板历史
+### Clipboard history
 
-剪贴板默认不记录。需要使用时，请在 **设置 → 模块** 中打开**实验性模块**，再在其中的剪贴板历史设置里打开 **记录剪贴板**。没打开时，只有你连按两下快捷键暂存剪贴板的那一刻才会读一次。打开之后，只记新复制的文本、HTTP(S) 链接和 PNG/TIFF 图片，不会回头翻以前的内容，也不记复制的文件。
+Clipboard recording is off by default. To use it, turn on **Experimental Modules** under **Settings → Modules**, then turn on **Record Clipboard** in the Clipboard History settings there. Until you turn it on, the clipboard is read only at the moment you double-press the shortcut to park it. Once on, only newly copied text, HTTP(S) links and PNG/TIFF images are recorded — nothing from before, and never copied files.
 
-历史以明文存在本机，不上传、不同步。普通条目可以留 30、100 或 300 条（默认 30），保留 1、7 或 30 天（默认 7 天）；另外最多收藏 30 条，不会过期。所有内容加起来上限 20 MiB。关掉记录不会删已有的历史，点"清空"才会删。
+History is stored as plain text on this Mac and is never uploaded or synced. Keep 30, 100 or 300 entries (default 30) for 1, 7 or 30 days (default 7), plus up to 30 favorites that never expire, all within 20 MiB. Turning recording off keeps what's already there; clearing it deletes it.
 
-常见密码管理器标记为隐私的内容、以及你设成忽略的应用，都会跳过，但没办法认出所有敏感信息。复制密码或令牌之前，最好先暂停记录。
+Items marked private by common password managers, and apps you've set to ignore, are skipped — but not every secret can be detected. Pause recording before you copy a password or token.
 
-## 从源码构建
+## Build from source
 
-需要 macOS 15+ 和 Xcode 27.2（与 CI 相同）。
+You'll need macOS 15+ and Xcode 27.2, the version CI uses.
 
 ```bash
 git clone https://github.com/Nininunz/Clerestory.git
@@ -99,29 +99,29 @@ xcodebuild \
   -only-testing:ClerestoryTests
 ```
 
-用 Swift 6、SwiftUI 和 AppKit 写的。本地构建不需要设置 `DEVELOPMENT_TEAM`；上面的测试命令只跑单元测试，不跑 UI 自动化。
+Written in Swift 6 with SwiftUI and AppKit. Local builds don't need a `DEVELOPMENT_TEAM`, and the test command above runs unit tests only, not UI automation.
 
-发版用 [`Scripts/make-release.sh`](Scripts/make-release.sh)，可以走 Developer ID 签名加公证，也可以显式传 `--adhoc` 出社区版。签名失败时脚本会直接停下，不会悄悄降级。
+Releases are built with [`Scripts/make-release.sh`](Scripts/make-release.sh), either with Developer ID signing and notarization or as an explicit `--adhoc` community build. If signing fails, the script stops instead of quietly falling back.
 
-## 参与进来
+## Contributing
 
-架构、测试、预览与发行指南见[文档索引](docs/README.md)。
+See the [documentation index](docs/README.md) for architecture, testing, previews, and release guides.
 
-在仓库根目录运行 `python3 Scripts/tree.py` 可查看源码目录结构，包括未被 Git 忽略的新文件。输出会跳过已忽略的构建产物和本地配置。
+Run `python3 Scripts/tree.py` from the repository root to list the source layout, including new files that Git does not ignore. The output omits ignored build artifacts and local configuration.
 
-运行 `python3 Scripts/tree.py Clerestory/Island --depth 2` 可查看指定目录及其下最多两层。输出路径仍以仓库根目录为基准。
+Use `python3 Scripts/tree.py Clerestory/Island --depth 2` to show one directory and up to two levels beneath it. Paths in the output stay relative to the repository root.
 
-运行 `Scripts/doctor.sh` 可检查当前的 Xcode、macOS SDK 以及本地构建和测试工具。加上 `--release` 可额外检查 Developer ID 签名、Sparkle 工具和公证权限。发版检查会连接 Apple，但不会上传构建产物或打印凭据。
+Run `Scripts/doctor.sh` to check the active Xcode, macOS SDK, and local build and test tools. Add `--release` to also check Developer ID signing, Sparkle tools, and notarization access. The release check contacts Apple without uploading a build or printing credentials.
 
-用着不顺手、遇到 bug 或者有想法，欢迎开 [Issue](https://github.com/Nininunz/Clerestory/issues)。报 bug 时附上 macOS 版本、Clerestory 版本和复现步骤会很有帮助；截图前留意别带上私人文件或剪贴板内容。
+Something feels off, broke, or could be better? Open an [issue](https://github.com/Nininunz/Clerestory/issues). For bugs, your macOS version, Clerestory version and steps to reproduce help a lot — and please keep private files and clipboard contents out of screenshots.
 
-PR 也欢迎。改动比较大的话，先开个 Issue 聊聊；提交前请跑一遍完整的单元测试。
+Pull requests are welcome. For bigger changes, open an issue first so we can talk it through, and run the full unit test suite before submitting.
 
-## 致谢与许可
+## Credits and license
 
-Clerestory 基于 weijue 和贡献者开发的 [OpenYoink](https://github.com/MuQY1818/OpenYoink)，采用 [MIT 许可证](LICENSE) 开源。
+Clerestory is based on [OpenYoink](https://github.com/MuQY1818/OpenYoink) by weijue and contributors and is released under the [MIT License](LICENSE).
 
-自动更新靠 [Sparkle](https://sparkle-project.org/)。用到的第三方组件和许可证见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。
+Updates are powered by [Sparkle](https://sparkle-project.org/). Third-party components and their licenses are listed in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 <br>
 

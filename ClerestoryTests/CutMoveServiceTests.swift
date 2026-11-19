@@ -82,22 +82,22 @@ final class CutMoveServiceTests: XCTestCase {
         let outcome = service.makeCutItem(for: source, displayName: "notes.txt")
 
         guard case .moved(let item) = outcome else {
-            return XCTFail("期望 .moved，得到 \(outcome)")
+            return XCTFail("Expected .moved, got \(outcome)")
         }
         XCTAssertTrue(item.isCut)
-        XCTAssertEqual(item.displayName, "notes.txt", "displayName 保持原名（不暴露 UUID 前缀）")
+        XCTAssertEqual(item.displayName, "notes.txt", "displayName keeps the original name (no UUID prefix exposed)")
         XCTAssertEqual(item.kind, .file)
-        XCTAssertNotNil(item.bookmark, "bookmark 应指向保管副本")
+        XCTAssertNotNil(item.bookmark, "bookmark should point to the managed copy")
         // Copy is in place and content is consistent.
         let path = try XCTUnwrap(item.path)
         XCTAssertTrue(path.hasPrefix(context.tempFileService.directoryURL.path),
-                      "保管副本应在 Materialized 目录内：\(path)")
+                      "Managed copy should be inside the Materialized directory: \(path)")
         XCTAssertEqual(try String(contentsOf: URL(fileURLWithPath: path), encoding: .utf8), "sample content")
         // Original file is moved to the 'Trash' (mock deletion), and trash is called once after the copy.
         XCTAssertEqual(trashed.withLock { $0 }, [source])
-        XCTAssertFalse(FileManager.default.fileExists(atPath: source.path), "原位置应已消失")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: source.path), "Original location should be gone")
         guard case .loaded(let records) = service.managedMoveJournal.loadResult() else {
-            return XCTFail("原文件进废纸篓后必须保留恢复事务")
+            return XCTFail("A recovery transaction must remain after the original is trashed")
         }
         XCTAssertEqual(records.count, 1)
         XCTAssertEqual(records[0].state, .originalTrashed)
@@ -119,7 +119,7 @@ final class CutMoveServiceTests: XCTestCase {
         let outcome = service.makeCutItem(for: folder, displayName: "docs")
 
         guard case .moved(let item) = outcome else {
-            return XCTFail("期望 .moved，得到 \(outcome)")
+            return XCTFail("Expected .moved, got \(outcome)")
         }
         XCTAssertEqual(item.kind, .folder)
         let path = try XCTUnwrap(item.path)
@@ -145,13 +145,13 @@ final class CutMoveServiceTests: XCTestCase {
         let outcome = service.makeCutItem(for: missing, displayName: "ghost.txt")
 
         guard case .fallbackToReference(let item, let reason) = outcome else {
-            return XCTFail("期望 .fallbackToReference，得到 \(outcome)")
+            return XCTFail("Expected .fallbackToReference, got \(outcome)")
         }
         XCTAssertEqual(reason, .copyFailed)
-        XCTAssertFalse(item.isCut, "回退项是普通引用模式")
+        XCTAssertFalse(item.isCut, "The fallback item is in plain reference mode")
         XCTAssertEqual(item.path, missing.path)
-        XCTAssertEqual(trashed.withLock { $0 }, [], "copy 失败时不得触碰原文件")
-        XCTAssertEqual(try managedDirectoryContents(context), [], "不得留下半成品副本")
+        XCTAssertEqual(trashed.withLock { $0 }, [], "The original file must not be touched when copy fails")
+        XCTAssertEqual(try managedDirectoryContents(context), [], "No partial copy may be left behind")
     }
 
     func testMakeCutItem_trashFailure_removesCopyAndFallsBack() throws {
@@ -168,17 +168,17 @@ final class CutMoveServiceTests: XCTestCase {
         let outcome = service.makeCutItem(for: source, displayName: "readonly.txt")
 
         guard case .fallbackToReference(let item, let reason) = outcome else {
-            return XCTFail("期望 .fallbackToReference，得到 \(outcome)")
+            return XCTFail("Expected .fallbackToReference, got \(outcome)")
         }
         XCTAssertEqual(reason, .trashFailed)
         XCTAssertFalse(item.isCut)
-        XCTAssertEqual(item.path, source.path, "回退引用指向原文件")
-        XCTAssertEqual(trashed.withLock { $0 }, [source], "trash 已尝试")
+        XCTAssertEqual(item.path, source.path, "The fallback reference points to the original file")
+        XCTAssertEqual(trashed.withLock { $0 }, [source], "trash was attempted")
         XCTAssertTrue(FileManager.default.fileExists(atPath: source.path),
-                      "trash 失败时原文件必须保持不动")
-        XCTAssertEqual(try managedDirectoryContents(context), [], "副本必须被清掉")
+                      "The original file must stay in place when trash fails")
+        XCTAssertEqual(try managedDirectoryContents(context), [], "The copy must be cleaned up")
         XCTAssertEqual(service.managedMoveJournal.loadResult(), .missing,
-                       "破坏性步骤失败后不得残留有效事务")
+                       "No live transaction may remain after the destructive step fails")
     }
 
     func testMakeCutItem_damagedJournalNeverTrashesOriginal() throws {
@@ -197,7 +197,7 @@ final class CutMoveServiceTests: XCTestCase {
         let outcome = service.makeCutItem(for: source, displayName: "protected.txt")
 
         guard case .fallbackToReference(let item, let reason) = outcome else {
-            return XCTFail("期望 .fallbackToReference，得到 \(outcome)")
+            return XCTFail("Expected .fallbackToReference, got \(outcome)")
         }
         XCTAssertEqual(reason, .transactionFailed)
         XCTAssertEqual(item.path, source.path)
@@ -223,13 +223,13 @@ final class CutMoveServiceTests: XCTestCase {
         let outcome = service.makeCutItem(for: source, displayName: "already-ours.txt")
 
         guard case .fallbackToReference(let item, let reason) = outcome else {
-            return XCTFail("期望 .fallbackToReference，得到 \(outcome)")
+            return XCTFail("Expected .fallbackToReference, got \(outcome)")
         }
         XCTAssertEqual(reason, .sourceInsideContainer)
         XCTAssertFalse(item.isCut)
-        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path), "容器内源不动")
-        XCTAssertEqual(trashed.withLock { $0 }, [], "拒绝剪切时不得调用 trash")
-        XCTAssertEqual(try managedDirectoryContents(context), [], "拒绝剪切时不产生副本")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path), "Source inside the container is untouched")
+        XCTAssertEqual(trashed.withLock { $0 }, [], "trash must not be called when the cut is refused")
+        XCTAssertEqual(try managedDirectoryContents(context), [], "No copy is made when the cut is refused")
     }
 
     // MARK: - dropMode modifier key determination
@@ -239,7 +239,7 @@ final class CutMoveServiceTests: XCTestCase {
         pasteboard.writeObjects([URL(fileURLWithPath: "/tmp/a.txt") as NSURL])
         XCTAssertEqual(DropImportCoordinator.dropMode(for: pasteboard, modifiers: .command), .move)
         XCTAssertEqual(DropImportCoordinator.dropMode(for: pasteboard, modifiers: [.command, .option]), .move,
-                       "⌘ 与其他修饰键组合仍为剪切")
+                       "⌘ combined with other modifier keys is still a cut")
     }
 
     func testDropMode_withoutCommand_isCopy() {
@@ -247,20 +247,20 @@ final class CutMoveServiceTests: XCTestCase {
         pasteboard.writeObjects([URL(fileURLWithPath: "/tmp/a.txt") as NSURL])
         XCTAssertEqual(DropImportCoordinator.dropMode(for: pasteboard, modifiers: []), .copy)
         XCTAssertEqual(DropImportCoordinator.dropMode(for: pasteboard, modifiers: .option), .copy,
-                       "⌥ 不是剪切修饰键")
+                       "⌥ is not a cut modifier key")
     }
 
     func testDropMode_commandWithNonFileContent_isCopy() {
         let text = NSPasteboard(name: NSPasteboard.Name("ClerestoryTests-\(UUID().uuidString)"))
         text.writeObjects(["hello" as NSString])
         XCTAssertEqual(DropImportCoordinator.dropMode(for: text, modifiers: .command), .copy,
-                       "文本没有「原文件」概念，⌘ 无效")
+                       "Text has no \"original file\" concept, so ⌘ has no effect")
 
         let url = NSPasteboard(name: NSPasteboard.Name("ClerestoryTests-\(UUID().uuidString)"))
         url.declareTypes([PasteboardTypes.url], owner: nil)
         url.setString("https://www.apple.com", forType: PasteboardTypes.url)
         XCTAssertEqual(DropImportCoordinator.dropMode(for: url, modifiers: .command), .copy,
-                       "URL 没有「原文件」概念，⌘ 无效")
+                       "A URL has no \"original file\" concept, so ⌘ has no effect")
     }
 
     // MARK: - Coordinator integration (⌘ dispatch + per-file independent success/failure)
@@ -293,7 +293,7 @@ final class CutMoveServiceTests: XCTestCase {
         pasteboard.writeObjects([movable as NSURL, stuck as NSURL])
 
         var received: [ShelfItem] = []
-        let completion = expectation(description: "两个后台托管移动均完成")
+        let completion = expectation(description: "Both background managed moves complete")
         completion.expectedFulfillmentCount = 2
         let collect: @MainActor (ShelfItem) -> Void = { item in
             received.append(item)
@@ -314,19 +314,19 @@ final class CutMoveServiceTests: XCTestCase {
         await fulfillment(of: [completion], timeout: 3)
 
         XCTAssertEqual(received.count, 2)
-        XCTAssertTrue(received[0].isCut, "trash 成功者剪切入架")
-        XCTAssertFalse(received[1].isCut, "trash 失败者回退引用模式")
+        XCTAssertTrue(received[0].isCut, "The item whose trash succeeded is cut onto the shelf")
+        XCTAssertFalse(received[1].isCut, "The item whose trash failed falls back to reference mode")
         XCTAssertEqual(received[1].path, stuck.path)
-        XCTAssertTrue(FileManager.default.fileExists(atPath: stuck.path), "失败文件原样保留")
-        XCTAssertFalse(FileManager.default.fileExists(atPath: movable.path), "成功文件原位置消失")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: stuck.path), "The failed file is left as is")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: movable.path), "Moved file is gone from its original location")
         guard case .partiallySucceeded(let successCount, let failures) =
             coordinator.transferStore.currentTask?.phase else {
-            return XCTFail("托管移动回退应形成可操作的批次警告")
+            return XCTFail("A managed-move fallback should produce an actionable batch warning")
         }
-        XCTAssertEqual(successCount, 2, "成功移动与安全回退的引用都已实际入架")
+        XCTAssertEqual(successCount, 2, "Both the move and the safe fallback reference landed on the shelf")
         XCTAssertEqual(failures.count, 1)
         XCTAssertEqual(failures[0].reason, .managedMoveFellBackToReference)
-        XCTAssertNil(noticeCenter.message, "批次状态由 ActivityStrip 统一呈现，避免重复提示")
+        XCTAssertNil(noticeCenter.message, "ActivityStrip alone presents batch status, avoiding duplicate notices")
     }
 
     func testImport_copyMode_neverCuts() throws {
@@ -350,9 +350,9 @@ final class CutMoveServiceTests: XCTestCase {
 
         let item = try XCTUnwrap(result.items.first)
         XCTAssertFalse(item.isCut)
-        XCTAssertEqual(item.path, source.path, "复制模式保存原文件引用")
-        XCTAssertEqual(trashed.withLock { $0 }, [], "复制模式不调用 trash")
-        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path), "复制模式原文件不动")
+        XCTAssertEqual(item.path, source.path, "Copy mode stores a reference to the original file")
+        XCTAssertEqual(trashed.withLock { $0 }, [], "Copy mode does not call trash")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path), "Copy mode leaves the original untouched")
     }
 
     func testImport_moveMode_persistenceFailureBecomesRecoveryWarning() async throws {
@@ -384,7 +384,7 @@ final class CutMoveServiceTests: XCTestCase {
 
         guard case .partiallySucceeded(let successCount, let failures) =
             coordinator.transferStore.currentTask?.phase else {
-            return XCTFail("即时持久化失败必须保留为可恢复警告")
+            return XCTFail("An immediate persistence failure must be kept as a recoverable warning")
         }
         XCTAssertEqual(successCount, 1)
         XCTAssertEqual(failures.first?.reason, .persistenceFailed)

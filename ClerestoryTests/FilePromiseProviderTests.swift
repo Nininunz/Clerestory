@@ -51,7 +51,7 @@ final class FilePromiseProviderTests: XCTestCase {
 
         XCTAssertEqual(try String(contentsOf: destination, encoding: .utf8), "promise content")
         XCTAssertTrue(FileManager.default.fileExists(atPath: source.path),
-                      "promise 落盘是 copy，源文件必须保留")
+                      "A promise write is a copy; the source file must be kept")
     }
 
     func testWriteCopy_withBookmark_resolvesAndCopies() throws {
@@ -160,7 +160,7 @@ final class FilePromiseProviderTests: XCTestCase {
 
         _ = provider.delegate?.filePromiseProvider(provider, fileNameForType: "public.data")
         XCTAssertEqual(requestCount.withLock { $0 }, 0,
-                       "询问文件名不代表目标已经请求写入")
+                       "Asking for the file name does not mean the destination has requested the write")
         provider.delegate?.filePromiseProvider(
             provider,
             writePromiseTo: directory.appendingPathComponent("out.txt")
@@ -176,7 +176,7 @@ final class FilePromiseProviderTests: XCTestCase {
         )
         let queue = provider.delegate?.operationQueue?(for: provider)
         XCTAssertEqual(queue?.qualityOfService, .userInitiated)
-        XCTAssertFalse(queue === OperationQueue.main, "promise 写入不得在主队列")
+        XCTAssertFalse(queue === OperationQueue.main, "Promise writes must not run on the main queue")
     }
 
     /// Regression (real device crash fix): When the target app requests promise content, the system
@@ -242,9 +242,9 @@ final class FilePromiseProviderTests: XCTestCase {
         }
 
         XCTAssertNotNil(try XCTUnwrap(completionError.withLock { $0 }),
-                        "写失败必须把错误回传给接收应用")
+                        "A failed write must pass the error back to the receiving app")
         XCTAssertNotNil(reportedError.withLock { $0 },
-                        "写失败必须上报 onError（预留 UI 订阅）")
+                        "A failed write must report onError (reserved for UI subscription)")
     }
 
     // MARK: - Direct file writer / promise-only provider
@@ -293,7 +293,7 @@ final class FilePromiseProviderTests: XCTestCase {
 
         XCTAssertTrue(pasteboard.writeObjects([writer]))
         XCTAssertEqual(requestCount.withLock { $0 }, 0,
-                       "写入拖拽 pasteboard 时不应提前解码整张图片")
+                       "Writing to the drag pasteboard should not decode the full image up front")
         XCTAssertEqual(pasteboard.data(forType: PasteboardTypes.tiff), expected)
         XCTAssertEqual(requestCount.withLock { $0 }, 1)
     }

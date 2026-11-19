@@ -34,7 +34,7 @@ final class ShelfLayoutEngineTests: XCTestCase {
     // MARK: - Edge attachment (UX5: compact height + vertical centering)
 
     func testEdgeAttachedFrame_leftAnchorsToVisibleMinX_andCentersVertically() {
-        // y = 60 + (1020-144)/2 = 498。
+        // y = 60 + (1020-144)/2 = 498.
         XCTAssertEqual(
             ShelfLayoutEngine.edgeAttachedFrame(position: .left, width: 320, height: 144,
                                                 visibleFrame: mainScreen.visibleFrame),
@@ -43,7 +43,7 @@ final class ShelfLayoutEngineTests: XCTestCase {
     }
 
     func testEdgeAttachedFrame_rightAnchorsToVisibleMaxX_andCentersVertically() {
-        // x = 4480-320 = 4160；y = 25 + (1415-144)/2 = 660.5。
+        // x = 4480-320 = 4160; y = 25 + (1415-144)/2 = 660.5.
         XCTAssertEqual(
             ShelfLayoutEngine.edgeAttachedFrame(position: .right, width: 320, height: 144,
                                                 visibleFrame: secondaryScreen.visibleFrame),

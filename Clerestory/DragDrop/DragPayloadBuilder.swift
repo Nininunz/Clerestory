@@ -44,7 +44,7 @@ enum DragPayloadBuilder {
         /// does not retain HTML/RTF original content, so there is no rich text representation to
         /// register).
         case plainText
-        /// Web URL：`public.url` + plain text。
+        /// Web URL: `public.url` + plain text.
         case webURL
     }
 

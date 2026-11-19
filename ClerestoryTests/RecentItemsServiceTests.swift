@@ -134,6 +134,6 @@ final class RecentItemsServiceTests: XCTestCase {
 
         XCTAssertTrue(service.entries.isEmpty)
         XCTAssertTrue(RecentItemsService(directoryURL: directory).entries.isEmpty,
-                      "清空必须落盘")
+                      "Clearing must be persisted to disk")
     }
 }

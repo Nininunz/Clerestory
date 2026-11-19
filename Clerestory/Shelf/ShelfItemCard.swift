@@ -95,7 +95,7 @@ struct ShelfItemCard: View {
     let isKeyboardFocused: Bool
     /// Click callback; additive being true means ⌘ click (toggle selection), otherwise single select.
     let onSelect: (_ additive: Bool) -> Void
-    /// 「Remove from Shelf」. Also drives right-click menu remove item and UX4 hover ✕ button; nil when both
+    /// "Remove from Shelf". Also drives right-click menu remove item and UX4 hover ✕ button; nil when both
     /// are not shown (removal semantics are injected by parent view).
     var onRemove: (() -> Void)?
     /// v1.2: safe recovery action selected by the parent (external reconnect,

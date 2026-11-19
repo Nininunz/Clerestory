@@ -98,7 +98,7 @@ final class ShelfItemTests: XCTestCase {
         XCTAssertNil(item.urlString)
         XCTAssertNil(item.children)
         XCTAssertFalse(item.isStale)
-        XCTAssertFalse(item.isCut, "旧版 JSON 无 isCut 字段，解码应为 false（F-05 向后兼容）")
+        XCTAssertFalse(item.isCut, "Legacy JSON has no isCut field, so it should decode as false (F-05 backward compatibility)")
     }
 
     /// `isStale` is runtime-only and must never be written to disk.

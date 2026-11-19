@@ -133,10 +133,10 @@ final class PersistenceControllerTests: XCTestCase {
         let controller = PersistenceController(directoryURL: directory)
         XCTAssertEqual(controller.loadResult(), .failed)
         XCTAssertFalse(FileManager.default.fileExists(atPath: shelfURL.path),
-                       "损坏文件应被移出原位")
+                       "The corrupt file should be moved out of its original location")
         let quarantined = try FileManager.default.contentsOfDirectory(atPath: directory.path)
             .filter { $0.hasPrefix("shelf.json.corrupt-") }
-        XCTAssertEqual(quarantined.count, 1, "损坏文件应被隔离保留供人工恢复")
+        XCTAssertEqual(quarantined.count, 1, "The corrupt file should be quarantined and kept for manual recovery")
     }
 
     /// The startup chain must reuse the result of the first read: damaged files are isolated during the
@@ -159,12 +159,12 @@ final class PersistenceControllerTests: XCTestCase {
         XCTAssertFalse(initialResult.permitsMaterializedOrphanCleanup)
         XCTAssertFalse(controller.canSafelyCleanupMaterializedOrphans(after: initialResult))
         XCTAssertEqual(controller.loadResult(), .missing,
-                       "隔离后的再次读取会变成 missing，启动代码不能依赖它")
+                       "A second read after quarantine becomes missing, so startup code cannot rely on it")
         XCTAssertFalse(initialResult.permitsMaterializedOrphanCleanup,
-                       "首次失败结果必须持续阻止本轮孤儿清理")
+                       "The first failed result must keep blocking orphan cleanup for this launch")
         XCTAssertFalse(
             controller.canSafelyCleanupMaterializedOrphans(after: .missing),
-            "隔离快照存在时，后续启动即使读到 missing 也必须保留恢复材料"
+            "While a quarantined snapshot exists, later launches must keep recovery material even if they read missing"
         )
     }
 
@@ -194,7 +194,7 @@ final class PersistenceControllerTests: XCTestCase {
 
         guard case .loaded = result else { return XCTFail("expected valid current snapshot") }
         XCTAssertFalse(controller.canSafelyCleanupMaterializedOrphans(after: result),
-                       "新快照不能隐式表示用户已放弃旧快照的数据恢复")
+                       "A new snapshot must not imply that the user has given up recovering data from the old snapshot")
     }
 
     /// Atomic replacement: when a file already exists, it must not be replaced via 'delete then move' (old
