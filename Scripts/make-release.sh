@@ -187,6 +187,7 @@ fi
 echo "==> Archive (Release, ${VERSION} (${BUILD_NUMBER}))"
 rm -rf "$ARCHIVE_PATH"
 xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration Release \
+    -onlyUsePackageVersionsFromResolvedFile \
     -destination 'platform=macOS' \
     -archivePath "$ARCHIVE_PATH" \
     "${VERSION_ARGS[@]}" \

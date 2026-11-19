@@ -8,6 +8,7 @@ common=(
   -scheme Clerestory
   -destination "platform=macOS,arch=$(uname -m)"
   -derivedDataPath "$derived_data"
+  -onlyUsePackageVersionsFromResolvedFile
   -only-testing:ClerestoryUITests
   -parallel-testing-enabled NO
   -test-timeouts-enabled YES

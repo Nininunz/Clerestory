@@ -13,7 +13,9 @@ Clerestory is maintained in [Nininunz/Clerestory](https://github.com/Nininunz/Cl
 | Source appcast | [docs/appcast.xml](appcast.xml) |
 | Hosting | [Account Pages repository](https://github.com/Nininunz/nininunz.github.io), at `Clerestory/appcast.xml` |
 
-The app uses its own bundle ID and feed path. The signing Keychain account continues to identify the existing Sparkle key. Appcast entries use `Nininunz/Clerestory` release download URLs. The account Pages repo also hosts the legacy Help redirect and feed.
+The app uses its own bundle ID and feed path. The signing Keychain account continues to identify the existing Sparkle key. Appcast entries use `Nininunz/Clerestory` release download URLs.
+
+Package versions are pinned in `Clerestory.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`, and CI and release builds use only those versions. To update Sparkle, update packages in Xcode, run `Scripts/test-ci.sh`, and commit the new `Package.resolved`.
 
 The public Sparkle Ed25519 key lives in [Info.plist](../Clerestory/App/Info.plist). The matching private key stays in the maintainer’s Keychain. Back it up securely outside the repository. The release script checks the public key against the Keychain account before building and signs the final DMG with that account. Upstream OpenYoink releases use a different key and feed.
 

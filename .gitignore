@@ -24,6 +24,8 @@ xcuserdata/
 .swiftpm/
 Package.pins
 Package.resolved
+# Pin the app's package versions (Sparkle) so CI and releases build the same code.
+!Clerestory.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
 
 # Archives / exports
 *.xcarchive
