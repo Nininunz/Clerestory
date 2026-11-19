@@ -36,8 +36,7 @@ enum DropInsertionLocator {
     /// area) does not match any row → append to end.
     nonisolated static let rowGapSlack: CGFloat = 6
 
-    /// Calculate insertion index (0...itemCount; itemCount = append to end, consistent with Yoink
-    /// semantics).
+    /// Calculate insertion index (0...itemCount; itemCount = append to end).
     ///
     /// Row territory vertical expansion/down extension `rowGapSlack`: row gap ownership belongs to the
     /// upper row; space above the first row (e.g., title bar area) and below the last row (grid blank

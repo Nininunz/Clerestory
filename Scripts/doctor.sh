@@ -103,7 +103,7 @@ check_release() {
 
     sparkle_bin=${SPARKLE_BIN:-}
     if [[ -z "$sparkle_bin" ]]; then
-        for candidate in "$HOME"/Library/Developer/Xcode/DerivedData/{Clerestory,Open-Yoink}-*/SourcePackages/artifacts/sparkle/Sparkle/bin; do
+        for candidate in "$HOME"/Library/Developer/Xcode/DerivedData/Clerestory-*/SourcePackages/artifacts/sparkle/Sparkle/bin; do
             if [[ -x "$candidate/sign_update" ]]; then
                 sparkle_bin=$candidate
                 break

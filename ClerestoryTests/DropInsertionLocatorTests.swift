@@ -160,7 +160,7 @@ final class DropInsertionLocatorTests: XCTestCase {
         XCTAssertEqual(locate(300, 100), 5)
     }
 
-    /// Blank area below grid doesn't hit any row → append to end (Yoink semantics).
+    /// Blank area below grid doesn't hit any row → append to end.
     func testBelowGridAppends() {
         XCTAssertEqual(locate(160, 300), 5)
     }

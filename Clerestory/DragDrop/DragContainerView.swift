@@ -74,8 +74,7 @@ final class DropTargetState {
 /// coordinates, with lower-left as origin) to window .global (upper-left as origin) coordinates, aligns it
 /// with the card frame reported by `ShelfGridGeometry`, and passes it to `DropInsertionLocator` to
 /// calculate the row and column insertion index, driving the `insertionIndex` indicator line in ShelfView
-/// in real time; if the grid's bottom area or geometry is not ready, it falls back to 'append to the end'
-/// (Yoink semantics).
+/// in real time; if the grid's bottom area or geometry is not ready, it falls back to 'append to the end'.
 @MainActor
 final class DragContainerView: NSView {
     private let destinationID = UUID()
