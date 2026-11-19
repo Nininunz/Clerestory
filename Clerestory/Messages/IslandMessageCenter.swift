@@ -298,19 +298,26 @@ final class IslandMessageCenter {
     private func announceRaise(of entry: StatusEntry, from moduleID: IslandModuleID) {
         let status = entry.status
         guard status.tone >= .warning, status.announcesWhenRaised else { return }
+        // The open panel already shows this module, so the pill would only repeat it.
+        let postsNotice = moduleID != shownModule
+        // The pill's Show button opens the panel on the module, which then withdraws the pill.
+        let action = IslandNoticeAction.openModule(moduleID)
+        let message = postsNotice
+            ? AccessibilityAnnouncementPlanner.appendingActionHint(for: action, to: status.spokenText)
+            : status.spokenText
         announcer.announce(AccessibilityAnnouncement(
             token: "status.\(moduleID.rawValue).\(status.key).\(entry.raiseOrder)",
-            message: status.spokenText,
+            message: message,
             priority: status.tone == .critical ? .high : .medium
         ))
-        // The open panel already shows this module, so the pill would only repeat it.
-        guard moduleID != shownModule else { return }
+        guard postsNotice else { return }
         let notice = IslandNotice(
             key: "status.\(status.key)",
             title: status.pillText,
             detail: status.detail == nil ? nil : status.spokenText,
             tone: status.tone == .critical ? .error : .warning,
-            systemImage: status.systemImage
+            systemImage: status.systemImage,
+            action: action
         )
         post(notice, from: moduleID, raisedStatusKey: status.key)
     }
@@ -575,15 +582,21 @@ final class IslandMessageCenter {
 }
 
 extension AccessibilityAnnouncementPlanner {
+    /// Names a notice's button after its text, such as "… Open Recovery is available." Text
+    /// without closing punctuation, such as a status's "Battery low, 15%", gets a period first.
+    static func appendingActionHint(for action: IslandNoticeAction, to text: String) -> String {
+        let hint = String(localized: "\(action.title) is available.",
+                          comment: "VoiceOver, after a notice's text. The argument is the notice's button title, such as Open Recovery.")
+        let isClosed = text.last.map { ".!?…".contains($0) } ?? true
+        return text + (isClosed ? " " : ". ") + hint
+    }
+
     /// Every notice is spoken when it is posted. A notice with a button names its action, because
     /// the pill's panel never takes keyboard focus.
     static func announcement(for posted: IslandMessageCenter.PostedNotice) -> AccessibilityAnnouncement {
         let notice = posted.notice
-        var message = notice.fullText
-        if let action = notice.action {
-            message += " " + String(localized: "\(action.title) is available.",
-                                    comment: "VoiceOver, after a notice's text. The argument is the notice's button title, such as Open Recovery.")
-        }
+        let message = notice.action.map { appendingActionHint(for: $0, to: notice.fullText) }
+            ?? notice.fullText
         let priority: AccessibilityAnnouncement.Priority
         if notice.tone == .error || notice.action != nil {
             priority = .high

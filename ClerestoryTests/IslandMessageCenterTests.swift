@@ -422,7 +422,7 @@ final class IslandMessageCenterTests: XCTestCase {
         center.moduleDidStart(.battery)
         let battery = center.messenger(for: .battery)
         battery.setStatus(low)
-        await clock.advance(by: IslandMessageCenter.defaultDuration)
+        await clock.advance(by: IslandMessageCenter.actionDuration)
         XCTAssertNil(center.currentNotice, "The raised notice has finished", file: file, line: line)
         let red = IslandNotchIndicator(systemImage: "battery.25percent", tint: .critical, accessibilityText: "Battery low")
         XCTAssertEqual(resolve(.battery, center), red, file: file, line: line)
@@ -476,7 +476,7 @@ final class IslandMessageCenterTests: XCTestCase {
         let center = startedCenter(.system)
         let system = center.messenger(for: .system)
         system.setStatus(status("disk", "Disk space is low", detail: "2 GB", tone: .warning))
-        XCTAssertEqual(spoken.messages, ["Disk space is low, 2 GB"])
+        XCTAssertEqual(spoken.messages, ["Disk space is low, 2 GB. Show is available."])
         XCTAssertEqual(spoken.announcements.last?.priority, .medium)
         let notice = try XCTUnwrap(center.currentNotice)
         XCTAssertEqual(notice.raisedStatusKey, "disk")
@@ -484,6 +484,7 @@ final class IslandMessageCenterTests: XCTestCase {
         XCTAssertEqual(notice.notice.title, "Disk space is low · 2 GB")
         XCTAssertEqual(notice.notice.fullText, "Disk space is low, 2 GB")
         XCTAssertEqual(notice.notice.tone, .warning)
+        XCTAssertEqual(notice.notice.action, .openModule(.system), "Show opens the panel on the module")
 
         system.setStatus(status("disk", "Disk space is low", detail: "1 GB", tone: .warning))
         XCTAssertEqual(spoken.messages.count, 1, "A detail-only change is silent")
@@ -495,7 +496,8 @@ final class IslandMessageCenterTests: XCTestCase {
         XCTAssertEqual(center.currentNotice?.id, notice.id)
 
         system.setStatus(status("disk", "Disk space is critically low", detail: "1 GB", tone: .warning, level: 1))
-        XCTAssertEqual(spoken.messages.last, "Disk space is critically low, 1 GB", "A higher level raises it again")
+        XCTAssertEqual(spoken.messages.last, "Disk space is critically low, 1 GB. Show is available.",
+                       "A higher level raises it again")
         XCTAssertEqual(spoken.messages.count, 2)
         XCTAssertEqual(center.currentNotice?.id, notice.id, "Its notice updates in place")
         XCTAssertEqual(center.currentNotice?.notice.title, "Disk space is critically low · 1 GB")
@@ -555,7 +557,7 @@ final class IslandMessageCenterTests: XCTestCase {
         let center = startedCenter(.timer)
         center.setShownModule(.timer, othersWait: true)
         center.messenger(for: .timer).setStatus(status("finished", "Timer finished", tone: .warning))
-        XCTAssertEqual(spoken.messages, ["Timer finished"])
+        XCTAssertEqual(spoken.messages, ["Timer finished"], "No pill, so no Show to name")
         XCTAssertNil(center.currentNotice)
     }
 
@@ -675,7 +677,7 @@ final class IslandMessageCenterTests: XCTestCase {
         let system = center.messenger(for: .system)
         system.setStatus(status("memory", "Memory pressure is high", tone: .warning, dismissible: true))
         system.setStatus(status("fixed", "Can't be hidden", tone: .warning, announces: false))
-        XCTAssertEqual(spoken.messages, ["Memory pressure is high"])
+        XCTAssertEqual(spoken.messages, ["Memory pressure is high. Show is available."])
 
         center.dismissStatus("fixed", of: .system)
         center.dismissStatus("memory", of: .system)

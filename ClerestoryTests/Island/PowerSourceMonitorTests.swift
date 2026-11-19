@@ -135,7 +135,7 @@ final class PowerSourceMonitorTests: XCTestCase {
         monitor.process(snapshot(percentage: 15, power: true))
         XCTAssertEqual(center.statuses(for: .battery), [low(15)])
         XCTAssertEqual(noticeKeys(center), noticesBefore + ["power"])
-        XCTAssertEqual(spoken.messages, ["Battery low, 15%", "Power connected, 15%"],
+        XCTAssertEqual(spoken.messages, ["Battery low, 15%. Show is available.", "Power connected, 15%"],
                        "Plugging in does not raise low again")
     }
 
@@ -166,7 +166,7 @@ final class PowerSourceMonitorTests: XCTestCase {
         monitor.start()
         defer { monitor.stop() }
         XCTAssertEqual(center.statuses(for: .battery), [low(15)])
-        XCTAssertEqual(spoken.messages.filter { $0 == "Battery low, 15%" }.count, 2,
+        XCTAssertEqual(spoken.messages.filter { $0 == "Battery low, 15%. Show is available." }.count, 2,
                        "Each start raises low again")
     }
 
@@ -176,27 +176,27 @@ final class PowerSourceMonitorTests: XCTestCase {
         monitor.process(snapshot(percentage: 20))
         monitor.process(snapshot(percentage: 18))
         XCTAssertEqual(center.statuses(for: .battery), [low(18)])
-        XCTAssertEqual(spoken.messages, ["Battery low, 20%"], "A lower percentage in the band is silent")
+        XCTAssertEqual(spoken.messages, ["Battery low, 20%. Show is available."], "A lower percentage in the band is silent")
         monitor.process(snapshot(percentage: 10))
         XCTAssertEqual(center.topStatus(for: .battery)?.title, "Battery critically low")
         XCTAssertEqual(center.topStatus(for: .battery)?.tone, .critical)
-        XCTAssertEqual(spoken.messages, ["Battery low, 20%", "Battery critically low, 10%"])
+        XCTAssertEqual(spoken.messages, ["Battery low, 20%. Show is available.", "Battery critically low, 10%. Show is available."])
     }
 
     func testChargingOutOfCriticallyLowDoesNotAnnounceAgain() {
         let (monitor, center) = makeMonitor()
         monitor.process(snapshot(percentage: 10, power: true))
-        XCTAssertEqual(spoken.messages, ["Battery critically low, 10%"])
+        XCTAssertEqual(spoken.messages, ["Battery critically low, 10%. Show is available."])
         let noticesBefore = noticeKeys(center)
 
         monitor.process(snapshot(percentage: 11, power: true))
         XCTAssertEqual(center.topStatus(for: .battery)?.title, "Battery low", "The title follows the charge")
-        XCTAssertEqual(spoken.messages, ["Battery critically low, 10%"], "A rising charge is silent")
+        XCTAssertEqual(spoken.messages, ["Battery critically low, 10%. Show is available."], "A rising charge is silent")
         XCTAssertEqual(noticeKeys(center), noticesBefore, "and shows no new pill")
 
         monitor.process(snapshot(percentage: 11, power: false))
         monitor.process(snapshot(percentage: 10, power: false))
-        XCTAssertEqual(spoken.messages.last, "Battery critically low, 10%", "Falling again announces")
+        XCTAssertEqual(spoken.messages.last, "Battery critically low, 10%. Show is available.", "Falling again announces")
     }
 
     func testPowerChangeNoticeLastsTwoPointFiveSeconds() async {
@@ -234,7 +234,7 @@ final class PowerSourceMonitorTests: XCTestCase {
     func testLowSurvivesPowerAndLowPowerModeNotices() async {
         let (monitor, center) = makeMonitor()
         monitor.process(snapshot(percentage: 15))
-        await clock.advance(by: IslandMessageCenter.defaultDuration)
+        await clock.advance(by: IslandMessageCenter.actionDuration)
         XCTAssertNil(center.currentNotice)
 
         monitor.process(snapshot(percentage: 15, power: true))
