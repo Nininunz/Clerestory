@@ -30,6 +30,8 @@ Each run defaults to a new `/tmp/clerestory-previews-*` directory with `index.ht
 
 Add Shelf cases to `ClerestoryTests/TestKit/Shelf/ShelfScenario.swift` using real state/store inputs. Other modules still use the compatibility adapter in `IslandModulePreviewTests.swift`. Enabled cases automatically appear in listing, filtering, the manifest, and the gallery. Shelf includes empty, populated, selected, search-empty, importing, duplicate-drop, file-drag, long-name, large-grid, and keyboard-focus samples.
 
+Notice samples post the module's real notice into a preview message center (`IslandMessageCenter.preview(notice:from:)`) and pass it with the scenario, so the host draws the pill below the Panel: Clipboard History `notice` and Quick Access `duplicate-folder-notice`. Lasting conditions are page content: Clipboard History `load-failed` and `storage-full`, Quick Access `load-failed`, and AI Usage `refresh-failed-cached-data-retry` show their `IslandStatusRow`.
+
 ## Test kit structure
 
 - `ClerestoryTests/TestKit/ModuleScenario.swift`: lazy view factories, stable scenario IDs, and isolated preference lifetime.

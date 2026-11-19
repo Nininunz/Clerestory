@@ -295,30 +295,60 @@ struct IslandEmptyState: View {
     }
 }
 
-/// Non-blocking notices preserve usable content and fixed search controls.
-struct IslandModuleNotice: View {
+/// A lasting condition on a module's own page, such as "History storage is full" or AI Usage's
+/// refresh failure with Retry. It is plain module content, not a message in the center: it
+/// shows while the condition holds and has no dismiss button. Something that just happened is a
+/// notice instead, posted through the module's `ModuleMessenger`.
+struct IslandStatusRow: View {
+    /// An ordinary in-place control, such as Retry. Not an `IslandNoticeAction`.
+    struct Action {
+        let title: LocalizedStringKey
+        let perform: () -> Void
+    }
+
+    enum Style {
+        /// White text on the dark Panel.
+        case island
+        /// System colors, for a regular window such as Clipboard History's.
+        case window
+    }
+
     let message: String
     var isError = false
-    var onDismiss: (() -> Void)? = nil
+    var action: Action? = nil
+    var style: Style = .island
 
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: isError ? "exclamationmark.triangle.fill" : "info.circle")
-                .foregroundStyle(isError ? Color.orange : IslandVisualStyle.secondaryText)
+                .foregroundStyle(isError ? Color.orange : secondaryText)
                 .accessibilityHidden(true)
             Text(message)
                 .font(.system(size: 11))
-                .foregroundStyle(IslandVisualStyle.secondaryText)
+                .foregroundStyle(secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
-            if let onDismiss {
-                Button(action: onDismiss) { Image(systemName: "xmark") }
-                    .buttonStyle(IslandHeaderButtonStyle())
-                    .accessibilityLabel("Dismiss")
+            if let action {
+                switch style {
+                case .island:
+                    Button(action.title, action: action.perform)
+                        .buttonStyle(IslandActionButtonStyle())
+                case .window:
+                    Button(action.title, action: action.perform)
+                        .controlSize(.small)
+                }
             }
         }
         .padding(8)
-        .background(RoundedRectangle(cornerRadius: 8).fill(IslandVisualStyle.cardFill))
+        .background(RoundedRectangle(cornerRadius: 8).fill(cardFill))
+    }
+
+    private var secondaryText: Color {
+        style == .island ? IslandVisualStyle.secondaryText : .secondary
+    }
+
+    private var cardFill: Color {
+        style == .island ? IslandVisualStyle.cardFill : Color.primary.opacity(0.05)
     }
 }
 

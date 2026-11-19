@@ -29,7 +29,11 @@ final class IslandModulePreviewTests: XCTestCase {
 
     private func defaults() -> UserDefaults { context.defaults() }
     private func settings() -> SettingsStore { context.settings() }
-    private func entry<V: View>(_ label: String, _ view: V) -> (String, AnyView) { (label, AnyView(view)) }
+    /// A label, the module view, and the preview center its notice was posted into, if any.
+    private typealias PreviewEntry = (label: String, view: AnyView, messages: IslandMessageCenter?)
+    private func entry<V: View>(_ label: String, _ view: V, messages: IslandMessageCenter? = nil) -> PreviewEntry {
+        (label, AnyView(view), messages)
+    }
 
     private func battery() async throws {
         let states: [(String, PowerSourceMonitor.Snapshot)] = [
@@ -52,7 +56,7 @@ final class IslandModulePreviewTests: XCTestCase {
     }
     private func media() async throws {
         let settings = settings()
-        var views: [(String, AnyView)] = []
+        var views: [PreviewEntry] = []
         for (label, availability) in [("Disabled / Enable", NowPlayingModuleStore.Availability.disabled), ("Probing", .probing), ("Nothing playing", .available), ("Unavailable", .unavailable)] {
             views.append(entry(label, IslandNowPlayingView().environment(settings).environment(NowPlayingModuleStore.preview(availability: availability))))
         }
@@ -75,22 +79,26 @@ final class IslandModulePreviewTests: XCTestCase {
     }
     private func clipboard() async throws {
         let entries = [ClipboardHistoryEntry(content: .text("A sample clipboard note")), ClipboardHistoryEntry(content: .url("https://example.com"), isFavorite: true)]
-        var views: [(String, AnyView)] = []
-        for state in ["Loading", "Empty", "Recording / items", "Paused / items", "Recording off", "No results", "Load failed", "Notice"] {
+        var views: [PreviewEntry] = []
+        for state in ["Loading", "Empty", "Recording / items", "Paused / items", "Recording off", "No results", "Load failed", "Storage full", "Notice"] {
             let settings = settings()
             settings.clipboardHistoryEnabled = state != "Recording off"
             settings.clipboardHistoryPaused = state == "Paused / items"
-            let store = ClipboardHistoryStore.preview(settings: settings, directory: output.appendingPathComponent("clipboard-fixture"), entries: ["Loading", "Empty", "Load failed"].contains(state) ? [] : entries, loading: state == "Loading", error: state == "Load failed" ? "Clipboard history could not be loaded. Clear history to reset it." : nil, notice: state == "Notice" ? "Copied to Clipboard" : nil)
-            views.append(entry(state, ClipboardHistoryView.preview(query: state == "No results" ? "no matching item" : "").environment(settings).environment(store)))
+            let store = ClipboardHistoryStore.preview(settings: settings, directory: output.appendingPathComponent("clipboard-fixture"), entries: ["Loading", "Empty", "Load failed"].contains(state) ? [] : entries, loading: state == "Loading", error: state == "Load failed" ? "Clipboard history could not be loaded. Clear history to reset it." : nil, storageFull: state == "Storage full")
+            // The notice shows in the pill below the Panel, as the copy posts it.
+            let messages = state == "Notice" ? IslandMessageCenter.preview(notice: ClipboardHistoryStore.copiedNotice, from: .clipboard) : nil
+            views.append(entry(state, ClipboardHistoryView.preview(query: state == "No results" ? "no matching item" : "").environment(settings).environment(store), messages: messages))
         }
         try await export("clipboard", "Clipboard History", views)
     }
     private func folders() async throws {
         let items = ["Documents", "Projects", "Downloads"].map { FavoriteFolder(bookmark: Data(), lastKnownPath: "/Preview/\($0)") }
-        var views: [(String, AnyView)] = []
-        for state in ["Empty / Add", "Folders / Add + Open", "Unavailable folder", "Load failed / Dismiss", "Duplicate folder notice / Dismiss", "Copying / Cancel"] {
-            let store = FavoriteFoldersStore.preview(items: state == "Empty / Add" || state == "Load failed / Dismiss" ? [] : items, unavailable: state == "Unavailable folder", notice: state == "Load failed / Dismiss" ? "Folder favorites could not be loaded. The damaged data was kept for recovery." : state == "Duplicate folder notice / Dismiss" ? "This folder is already in Quick Access." : nil, isError: state == "Load failed / Dismiss")
-            views.append(entry(state, FavoriteFoldersModuleView().environment(store).environment(FavoriteFolderDropCoordinator.preview(folders: store, copying: state == "Copying / Cancel")).environment(DropTargetState())))
+        var views: [PreviewEntry] = []
+        for state in ["Empty / Add", "Folders / Add + Open", "Unavailable folder", "Load failed", "Duplicate folder notice", "Copying / Cancel"] {
+            let store = FavoriteFoldersStore.preview(items: state == "Empty / Add" || state == "Load failed" ? [] : items, unavailable: state == "Unavailable folder", loadFailed: state == "Load failed")
+            let duplicate = FavoriteFoldersStore.importNotice(for: .init(duplicates: 1))
+            let messages = state == "Duplicate folder notice" ? IslandMessageCenter.preview(notice: duplicate, from: .folders) : nil
+            views.append(entry(state, FavoriteFoldersModuleView().environment(store).environment(FavoriteFolderDropCoordinator.preview(folders: store, copying: state == "Copying / Cancel")).environment(DropTargetState()), messages: messages))
         }
         try await export("quick-access", "Quick Access", views)
     }
@@ -128,7 +136,7 @@ final class IslandModulePreviewTests: XCTestCase {
         ])
     }
     private func quickSettings() async throws {
-        var views: [(String, AnyView)] = []
+        var views: [PreviewEntry] = []
         for state in ["Default modules", "All modules enabled", "Optional modules disabled", "Experimental modules hidden"] {
             let settings = settings()
             settings.experimentalModulesEnabled = state != "Experimental modules hidden"
@@ -156,10 +164,11 @@ final class IslandModulePreviewTests: XCTestCase {
     }
 
     // Compatibility adapter while other modules migrate to explicit scenario IDs.
-    private func export(_ slug: String, _ title: String, _ states: [(String, AnyView)]) async throws {
-        try await renderer.export(slug, title, states.map { label, view in
+    private func export(_ slug: String, _ title: String, _ states: [PreviewEntry]) async throws {
+        try await renderer.export(slug, title, states.map { label, view, messages in
             ModuleScenario(id: label.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted)
-                .filter { !$0.isEmpty }.joined(separator: "-"), label: label, makeView: { ModuleScenarioContent(view: view) })
+                .filter { !$0.isEmpty }.joined(separator: "-"), label: label,
+                makeView: { ModuleScenarioContent(view: view, messages: messages) })
         })
     }
 }

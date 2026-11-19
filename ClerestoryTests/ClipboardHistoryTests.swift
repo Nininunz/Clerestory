@@ -12,6 +12,7 @@ final class ClipboardHistoryTests: XCTestCase {
     private var pasteboard: NSPasteboard!
     private var settings: SettingsStore!
     private var history: ClipboardHistoryStore!
+    private var messages: IslandMessageCenter!
     private var clock = Date(timeIntervalSince1970: 1_800_000_000)
     private var ignored = false
 
@@ -22,9 +23,11 @@ final class ClipboardHistoryTests: XCTestCase {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         pasteboard = NSPasteboard.withUniqueName()
         settings = SettingsStore(defaults: defaults)
+        messages = IslandMessageCenter.forTesting()
         history = ClipboardHistoryStore(settings: settings, pasteboard: pasteboard, directoryURL: directory,
                                         now: { [unowned self] in self.clock },
-                                        sourceIsIgnored: { [unowned self] in self.ignored })
+                                        sourceIsIgnored: { [unowned self] in self.ignored },
+                                        messenger: messages.messenger(for: .clipboard))
     }
 
     override func tearDown() async throws {
@@ -607,6 +610,75 @@ final class ClipboardHistoryTests: XCTestCase {
         XCTAssertLessThan(try Data(contentsOf: url).count, 1024)
         try await persistence.save([], revision: 3)
         XCTAssertFalse(FileManager.default.fileExists(atPath: imageURL.path))
+    }
+
+    func testCopyAndFavoriteLimitPostNotices() async throws {
+        try await start()
+        write("first")
+        history.poll()
+        XCTAssertTrue(history.copy(try XCTUnwrap(history.entries.first)))
+        var posted = try XCTUnwrap(messages.currentNotice)
+        XCTAssertEqual(posted.moduleID, .clipboard)
+        XCTAssertEqual(posted.notice.key, "copy")
+        XCTAssertEqual(posted.notice.tone, .success)
+        XCTAssertEqual(posted.notice.title, "Copied to Clipboard")
+        XCTAssertEqual(ClipboardHistoryStore.copyFailedNotice.key, "copy", "Success and failure replace each other")
+        XCTAssertEqual(ClipboardHistoryStore.copyFailedNotice.tone, .error)
+
+        for index in 0...ClipboardHistoryPolicy.maximumFavorites {
+            clock += 1
+            write("favorite \(index)")
+            history.poll()
+            let id = try XCTUnwrap(history.entries.first { $0.content == .text("favorite \(index)") }?.id)
+            history.setFavorite(true, id: id)
+        }
+        XCTAssertEqual(history.entries.filter(\.isFavorite).count, ClipboardHistoryPolicy.maximumFavorites)
+        posted = try XCTUnwrap(messages.currentNotice)
+        XCTAssertEqual(posted.notice.key, "favorites-limit")
+        XCTAssertEqual(posted.notice.tone, .info)
+        XCTAssertEqual(posted.notice.title, "You can keep up to 30 favorites.")
+    }
+
+    func testStorageFullLastsUntilACopyIsRecordedOrHistoryIsCleared() async throws {
+        try await start()
+        let png = try imageData()
+        func copyFavoriteImage(_ seed: UInt8) throws -> UUID {
+            var data = png
+            data.append(Data(repeating: seed, count: ClipboardHistoryPolicy.maximumImageBytes - png.count))
+            clock += 1
+            pasteboard.clearContents()
+            pasteboard.setData(data, forType: .png)
+            history.poll()
+            let id = try XCTUnwrap(history.entries.first { $0.content == .image(data, type: "public.png") }?.id)
+            history.setFavorite(true, id: id)
+            return id
+        }
+        // Four favorite images fill the storage budget.
+        let first = try copyFavoriteImage(0)
+        for seed: UInt8 in 1...3 { _ = try copyFavoriteImage(seed) }
+        XCTAssertFalse(history.isStorageFull)
+
+        clock += 1
+        write("does not fit")
+        history.poll()
+        XCTAssertTrue(history.isStorageFull)
+        XCTAssertNil(messages.currentNotice, "Storage full is a lasting row, not a notice")
+
+        history.remove(first)
+        XCTAssertTrue(history.isStorageFull, "It clears on the next recorded copy")
+        clock += 1
+        write("fits")
+        history.poll()
+        XCTAssertFalse(history.isStorageFull)
+        XCTAssertTrue(history.entries.contains { $0.content == .text("fits") })
+
+        _ = try copyFavoriteImage(4)
+        clock += 1
+        write("does not fit either")
+        history.poll()
+        XCTAssertTrue(history.isStorageFull)
+        history.clear()
+        XCTAssertFalse(history.isStorageFull)
     }
 
     func testFavoritesAreBoundedAndCannotBeEvictedByNewHistory() {

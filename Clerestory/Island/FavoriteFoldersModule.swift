@@ -268,13 +268,16 @@ final class FavoriteFoldersStore {
     private(set) var items: [FavoriteFolder]
     private(set) var selectedID: UUID?
     private(set) var unavailableIDs: Set<UUID> = []
-    private(set) var noticeMessage: String?
-    private(set) var noticeIsError = false
+    /// The saved favorites could not be read at launch. The page shows it until a folder is
+    /// added, which saves a fresh list over the damaged one.
+    private(set) var didFailToLoad = false
     private(set) var isRunning = false
 
     @ObservationIgnored private let persistence: FavoriteFoldersPersistenceController?
     @ObservationIgnored private let bookmarkService: BookmarkService
     @ObservationIgnored private let opener: any FavoriteFolderOpening
+    /// Where Quick Access posts what just happened, such as "Folder added to Quick Access."
+    @ObservationIgnored private let messenger: ModuleMessenger
     @ObservationIgnored private var hasLoaded = false
 
     init(
@@ -282,12 +285,14 @@ final class FavoriteFoldersStore {
         persistence: FavoriteFoldersPersistenceController? = nil,
         bookmarkService: BookmarkService,
         opener: any FavoriteFolderOpening = SystemFavoriteFolderOpener(),
+        messenger: ModuleMessenger = .inert,
         itemsAreLoaded: Bool = false
     ) {
         self.items = items
         self.persistence = persistence
         self.bookmarkService = bookmarkService
         self.opener = opener
+        self.messenger = messenger
         self.hasLoaded = itemsAreLoaded
     }
 
@@ -304,10 +309,7 @@ final class FavoriteFoldersStore {
             items = []
         case .failed:
             items = []
-            showNotice(
-                String(localized: "Folder favorites could not be loaded. The damaged data was kept for recovery."),
-                isError: true
-            )
+            didFailToLoad = true
         }
     }
 
@@ -343,9 +345,10 @@ final class FavoriteFoldersStore {
         if !newItems.isEmpty {
             items.append(contentsOf: newItems)
             selectedID = newItems.last?.id
+            if didFailToLoad { didFailToLoad = false }
             persist()
         }
-        updateNotice(for: summary)
+        postNotice(for: summary)
         return summary
     }
 
@@ -424,13 +427,10 @@ final class FavoriteFoldersStore {
             guard let self else { return }
             if let errorMessage {
                 self.unavailableIDs.insert(id)
-                self.showNotice(
-                    String(localized: "Could not open this folder.") + " " + errorMessage,
-                    isError: true
-                )
+                self.messenger.post(Self.openFailedNotice(reason: errorMessage))
             } else {
                 self.unavailableIDs.remove(id)
-                self.noticeMessage = nil
+                self.messenger.withdrawNotice(Self.openFailedKey)
             }
         }
         return true
@@ -468,20 +468,17 @@ final class FavoriteFoldersStore {
             items[index].lastKnownPath = normalizedPath(url)
             unavailableIDs.remove(id)
             persist()
-            noticeMessage = nil
+            messenger.withdrawNotice(Self.openFailedKey)
+            messenger.withdrawNotice(Self.relocateFailedKey)
             return true
         } catch {
-            showNotice(error.localizedDescription, isError: true)
+            messenger.post(IslandNotice(key: Self.relocateFailedKey, title: error.localizedDescription, tone: .error))
             return false
         }
     }
 
     func isUnavailable(_ id: UUID) -> Bool {
         unavailableIDs.contains(id)
-    }
-
-    func dismissNotice() {
-        noticeMessage = nil
     }
 
     func canImportFolders(from pasteboard: NSPasteboard) -> Bool {
@@ -517,11 +514,9 @@ final class FavoriteFoldersStore {
             unavailableIDs.remove(id)
             return resolved.url
         } catch {
+            // The tile turns orange and reads "Unavailable", and its menu has Locate Again,
+            // so no notice repeats that.
             unavailableIDs.insert(id)
-            showNotice(
-                String(localized: "This folder is not available. Locate it again to reconnect the favorite."),
-                isError: true
-            )
             return nil
         }
     }
@@ -568,34 +563,48 @@ final class FavoriteFoldersStore {
         persistence?.scheduleSave(items)
     }
 
-    private func updateNotice(for summary: FavoriteFolderImportSummary) {
+    private func postNotice(for summary: FavoriteFolderImportSummary) {
+        if let notice = Self.importNotice(for: summary) { messenger.post(notice) }
+    }
+}
+
+extension FavoriteFoldersStore {
+    static let openFailedKey = "open-failed"
+    static let relocateFailedKey = "relocate-failed"
+
+    /// What adding folders reports: added, already there, or some rejected. `nil` when
+    /// nothing was dropped.
+    static func importNotice(for summary: FavoriteFolderImportSummary) -> IslandNotice? {
         if summary.added > 0 {
-            showNotice(
-                summary.added == 1
+            return IslandNotice(
+                key: "added",
+                title: summary.added == 1
                     ? String(localized: "Folder added to Quick Access.")
                     : String(localized: "Folders added to Quick Access."),
-                isError: false
+                tone: .success
             )
         } else if summary.duplicates > 0 && summary.rejected == 0 {
-            showNotice(String(localized: "This folder is already in Quick Access."), isError: false)
+            return IslandNotice(key: "duplicate", title: String(localized: "This folder is already in Quick Access."))
         } else if summary.rejected > 0 {
-            showNotice(String(localized: "Some folders could not be added."), isError: true)
+            return IslandNotice(key: "add-failed", title: String(localized: "Some folders could not be added."),
+                                tone: .error)
         }
+        return nil
     }
 
-    private func showNotice(_ message: String, isError: Bool) {
-        noticeMessage = message
-        noticeIsError = isError
+    /// The pill names the failure; the tooltip and VoiceOver add the reason.
+    static func openFailedNotice(reason: String) -> IslandNotice {
+        let title = String(localized: "Could not open this folder.")
+        return IslandNotice(key: openFailedKey, title: title, detail: title + " " + reason, tone: .error)
     }
 }
 
 #if DEBUG
 // Isolated, non-running fixtures for the module preview catalog. Never used by app startup.
 extension FavoriteFoldersStore {
-    static func preview(items: [FavoriteFolder] = [], unavailable: Bool = false, notice: String? = nil, isError: Bool = false) -> FavoriteFoldersStore {
+    static func preview(items: [FavoriteFolder] = [], unavailable: Bool = false, loadFailed: Bool = false) -> FavoriteFoldersStore {
         let store = FavoriteFoldersStore(items: items, bookmarkService: BookmarkService(), itemsAreLoaded: true)
-        store.noticeMessage = notice
-        store.noticeIsError = isError
+        store.didFailToLoad = loadFailed
         if unavailable { store.unavailableIDs = Set(items.map(\.id)) }
         return store
     }

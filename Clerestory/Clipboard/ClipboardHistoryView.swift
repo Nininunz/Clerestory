@@ -24,6 +24,10 @@ struct ClipboardHistoryView: View {
         isIsland ? IslandVisualStyle.secondaryText : .secondary
     }
 
+    private var statusRowStyle: IslandStatusRow.Style {
+        isIsland ? .island : .window
+    }
+
     private var headerSubtitle: String {
         if !settings.clipboardHistoryEnabled { return String(localized: "Recording off") }
         return settings.clipboardHistoryPaused
@@ -94,14 +98,12 @@ struct ClipboardHistoryView: View {
             }
             .onChange(of: settings.clipboardHistoryEnabled) { _, _ in history.updateRecording() }
 
-            if let message = history.errorMessage ?? history.noticeMessage {
-                if isIsland {
-                    IslandModuleNotice(message: message, isError: history.errorMessage != nil)
-                } else {
-                    Text(message).font(.caption)
-                        .foregroundStyle(history.errorMessage != nil ? Color.orange : secondaryForeground)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
+            if let message = history.errorMessage {
+                IslandStatusRow(message: message, isError: true, style: statusRowStyle)
+            }
+            if history.isStorageFull {
+                IslandStatusRow(message: ClipboardHistoryStore.storageFullMessage, isError: true,
+                                style: statusRowStyle)
             }
 
             HStack(spacing: 6) {

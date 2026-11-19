@@ -465,7 +465,8 @@ final class ShelfWindowController: NSObject {
         )
         let favoriteFoldersStore = FavoriteFoldersStore(
             persistence: FavoriteFoldersPersistenceController(),
-            bookmarkService: importCoordinator.bookmarkService
+            bookmarkService: importCoordinator.bookmarkService,
+            messenger: messages.messenger(for: .folders)
         )
         let favoriteFolderDropCoordinator = FavoriteFolderDropCoordinator(folders: favoriteFoldersStore,
                                                                           bookmarks: importCoordinator.bookmarkService)

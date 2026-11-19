@@ -10,9 +10,13 @@ final class ClipboardHistoryStore {
     private(set) var isRecording = false
     private(set) var isLoading = true
     private(set) var errorMessage: String?
-    private(set) var noticeMessage: String?
+    /// A copy could not be recorded because favorites and images fill the storage budget. It
+    /// stays until the next copy is recorded or the history is cleared.
+    private(set) var isStorageFull = false
     var shortcutRegistrationError: String?
     @ObservationIgnored private let settings: SettingsStore
+    /// Where Clipboard History posts what just happened, such as "Copied to Clipboard".
+    @ObservationIgnored private let messenger: ModuleMessenger
     @ObservationIgnored private let pasteboard: NSPasteboard
     @ObservationIgnored private let persistence: ClipboardHistoryPersistence
     @ObservationIgnored private var pollTask: Task<Void, Never>?
@@ -38,8 +42,9 @@ final class ClipboardHistoryStore {
 
     init(settings: SettingsStore, pasteboard: NSPasteboard = .general,
          directoryURL: URL = AppDirectories.applicationSupport(), now: @escaping () -> Date = Date.init,
-         sourceIsIgnored: (() -> Bool)? = nil) {
+         sourceIsIgnored: (() -> Bool)? = nil, messenger: ModuleMessenger = .inert) {
         self.settings = settings
+        self.messenger = messenger
         self.pasteboard = pasteboard
         self.persistence = ClipboardHistoryPersistence(directoryURL: directoryURL)
         self.now = now
@@ -192,9 +197,10 @@ final class ClipboardHistoryStore {
         let next = ClipboardHistoryPolicy.inserting(content, into: entries, now: copiedAt, retentionDays: settings.clipboardHistoryRetentionDays,
                                                      entryLimit: settings.clipboardHistoryEntryLimit)
         guard next.contains(where: { $0.content == content }) else {
-            noticeMessage = String(localized: "History storage is full. Remove a favorite or an image to record more.")
+            isStorageFull = true
             return
         }
+        if isStorageFull { isStorageFull = false }
         entries = next
         persist()
     }
@@ -219,7 +225,7 @@ final class ClipboardHistoryStore {
         pasteboard.clearContents()
         let success = pasteboard.writeObjects([item])
         lastChangeCount = pasteboard.changeCount
-        noticeMessage = success ? String(localized: "Copied to Clipboard") : String(localized: "Copy failed")
+        messenger.post(success ? Self.copiedNotice : Self.copyFailedNotice)
         return success
     }
 
@@ -239,7 +245,7 @@ final class ClipboardHistoryStore {
         lastChangeCount = pasteboard.changeCount
         canWrite = true
         errorMessage = nil
-        noticeMessage = nil
+        isStorageFull = false
         persist(immediately: true)
     }
 
@@ -247,7 +253,7 @@ final class ClipboardHistoryStore {
         guard let index = entries.firstIndex(where: { $0.id == id }) else { return }
         if favorite && !entries[index].isFavorite,
            entries.filter(\.isFavorite).count >= ClipboardHistoryPolicy.maximumFavorites {
-            noticeMessage = String(localized: "You can keep up to 30 favorites.")
+            messenger.post(Self.favoritesLimitNotice)
             return
         }
         entries[index].isFavorite = favorite
@@ -313,15 +319,33 @@ final class ClipboardHistoryStore {
     }
 }
 
+extension ClipboardHistoryStore {
+    static var copiedNotice: IslandNotice {
+        IslandNotice(key: "copy", title: String(localized: "Copied to Clipboard"), tone: .success)
+    }
+
+    static var copyFailedNotice: IslandNotice {
+        IslandNotice(key: "copy", title: String(localized: "Copy failed"), tone: .error)
+    }
+
+    static var favoritesLimitNotice: IslandNotice {
+        IslandNotice(key: "favorites-limit", title: String(localized: "You can keep up to 30 favorites."))
+    }
+
+    static var storageFullMessage: String {
+        String(localized: "History storage is full. Remove a favorite or an image to record more.")
+    }
+}
+
 #if DEBUG
 // Isolated, non-running fixtures for the module preview catalog. Never used by app startup.
 extension ClipboardHistoryStore {
-    static func preview(settings: SettingsStore, directory: URL, entries: [ClipboardHistoryEntry] = [], loading: Bool = false, error: String? = nil, notice: String? = nil) -> ClipboardHistoryStore {
+    static func preview(settings: SettingsStore, directory: URL, entries: [ClipboardHistoryEntry] = [], loading: Bool = false, error: String? = nil, storageFull: Bool = false) -> ClipboardHistoryStore {
         let store = ClipboardHistoryStore(settings: settings, pasteboard: NSPasteboard(name: .init("Clerestory.ModulePreviews")), directoryURL: directory)
         store.entries = entries
         store.isLoading = loading
         store.errorMessage = error
-        store.noticeMessage = notice
+        store.isStorageFull = storageFull
         return store
     }
 }
