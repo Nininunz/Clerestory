@@ -147,7 +147,7 @@ struct ShelfView: View {
                 .contentShape(Rectangle())
                 .onTapGesture(perform: clearSelectionAndCollapse)
         } else if store.visibleItems.isEmpty {
-            IslandModuleState(title: "No Results", message: "Try a different search or filter.",
+            IslandModuleState(title: "No Results", message: Text("Try a different search or filter."),
                               systemImage: "magnifyingglass") {
                 Button("Clear Search and Filters") {
                     store.searchQuery = ""

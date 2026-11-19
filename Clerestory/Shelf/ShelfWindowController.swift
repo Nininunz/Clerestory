@@ -202,7 +202,7 @@ final class ShelfWindowController: NSObject {
                     NSApp.activate()
                     panel.makeKeyAndOrderFront(nil)
                     if let editor = panel.firstResponder as? NSTextView, editor.isFieldEditor {
-                        panel.makeFirstResponder(nil)
+                        _ = panel.makeFirstResponder(nil)
                     }
                 })
         )
