@@ -4,13 +4,13 @@
 
 Clerestory puts a file shelf and configurable shortcuts in a panel at the top of your display. Use it on any display. On a Mac with a built-in notch, an optional Notch companion gives you a compact way to open the panel and see module activity.
 
-[Download Clerestory 1.0.4](https://github.com/Nininunz/Clerestory/releases/tag/v1.0.4) · [Quick start](#quick-start) · [简体中文](README.md)
+[Download Clerestory 1.0.5](https://github.com/Nininunz/Clerestory/releases/tag/v1.0.5) · [Quick start](#quick-start) · [简体中文](README.md)
 
 ## Install
 
-Clerestory supports macOS 15 and later on Apple silicon and Intel. Open the signed and notarized [Clerestory 1.0.4 DMG](https://github.com/Nininunz/Clerestory/releases/download/v1.0.4/Clerestory-1.0.4.dmg) and drag the app to Applications.
+Clerestory supports macOS 15 and later on Apple silicon and Intel. Open the signed and notarized [Clerestory 1.0.5 DMG](https://github.com/Nininunz/Clerestory/releases/download/v1.0.5/Clerestory-1.0.5.dmg) and drag the app to Applications.
 
-Install Clerestory from its DMG when switching from an earlier OpenYoink build. Clerestory starts with its own Shelf and preferences. To update a build that uses the Clerestory app identity, choose **Check for Updates…** from the menu bar icon. See the [release guide](docs/FORK_RELEASE.md).
+Install Clerestory from its DMG when switching from an earlier OpenYoink build. Clerestory starts with its own Shelf and preferences. To update a build that uses the Clerestory app identity, choose **Check for Updates…** from the menu bar icon. See the [release guide](docs/RELEASING.md).
 
 ## Quick start
 
@@ -117,21 +117,11 @@ Something feels off, broke, or could be better? Open an [issue](https://github.c
 
 Pull requests are welcome. For bigger changes, open an issue first so we can talk it through, and run the full unit test suite before submitting.
 
-## Upstream star history
-
-<a href="https://www.star-history.com/?repos=MuQY1818%2FOpenYoink&amp;type=date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=MuQY1818/OpenYoink&amp;type=Date&amp;theme=dark">
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=MuQY1818/OpenYoink&amp;type=Date">
-    <img src="https://api.star-history.com/svg?repos=MuQY1818/OpenYoink&amp;type=Date" width="800" alt="OpenYoink GitHub stars over time">
-  </picture>
-</a>
-
 ## Credits and license
 
 Clerestory is based on [OpenYoink](https://github.com/MuQY1818/OpenYoink) by weijue and contributors and is released under the [MIT License](LICENSE).
 
-Updates are powered by [Sparkle](https://sparkle-project.org/), and the star chart comes from [Star History](https://www.star-history.com/). Third-party components and their licenses are listed in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+Updates are powered by [Sparkle](https://sparkle-project.org/). Third-party components and their licenses are listed in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 <br>
 

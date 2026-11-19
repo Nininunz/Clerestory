@@ -62,4 +62,4 @@ For a read-only idle sample, run `swift Scripts/diagnostics/profile-idle.swift P
 
 ## Release smoke check
 
-Follow the [signed release and Sparkle guide](FORK_RELEASE.md) for packaging and feed validation. A fresh macOS account or VM is needed to establish first-launch and permission behavior. A distinct physical display and supported Intel hardware are separate checks when available.
+Follow the [signed release and Sparkle guide](RELEASING.md) for packaging and feed validation. A fresh macOS account or VM is needed to establish first-launch and permission behavior. A distinct physical display and supported Intel hardware are separate checks when available.

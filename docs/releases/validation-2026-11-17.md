@@ -1,6 +1,6 @@
 # Release preparation validation: November 17, 2026
 
-This historical record preserves the state observed during the first release cycle. See the [release and Sparkle guide](../FORK_RELEASE.md) for the current procedure.
+This historical record preserves the state observed during the first release cycle. See the [release and Sparkle guide](../RELEASING.md) for the current procedure.
 
 Scope: `release-prep`, macOS 27.2.1 on Apple silicon, Xcode 27.2.0.
 Current signed candidate: **1.0.0 (55)**. No release has been published.
@@ -12,7 +12,7 @@ The earlier 1.8.x versions below were unpublished update-test candidates.
   1.8.11 (52) to 1.8.12 (53). Both candidates were notarized.
 - Automatic local-feed discovery, user-approved install, replacement at the
   original path, and relaunch passed. File/snippet contents and a preference
-  persisted. See `docs/FORK_RELEASE.md`.
+  persisted. See `docs/RELEASING.md`.
 - Launch with the fork's shelf test data removed succeeded; Settings opened.
   Automatic checking is enabled and currently reports a retrieval error because
   the public feed is not deployed.
