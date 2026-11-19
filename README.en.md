@@ -127,6 +127,6 @@ Updates are powered by [Sparkle](https://sparkle-project.org/). Third-party comp
 
 <div align="center">
 
-© 2026 weijue · MIT License
+© 2026 weijue, Nicholas Nunziata · MIT License
 
 </div>
