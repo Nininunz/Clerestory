@@ -125,6 +125,46 @@ final class IslandPresentationControllerTests: XCTestCase {
         }
     }
 
+    func testResumeHoverDismissalArmsHoverOnlyForAnUnpinnedOpenPanel() throws {
+        let name = "IslandHoverResume.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let settings = SettingsStore(defaults: defaults)
+        let coordinator = IslandActivityCoordinator(defaults: defaults)
+        let registry = IslandModuleRegistry()
+        registry.apply(settings: settings)
+        let screen = geometry(notched: true)
+        let presentation = IslandPresentationController(
+            settings: settings, coordinator: coordinator, registry: registry,
+            modules: IslandModuleContainer(registrations: [], messages: .forTesting()),
+            notices: { nil }, collapse: { _ in coordinator.collapse() },
+            makePanel: { _ in
+                let panel = ShelfPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel],
+                    backing: .buffered, defer: false)
+                panel.isReleasedWhenClosed = false
+                return panel
+            }, screenGeometry: { _ in screen }, notchScreenGeometry: { screen })
+        presentation.connect()
+        presentation.activate()
+        defer { presentation.deactivate() }
+
+        presentation.resumeHoverDismissal()
+        XCTAssertEqual(presentation.hoverPreviewPhase, .idle, "A closed panel has nothing to dismiss")
+
+        // Opening the panel directly (as a drag does) does not arm hover dismissal by itself.
+        coordinator.show(module: .shelf, pinned: false)
+        coordinator.completeSurfaceTransition(coordinator.surfaceTransitionID)
+        XCTAssertEqual(presentation.hoverPreviewPhase, .idle)
+        presentation.resumeHoverDismissal()
+        XCTAssertNotEqual(presentation.hoverPreviewPhase, .idle,
+                          "An open, unpinned panel follows the pointer again")
+
+        coordinator.setPinned(true)
+        coordinator.completeSurfaceTransition(coordinator.surfaceTransitionID)
+        presentation.resumeHoverDismissal()
+        XCTAssertEqual(presentation.hoverPreviewPhase, .idle, "A pinned panel stays")
+    }
+
     func testPanelTriggerDisplayIsIndependentOfNotchAndPinnedPointerMovement() throws {
         let name = "IslandDisplays.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: name))

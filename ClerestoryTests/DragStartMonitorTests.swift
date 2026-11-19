@@ -2,8 +2,8 @@ import AppKit
 import XCTest
 @testable import Clerestory
 
-/// UX1 Drag start state machine (DragGestureTracker) and pure logic unit test for auto-show session
-/// (DragAutoShowSession).
+/// UX1 Drag start state machine (DragGestureTracker) and pure logic unit tests for the auto-show
+/// session (DragAutoShowSession) and the Panel drag-end decision (IslandDragEndSession).
 final class DragStartMonitorTests: XCTestCase {
     func testTextApproachRequiresFreshDragPayloadAndCannotLeakIntoNextGesture() {
         for types in [[NSPasteboard.PasteboardType.string], [.string, .html, .rtf]] {
@@ -262,5 +262,158 @@ final class DragStartMonitorTests: XCTestCase {
         session.dragBegan()
         session.markShownAutomatically()
         XCTAssertTrue(session.dragEnded())
+    }
+
+    // MARK: - IslandDragEndSession
+
+    @MainActor
+    func testPanelDrag_importReportedAfterMouseUpKeepsPanelOpen() {
+        let coordinator = IslandActivityCoordinator()
+        var session = panelDestinationSession()
+        coordinator.beginDrag()
+        // Mouse-up arrives before AppKit delivers the drop to the Panel.
+        XCTAssertEqual(session.mouseUp(), .awaitDestination(generation: session.generation))
+        XCTAssertTrue(coordinator.surfaceState.isExpanded)
+        session.noteImport()
+        let step = session.destinationEnded(sequenceNumber: 10, accepted: true)
+        XCTAssertEqual(step, .endDrag(imported: true))
+        coordinator.endDrag(imported: true, hasPendingNotice: false)
+        XCTAssertEqual(coordinator.surfaceState, .expanded)
+        XCTAssertEqual(session.destinationTimedOut(generation: session.generation), .noAction,
+                       "The timeout of a decided drag does nothing")
+    }
+
+    func testPanelDrag_destinationBeforeMouseUpDecidesAtMouseUp() {
+        var session = panelDestinationSession()
+        session.noteImport()
+        XCTAssertEqual(session.destinationEnded(sequenceNumber: 10, accepted: true), .noAction)
+        XCTAssertEqual(session.mouseUp(), .endDrag(imported: true))
+    }
+
+    @MainActor
+    func testPanelDrag_noImportCollapses() {
+        for destinationFirst in [true, false] {
+            let coordinator = IslandActivityCoordinator()
+            var session = panelDestinationSession()
+            coordinator.beginDrag()
+            let step: IslandDragEndSession.Step
+            if destinationFirst {
+                XCTAssertEqual(session.destinationEnded(sequenceNumber: 10, accepted: false), .noAction)
+                step = session.mouseUp()
+            } else {
+                XCTAssertNotEqual(session.mouseUp(), .noAction)
+                step = session.destinationEnded(sequenceNumber: 10, accepted: false)
+            }
+            XCTAssertEqual(step, .endDrag(imported: false))
+            coordinator.endDrag(imported: false)
+            XCTAssertEqual(coordinator.surfaceState, .collapsed)
+        }
+    }
+
+    @MainActor
+    func testPanelDrag_pendingShelfNoticeCollapsesAfterLateImport() {
+        let coordinator = IslandActivityCoordinator()
+        var session = panelDestinationSession()
+        coordinator.beginDrag()
+        _ = session.mouseUp()
+        XCTAssertEqual(session.destinationEnded(sequenceNumber: 10, accepted: true), .endDrag(imported: true))
+        // The caller reads the notice state when the step arrives, after the drop posted it.
+        coordinator.endDrag(imported: true, hasPendingNotice: true)
+        XCTAssertEqual(coordinator.surfaceState, .collapsed)
+    }
+
+    func testPanelDrag_destinationNeverEnteredDecidesAtMouseUp() {
+        for imported in [true, false] {
+            var session = IslandDragEndSession()
+            _ = session.dragBegan()
+            session.markPanelActivated()
+            if imported { session.noteImport() }
+            XCTAssertEqual(session.mouseUp(), .endDrag(imported: imported))
+            XCTAssertFalse(session.isAwaitingDestination)
+        }
+    }
+
+    func testPanelDrag_dragThatDidNotOpenPanelNeverEndsIt() {
+        var session = IslandDragEndSession()
+        _ = session.dragBegan()
+        session.destinationEntered(sequenceNumber: 10)
+        XCTAssertEqual(session.mouseUp(), .noAction)
+        XCTAssertEqual(session.destinationEnded(sequenceNumber: 10, accepted: true), .noAction)
+        // Activation outside a drag is ignored.
+        session.markPanelActivated()
+        XCTAssertFalse(session.didActivatePanel)
+    }
+
+    func testPanelDrag_lateCallbackFromOlderDragIsIgnored() {
+        var session = panelDestinationSession()
+        XCTAssertEqual(session.mouseUp(), .awaitDestination(generation: session.generation))
+        // A new drag starts before the old destination reported; the old drag ends now.
+        XCTAssertEqual(session.dragBegan(), .endDrag(imported: false))
+        session.markPanelActivated()
+        session.destinationEntered(sequenceNumber: 11)
+        XCTAssertEqual(session.destinationEnded(sequenceNumber: 10, accepted: true), .noAction,
+                       "A late callback from the old drag is ignored")
+        session.destinationEntered(sequenceNumber: 12)
+        XCTAssertEqual(session.mouseUp(), .awaitDestination(generation: session.generation))
+        XCTAssertEqual(session.destinationEnded(sequenceNumber: 12, accepted: true), .noAction,
+                       "Another drag's destination cannot take over")
+        XCTAssertEqual(session.destinationEnded(sequenceNumber: 11, accepted: true), .endDrag(imported: true))
+
+        // A callback for the finished drag cannot end the next one.
+        _ = session.dragBegan()
+        session.markPanelActivated()
+        XCTAssertEqual(session.destinationEnded(sequenceNumber: 11, accepted: true), .noAction)
+        XCTAssertEqual(session.mouseUp(), .endDrag(imported: false))
+    }
+
+    func testPanelDrag_duplicateDestinationEndKeepsFirstResult() {
+        var session = panelDestinationSession()
+        XCTAssertEqual(session.destinationEnded(sequenceNumber: 10, accepted: true), .noAction)
+        XCTAssertEqual(session.destinationEnded(sequenceNumber: 10, accepted: false), .noAction)
+        XCTAssertEqual(session.mouseUp(), .endDrag(imported: true))
+    }
+
+    func testPanelDrag_timeoutDecidesWithWhatIsKnown() {
+        for imported in [true, false] {
+            var session = panelDestinationSession()
+            guard case .awaitDestination(let generation) = session.mouseUp() else {
+                return XCTFail("Expected to wait for the destination")
+            }
+            if imported { session.noteImport() }
+            XCTAssertEqual(session.destinationTimedOut(generation: generation &- 1), .noAction,
+                           "An older drag's timeout is ignored")
+            XCTAssertEqual(session.destinationTimedOut(generation: generation), .endDrag(imported: imported))
+            XCTAssertEqual(session.destinationEnded(sequenceNumber: 10, accepted: true), .noAction,
+                           "A destination reporting after the timeout is ignored")
+        }
+    }
+
+    func testPanelDrag_timeoutFromOlderDragCannotEndNewDrag() {
+        var session = panelDestinationSession()
+        guard case .awaitDestination(let oldGeneration) = session.mouseUp() else {
+            return XCTFail("Expected to wait for the destination")
+        }
+        _ = session.dragBegan()
+        session.markPanelActivated()
+        session.destinationEntered(sequenceNumber: 11)
+        XCTAssertEqual(session.mouseUp(), .awaitDestination(generation: session.generation))
+        XCTAssertEqual(session.destinationTimedOut(generation: oldGeneration), .noAction)
+        XCTAssertTrue(session.isAwaitingDestination)
+    }
+
+    func testPanelDrag_importOutsideDragIsIgnored() {
+        var session = IslandDragEndSession()
+        session.noteImport()
+        _ = session.dragBegan()
+        session.markPanelActivated()
+        XCTAssertEqual(session.mouseUp(), .endDrag(imported: false))
+    }
+
+    private func panelDestinationSession() -> IslandDragEndSession {
+        var session = IslandDragEndSession()
+        _ = session.dragBegan()
+        session.markPanelActivated()
+        session.destinationEntered(sequenceNumber: 10)
+        return session
     }
 }

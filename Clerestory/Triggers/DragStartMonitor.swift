@@ -140,6 +140,119 @@ struct DragAutoShowSession: Sendable, Equatable {
     }
 }
 
+/// Decides when a Panel opened by a drag learns how that drag ended (pure logic, decoupled from
+/// AppKit).
+///
+/// `DragStartMonitor` reports mouse-up from the global event stream, and AppKit can call
+/// `performDragOperation` on the Panel after that, so the import may not have happened at
+/// mouse-up. Once a Panel drop destination has seen the drag, the decision waits for both
+/// mouse-up and that destination's completion, the same way `DragAutoShowSession` waits for
+/// the classic Shelf. A drag no Panel destination saw decides at mouse-up. If the destination
+/// never reports, `destinationTimedOut(generation:)` decides with what is known.
+struct IslandDragEndSession: Sendable, Equatable {
+    /// How long to wait for a Panel destination after mouse-up.
+    static let destinationTimeout: Duration = .seconds(1)
+
+    /// What the caller does after an event.
+    enum Step: Sendable, Equatable {
+        /// Nothing to do now.
+        case noAction
+        /// Wait for the destination; call `destinationTimedOut(generation:)` after
+        /// `destinationTimeout`.
+        case awaitDestination(generation: Int)
+        /// End the Panel drag now with this result.
+        case endDrag(imported: Bool)
+    }
+
+    /// Identifies the current drag so a timeout from an older drag is ignored.
+    private(set) var generation = 0
+    private(set) var isDragging = false
+    /// Whether this drag opened the Panel.
+    private(set) var didActivatePanel = false
+    /// Mouse-up has arrived and the decision waits for the destination.
+    private(set) var isAwaitingDestination = false
+    private var receivedImport = false
+    private var destinationSequenceNumber: Int?
+    private var destinationDidEnd = false
+    private var destinationAccepted = false
+
+    /// Starts a new drag. A previous drag that is still waiting for its destination ends now
+    /// with what is known, so the Panel never stays in its drag state.
+    mutating func dragBegan() -> Step {
+        let previous: Step = isAwaitingDestination ? .endDrag(imported: imported) : .noAction
+        reset()
+        generation &+= 1
+        isDragging = true
+        return previous
+    }
+
+    /// This drag opened the Panel, so its end decides whether the Panel stays open.
+    mutating func markPanelActivated() {
+        guard isDragging else { return }
+        didActivatePanel = true
+    }
+
+    /// Content from this drag reached Shelf.
+    mutating func noteImport() {
+        guard isDragging || isAwaitingDestination else { return }
+        receivedImport = true
+    }
+
+    /// A Panel destination has seen this drag; it now owns completion. A callback from an
+    /// older drag cannot take over a new one.
+    mutating func destinationEntered(sequenceNumber: Int) {
+        guard isDragging,
+              destinationSequenceNumber == nil || destinationSequenceNumber == sequenceNumber else { return }
+        destinationSequenceNumber = sequenceNumber
+    }
+
+    /// The destination finished: it accepted a drop, or the drag was rejected, cancelled or
+    /// dropped elsewhere. Ends the Panel drag if mouse-up has already arrived.
+    mutating func destinationEnded(sequenceNumber: Int, accepted: Bool) -> Step {
+        guard destinationSequenceNumber == sequenceNumber, !destinationDidEnd else { return .noAction }
+        destinationDidEnd = true
+        destinationAccepted = accepted
+        return isAwaitingDestination ? finish() : .noAction
+    }
+
+    /// Mouse-up ended the drag.
+    mutating func mouseUp() -> Step {
+        guard isDragging else { return .noAction }
+        isDragging = false
+        guard didActivatePanel else {
+            reset()
+            return .noAction
+        }
+        if destinationSequenceNumber != nil && !destinationDidEnd {
+            isAwaitingDestination = true
+            return .awaitDestination(generation: generation)
+        }
+        return finish()
+    }
+
+    /// The destination did not report in time. Decide with what is known.
+    mutating func destinationTimedOut(generation: Int) -> Step {
+        guard isAwaitingDestination, generation == self.generation else { return .noAction }
+        return finish()
+    }
+
+    private var imported: Bool {
+        receivedImport || (destinationDidEnd && destinationAccepted)
+    }
+
+    private mutating func finish() -> Step {
+        let step = Step.endDrag(imported: imported)
+        reset()
+        return step
+    }
+
+    private mutating func reset() {
+        let generation = generation
+        self = Self()
+        self.generation = generation
+    }
+}
+
 /// Global Shelf-content drag monitor. A fresh drag pasteboard change establishes the
 /// session; a common-run-loop poll fills gaps in AppKit mouse event delivery.
 ///

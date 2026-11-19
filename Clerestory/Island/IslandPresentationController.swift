@@ -506,6 +506,18 @@ final class IslandPresentationController: NSObject {
         }
     }
 
+    /// The open panel follows the pointer again, as after unpinning: it stays while the pointer
+    /// is over it and closes after the usual delay once the pointer leaves. A drop that keeps a
+    /// drag-opened panel open calls this, so moving away closes it.
+    func resumeHoverDismissal() {
+        guard islandActivityCoordinator.surfaceState == .expanded else { return }
+        let inside = hoverKeepAliveFrame(for: islandLayout()).contains(NSEvent.mouseLocation)
+        performIslandHoverActions(islandHoverPreview.handle(.unpinned(pointerInside: inside)))
+    }
+
+    /// The hover preview's phase, for tests.
+    var hoverPreviewPhase: IslandHoverPreviewStateMachine.Phase { islandHoverPreview.phase }
+
     func resetIslandHoverPreview(restoreSelection: Bool) {
         let actions = islandHoverPreview.handle(.reset)
         islandHoverTask?.cancel()

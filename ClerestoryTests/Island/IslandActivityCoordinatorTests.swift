@@ -13,6 +13,28 @@ final class IslandActivityCoordinatorTests: XCTestCase {
         }
     }
 
+    func testEndDragReportsOnlyADragOpenedPanelThatADropKeepsOpen() {
+        let opened = IslandActivityCoordinator()
+        opened.beginDrag()
+        XCTAssertTrue(opened.endDrag(imported: true), "The drag opened it and the drop keeps it open")
+        XCTAssertEqual(opened.surfaceState, .expanded)
+
+        let userOpened = IslandActivityCoordinator()
+        userOpened.show(module: .shelf, pinned: false)
+        userOpened.beginDrag()
+        XCTAssertFalse(userOpened.endDrag(imported: true), "It was already open before the drag")
+
+        let pinned = IslandActivityCoordinator()
+        pinned.show(module: .shelf, pinned: true)
+        pinned.beginDrag()
+        XCTAssertFalse(pinned.endDrag(imported: true))
+
+        let empty = IslandActivityCoordinator()
+        empty.beginDrag()
+        XCTAssertFalse(empty.endDrag(imported: false), "Nothing landed, so it closes")
+        XCTAssertEqual(empty.surfaceState, .collapsed)
+    }
+
     func testNotchActivationPreservesPinWhileSwitchingModules() {
         let coordinator = IslandActivityCoordinator()
         coordinator.show(module: .quickSettings, pinned: true)

@@ -475,7 +475,10 @@ final class IslandActivityCoordinator {
         setSurfaceState(.expanded)
     }
 
-    func endDrag(imported: Bool, hasPendingNotice: Bool = false) {
+    /// Returns `true` when the drag opened the panel and the drop keeps it open, so the caller
+    /// can hand it to hover dismissal.
+    @discardableResult
+    func endDrag(imported: Bool, hasPendingNotice: Bool = false) -> Bool {
         if isDragInProgress {
             isDragInProgress = false
             onStateDidChange?()
@@ -486,10 +489,12 @@ final class IslandActivityCoordinator {
         }
         // New drop feedback waits for the transient drag-opened panel to close.
         guard !imported || hasPendingNotice else {
+            let openedByDrag = !(stateBeforeDrag?.isExpanded ?? false)
             setSurfaceState(.expanded)
-            return
+            return openedByDrag
         }
         if let moduleBeforeDrag { selectedModule = moduleBeforeDrag }
         setSurfaceState(stateBeforeDrag ?? .collapsed)
+        return false
     }
 }
