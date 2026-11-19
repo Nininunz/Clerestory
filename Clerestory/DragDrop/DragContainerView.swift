@@ -1,24 +1,5 @@
 import AppKit
 
-/// Optional destination override for module-specific drops. When active it
-/// owns the complete drop decision, so a rejected file cannot silently fall
-/// through into the shared ShelfStore behind another module's UI.
-@MainActor
-struct DragContainerDropOverride {
-    let isActive: @MainActor () -> Bool
-    let canHandle: @MainActor (DragContainerDropContext) -> Bool
-    let perform: @MainActor (DragContainerDropContext) -> Bool
-    var reset: @MainActor () -> Void = {}
-}
-
-@MainActor
-struct DragContainerDropContext {
-    let pasteboard: NSPasteboard
-    let location: CGPoint
-    let isInternal: Bool
-    let internalItems: [ShelfItem]?
-}
-
 /// Drag position/hover/insert state, driven by `DragContainerView` (NSDraggingDestination),
 /// and injected via `@Environment` to `ShelfView` for rendering drop highlight and insertion guide line
 /// (S3 reserved style).
@@ -84,7 +65,9 @@ final class DragContainerView: NSView {
     private let dropTargetState: DropTargetState
     /// S10: Card grid geometry (reported by SwiftUI), used for drag-in insertion positioning.
     private let gridGeometry: ShelfGridGeometry
-    private let dropOverride: DragContainerDropOverride?
+    /// Returns true while a module that takes no drops is shown, so a file
+    /// cannot silently fall through into the shared ShelfStore behind it.
+    private let refusesDrops: @MainActor () -> Bool
     private let onDestinationEntered: (Int) -> Void
     private let onDestinationEnded: (Int, Bool) -> Void
     private let onNativeShelfDrag: () -> Void
@@ -102,7 +85,7 @@ final class DragContainerView: NSView {
          coordinator: DropImportCoordinator,
          dropTargetState: DropTargetState,
          gridGeometry: ShelfGridGeometry,
-         dropOverride: DragContainerDropOverride? = nil,
+         refusesDrops: @escaping @MainActor () -> Bool = { false },
          onDestinationEntered: @escaping (Int) -> Void = { _ in },
          onDestinationEnded: @escaping (Int, Bool) -> Void = { _, _ in },
          onNativeShelfDrag: @escaping () -> Void = {},
@@ -112,7 +95,7 @@ final class DragContainerView: NSView {
         self.coordinator = coordinator
         self.dropTargetState = dropTargetState
         self.gridGeometry = gridGeometry
-        self.dropOverride = dropOverride
+        self.refusesDrops = refusesDrops
         self.onDestinationEntered = onDestinationEntered
         self.onDestinationEnded = onDestinationEnded
         self.onNativeShelfDrag = onNativeShelfDrag
@@ -178,16 +161,9 @@ final class DragContainerView: NSView {
         }
         currentDestinationSequenceNumber = sender.draggingSequenceNumber
         onDestinationEntered(sender.draggingSequenceNumber)
-        if let dropOverride, dropOverride.isActive() {
-            guard dropOverride.canHandle(dropContext(sender)) else {
-                dropTargetState.reset()
-                return []
-            }
-            dropTargetState.target(destination: destinationID)
-            dropTargetState.insertionIndex = nil
-            dropTargetState.mode = .copy
-            dropTargetState.isReordering = false
-            return .copy
+        if refusesDrops() {
+            dropTargetState.reset()
+            return []
         }
         if let source = shelfReorderSource(from: sender) {
             resetReorderTravel()
@@ -225,14 +201,9 @@ final class DragContainerView: NSView {
         // The global monitor delivers drag-start on the main actor. Repeating
         // this idempotent registration also covers entering before that delivery.
         onDestinationEntered(sender.draggingSequenceNumber)
-        if let dropOverride, dropOverride.isActive() {
-            guard dropOverride.canHandle(dropContext(sender)) else {
-                dropTargetState.reset()
-                return []
-            }
-            dropTargetState.target(destination: destinationID)
-            dropTargetState.isReordering = false
-            return .copy
+        if refusesDrops() {
+            dropTargetState.reset()
+            return []
         }
         if let source = shelfReorderSource(from: sender) {
             dropTargetState.target(destination: destinationID)
@@ -263,7 +234,6 @@ final class DragContainerView: NSView {
     override func draggingExited(_ sender: NSDraggingInfo?) {
         resetReorderTravel()
         dropTargetState.leave(destination: destinationID)
-        dropOverride?.reset()
     }
 
     override func prepareForDragOperation(_ sender: NSDraggingInfo) -> Bool {
@@ -275,12 +245,7 @@ final class DragContainerView: NSView {
         guard Self.acceptsApproachPayload(sender.draggingPasteboard.types ?? [], isApproachZone: isApproachZone) else { return false }
         var accepted = false
         defer { onDestinationEnded(sender.draggingSequenceNumber, accepted) }
-        if let dropOverride, dropOverride.isActive() {
-            guard dropOverride.canHandle(dropContext(sender)) else { return false }
-            accepted = dropOverride.perform(dropContext(sender))
-            if accepted { (sender.draggingSource as? DragSessionController)?.acceptedByFolderCopy = true }
-            return accepted
-        }
+        if refusesDrops() { return false }
         if let source = shelfReorderSource(from: sender) {
             updateReorderInsertionIndex(sender, source: source)
             let destination = dropTargetState.insertionIndex ?? store.items.count
@@ -328,13 +293,11 @@ final class DragContainerView: NSView {
         currentDestinationSequenceNumber = nil
         resetReorderTravel()
         dropTargetState.leave(destination: destinationID)
-        dropOverride?.reset()
     }
 
     override func concludeDragOperation(_ sender: NSDraggingInfo?) {
         resetReorderTravel()
         dropTargetState.leave(destination: destinationID)
-        dropOverride?.reset()
     }
 
     // MARK: - Helpers
@@ -345,13 +308,6 @@ final class DragContainerView: NSView {
         ) as? [URL] ?? []
         dropTargetState.hasDuplicateFiles = dropTargetState.mode == .copy
             && urls.contains { store.containsFileReference(at: $0) }
-    }
-
-    private func dropContext(_ sender: NSDraggingInfo) -> DragContainerDropContext {
-        .init(pasteboard: sender.draggingPasteboard,
-              location: CGPoint(x: sender.draggingLocation.x, y: bounds.height - sender.draggingLocation.y),
-              isInternal: sender.draggingSource != nil,
-              internalItems: (sender.draggingSource as? DragSessionController)?.itemsForFolderCopy)
     }
 
     /// F-05: Read real-time modifier keys (`NSEvent.modifierFlags`) to refresh hover mode during the drag

@@ -63,7 +63,6 @@ extension IslandModuleID {
     static let battery = Self(rawValue: "battery")
     static let media = Self(rawValue: "media")
     static let system = Self(rawValue: "system")
-    static let folders = Self(rawValue: "folders")
     static let clipboard = Self(rawValue: "clipboard")
     static let aiUsage = Self(rawValue: "aiUsage")
 }
@@ -250,8 +249,6 @@ final class IslandModuleRegistry {
               systemImage: "gauge.with.dots.needle.67percent", order: 4, isCore: false),
         .init(id: .media, title: String(localized: "Now Playing"),
               systemImage: "music.note", order: 5, isCore: false),
-        .init(id: .folders, title: String(localized: "Quick Access"),
-              systemImage: "folder", order: 6, isCore: false),
         .init(id: .clipboard, title: String(localized: "Clipboard History"),
               systemImage: "doc.on.clipboard", order: 7, isCore: false),
         AIUsageModuleStore.moduleDescriptor,

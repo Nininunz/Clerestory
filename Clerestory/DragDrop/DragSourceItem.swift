@@ -284,9 +284,7 @@ final class DragOutController {
 @MainActor
 final class DragSessionController: NSObject, NSDraggingSource {
     private let contents: DragOutContents
-    var itemsForFolderCopy: [ShelfItem] { contents.items }
     var topLevelItemIDs: Set<UUID> { contents.topLevelIDs }
-    var acceptedByFolderCopy = false
     var acceptedByShelfReorder = false
     var canReorderOnShelf: Bool {
         !topLevelItemIDs.isEmpty
@@ -355,7 +353,7 @@ final class DragSessionController: NSObject, NSDraggingSource {
     func completeDrag(operation: NSDragOperation) {
         defer { fileAccess = nil }
         delivery?.noteDragSessionEnded()
-        if acceptedByFolderCopy || acceptedByShelfReorder {
+        if acceptedByShelfReorder {
             delivery?.noteSessionEnded(id: sessionID, accepted: false)
             return
         }

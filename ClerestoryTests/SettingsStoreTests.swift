@@ -70,8 +70,8 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertTrue(store.islandTimerEnabled)
         XCTAssertTrue(store.islandBatteryEnabled)
         XCTAssertFalse(store.islandMediaEnabled)
-        XCTAssertFalse(store.isIslandModuleEnabled(.folders))
-        XCTAssertFalse(store.isIslandModulePinned(.folders))
+        XCTAssertFalse(store.isIslandModuleEnabled(.clipboard))
+        XCTAssertFalse(store.isIslandModulePinned(.clipboard))
         XCTAssertEqual(store.islandModuleConfiguration.enabledModuleIDs,
                        [.shelf, .transfers, .timer, .battery, .system])
         XCTAssertEqual(store.islandModuleConfiguration.pinnedModuleIDs,

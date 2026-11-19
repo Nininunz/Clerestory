@@ -90,7 +90,7 @@ struct ModulePreviewHost: View {
         let ids: [String: IslandModuleID] = [
             "shelf": .shelf, "quick-settings": .quickSettings, "battery": .battery,
             "timer": .timer, "now-playing": .media, "ai-usage": .aiUsage,
-            "clipboard": .clipboard, "quick-access": .folders,
+            "clipboard": .clipboard,
             "transfers": .transfers, "system-status": .system
         ]
         return ids[slug].flatMap { IslandModuleRegistry().descriptor(for: $0) }

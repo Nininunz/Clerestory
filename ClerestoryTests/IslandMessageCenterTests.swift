@@ -785,9 +785,9 @@ final class IslandMessageCenterTests: XCTestCase {
         center.setShownModule(.shelf, othersWait: true)
         center.messenger(for: .battery).post(plain("power"))
         center.messenger(for: .timer).post(plain("done"))
-        center.messenger(for: .folders).post(plain("added"))
-        center.setShownModule(.folders, othersWait: true)
-        XCTAssertEqual(center.currentNotice?.moduleID, .folders)
+        center.messenger(for: .clipboard).post(plain("copied"))
+        center.setShownModule(.clipboard, othersWait: true)
+        XCTAssertEqual(center.currentNotice?.moduleID, .clipboard)
         XCTAssertEqual(center.waitingNotices.map(\.moduleID), [.battery, .timer])
     }
 
