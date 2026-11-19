@@ -102,6 +102,17 @@ struct ModuleMessenger {
         center?.setStatuses(statuses, from: moduleID)
     }
 
+    /// This module's statuses that are not dismissed, top first. Empty for `inert`.
+    var statuses: [IslandStatus] {
+        center?.statuses(for: moduleID) ?? []
+    }
+
+    /// Hides this module's dismissible status while the module keeps setting it, for a
+    /// control in the module's own page such as System Status "Ignore Once".
+    func dismissStatus(_ key: String) {
+        center?.dismissStatus(key, of: moduleID)
+    }
+
     /// A value for `IslandStatus.expiresAt`, this far from now on the center's clock.
     func expiry(after duration: Duration) -> Duration {
         (center?.now ?? .zero) + duration

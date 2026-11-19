@@ -11,15 +11,16 @@ import Observation
 /// 1. Each module has its own set, by key. Setting an equal value changes nothing, not even
 ///    for observers. A module that has not started (`moduleDidStart`) cannot set statuses, and
 ///    `moduleDidStop` clears its set.
-/// 2. A status is *raised* when it is new, its tone goes up, or its title changes. A raised
-///    `warning` or `critical` status that `announcesWhenRaised` is spoken once ("title,
-///    detail") and queues one notice with its text (key `status.<key>`). That notice is
+/// 2. A status is *raised* when it is new, its tone goes up, or its tone stays and its level
+///    goes up. A raised `warning` or `critical` status that `announcesWhenRaised` is spoken once
+///    ("title, detail") and queues one notice with its text (key `status.<key>`). That notice is
 ///    withdrawn when its module is, or becomes, the module shown in the panel, or when the
-///    status clears first. A change to the detail only is silent.
+///    status clears first. Any other change, to the title, the detail or a lower level, is
+///    silent.
 /// 3. A dismissed status stays hidden while its module keeps setting it. Once the module
 ///    clears it, the next raise shows it again.
-/// 4. Within a module, the top status has the highest tone, then the latest raise, then the
-///    lowest key.
+/// 4. Within a module, the top status has the highest tone, then the highest level, then the
+///    latest raise, then the lowest key.
 ///
 /// Notice rules:
 /// 1. A notice with the same module and key as the visible or a waiting one replaces that copy in
@@ -241,6 +242,7 @@ final class IslandMessageCenter {
             .filter { !$0.isDismissed }
             .sorted { lhs, rhs in
                 if lhs.status.tone != rhs.status.tone { return lhs.status.tone > rhs.status.tone }
+                if lhs.status.level != rhs.status.level { return lhs.status.level > rhs.status.level }
                 if lhs.raiseOrder != rhs.raiseOrder { return lhs.raiseOrder > rhs.raiseOrder }
                 return lhs.status.key < rhs.status.key
             }
@@ -265,7 +267,7 @@ final class IslandMessageCenter {
             if let previous = old[key] {
                 entry = previous
                 entry.status = status
-                if status.tone > previous.status.tone || status.title != previous.status.title {
+                if Self.isRaise(of: status, from: previous.status) {
                     lastRaise &+= 1
                     entry.raiseOrder = lastRaise
                     raised.append(entry)
@@ -286,6 +288,11 @@ final class IslandMessageCenter {
         for entry in raised where !entry.isDismissed {
             announceRaise(of: entry, from: moduleID)
         }
+    }
+
+    /// Worse than before: a higher tone, or the same tone at a higher level.
+    static func isRaise(of status: IslandStatus, from previous: IslandStatus) -> Bool {
+        status.tone > previous.tone || (status.tone == previous.tone && status.level > previous.level)
     }
 
     private func announceRaise(of entry: StatusEntry, from moduleID: IslandModuleID) {

@@ -104,10 +104,6 @@ final class ShelfWindowController: NSObject {
     let favoriteFoldersStore: FavoriteFoldersStore
     let favoriteFolderDropCoordinator: FavoriteFolderDropCoordinator
     let islandModuleContainer: IslandModuleContainer
-    private let transfersModuleRuntime: TransfersModuleRuntime
-    private let timerModuleRuntime: CallbackIslandModuleRuntime
-    private let mediaModuleRuntime: CallbackIslandModuleRuntime
-    private let favoriteFoldersModuleRuntime: CallbackIslandModuleRuntime
     private var classicHoverPreviewState = ClassicShelfHoverPreviewStateMachine()
     private var classicHoverExitTask: Task<Void, Never>?
     private var classicHoverGlobalMonitor: Any?
@@ -454,7 +450,8 @@ final class ShelfWindowController: NSObject {
             isSelectedAndExpanded: {
                 islandActivityCoordinator.surfaceState.isExpanded
                     && islandActivityCoordinator.selectedModule == .system
-            }
+            },
+            messenger: messages.messenger(for: .system)
         )
         let aiUsageModuleStore = AIUsageModuleStore(
             makeProvider: { TokenTrackerClient(port: settings.aiUsageServerPort) },
@@ -463,7 +460,8 @@ final class ShelfWindowController: NSObject {
                     && islandActivityCoordinator.selectedModule == .aiUsage
             },
             notchMetric: { settings.aiUsageNotchMetric },
-            alertsEnabled: { settings.aiUsageLimitAlertsEnabled }
+            alertsEnabled: { settings.aiUsageLimitAlertsEnabled },
+            messenger: messages.messenger(for: .aiUsage)
         )
         let favoriteFoldersStore = FavoriteFoldersStore(
             persistence: FavoriteFoldersPersistenceController(),
@@ -475,7 +473,8 @@ final class ShelfWindowController: NSObject {
             descriptor: islandModuleRegistry.descriptor(for: .shelf)!
         )
         let transfersModuleRuntime = TransfersModuleRuntime(
-            transferStore: importCoordinator.transferStore
+            transferStore: importCoordinator.transferStore,
+            messenger: messages.messenger(for: .transfers)
         )
         // Recording belongs to the app lifecycle, independently of Island.
         let clipboardRuntime = CallbackIslandModuleRuntime(
@@ -510,10 +509,6 @@ final class ShelfWindowController: NSObject {
         self.aiUsageModuleStore = aiUsageModuleStore
         self.favoriteFoldersStore = favoriteFoldersStore
         self.favoriteFolderDropCoordinator = favoriteFolderDropCoordinator
-        self.transfersModuleRuntime = transfersModuleRuntime
-        self.timerModuleRuntime = timerModuleRuntime
-        self.mediaModuleRuntime = mediaModuleRuntime
-        self.favoriteFoldersModuleRuntime = favoriteFoldersModuleRuntime
         self.islandModuleContainer = IslandModuleContainer(
             registrations: [
                 IslandModuleRegistration(
@@ -615,24 +610,18 @@ final class ShelfWindowController: NSObject {
         transferAnnouncements = TransferAnnouncementObserver(transferStore: importCoordinator.transferStore,
                                                              announcer: messages.announcer)
         islandPresentation.connect()
-        islandTimerStore.onActivity = { [weak self] activity in
-            self?.timerModuleRuntime.replaceActivity(activity)
-            if activity?.priority == .timerFinished,
-               self?.settings.isIslandModuleAvailable(.timer) == true,
-               let self,
-               self.settings.islandEnabled,
-               self.hasAvailableIslandDisplay,
-               self.islandActivityCoordinator.surfaceState != .pinned {
-                self.islandActivityCoordinator.show(module: .timer)
-            }
+        islandTimerStore.messenger = messages.messenger(for: .timer)
+        islandTimerStore.onDidFinish = { [weak self] in
+            guard let self,
+                  self.settings.isIslandModuleAvailable(.timer),
+                  self.settings.islandEnabled,
+                  self.hasAvailableIslandDisplay,
+                  self.islandActivityCoordinator.surfaceState != .pinned else { return }
+            self.islandActivityCoordinator.show(module: .timer)
         }
         powerSourceMonitor.messenger = messages.messenger(for: .battery)
-        favoriteFolderDropCoordinator.onActivity = { [weak self] activity in
-            self?.favoriteFoldersModuleRuntime.replaceActivity(activity)
-        }
-        nowPlayingModuleStore.onActivity = { [weak self] activity in
-            self?.mediaModuleRuntime.replaceActivity(activity)
-        }
+        favoriteFolderDropCoordinator.messenger = messages.messenger(for: .folders)
+        nowPlayingModuleStore.messenger = messages.messenger(for: .media)
         // Item updates can animate the height and trigger empty-Shelf auto-hide.
         store.onItemsDidChange = { [weak self] in
             self?.handleItemsDidChange()
@@ -1750,7 +1739,6 @@ final class ShelfWindowController: NSObject {
     /// ActivityStrip changes compact height but must not participate in the
     /// non-empty → empty auto-hide state machine.
     private func handleActivityVisibilityDidChange() {
-        transfersModuleRuntime.refresh()
         applyClassicLayout()
     }
 

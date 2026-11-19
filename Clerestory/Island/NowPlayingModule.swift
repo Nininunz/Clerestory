@@ -209,7 +209,8 @@ final class NowPlayingModuleStore: IslandModule {
     private(set) var availability: Availability = .disabled
     private(set) var snapshot: NowPlayingSnapshot?
     private(set) var snapshotReceivedAt = Date()
-    var onActivity: (@MainActor (IslandActivity?) -> Void)?
+    /// Where Now Playing sets its "playing" status.
+    @ObservationIgnored var messenger: ModuleMessenger = .inert
 
     init(sourceFactory: @escaping @MainActor () -> NowPlayingSource? = { nil }) {
         self.sourceFactory = sourceFactory
@@ -260,7 +261,7 @@ final class NowPlayingModuleStore: IslandModule {
             self.snapshot = nextSnapshot
             self.snapshotReceivedAt = receivedAt
             self.availability = .available
-            self.publishActivity()
+            self.updateStatus()
         }, onFailure: { [weak self] in
             guard let self, self.isEnabled, self.sourceGeneration == generation else { return }
             self.sourceGeneration &+= 1
@@ -268,7 +269,7 @@ final class NowPlayingModuleStore: IslandModule {
             self.source = nil
             self.snapshot = nil
             self.availability = .unavailable
-            self.onActivity?(nil)
+            self.updateStatus()
         })
     }
 
@@ -294,7 +295,7 @@ final class NowPlayingModuleStore: IslandModule {
         seekFailureCounts.removeAll()
         seekUnsupportedSources.removeAll()
         availability = .disabled
-        onActivity?(nil)
+        updateStatus()
     }
 
     var supportsTransportControls: Bool {
@@ -355,16 +356,18 @@ final class NowPlayingModuleStore: IslandModule {
         return min(max(0, reportedElapsed + drift), duration)
     }
 
-    private func publishActivity() {
+    /// A neutral "playing" status that follows the snapshot, or none without one.
+    private func updateStatus() {
         guard let snapshot else {
-            onActivity?(nil)
+            messenger.setStatuses([])
             return
         }
-        onActivity?(.init(id: "media.now-playing", moduleID: .media,
-                          priority: .nowPlaying,
-                          title: snapshot.title, detail: snapshot.artist,
-                          systemImage: snapshot.isPlaying ? "waveform" : "pause.fill",
-                          expiresAt: nil))
+        messenger.setStatuses([IslandStatus(
+            key: "playing",
+            title: snapshot.title,
+            detail: snapshot.artist,
+            systemImage: snapshot.isPlaying ? "waveform" : "pause.fill"
+        )])
     }
 
     private var seekCapabilityKey: String {

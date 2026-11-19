@@ -473,12 +473,11 @@ final class SystemStatusModuleStore: IslandModuleRuntime {
         order: 4,
         isCore: false
     )
-    let events: AsyncStream<IslandModuleEvent>
 
     private let provider: any SystemStatusProviding
     private let isSelectedAndExpanded: @MainActor () -> Bool
     private let now: @MainActor () -> Date
-    private let continuation: AsyncStream<IslandModuleEvent>.Continuation
+    @ObservationIgnored private let messenger: ModuleMessenger
     @ObservationIgnored private var samplingTask: Task<Void, Never>?
     @ObservationIgnored private var immediateRefreshTask: Task<Void, Never>?
     @ObservationIgnored nonisolated(unsafe) private var notificationTokens: [NSObjectProtocol] = []
@@ -486,25 +485,32 @@ final class SystemStatusModuleStore: IslandModuleRuntime {
         DispatchSourceMemoryPressure?
     @ObservationIgnored nonisolated(unsafe) private var batteryRunLoopSource: CFRunLoopSource?
     private var applicationAlertEvaluator = SystemApplicationAlertEvaluator()
-    private var publishedWarningIDs: Set<String> = []
-    private var ignoredWarningIDs: Set<String> = []
     private var eventMemoryPressure: SystemMemoryPressure?
 
     private(set) var snapshot = SystemSnapshot.unavailable()
     private(set) var isRunning = false
-    private(set) var alerts: [IslandActivity] = []
+    /// The warnings the latest sample found, in a stable order. Each is also a status in the
+    /// message center, which remembers the ones the user ignored.
+    private var warnings: [IslandStatus] = []
+
+    /// The warnings the page lists: the latest sample's, without the ones the user ignored.
+    var alerts: [IslandStatus] {
+        // Previews have no center, so they list every warning.
+        guard messenger.isConnected else { return warnings }
+        let shown = Set(messenger.statuses.map(\.key))
+        return warnings.filter { shown.contains($0.key) }
+    }
 
     init(
         provider: any SystemStatusProviding = SystemStatusSampler(),
         isSelectedAndExpanded: @escaping @MainActor () -> Bool,
-        now: @escaping @MainActor () -> Date = Date.init
+        now: @escaping @MainActor () -> Date = Date.init,
+        messenger: ModuleMessenger = .inert
     ) {
         self.provider = provider
         self.isSelectedAndExpanded = isSelectedAndExpanded
         self.now = now
-        var capturedContinuation: AsyncStream<IslandModuleEvent>.Continuation?
-        events = AsyncStream { continuation in capturedContinuation = continuation }
-        continuation = capturedContinuation!
+        self.messenger = messenger
     }
 
     deinit {
@@ -522,6 +528,12 @@ final class SystemStatusModuleStore: IslandModuleRuntime {
         startMemoryPressureMonitoring()
         startBatteryMonitoring()
         restartSampling()
+    }
+
+    /// Marks the store running without its sampling loop or system observers, so a test drives
+    /// every sample through `refresh()` itself.
+    func startForTesting() {
+        isRunning = true
     }
 
     private func restartSampling() {
@@ -551,9 +563,8 @@ final class SystemStatusModuleStore: IslandModuleRuntime {
         unregisterNotifications()
         stopMemoryPressureMonitoring()
         stopBatteryMonitoring()
-        alerts = []
-        publishedWarningIDs = []
-        continuation.yield(.removeAllActivities)
+        warnings = []
+        messenger.setStatuses([])
     }
 
     func refresh() async {
@@ -565,10 +576,9 @@ final class SystemStatusModuleStore: IslandModuleRuntime {
         evaluateWarnings()
     }
 
-    func ignoreAlert(id: String) {
-        ignoredWarningIDs.insert(id)
-        continuation.yield(.removeActivity(id: id))
-        alerts.removeAll { $0.id == id }
+    /// Hides the warning until its condition clears and returns.
+    func ignoreAlert(_ key: String) {
+        messenger.dismissStatus(key)
     }
 
     private func requestImmediateRefresh() {
@@ -666,33 +676,37 @@ final class SystemStatusModuleStore: IslandModuleRuntime {
         self.batteryRunLoopSource = nil
     }
 
+    /// Every sample sets the whole set of warnings. Thermal, memory and disk warnings are
+    /// announced once when raised; critical memory pressure or thermal state is level 1, so
+    /// getting worse announces again and improving is silent. An application alert is not: the evaluator reports it once
+    /// per cooldown, so it lasts until the next sample, without an expiry of its own.
     private func evaluateWarnings() {
         let date = now()
-        var next: [IslandActivity] = []
+        var next: [IslandStatus] = []
         if snapshot.memoryPressure == .warning || snapshot.memoryPressure == .critical {
-            next.append(.init(
-                id: "system.memory-pressure",
-                moduleID: .system,
-                priority: .systemWarning,
+            next.append(IslandStatus(
+                key: "memory-pressure",
                 title: snapshot.memoryPressure == .critical
                     ? String(localized: "Memory pressure is critical")
                     : String(localized: "Memory pressure is high"),
-                detail: String(localized: "View system details"),
+                detail: String(localized: "Apps may slow down"),
                 systemImage: "memorychip",
-                expiresAt: nil
+                tone: .warning,
+                level: snapshot.memoryPressure == .critical ? 1 : 0,
+                isDismissible: true
             ))
         }
         if snapshot.thermalStatus == .serious || snapshot.thermalStatus == .critical {
-            next.append(.init(
-                id: "system.thermal",
-                moduleID: .system,
-                priority: .systemWarning,
+            next.append(IslandStatus(
+                key: "thermal",
                 title: snapshot.thermalStatus == .critical
                     ? String(localized: "Mac thermal state is critical")
                     : String(localized: "Mac thermal state is serious"),
                 detail: String(localized: "Performance may be reduced"),
                 systemImage: "thermometer.high",
-                expiresAt: nil
+                tone: .warning,
+                level: snapshot.thermalStatus == .critical ? 1 : 0,
+                isDismissible: true
             ))
         }
         if let available = snapshot.diskAvailableBytes,
@@ -700,38 +714,28 @@ final class SystemStatusModuleStore: IslandModuleRuntime {
            total > 0,
            available < 20_000_000_000,
            Double(available) / Double(total) < 0.10 {
-            next.append(.init(
-                id: "system.disk-space",
-                moduleID: .system,
-                priority: .systemWarning,
+            next.append(IslandStatus(
+                key: "disk-space",
                 title: String(localized: "Disk space is low"),
                 detail: ByteCountFormatter.string(fromByteCount: available, countStyle: .file),
                 systemImage: "externaldrive.badge.exclamationmark",
-                expiresAt: nil
+                tone: .warning,
+                isDismissible: true
             ))
         }
         for application in applicationAlertEvaluator.alerts(for: snapshot, at: date) {
-            next.append(.init(
-                id: "system.application.\(application.id)",
-                moduleID: .system,
-                priority: .systemWarning,
+            next.append(IslandStatus(
+                key: "application.\(application.id)",
                 title: String(localized: "\(application.name) is using significant resources"),
                 detail: Self.applicationDetail(application),
                 systemImage: "app.badge",
-                expiresAt: date.addingTimeInterval(12)
+                tone: .warning,
+                announcesWhenRaised: false,
+                isDismissible: true
             ))
         }
-
-        let currentConditionIDs = Set(next.map(\.id))
-        ignoredWarningIDs.formIntersection(currentConditionIDs)
-        let visible = next.filter { !ignoredWarningIDs.contains($0.id) }
-        let nextIDs = Set(visible.map(\.id))
-        for removedID in publishedWarningIDs.subtracting(nextIDs) {
-            continuation.yield(.removeActivity(id: removedID))
-        }
-        for activity in visible { continuation.yield(.publishActivity(activity)) }
-        publishedWarningIDs = nextIDs
-        alerts = visible
+        if warnings != next { warnings = next }
+        messenger.setStatuses(next)
     }
 
     private static func applicationDetail(_ application: SystemProcessMetric) -> String {
@@ -746,10 +750,10 @@ final class SystemStatusModuleStore: IslandModuleRuntime {
 #if DEBUG
 // Isolated, non-running fixtures for the module preview catalog. Never used by app startup.
 extension SystemStatusModuleStore {
-    static func preview(snapshot: SystemSnapshot, alerts: [IslandActivity] = []) -> SystemStatusModuleStore {
+    static func preview(snapshot: SystemSnapshot, alerts: [IslandStatus] = []) -> SystemStatusModuleStore {
         let store = SystemStatusModuleStore(isSelectedAndExpanded: { false })
         store.snapshot = snapshot
-        store.alerts = alerts
+        store.warnings = alerts
         return store
     }
 }

@@ -319,21 +319,57 @@ final class NowPlayingModuleTests: XCTestCase {
         store.stop()
     }
 
-    func testModuleStopReleasesSourceAndClearsActivity() {
+    func testModuleStopReleasesSourceAndClearsStatus() {
         let source = FakeSource()
+        let messages = IslandMessageCenter.forTesting()
+        messages.moduleDidStart(.media)
         let store = NowPlayingModuleStore(sourceFactory: { source })
-        var activities: [IslandActivity?] = []
-        store.onActivity = { activities.append($0) }
+        store.messenger = messages.messenger(for: .media)
         store.start()
         source.snapshot?(.init(title: "Track", artist: nil, album: nil,
                                isPlaying: true, sourceName: nil))
         XCTAssertEqual(store.availability, .available)
         XCTAssertNotNil(store.snapshot)
+        XCTAssertEqual(messages.statuses(for: .media).map(\.key), ["playing"])
         store.stop()
         XCTAssertEqual(source.stopCount, 1)
         XCTAssertEqual(store.availability, .disabled)
         XCTAssertNil(store.snapshot)
-        XCTAssertNil(activities.last ?? nil)
+        XCTAssertTrue(messages.statuses(for: .media).isEmpty)
+    }
+
+    func testPlayingStatusFollowsTheSnapshot() throws {
+        let source = FakeSource()
+        let messages = IslandMessageCenter.forTesting()
+        messages.moduleDidStart(.media)
+        let store = NowPlayingModuleStore(sourceFactory: { source })
+        store.messenger = messages.messenger(for: .media)
+        store.start()
+        source.snapshot?(.init(title: "Track", artist: "Artist", album: nil,
+                               isPlaying: true, sourceName: nil))
+        var status = try XCTUnwrap(messages.topStatus(for: .media))
+        XCTAssertEqual(status.key, "playing")
+        XCTAssertEqual(status.title, "Track")
+        XCTAssertEqual(status.detail, "Artist")
+        XCTAssertEqual(status.systemImage, "waveform")
+        XCTAssertEqual(status.tone, .neutral)
+
+        source.snapshot?(.init(title: "Next", artist: nil, album: nil,
+                               isPlaying: false, sourceName: nil))
+        status = try XCTUnwrap(messages.topStatus(for: .media))
+        XCTAssertEqual(status.title, "Next")
+        XCTAssertNil(status.detail)
+        XCTAssertEqual(status.systemImage, "pause.fill")
+        XCTAssertEqual(messages.statuses(for: .media).count, 1)
+
+        source.snapshot?(nil)
+        XCTAssertTrue(messages.statuses(for: .media).isEmpty, "No snapshot clears it")
+        source.snapshot?(.init(title: "Track", artist: nil, album: nil, isPlaying: true, sourceName: nil))
+        XCTAssertEqual(messages.topStatus(for: .media)?.title, "Track")
+        source.fail?()
+        XCTAssertTrue(messages.statuses(for: .media).isEmpty, "A source failure clears it")
+        XCTAssertNil(messages.currentNotice, "Now Playing never shows a pill")
+        store.stop()
     }
 
     func testModuleStartIsIdempotent() {

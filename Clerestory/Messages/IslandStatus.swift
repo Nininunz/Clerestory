@@ -6,9 +6,10 @@ import Foundation
 /// The app tells the user about a module in two ways. If it will still be true in a minute, it is a
 /// status; if it describes something that just happened, it is a notice.
 ///
-/// A status is *raised* when it is new, its tone goes up, or its title changes. A raised
-/// `warning` or `critical` status that `announcesWhenRaised` is spoken once and shows its text
-/// once in the notice pill. A change to the detail only, such as 18% becoming 17%, is silent.
+/// A status is *raised* when it is new, its tone goes up, or its tone stays and its level goes
+/// up. A raised `warning` or `critical` status that `announcesWhenRaised` is spoken once and
+/// shows its text once in the notice pill. Any other change, such as a new title or 18% becoming
+/// 17%, is silent.
 struct IslandStatus: Equatable, Sendable {
     enum Tone: Int, Comparable, Sendable {
         case neutral, progress, warning, critical
@@ -23,6 +24,10 @@ struct IslandStatus: Equatable, Sendable {
     var detail: String? = nil
     var systemImage: String
     var tone: Tone = .neutral
+    /// Orders statuses of the same tone; a higher level means the condition got worse, such as
+    /// "Battery critically low" (1) after "Battery low" (0). Going up raises the status again;
+    /// going down is silent.
+    var level: Int = 0
     /// Whether raising a `warning` or `critical` status is spoken and shown once in the pill.
     var announcesWhenRaised = true
     /// Whether the user can hide it while the module keeps setting it.

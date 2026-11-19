@@ -291,7 +291,8 @@ final class PowerSourceMonitorTests: XCTestCase {
 
     private func low(_ percentage: Int) -> IslandStatus {
         IslandStatus(key: "low", title: percentage <= 10 ? "Battery critically low" : "Battery low",
-                     detail: "\(percentage)%", systemImage: "battery.25percent", tone: .critical)
+                     detail: "\(percentage)%", systemImage: "battery.25percent", tone: .critical,
+                     level: percentage <= 10 ? 1 : 0)
     }
 
     private func snapshot(percentage: Int, power: Bool = false) -> PowerSourceMonitor.Snapshot {

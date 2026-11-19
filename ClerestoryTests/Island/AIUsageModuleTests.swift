@@ -152,6 +152,34 @@ final class AIUsageAlertTests: XCTestCase {
     }
 }
 
+/// Serves one Claude five-hour window whose fraction a test can change between fetches.
+private final class ScriptedAIUsageProvider: AIUsageProviding, @unchecked Sendable {
+    // Guards storedFraction.
+    private let lock = NSLock()
+    private var storedFraction: Double
+
+    init(fraction: Double) {
+        storedFraction = fraction
+    }
+
+    var fraction: Double {
+        get { lock.withLock { storedFraction } }
+        set { lock.withLock { storedFraction = newValue } }
+    }
+
+    func fetch(now: Date) async throws -> AIUsageSnapshot {
+        let fraction = self.fraction
+        return AIUsageSnapshot(
+            summary: AIUsageSummary(today: AIUsageTotals(tokens: 1, costUSD: 0, conversations: 1)),
+            limits: AIUsageLimits(windows: [
+                AIUsageLimitWindow(id: "claude.five_hour", provider: "claude", providerName: "Claude",
+                                   windowLabel: "5h", fraction: fraction, resetsAt: nil),
+            ], issues: []),
+            fetchedAt: now
+        )
+    }
+}
+
 private struct StubAIUsageProvider: AIUsageProviding {
     var result: Result<AIUsageSnapshot, AIUsageError>
     func fetch(now: Date) async throws -> AIUsageSnapshot { try result.get() }
@@ -204,6 +232,79 @@ final class AIUsageModuleStoreTests: XCTestCase {
         await store.refresh()
         XCTAssertEqual(store.status, .notRunning)
         XCTAssertNil(store.notchValue)
+        store.stop()
+    }
+
+    func testThresholdCrossingSetsOneTenMinuteStatusAndAnnouncesOnce() async throws {
+        let clock = ManualMessageClock()
+        let spoken = AnnouncementRecorder()
+        let messages = IslandMessageCenter.forTesting(clock: clock, announcer: .recording(into: spoken))
+        messages.setNoticeClockRunning(true)
+        messages.moduleDidStart(.aiUsage)
+        let provider = ScriptedAIUsageProvider(fraction: 0.5)
+        let store = AIUsageModuleStore(
+            makeProvider: { provider },
+            isSelectedAndExpanded: { false },
+            notchMetric: { .off },
+            alertsEnabled: { true },
+            messenger: messages.messenger(for: .aiUsage)
+        )
+        store.startForTesting()
+        await store.refresh()
+        XCTAssertTrue(messages.statuses(for: .aiUsage).isEmpty, "The first fetch is the baseline")
+
+        provider.fraction = 0.82
+        await store.refresh()
+        let status = try XCTUnwrap(messages.topStatus(for: .aiUsage))
+        XCTAssertEqual(status.key, "limit.claude.five_hour")
+        XCTAssertTrue(status.title.hasSuffix("limit at 82%"), status.title)
+        XCTAssertEqual(status.tone, .warning, "Keeps the orange tint")
+        XCTAssertEqual(status.level, 0)
+        XCTAssertEqual(status.expiresAt, messages.now + .seconds(600))
+        XCTAssertEqual(spoken.messages.count, 1)
+        XCTAssertEqual(messages.currentNotice?.raisedStatusKey, "limit.claude.five_hour",
+                       "The raise is the one pill; no separate notice")
+
+        provider.fraction = 0.85
+        await store.refresh()
+        XCTAssertEqual(messages.statuses(for: .aiUsage).count, 1)
+        XCTAssertEqual(spoken.messages.count, 1, "Staying above the threshold is silent")
+
+        await clock.advance(by: 599)
+        XCTAssertNotNil(messages.topStatus(for: .aiUsage))
+        await clock.advance(by: 2)
+        XCTAssertNil(messages.topStatus(for: .aiUsage), "The orange tint lasts 10 minutes")
+        store.stop()
+    }
+
+    func testHigherThresholdRaisesAgainWithTheSameRoundedPercent() async throws {
+        let spoken = AnnouncementRecorder()
+        let messages = IslandMessageCenter.forTesting(announcer: .recording(into: spoken))
+        messages.moduleDidStart(.aiUsage)
+        let provider = ScriptedAIUsageProvider(fraction: 0.5)
+        let store = AIUsageModuleStore(
+            makeProvider: { provider },
+            isSelectedAndExpanded: { false },
+            notchMetric: { .off },
+            alertsEnabled: { true },
+            messenger: messages.messenger(for: .aiUsage)
+        )
+        store.startForTesting()
+        await store.refresh()
+
+        provider.fraction = 0.946
+        await store.refresh()
+        let first = try XCTUnwrap(messages.topStatus(for: .aiUsage))
+        XCTAssertTrue(first.title.hasSuffix("limit at 95%"), first.title)
+        XCTAssertEqual(first.level, 0, "Only the 80% threshold is crossed")
+
+        provider.fraction = 0.95
+        await store.refresh()
+        let second = try XCTUnwrap(messages.topStatus(for: .aiUsage))
+        XCTAssertEqual(second.title, first.title, "The rounded percent is unchanged")
+        XCTAssertEqual(second.level, 1)
+        XCTAssertEqual(spoken.messages.count, 2, "Crossing 95% raises it again")
+        XCTAssertEqual(messages.statuses(for: .aiUsage).count, 1)
         store.stop()
     }
 

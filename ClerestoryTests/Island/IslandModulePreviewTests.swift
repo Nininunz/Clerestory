@@ -120,7 +120,7 @@ final class IslandModulePreviewTests: XCTestCase {
         snapshot.thermalStatus = .nominal
         snapshot.battery = .init(percentage: 64, isCharging: false, isConnectedToPower: false, powerWatts: -8.2)
         snapshot.topApplications = [.init(id: "preview", processIdentifier: 0, name: "Sample App", bundleIdentifier: nil, cpuUsage: 0.18, memoryBytes: 1_200_000_000)]
-        let alert = IslandActivity(id: "preview", moduleID: .system, priority: .systemWarning, title: "High memory pressure", detail: "Memory pressure is elevated.", systemImage: "memorychip", expiresAt: nil)
+        let alert = IslandStatus(key: "preview", title: "High memory pressure", detail: "Memory pressure is elevated.", systemImage: "memorychip", tone: .warning, isDismissible: true)
         try await export("system-status", "System Status", [
             entry("Metrics unavailable", IslandSystemStatusView().environment(SystemStatusModuleStore.preview(snapshot: .unavailable()))),
             entry("Metrics and applications", IslandSystemStatusView().environment(SystemStatusModuleStore.preview(snapshot: snapshot))),

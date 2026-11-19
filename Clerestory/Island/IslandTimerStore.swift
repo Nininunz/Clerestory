@@ -78,7 +78,16 @@ final class IslandTimerStore: IslandModule {
     private(set) var goal = ""
     private(set) var sessions: [IslandFocusSession] = []
     private var activeSessionID: UUID?
-    var onActivity: (@MainActor (IslandActivity?) -> Void)?
+    /// Where Timer sets its "running" and "finished" statuses.
+    @ObservationIgnored var messenger: ModuleMessenger = .inert
+    /// Called once each time a running timer finishes, after its "finished" status is set, and
+    /// once from the first `start()` for a timer that finished while the app was quit.
+    /// ShelfWindowController opens the Panel on Timer from here.
+    @ObservationIgnored var onDidFinish: (@MainActor () -> Void)?
+    /// Set when `restore()` finds or produces a finished timer, before `onDidFinish` is wired,
+    /// so the first `start()` opens the Panel once for a timer that finished while the app was
+    /// quit. Later starts while finished do not.
+    @ObservationIgnored private var finishedBeforeLaunch = false
     var onStateChange: (@MainActor () -> Void)?
 
     init(defaults: UserDefaults = .standard,
@@ -96,14 +105,22 @@ final class IslandTimerStore: IslandModule {
 
     func start() {
         updateForCurrentTime()
-        publishActivity()
+        updateStatuses()
         scheduleTickerIfNeeded()
+        if finishedBeforeLaunch {
+            finishedBeforeLaunch = false
+            if case .finished = state { onDidFinish?() }
+        }
     }
 
     func stop() {
+        stopTicker()
+        messenger.setStatuses([])
+    }
+
+    private func stopTicker() {
         tickerTask?.cancel()
         tickerTask = nil
-        onActivity?(nil)
     }
 
     func start(minutes: Double) {
@@ -116,7 +133,7 @@ final class IslandTimerStore: IslandModule {
         state = .running(endDate: nowProvider().addingTimeInterval(duration),
                          originalDuration: duration)
         persist()
-        publishActivity()
+        updateStatuses()
         scheduleTickerIfNeeded()
         onStateChange?()
     }
@@ -125,7 +142,7 @@ final class IslandTimerStore: IslandModule {
         guard state == .idle, self.mode != mode else { return }
         self.mode = mode
         persistConfiguration()
-        publishActivity()
+        updateStatuses()
         onStateChange?()
     }
 
@@ -134,7 +151,7 @@ final class IslandTimerStore: IslandModule {
         guard self.goal != sanitized else { return }
         self.goal = sanitized
         persistConfiguration()
-        publishActivity()
+        updateStatuses()
         onStateChange?()
     }
 
@@ -142,9 +159,9 @@ final class IslandTimerStore: IslandModule {
         guard case let .running(endDate, originalDuration) = state else { return }
         state = .paused(remaining: max(0, endDate.timeIntervalSince(nowProvider())),
                         originalDuration: originalDuration)
-        stop()
+        stopTicker()
         persist()
-        publishActivity()
+        updateStatuses()
         onStateChange?()
     }
 
@@ -153,17 +170,17 @@ final class IslandTimerStore: IslandModule {
         state = .running(endDate: nowProvider().addingTimeInterval(max(1, remaining)),
                          originalDuration: originalDuration)
         persist()
-        publishActivity()
+        updateStatuses()
         scheduleTickerIfNeeded()
         onStateChange?()
     }
 
     func reset() {
-        stop()
+        stopTicker()
         state = .idle
         activeSessionID = nil
         defaults.removeObject(forKey: Self.persistenceKey)
-        onActivity?(nil)
+        updateStatuses()
         onStateChange?()
     }
 
@@ -224,7 +241,7 @@ final class IslandTimerStore: IslandModule {
         guard case let .running(endDate, originalDuration) = state else { return }
         guard endDate <= nowProvider() else {
             tick &+= 1
-            publishActivity()
+            updateStatuses()
             return
         }
         completeTimer(at: endDate, originalDuration: originalDuration)
@@ -238,10 +255,11 @@ final class IslandTimerStore: IslandModule {
                            completedAt: completionDate,
                            duration: originalDuration)
         state = .finished(originalDuration: originalDuration)
-        stop()
+        stopTicker()
         persist()
-        publishActivity()
+        updateStatuses()
         onStateChange?()
+        onDidFinish?()
     }
 
     private func scheduleTickerIfNeeded() {
@@ -260,26 +278,30 @@ final class IslandTimerStore: IslandModule {
         }
     }
 
-    private func publishActivity() {
+    /// Running or paused is a neutral "running" status with the time left; finished is a warning
+    /// "finished" status, which the center announces once when it is raised. Idle clears both.
+    private func updateStatuses() {
         switch state {
         case .idle:
-            onActivity?(nil)
+            messenger.setStatuses([])
         case .running, .paused:
-            onActivity?(.init(id: "timer.running", moduleID: .timer,
-                              priority: .selectedModule,
-                              title: activityTitle,
-                              detail: formattedRemaining,
-                              systemImage: mode.systemImage, expiresAt: nil))
+            messenger.setStatuses([IslandStatus(
+                key: "running",
+                title: statusTitle,
+                detail: formattedRemaining,
+                systemImage: mode.systemImage
+            )])
         case .finished:
-            onActivity?(.init(id: "timer.finished", moduleID: .timer,
-                              priority: .timerFinished,
-                              title: String(localized: "Timer finished"),
-                              detail: nil, systemImage: "timer",
-                              expiresAt: nil))
+            messenger.setStatuses([IslandStatus(
+                key: "finished",
+                title: String(localized: "Timer finished"),
+                systemImage: "timer",
+                tone: .warning
+            )])
         }
     }
 
-    private var activityTitle: String {
+    private var statusTitle: String {
         let trimmedGoal = goal.trimmingCharacters(in: .whitespacesAndNewlines)
         if mode == .focus, !trimmedGoal.isEmpty { return trimmedGoal }
         return mode.title
@@ -368,6 +390,7 @@ final class IslandTimerStore: IslandModule {
             } else {
                 completeTimer(at: value.endDate ?? nowProvider(),
                               originalDuration: value.originalDuration)
+                finishedBeforeLaunch = true
                 return
             }
         case .paused:
@@ -377,8 +400,9 @@ final class IslandTimerStore: IslandModule {
         case .finished:
             activeSessionID = value.sessionID
             state = .finished(originalDuration: value.originalDuration)
+            finishedBeforeLaunch = true
         }
-        publishActivity()
+        updateStatuses()
     }
 }
 
