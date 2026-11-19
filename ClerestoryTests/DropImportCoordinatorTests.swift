@@ -163,7 +163,7 @@ final class DropImportCoordinatorTests: XCTestCase {
     func testTutorialTokenAllowsOnlyCurrentInternalSessionAndReportsRealImportedItem() throws {
         var context = makeContext()
         defer { context.cleanup() }
-        let fileURL = try makeTempFile(in: &context, named: "OpenYoink 练习文件.txt")
+        let fileURL = try makeTempFile(in: &context, named: OnboardingSessionStore.tutorialFileName)
         let token = UUID().uuidString
         let pasteboard = makePasteboard()
         pasteboard.writeObjects([fileURL as NSURL])

@@ -31,7 +31,7 @@ Hover, click, and drag-to-open are enabled by default. Adjust the hover delays o
 
 - **Panel.** Opens on the display where you trigger it and stays on that display until dismissed. Use **Settings → Panel → Shortcut Positions** or **Quick Settings** to arrange module shortcuts.
 - **Notch.** An optional companion on the built-in display of a Mac with a physical notch. It is on by default. Use **Settings → Notch** to turn it off, choose its module order, and set a cycling shortcut (none is set by default). Hold Shift with that shortcut to cycle backward.
-- **Shelf** and **Quick Settings** are available by default. To use other modules, turn on **Experimental Modules** under **Settings → Modules**. Transfers, Timer, Battery and System Status turn on right away; turn on the others individually. Experimental modules include Transfers, Timer, Battery, Now Playing, System Status, Quick Access, Clipboard, and AI Usage.
+- **Shelf** and **Quick Settings** are available by default. To use other modules, turn on **Experimental Modules** under **Settings → Modules**. Transfers, Timer, Battery and System Status turn on right away; turn on the others individually. Experimental modules include Transfers, Timer, Battery, Now Playing, System Status, Quick Access, Clipboard History, and AI Usage.
 
 ## File safety and lifecycle
 

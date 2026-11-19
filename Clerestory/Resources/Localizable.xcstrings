@@ -3350,17 +3350,6 @@
         }
       }
     },
-    "You're ready. Move the pointer or drag a file to the top center of the screen to open Clerestory, or press %@ anytime." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You're ready. Move the pointer or drag a file to the top center of the screen to open Clerestory, or press %@ anytime."
-          }
-        }
-      }
-    },
     "You're ready. Move the pointer or drag a file to the top center of the screen to open Clerestory, or use the menu bar icon." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4568,17 +4557,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Will move on drag out"
-          }
-        }
-      }
-    },
-    "⌘⇧Space to toggle the shelf" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "⌘⇧Space to toggle the shelf"
           }
         }
       }

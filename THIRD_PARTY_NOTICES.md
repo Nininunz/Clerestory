@@ -1,6 +1,6 @@
 # Third-Party Notices & Clean-Implementation Record
 
-Clerestory 基于 Open-Yoink，后者是一个**清洁实现（clean-room implementation）**。我们参考了若干开源项目的**公开可观察行为与架构思路**，但没有复制其源代码、UI 素材或专有实现。本文件记录行为参考来源；如未来引入任何第三方代码或资源，会在此追加其许可证文本与版权归属。
+Clerestory 基于 Open-Yoink，后者是一个**清洁实现（clean-room implementation）**。我们参考了若干开源项目的**公开可观察行为与架构思路**，但没有复制其源代码、UI 素材或专有实现。本文件记录所包含的第三方代码及其许可证（Sparkle、mediaremote-adapter、liquid-glass-react），以及行为参考来源；如引入更多第三方代码或资源，会在此追加。
 
 ## 第三方代码
 

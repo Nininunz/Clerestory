@@ -331,8 +331,8 @@ final class DragPayloadBuilderTests: XCTestCase {
 
     func testTutorialFileWriterCarriesPrivateTokenAlongsideRealFileRepresentations() throws {
         let item = ShelfItem(kind: .file,
-                             path: "/tmp/OpenYoink 练习文件.txt",
-                             displayName: "OpenYoink 练习文件.txt")
+                             path: "/tmp/\(OnboardingSessionStore.tutorialFileName)",
+                             displayName: OnboardingSessionStore.tutorialFileName)
         let token = UUID().uuidString
         let writer = try XCTUnwrap(DragPayloadBuilder.makePasteboardWriter(
             for: item,
