@@ -21,7 +21,8 @@ final class OnboardingSessionStore {
         case invalidSessionDirectory
     }
 
-    static let tutorialFileName = "OpenYoink 练习文件.txt"
+    static let tutorialFileName = "Clerestory Practice File.txt"
+    private static let legacyTutorialFileName = "OpenYoink 练习文件.txt"
 
     let rootURL: URL
     private let fileManager: FileManager
@@ -73,9 +74,14 @@ final class OnboardingSessionStore {
     }
 
     func tutorialFileURL(for record: Record) -> URL {
-        rootURL
+        let directory = rootURL
             .appendingPathComponent(record.sessionID.uuidString, isDirectory: true)
-            .appendingPathComponent(Self.tutorialFileName, isDirectory: false)
+        let currentURL = directory.appendingPathComponent(Self.tutorialFileName, isDirectory: false)
+        let legacyURL = directory.appendingPathComponent(Self.legacyTutorialFileName, isDirectory: false)
+        if !fileManager.fileExists(atPath: currentURL.path), fileManager.fileExists(atPath: legacyURL.path) {
+            return legacyURL
+        }
+        return currentURL
     }
 
     /// Delete a single session. Before deletion, strictly verify that the directory is a direct UUID
