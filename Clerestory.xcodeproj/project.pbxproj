@@ -229,7 +229,6 @@
 			knownRegions = (
 				en,
 				Base,
-				"zh-Hans",
 			);
 			mainGroup = 110000000000000000001;
 			packageReferences = (

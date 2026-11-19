@@ -6,6 +6,9 @@ import SwiftUI
 /// (`DropTargetState.isTargeted`) takes over the emphasis state. Text is in Localizable.xcstrings (S10);
 /// D9: merged into a single accessible element, VoiceOver reads the hint and shortcut in one go.
 struct ShelfEmptyState: View {
+    /// The panel shortcut as shown in Settings, or nil when it is off or unset.
+    var shortcut: String?
+
     var body: some View {
         VStack(spacing: 12) {
             // Same font as the screen edge pull ring, implying that it 'stays there after collapsing'
@@ -23,9 +26,11 @@ struct ShelfEmptyState: View {
                 Text("Hold ⌘ while dropping to move the original here")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
-                Text("⌘⇧Space to toggle the shelf")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                if let shortcut {
+                    Text("Press \(shortcut) to show or hide the shelf")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
             }
         }
         .accessibilityElement(children: .combine)
@@ -52,6 +57,6 @@ struct ShelfEmptyState: View {
 // MARK: - Previews
 
 #Preview("Empty state") {
-    ShelfEmptyState()
+    ShelfEmptyState(shortcut: "⌘⇧Space")
         .frame(width: 280, height: 400)
 }

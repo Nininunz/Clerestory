@@ -356,7 +356,7 @@ fi
 # Use the hash of this exact notarized DMG. Rebuilding changes timestamped signatures
 # and therefore the digest.
 DMG_SHA="$(shasum -a 256 "$DMG_PATH" | cut -d' ' -f1)"
-echo "==> Homebrew cask：version=$SHORT_VERSION  sha256=$DMG_SHA"
+echo "==> Homebrew cask: version=$SHORT_VERSION  sha256=$DMG_SHA"
 echo "    After uploading the GitHub release, use these two values to update homebrew-tap."
 
 echo ""

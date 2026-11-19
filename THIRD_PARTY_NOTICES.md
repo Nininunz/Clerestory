@@ -1,6 +1,6 @@
 # Third-Party Notices & Clean-Implementation Record
 
-Open-Yoink 是一个**清洁实现（clean-room implementation）**。我们参考了若干开源项目的**公开可观察行为与架构思路**，但没有复制其源代码、UI 素材或专有实现。本文件记录行为参考来源；如未来引入任何第三方代码或资源，会在此追加其许可证文本与版权归属。
+Clerestory 基于 Open-Yoink，后者是一个**清洁实现（clean-room implementation）**。我们参考了若干开源项目的**公开可观察行为与架构思路**，但没有复制其源代码、UI 素材或专有实现。本文件记录所包含的第三方代码及其许可证（Sparkle、mediaremote-adapter、liquid-glass-react），以及行为参考来源；如引入更多第三方代码或资源，会在此追加。
 
 ## 第三方代码
 
@@ -201,7 +201,7 @@ POSSIBILITY OF SUCH DAMAGE.
 | nab | https://github.com/jameshiew/nab | MIT-0 | 最小 shelf 生命周期与窗口行为 |
 | Dropshit | https://github.com/iamsumanp/Dropshit | MIT | fileURL + NSFilePromiseProvider 多表示拖出思路 |
 
-> ClipKit（GPL-3.0）仅作为剪贴板功能的行为参考，未复制其代码；Open-Yoink v1 不含剪贴板历史。
+> ClipKit（GPL-3.0）仅作为剪贴板功能的行为参考，未复制其代码。
 
 ## 项目自有资源
 
@@ -214,7 +214,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ## 商标声明
 
-「Yoink」是 Eternal Storms Software 的产品名称。Open-Yoink 与其无任何隶属或授权关系，仅借鉴其公开描述的用户行为，不复制其代码、图标、文案或品牌资产。
+「Yoink」是 Eternal Storms Software 的产品名称。Clerestory 及其所基于的 Open-Yoink 均与其无任何隶属或授权关系，仅借鉴其公开描述的用户行为，不复制其代码、图标、文案或品牌资产。
 
 ## Apple 平台
 

@@ -92,7 +92,6 @@ final class ClerestorySmokeUITests: XCTestCase {
 
         let popupIdentifiers = [
             "settings.dragOutRemovalPolicy",
-            "settings.language",
         ]
         let systemZoomButton = app.buttons.matching(
             identifier: "_XCUI:ZoomWindow"
@@ -149,15 +148,6 @@ final class ClerestorySmokeUITests: XCTestCase {
     func testSettingsPopupPickerOpens() throws {
         let app = launch(surface: "--ui-testing-open-settings")
 
-        for (pane, identifier) in [("general", "settings.language")] {
-            element("settings.pane.\(pane)", in: app).click()
-            let picker = element(identifier, in: app)
-            XCTAssertTrue(picker.waitForExistence(timeout: 5))
-            XCTAssertTrue(picker.isHittable)
-            picker.click()
-            XCTAssertTrue(app.menuItems.firstMatch.waitForExistence(timeout: 2))
-            app.typeKey(.escape, modifierFlags: [])
-        }
         openShelfSettings(in: app)
         let picker = element("settings.dragOutRemovalPolicy", in: app)
         XCTAssertTrue(picker.waitForExistence(timeout: 5))

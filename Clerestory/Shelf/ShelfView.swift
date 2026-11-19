@@ -296,7 +296,8 @@ struct ShelfView: View {
                         .accessibilityElement(children: .combine)
                         .accessibilityIdentifier("shelf.emptyState")
                 } else {
-                    ShelfEmptyState()
+                    ShelfEmptyState(shortcut: settings.hotKeyEnabled
+                        ? settings.hotKeyShortcut.map(ShortcutRecorderLogic.displayString(for:)) : nil)
                 }
             }
             .contentShape(Rectangle())

@@ -25,19 +25,6 @@ final class OnboardingSessionStoreTests: XCTestCase {
         XCTAssertEqual(store.load(), record)
     }
 
-    func testResumingLegacySessionRecognizesOriginalPracticeFile() throws {
-        let (store, root) = makeStore()
-        defer { try? FileManager.default.removeItem(at: root) }
-        let record = try store.begin()
-        let file = store.tutorialFileURL(for: record)
-        let legacyFile = file.deletingLastPathComponent().appendingPathComponent("OpenYoink 练习文件.txt")
-        try FileManager.default.moveItem(at: file, to: legacyFile)
-
-        let resumed = try XCTUnwrap(store.load())
-        XCTAssertEqual(store.tutorialFileURL(for: resumed), legacyFile)
-        XCTAssertTrue(store.isTutorialFile(legacyFile, for: resumed))
-    }
-
     func testAwaitingExportPersistsItemIdentityForCrashResume() throws {
         let (store, root) = makeStore()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -65,7 +52,7 @@ final class OnboardingSessionStoreTests: XCTestCase {
         try store.discard(record)
 
         XCTAssertTrue(FileManager.default.fileExists(atPath: root.path),
-                      "单个 session 清理只删除 UUID 子目录和记录，根目录可以保留")
+                      "Cleaning up a single session deletes only the UUID subdirectory and record; the root directory may remain")
         XCTAssertTrue(FileManager.default.fileExists(atPath: sentinel.path))
     }
 
@@ -104,7 +91,7 @@ final class OnboardingPolicyAndLayoutTests: XCTestCase {
         XCTAssertFalse(OnboardingLaunchPolicy.hasExistingInstallation(
             preferences: ["Clerestory.onboardingVersion": 0], supportEntries: ["Tutorial"]))
         XCTAssertTrue(OnboardingLaunchPolicy.hasExistingInstallation(
-            preferences: ["Clerestory.language": "english"], supportEntries: []))
+            preferences: ["Clerestory.autoHide": true], supportEntries: []))
         XCTAssertTrue(OnboardingLaunchPolicy.hasExistingInstallation(
             preferences: [:], supportEntries: ["shelf.json"]))
     }
@@ -165,5 +152,18 @@ final class OnboardingPolicyAndLayoutTests: XCTestCase {
         XCTAssertLessThanOrEqual(panel.maxX, visible.maxX - 12)
         XCTAssertGreaterThanOrEqual(panel.minY, visible.minY + 12)
         XCTAssertLessThanOrEqual(panel.maxY, visible.maxY - 12)
+    }
+
+    func testCompletionHintNamesOnlyEnabledTriggers() {
+        XCTAssertEqual(OnboardingCompletionHint(hover: true, drag: true, shortcut: "⌘⇧Space").message,
+                       "You're ready. Move the pointer or drag a file to the top center of the screen to open Clerestory, or press ⌘⇧Space anytime.")
+        XCTAssertEqual(OnboardingCompletionHint(hover: false, drag: true, shortcut: nil).message,
+                       "You're ready. Drag a file to the top center of the screen to open Clerestory, or use the menu bar icon.")
+        XCTAssertEqual(OnboardingCompletionHint(hover: true, drag: false, shortcut: "⌃⌥P").message,
+                       "You're ready. Move the pointer to the top center of the screen to open Clerestory, or press ⌃⌥P anytime.")
+        XCTAssertEqual(OnboardingCompletionHint(hover: false, drag: false, shortcut: "⌘⇧Space").message,
+                       "You're ready. Press ⌘⇧Space anytime to open Clerestory, or use the menu bar icon.")
+        XCTAssertEqual(OnboardingCompletionHint().message,
+                       "You're ready. Open Clerestory from the menu bar icon.")
     }
 }

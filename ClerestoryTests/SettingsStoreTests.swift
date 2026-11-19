@@ -73,7 +73,6 @@ final class SettingsStoreTests: XCTestCase {
         store.autoHide = true
         store.keepShelfOpenAfterDrop = true
         store.dragOutRemovalPolicy = .ask
-        store.language = .chinese
 
         let reloaded = SettingsStore(defaults: defaults)
         XCTAssertEqual(reloaded.shelfPosition, .left)
@@ -81,7 +80,6 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertTrue(reloaded.autoHide)
         XCTAssertTrue(reloaded.keepShelfOpenAfterDrop)
         XCTAssertEqual(reloaded.dragOutRemovalPolicy, .ask)
-        XCTAssertEqual(reloaded.language, .chinese)
     }
 
     func testExplicitHoverOptOutSurvivesDefaultChange() throws {
@@ -101,7 +99,6 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertFalse(store.autoHide)
         XCTAssertTrue(store.keepShelfOpenAfterDrop)
         XCTAssertEqual(store.dragOutRemovalPolicy, .keep)
-        XCTAssertEqual(store.language, .system)
         XCTAssertEqual(store.onboardingVersion, 0)
         XCTAssertFalse(store.hadPersistedOnboardingVersion)
         XCTAssertEqual(store.shelfPresentationMode, .island)

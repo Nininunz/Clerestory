@@ -46,20 +46,6 @@ struct GeneralSettingsTab: View {
                     .foregroundStyle(.secondary)
             }
 
-            Section("Language") {
-                Picker("Language", selection: $settings.language) {
-                    Text("System").tag(SettingsStore.LanguagePreference.system)
-                    Text("English").tag(SettingsStore.LanguagePreference.english)
-                    Text("中文").tag(SettingsStore.LanguagePreference.chinese)
-                }
-                .accessibilityIdentifier("settings.language")
-                // S10: AppleLanguages override is applied as early as possible during launch
-                // (AppDelegate.applicationWillFinishLaunching), so runtime changes require a restart to
-                // take effect.
-                Text("Takes effect after relaunch.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
 
             Section("Updates") {
                 Toggle("Automatically check for updates", isOn: $settings.autoUpdateCheckEnabled)

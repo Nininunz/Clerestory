@@ -13,4 +13,4 @@
 
 ## Run checks
 
-See [Build from source](README.en.md#build-from-source) for setup. Run `Scripts/test-ci.sh` for the build and unit tests. See the [CI guide](docs/development/CI.md), [UI test guide](docs/development/UI_TESTS.md), and [manual checks](docs/MANUAL_TESTING.md) for coverage relevant to your change.
+See [Build from source](README.md#build-from-source) for setup. Run `Scripts/test-ci.sh` for the build and unit tests. See the [CI guide](docs/development/CI.md), [UI test guide](docs/development/UI_TESTS.md), and [manual checks](docs/MANUAL_TESTING.md) for coverage relevant to your change.

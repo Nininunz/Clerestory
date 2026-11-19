@@ -21,19 +21,19 @@ enum PasteboardTypes {
     /// longer exposes the deprecated constant to Swift, so keep the wire
     /// value local and advertise it only alongside a real direct file URL.
     static let legacyFilenames = NSPasteboard.PasteboardType("NSFilenamesPboardType")
-    /// `public.utf8-plain-text`。
+    /// `public.utf8-plain-text`.
     static let plainText: NSPasteboard.PasteboardType = .string
-    /// `public.html`。
+    /// `public.html`.
     static let html = NSPasteboard.PasteboardType(UTType.html.identifier)
-    /// `public.rtf`。
+    /// `public.rtf`.
     static let rtf = NSPasteboard.PasteboardType(UTType.rtf.identifier)
-    /// `public.png`。
+    /// `public.png`.
     static let png = NSPasteboard.PasteboardType(UTType.png.identifier)
-    /// `public.tiff`。
+    /// `public.tiff`.
     static let tiff = NSPasteboard.PasteboardType(UTType.tiff.identifier)
     /// `public.image` (generic image data).
     static let image = NSPasteboard.PasteboardType(UTType.image.identifier)
-    /// `public.url`。
+    /// `public.url`.
     static let url = NSPasteboard.PasteboardType(UTType.url.identifier)
     /// `public.text` (generic text supertype; after registration, conformance covers other text flavors
     /// like utf16).
@@ -63,7 +63,7 @@ enum PasteboardTypes {
     /// `public.item` —— Root of all things (includes URL family; `public.url` conforms to `public.item`,
     /// Probe: Declaring `public.url` pasteboard hits `public.item/public.data`).
     static let item = NSPasteboard.PasteboardType(UTType.item.identifier)
-    /// `public.content`。
+    /// `public.content`.
     static let content = NSPasteboard.PasteboardType(UTType.content.identifier)
     /// The UTI form of `NSFileContentsPboardType`. Register the `public.file-contents` string directly
     /// because the SDK has no corresponding static `UTType` property.
@@ -114,7 +114,7 @@ enum PasteboardTypes {
         case fileURL
         /// Bitmap data without a file URL, such as PNG, TIFF, or a generic image.
         case image
-        /// Web URL。
+        /// Web URL.
         case url
         /// Plain text / HTML / RTF.
         case text

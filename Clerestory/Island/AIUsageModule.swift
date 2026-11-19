@@ -301,12 +301,7 @@ enum AIUsageLabels {
 // MARK: - Formatting
 
 enum AIUsageFormat {
-    /// UI language, not region: the app can override `AppleLanguages`.
-    static var usesChineseUnits: Bool {
-        Bundle.main.preferredLocalizations.first?.hasPrefix("zh") == true
-    }
-
-    static func tokens(_ value: Int, chinese: Bool = usesChineseUnits) -> String {
+    static func tokens(_ value: Int) -> String {
         let number = Double(value)
         func trim(_ value: Double, digits: Int) -> String {
             let text = String(format: "%.\(digits)f", value)
@@ -316,11 +311,6 @@ enum AIUsageFormat {
         func scaled(_ unit: Double) -> String {
             let value = number / unit
             return trim(value, digits: value >= 100 ? 0 : value >= 10 ? 1 : 2)
-        }
-        if chinese {
-            if number >= 1e8 { return scaled(1e8) + " 亿" }
-            if number >= 1e4 { return scaled(1e4) + " 万" }
-            return "\(value)"
         }
         if number >= 1e9 { return scaled(1e9) + "B" }
         if number >= 1e6 { return scaled(1e6) + "M" }
@@ -720,8 +710,14 @@ final class AIUsageModuleStore: IslandModuleRuntime {
         }
     }
 
+    /// The TokenTracker dashboard on the port the provider uses, so a custom
+    /// port in Settings applies to the link as well as to data fetching.
+    var dashboardURL: URL {
+        (makeProvider() as? TokenTrackerClient ?? TokenTrackerClient()).dashboardURL
+    }
+
     func openDashboard() {
-        NSWorkspace.shared.open(TokenTrackerClient().dashboardURL)
+        NSWorkspace.shared.open(dashboardURL)
     }
 
     private func restartPolling() {

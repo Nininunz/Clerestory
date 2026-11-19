@@ -90,11 +90,6 @@ final class SettingsStore {
         case ask    // ask every time (NSAlert in DragSessionController, S8)
     }
 
-    /// UI language override.
-    enum LanguagePreference: String, CaseIterable, Sendable {
-        case system, chinese, english
-    }
-
     /// What happens when the user starts dragging with the left mouse button
     /// held (UX batch, task 1/2; Yoink's signature "shelf appears on drag").
     enum DragAutoAppearMode: String, CaseIterable, Sendable {
@@ -563,10 +558,6 @@ final class SettingsStore {
         didSet { defaults.set(dragOutRemovalPolicy.rawValue, forKey: Keys.dragOutRemovalPolicy) }
     }
 
-    /// UI language override. Default: system.
-    var language: LanguagePreference {
-        didSet { defaults.set(language.rawValue, forKey: Keys.language) }
-    }
 
     /// Sparkle automatically checks for updates (the only network behavior). Default: true.
     /// Applied to SPUUpdater.automaticallyChecksForUpdates by UpdateController
@@ -785,7 +776,6 @@ final class SettingsStore {
         static let keepShelfOpenAfterDrop = prefix + "keepShelfOpenAfterDrop"
         static let autoHideWhenEmpty = prefix + "autoHideWhenEmpty"
         static let dragOutRemovalPolicy = prefix + "dragOutRemovalPolicy"
-        static let language = prefix + "language"
         static let autoUpdateCheckEnabled = prefix + "autoUpdateCheckEnabled"
         static let onboardingVersion = prefix + "onboardingVersion"
         static let customShelfFrame = prefix + "customShelfFrame"
@@ -880,7 +870,6 @@ final class SettingsStore {
             Keys.keepShelfOpenAfterDrop: true,
             Keys.autoHideWhenEmpty: true,
             Keys.dragOutRemovalPolicy: DragOutRemovalPolicy.keep.rawValue,
-            Keys.language: LanguagePreference.system.rawValue,
             Keys.autoUpdateCheckEnabled: true,
             Keys.hotKeyEnabled: true,
             Keys.hotKeyDoublePressSavesClipboard: true,
@@ -1065,8 +1054,6 @@ final class SettingsStore {
         dragOutRemovalPolicy = DragOutRemovalPolicy(
             rawValue: defaults.string(forKey: Keys.dragOutRemovalPolicy) ?? ""
         ) ?? .keep
-        language = LanguagePreference(rawValue: defaults.string(forKey: Keys.language) ?? "")
-            ?? .system
         autoUpdateCheckEnabled = defaults.bool(forKey: Keys.autoUpdateCheckEnabled)
         onboardingVersion = defaults.object(forKey: Keys.onboardingVersion) as? Int ?? 0
         if let data = defaults.data(forKey: Keys.customShelfFrame) {

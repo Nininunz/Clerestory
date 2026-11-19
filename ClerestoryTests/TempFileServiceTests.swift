@@ -30,9 +30,9 @@ final class TempFileServiceTests: XCTestCase {
 
         service.cleanupStaleStagingDirectories(maxAge: 3600)
 
-        XCTAssertFalse(fileManager.fileExists(atPath: oldStaging.path), "超龄 staging 应被清理")
-        XCTAssertTrue(fileManager.fileExists(atPath: newStaging.path), "新 staging 必须保留")
-        XCTAssertTrue(fileManager.fileExists(atPath: materializedFile.path), "非 staging 条目不受影响")
+        XCTAssertFalse(fileManager.fileExists(atPath: oldStaging.path), "Expired staging should be cleaned up")
+        XCTAssertTrue(fileManager.fileExists(atPath: newStaging.path), "New staging must be kept")
+        XCTAssertTrue(fileManager.fileExists(atPath: materializedFile.path), "Non-staging entries are not affected")
     }
 
     /// The cleanup deletion scope does not exceed the hosted directory semantics: directories without the

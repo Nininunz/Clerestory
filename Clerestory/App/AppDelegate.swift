@@ -272,28 +272,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     )
 
-    /// Apply AppleLanguages before SwiftUI builds any views. The first localization
-    /// lookup locks the bundle language for the process. Settings saves changes for the next launch.
     func applicationWillFinishLaunching(_ notification: Notification) {
         if isUITesting {
             settingsStore.islandEnabled = true
             settingsStore.showNotch = !ProcessInfo.processInfo.arguments.contains("--ui-testing-hide-compact")
             settingsStore.islandHoverRevealEnabled = ProcessInfo.processInfo.arguments.contains("--ui-testing-hover")
-        }
-        if !isUITesting {
-            applyLanguageOverride()
-        }
-    }
-
-    /// Apply SettingsStore.language to AppleLanguages. System mode removes the override.
-    private func applyLanguageOverride() {
-        switch settingsStore.language {
-        case .system:
-            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
-        case .english:
-            UserDefaults.standard.set(["en"], forKey: "AppleLanguages")
-        case .chinese:
-            UserDefaults.standard.set(["zh-Hans"], forKey: "AppleLanguages")
         }
     }
 

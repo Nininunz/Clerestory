@@ -9,7 +9,6 @@ final class SupportControllerTests: XCTestCase {
         build: "14",
         operatingSystem: "macOS 26.5 (Build 25F70)",
         architecture: "arm64",
-        language: .system,
         shelfPosition: .right,
         dragAutoAppearMode: .immediate,
         edgeTabEnabled: true,

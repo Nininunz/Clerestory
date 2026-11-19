@@ -47,7 +47,7 @@ final class DragPayloadBuilderTests: XCTestCase {
     /// the same path as a drop target.
     private func writtenPasteboard(for writer: NSPasteboardWriting) -> NSPasteboard {
         let pasteboard = NSPasteboard(name: NSPasteboard.Name("ClerestoryTests-\(UUID().uuidString)"))
-        precondition(pasteboard.writeObjects([writer]), "writer 必须能写入 pasteboard")
+        precondition(pasteboard.writeObjects([writer]), "writer must be able to write to the pasteboard")
         return pasteboard
     }
 
@@ -60,7 +60,7 @@ final class DragPayloadBuilderTests: XCTestCase {
         XCTAssertEqual(DragPayloadBuilder.strategy(for: makeItem(kind: .text)), .plainText)
         XCTAssertEqual(DragPayloadBuilder.strategy(for: makeItem(kind: .url)), .webURL)
         XCTAssertNil(DragPayloadBuilder.strategy(for: makeItem(kind: .stack)),
-                     "stack 不整体拖出，由 flattenedItems 展开")
+                     "A stack is not dragged out as a whole; flattenedItems expands it")
     }
 
     func testCanMakePasteboardWriterRejectsMalformedCards() {
@@ -147,9 +147,9 @@ final class DragPayloadBuilderTests: XCTestCase {
         for item in samples {
             let identifier = DragPayloadBuilder.promisedFileType(for: item)
             let type = UTType(identifier)
-            XCTAssertNotNil(type, "\(identifier) 必须是已声明 UTI")
+            XCTAssertNotNil(type, "\(identifier) must be a declared UTI")
             XCTAssertTrue(type?.conforms(to: .data) == true || type?.conforms(to: .directory) == true,
-                          "\(identifier) 必须符合 data/directory（NSFilePromiseProvider 硬性要求）")
+                          "\(identifier) must conform to data/directory (a hard requirement of NSFilePromiseProvider)")
         }
     }
 
@@ -216,15 +216,15 @@ final class DragPayloadBuilderTests: XCTestCase {
         let writer = try XCTUnwrap(DragPayloadBuilder.makePasteboardWriter(for: item, bookmarkService: bookmarkService))
 
         XCTAssertNotNil(writer as? DirectFilePasteboardWriter,
-                        "普通文件必须使用真实拖拽会保留全部类型的直接 writer")
+                        "Regular files must use the direct writer, which keeps all types in a real drag")
 
         let advertised = advertisedTypes(of: writer)
         XCTAssertTrue(advertised.contains(UTType.fileURL.identifier),
-                      "advertised types \(advertised) 应含 public.file-url（Finder copy 语义路径）")
+                      "advertised types \(advertised) should include public.file-url (the Finder copy-semantics path)")
         XCTAssertTrue(advertised.contains(PasteboardTypes.legacyFilenames.rawValue),
-                      "advertised types \(advertised) 应含 Chromium 文件名列表")
+                      "advertised types \(advertised) should include the Chromium filename list")
         XCTAssertFalse(advertised.contains { NSFilePromiseReceiver.readableDraggedTypes.contains($0) },
-                       "普通文件不得依赖真实拖拽会丢失附加类型的 promise provider")
+                       "Regular files must not rely on the promise provider, which loses extra types in a real drag")
 
         XCTAssertEqual(writer.pasteboardPropertyList(forType: .fileURL) as? String,
                        "file:///tmp/report.pdf")
@@ -255,7 +255,7 @@ final class DragPayloadBuilderTests: XCTestCase {
         XCTAssertTrue(advertised.contains(PasteboardTypes.legacyFilenames.rawValue))
         XCTAssertFalse(advertised.contains { NSFilePromiseReceiver.readableDraggedTypes.contains($0) })
         XCTAssertTrue(advertised.contains(UTType.tiff.identifier),
-                      "图片项应声明 public.tiff 位图回退")
+                      "Image items should declare a public.tiff bitmap fallback")
     }
 
     // MARK: - Text item
@@ -270,7 +270,7 @@ final class DragPayloadBuilderTests: XCTestCase {
         let pasteboard = writtenPasteboard(for: writer)
         let advertised = pasteboard.types?.map(\.rawValue) ?? []
         XCTAssertTrue(advertised.contains(UTType.utf8PlainText.identifier),
-                      "advertised types \(advertised) 应含 public.utf8-plain-text")
+                      "advertised types \(advertised) should include public.utf8-plain-text")
         XCTAssertFalse(advertised.contains(UTType.fileURL.identifier))
         XCTAssertEqual(pasteboard.string(forType: .string), "hello shelf")
     }
@@ -286,7 +286,7 @@ final class DragPayloadBuilderTests: XCTestCase {
         XCTAssertTrue(advertised.contains(UTType.url.identifier))
         XCTAssertTrue(advertised.contains(UTType.utf8PlainText.identifier))
         XCTAssertFalse(advertised.contains(UTType.fileURL.identifier),
-                       "web URL 不得连带声明 public.file-url（错误表示）")
+                       "A web URL must not also declare public.file-url (wrong representation)")
         // Read-back path consistent with the target application (NSURL reading + text fallback).
         XCTAssertEqual(pasteboard.string(forType: PasteboardTypes.url), "https://www.apple.com")
         XCTAssertEqual(pasteboard.string(forType: .string), "https://www.apple.com")
@@ -302,16 +302,16 @@ final class DragPayloadBuilderTests: XCTestCase {
         let writer = try XCTUnwrap(DragPayloadBuilder.makePasteboardWriter(for: item, bookmarkService: bookmarkService))
 
         let provider = try XCTUnwrap(writer as? FilePromiseProvider,
-                                     "托管剪切项必须使用可确认落盘的 promise provider")
+                                     "Managed cut items must use the promise provider, which can confirm the write")
         XCTAssertEqual(provider.fileType, DragPayloadBuilder.promisedFileType(for: item))
         let advertised = advertisedTypes(of: writer)
         XCTAssertFalse(advertised.contains(UTType.fileURL.identifier),
-                       "剪切项不得广告 public.file-url（否则 Finder 直读路径绕过交付确认）：\(advertised)")
+                       "Cut items must not advertise public.file-url (Finder would read the path and skip delivery confirmation): \(advertised)")
         XCTAssertFalse(advertised.contains(PasteboardTypes.legacyFilenames.rawValue),
-                       "剪切项不得通过 legacy 路径绕过交付确认")
+                       "Cut items must not bypass delivery confirmation through the legacy path")
         let promiseTypes = NSFilePromiseReceiver.readableDraggedTypes
         XCTAssertTrue(advertised.contains { promiseTypes.contains($0) },
-                      "剪切项必须保留 promise 类型（一切目的地必经 promise 写入）：\(advertised)")
+                      "Cut items must keep promise types (every destination goes through the promise write): \(advertised)")
         // fileURL representation does not produce data (double defense: not declared, and request also
         // returns nil).
         XCTAssertNil(writer.pasteboardPropertyList(forType: .fileURL))
@@ -325,14 +325,14 @@ final class DragPayloadBuilderTests: XCTestCase {
         let advertised = advertisedTypes(of: writer)
         XCTAssertFalse(advertised.contains(UTType.fileURL.identifier))
         XCTAssertFalse(advertised.contains(UTType.tiff.identifier),
-                       "剪切图片项不挂 tiff 位图回退（位图目标无法确认交付）")
+                       "Cut image items get no tiff bitmap fallback (bitmap destinations cannot confirm delivery)")
         XCTAssertTrue(advertised.contains { NSFilePromiseReceiver.readableDraggedTypes.contains($0) })
     }
 
     func testTutorialFileWriterCarriesPrivateTokenAlongsideRealFileRepresentations() throws {
         let item = ShelfItem(kind: .file,
-                             path: "/tmp/OpenYoink 练习文件.txt",
-                             displayName: "OpenYoink 练习文件.txt")
+                             path: "/tmp/\(OnboardingSessionStore.tutorialFileName)",
+                             displayName: OnboardingSessionStore.tutorialFileName)
         let token = UUID().uuidString
         let writer = try XCTUnwrap(DragPayloadBuilder.makePasteboardWriter(
             for: item,
@@ -372,7 +372,7 @@ final class DragPayloadBuilderTests: XCTestCase {
                 deliveredID.withLock { $0 = id }
                 deliveredURL.withLock { $0 = url }
             },
-            failed: { _ in XCTFail("写入应成功") }
+            failed: { _ in XCTFail("The write should succeed") }
         )
         let writer = try XCTUnwrap(DragPayloadBuilder.makePasteboardWriter(
             for: item, bookmarkService: bookmarkService, delivery: sink))
@@ -440,7 +440,7 @@ final class DragPayloadBuilderTests: XCTestCase {
         let draggingItems = DragPayloadBuilder.makeDraggingItems(
             for: [stack], frame: NSRect(x: 0, y: 0, width: 88, height: 100), bookmarkService: bookmarkService)
 
-        XCTAssertEqual(draggingItems.count, 3, "stack 拖出 = 其全部子项")
+        XCTAssertEqual(draggingItems.count, 3, "Dragging out a stack = all of its children")
     }
 
     func testMakeDraggingItems_skipsUnbuildableItems() {

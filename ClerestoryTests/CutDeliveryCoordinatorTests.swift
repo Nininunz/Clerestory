@@ -92,7 +92,7 @@ final class DeliveryCoordinatorTests: XCTestCase {
         let sessionID = beginSession(context, items: [item])
 
         context.coordinator.noteSessionEnded(id: sessionID, accepted: true)
-        XCTAssertNotNil(context.store.item(withID: item.id), "交付确认前不移除")
+        XCTAssertNotNil(context.store.item(withID: item.id), "Do not remove before delivery is confirmed")
         XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
         try FilePromiseProvider.writeCopy(
             of: .init(sourceURL: source, bookmark: item.bookmark,
@@ -104,13 +104,13 @@ final class DeliveryCoordinatorTests: XCTestCase {
                                           itemID: item.id,
                                           destination: destination)
 
-        XCTAssertNil(context.store.item(withID: item.id), "交付后 item 必须离架")
+        XCTAssertNil(context.store.item(withID: item.id), "The item must leave the shelf after delivery")
         XCTAssertFalse(FileManager.default.fileExists(atPath: item.fileURL!.path),
-                       "交付后保管副本必须删除")
+                       "The managed copy must be deleted after delivery")
         XCTAssertEqual(try Data(contentsOf: destination), Data("managed content".utf8))
         let entry = try XCTUnwrap(context.recents.entries.first)
         XCTAssertEqual(entry.displayName, item.displayName)
-        XCTAssertEqual(entry.path, destination.path, "最近历史记录交付目标路径（保管副本已删）")
+        XCTAssertEqual(entry.path, destination.path, "Recents record the delivery destination path (the managed copy is deleted)")
     }
 
     /// Reverse timeline: promise write completes before session ends (for small files) → finalize upon
@@ -126,7 +126,7 @@ final class DeliveryCoordinatorTests: XCTestCase {
         context.coordinator.noteDelivered(sessionID: sessionID,
                                           itemID: item.id,
                                           destination: destination)
-        XCTAssertNotNil(context.store.item(withID: item.id), "会话未成功结束前不移除")
+        XCTAssertNotNil(context.store.item(withID: item.id), "Do not remove before the session ends successfully")
         context.coordinator.noteSessionEnded(id: sessionID, accepted: true)
 
         XCTAssertNil(context.store.item(withID: item.id))
@@ -183,7 +183,7 @@ final class DeliveryCoordinatorTests: XCTestCase {
             XCTAssertEqual(failure.reason, .deliveryFailed)
             XCTAssertEqual(failure.recoveryAction, .retryByDraggingOut(itemID: item.id))
         } else {
-            XCTFail("交付失败必须进入 failed 状态")
+            XCTFail("A failed delivery must enter the failed state")
         }
         XCTAssertTrue(context.recents.entries.isEmpty)
     }
@@ -207,9 +207,9 @@ final class DeliveryCoordinatorTests: XCTestCase {
                                           itemID: cutChild.id,
                                           destination: URL(fileURLWithPath: "/tmp/out-child.txt"))
 
-        XCTAssertNil(context.store.item(withID: stack.id), "剩 1 子项时 stack 自动解散")
+        XCTAssertNil(context.store.item(withID: stack.id), "The stack dissolves automatically when 1 child remains")
         let survivor = try XCTUnwrap(context.store.items.first)
-        XCTAssertEqual(survivor.id, sibling.id, "stack 解散后存活子项原位保留")
+        XCTAssertEqual(survivor.id, sibling.id, "After the stack dissolves, the surviving child stays in place")
         XCTAssertFalse(FileManager.default.fileExists(atPath: cutChild.fileURL!.path))
     }
 
@@ -230,7 +230,7 @@ final class DeliveryCoordinatorTests: XCTestCase {
 
         XCTAssertNil(context.store.item(withID: item.id))
         XCTAssertFalse(FileManager.default.fileExists(atPath: item.fileURL!.path),
-                       "item 快照驱动定稿：store 里没有也要删掉保管副本")
+                       "The item snapshot drives finalization: delete the managed copy even if the store no longer has it")
         XCTAssertEqual(context.recents.entries.first?.displayName, item.displayName)
     }
 
@@ -246,7 +246,7 @@ final class DeliveryCoordinatorTests: XCTestCase {
 
         XCTAssertNotNil(context.store.item(withID: normal.id))
         XCTAssertEqual(context.transferStore.currentTask?.phase, .targetAccepted)
-        XCTAssertTrue(context.recents.entries.isEmpty, "普通项的历史由 DragSessionController 策略路径记录")
+        XCTAssertTrue(context.recents.entries.isEmpty, "History for regular items is recorded by the DragSessionController policy path")
     }
 
     /// After using the `.remove` strategy to remove an ordinary materialized item, already accepted direct

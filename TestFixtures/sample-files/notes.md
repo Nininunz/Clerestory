@@ -1,4 +1,4 @@
 # Sample Notes
 
 - Markdown fixture for Clerestory manual testing.
-- 用于拖拽测试的 Markdown 样例。
+- Sample Markdown file for drag-and-drop tests.

@@ -120,11 +120,23 @@ final class OnboardingController: NSObject, NSWindowDelegate {
                 model: model,
                 onSkip: { [weak self] in self?.skip() },
                 onDone: { [weak self] in self?.closeAfterCompletion() },
-                onTutorialDrop: { [weak self] token in self?.acceptTutorialDrop(token) }
+                onTutorialDrop: { [weak self] token in self?.acceptTutorialDrop(token) },
+                completionHint: { [weak self] in self?.completionHint ?? OnboardingCompletionHint() }
             )
         )
         return panel
     }()
+
+    /// How the panel can be opened right now. Quick Start can be reopened later
+    /// from the menu bar, so this follows the current settings, not the defaults.
+    private var completionHint: OnboardingCompletionHint {
+        let panel = settings.islandEnabled
+        let shortcut = settings.hotKeyEnabled
+            ? settings.hotKeyShortcut.map(ShortcutRecorderLogic.displayString(for:)) : nil
+        return OnboardingCompletionHint(hover: panel && settings.islandHoverRevealEnabled,
+                                        drag: panel && settings.islandDragApproachEnabled,
+                                        shortcut: shortcut)
+    }
 
     init(settings: SettingsStore,
          shelfStore: ShelfStore,
@@ -395,11 +407,41 @@ private final class OnboardingPanel: NSPanel {
     override var canBecomeKey: Bool { true }
 }
 
+/// The last Quick Start step's description of how to open the panel. It names
+/// only the triggers that are on, so it stays true after the user changes them.
+struct OnboardingCompletionHint: Equatable {
+    var hover = false
+    var drag = false
+    var shortcut: String?
+
+    var message: String {
+        switch (hover, drag, shortcut) {
+        case let (true, true, key?):
+            String(localized: "You're ready. Move the pointer or drag a file to the top center of the screen to open Clerestory, or press \(key) anytime.")
+        case (true, true, nil):
+            String(localized: "You're ready. Move the pointer or drag a file to the top center of the screen to open Clerestory, or use the menu bar icon.")
+        case let (false, true, key?):
+            String(localized: "You're ready. Drag a file to the top center of the screen to open Clerestory, or press \(key) anytime.")
+        case (false, true, nil):
+            String(localized: "You're ready. Drag a file to the top center of the screen to open Clerestory, or use the menu bar icon.")
+        case let (true, false, key?):
+            String(localized: "You're ready. Move the pointer to the top center of the screen to open Clerestory, or press \(key) anytime.")
+        case (true, false, nil):
+            String(localized: "You're ready. Move the pointer to the top center of the screen to open Clerestory, or use the menu bar icon.")
+        case let (false, false, key?):
+            String(localized: "You're ready. Press \(key) anytime to open Clerestory, or use the menu bar icon.")
+        case (false, false, nil):
+            String(localized: "You're ready. Open Clerestory from the menu bar icon.")
+        }
+    }
+}
+
 private struct OnboardingView: View {
     @Bindable var model: OnboardingViewModel
     let onSkip: () -> Void
     let onDone: () -> Void
     let onTutorialDrop: (String) -> Void
+    let completionHint: () -> OnboardingCompletionHint
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -479,7 +521,7 @@ private struct OnboardingView: View {
                     .font(.system(size: 30))
                     .foregroundStyle(.green)
                     .accessibilityHidden(true)
-                Text("You're ready. Clerestory will appear when you start dragging, and ⌘⇧Space shows or hides it anytime.")
+                Text(completionHint().message)
                     .font(.callout)
                     .fixedSize(horizontal: false, vertical: true)
             }
