@@ -24,10 +24,7 @@ assert set(identifiers) == {
 feed = ET.parse(root / "docs/appcast.xml")
 assert feed.findtext("./channel/link") == feed_url
 for enclosure in feed.findall("./channel/item/enclosure"):
-    assert enclosure.attrib["url"].startswith((
-        "https://github.com/Nininunz/OpenYoink/releases/download/",
-        "https://github.com/Nininunz/Clerestory/releases/download/",
-    ))
+    assert enclosure.attrib["url"].startswith("https://github.com/Nininunz/Clerestory/releases/download/")
 
 for file in ["Clerestory/Services/UpdateController.swift", "Clerestory/Services/SupportController.swift",
              "Scripts/make-release.sh", "Scripts/verify-update-feed.sh"]:
@@ -37,4 +34,4 @@ release = (root / "Scripts/make-release.sh").read_text()
 assert '"$SIGN_UPDATE" --account com.nininunz.OpenYoink' in release
 assert '"$SPARKLE_BIN/generate_keys" --account com.nininunz.OpenYoink -p' in release
 assert (root / "Clerestory/Resources/OpenYoink-LICENSE.txt").read_bytes() == (root / "LICENSE").read_bytes()
-print("Fork identity, signing-account selection, and update ownership checks passed.")
+print("App identity, signing-account selection, and update ownership checks passed.")

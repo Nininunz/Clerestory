@@ -13,13 +13,13 @@ Clerestory is maintained in [Nininunz/Clerestory](https://github.com/Nininunz/Cl
 | Source appcast | [docs/appcast.xml](appcast.xml) |
 | Hosting | [Account Pages repository](https://github.com/Nininunz/nininunz.github.io), at `Clerestory/appcast.xml` |
 
-The app uses its own bundle ID and feed path. The signing Keychain account continues to identify the existing Sparkle key. New appcast entries use `Nininunz/Clerestory` release download URLs. The account Pages repo also hosts the legacy Help redirect and feed.
+The app uses its own bundle ID and feed path. The signing Keychain account continues to identify the existing Sparkle key. Appcast entries use `Nininunz/Clerestory` release download URLs. The account Pages repo also hosts the legacy Help redirect and feed.
 
 The public Sparkle Ed25519 key lives in [Info.plist](../Clerestory/App/Info.plist). The matching private key stays in the maintainer’s Keychain. Back it up securely outside the repository. The release script checks the public key against the Keychain account before building and signs the final DMG with that account. Upstream OpenYoink releases use a different key and feed.
 
 ## Signing setup
 
-Use a Developer ID Application identity, an Apple notarization profile in Keychain, and the fork’s Sparkle signing key. Copy [the signing example](../Scripts/release-signing.example) to the ignored `Scripts/release-signing.local` and configure `DEVELOPER_ID_APPLICATION`, `DEVELOPMENT_TEAM_ID`, and `NOTARY_PROFILE`, or provide them in the environment. The release and notarization scripts load the local file. The example lets existing environment values take precedence. Keep passwords and private keys in Keychain.
+Use a Developer ID Application identity, an Apple notarization profile in Keychain, and the Clerestory Sparkle signing key. Copy [the signing example](../Scripts/release-signing.example) to the ignored `Scripts/release-signing.local` and configure `DEVELOPER_ID_APPLICATION`, `DEVELOPMENT_TEAM_ID`, and `NOTARY_PROFILE`, or provide them in the environment. The release and notarization scripts load the local file. The example lets existing environment values take precedence. Keep passwords and private keys in Keychain.
 
 Run `Scripts/doctor.sh --release` to check tool availability, Developer ID signing, and notarization access. Set `SPARKLE_BIN` if the Sparkle tools are in a custom DerivedData location.
 
@@ -37,6 +37,6 @@ Update [Version.xcconfig](../Version.xcconfig) when preparing a release. It sets
 
 ## Existing installations
 
-Install the first build with bundle ID `com.nininunz.Clerestory` from its DMG. It starts with a fresh sandbox. Earlier fork builds and upstream OpenYoink retain their separate data containers.
+Install the first build with bundle ID `com.nininunz.Clerestory` from its DMG. It starts with a fresh sandbox. Earlier `com.nininunz.OpenYoink` builds and upstream OpenYoink retain their separate data containers.
 
-See the [first release notes](releases/first-fork-release.md) and [initial validation record](releases/validation-2026-11-17.md) for historical release and test evidence.
+See the [1.0.0 release notes](releases/release-notes-1.0.0.md) and [initial validation record](releases/validation-2026-11-17.md) for historical release and test evidence.

@@ -4,13 +4,13 @@
 
 Clerestory 将暂存架和可配置的快捷入口集中在屏幕顶部的面板中，支持内置和外接显示器。配有实体刘海的 Mac 还可以显示独立的刘海入口，用来打开面板或查看模块状态。
 
-[下载 Clerestory 1.0.4](https://github.com/Nininunz/Clerestory/releases/tag/v1.0.4) · [快速上手](#快速上手) · [English](README.en.md)
+[下载 Clerestory 1.0.5](https://github.com/Nininunz/Clerestory/releases/tag/v1.0.5) · [快速上手](#快速上手) · [English](README.en.md)
 
 ## 安装
 
-Clerestory 支持运行 macOS 15 或更新版本的 Apple 芯片和 Intel Mac。打开已签名并通过 Apple 公证的 [Clerestory 1.0.4 DMG](https://github.com/Nininunz/Clerestory/releases/download/v1.0.4/Clerestory-1.0.4.dmg)，将应用拖入「应用程序」。
+Clerestory 支持运行 macOS 15 或更新版本的 Apple 芯片和 Intel Mac。打开已签名并通过 Apple 公证的 [Clerestory 1.0.5 DMG](https://github.com/Nininunz/Clerestory/releases/download/v1.0.5/Clerestory-1.0.5.dmg)，将应用拖入「应用程序」。
 
-从旧版 OpenYoink 切换时，请使用 DMG 安装 Clerestory。Clerestory 使用独立的暂存架和偏好设置。已安装使用 Clerestory 应用标识符的版本后，可从菜单栏图标选择 **检查更新…**。详见[发行指南](docs/FORK_RELEASE.md)。
+从旧版 OpenYoink 切换时，请使用 DMG 安装 Clerestory。Clerestory 使用独立的暂存架和偏好设置。已安装使用 Clerestory 应用标识符的版本后，可从菜单栏图标选择 **检查更新…**。详见[发行指南](docs/RELEASING.md)。
 
 ## 快速上手
 
@@ -117,21 +117,11 @@ xcodebuild \
 
 PR 也欢迎。改动比较大的话，先开个 Issue 聊聊；提交前请跑一遍完整的单元测试。
 
-## 上游项目的 Star 历史
-
-<a href="https://www.star-history.com/?repos=MuQY1818%2FOpenYoink&amp;type=date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=MuQY1818/OpenYoink&amp;type=Date&amp;theme=dark">
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=MuQY1818/OpenYoink&amp;type=Date">
-    <img src="https://api.star-history.com/svg?repos=MuQY1818/OpenYoink&amp;type=Date" width="800" alt="OpenYoink 在 GitHub 上的 Star 数量变化">
-  </picture>
-</a>
-
 ## 致谢与许可
 
 Clerestory 基于 weijue 和贡献者开发的 [OpenYoink](https://github.com/MuQY1818/OpenYoink)，采用 [MIT 许可证](LICENSE) 开源。
 
-自动更新靠 [Sparkle](https://sparkle-project.org/)，Star 趋势图来自 [Star History](https://www.star-history.com/)。用到的第三方组件和许可证见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。
+自动更新靠 [Sparkle](https://sparkle-project.org/)。用到的第三方组件和许可证见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。
 
 <br>
 
