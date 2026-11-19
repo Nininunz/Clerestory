@@ -35,8 +35,6 @@ Update [Version.xcconfig](../Version.xcconfig) when preparing a release. It sets
 4. Run `Scripts/publish-update-feed.sh` from a checkout with write access to the account Pages repository. It reads the merged appcast, verifies the release archive and signature, creates or updates the feed path, and checks that the deployed bytes match. Then run `Scripts/verify-update-feed.sh "https://nininunz.github.io/Clerestory/appcast.xml" "$version"` to check the public download, signature, and bundled app.
 5. For updates within the `com.nininunz.Clerestory` identity, confirm Sparkle discovers the update from an earlier signed install using the public feed. Seed disposable Shelf items and a preference first. After installation and relaunch, verify the new build and confirm that the data and setting survived. Record the results with the release evidence.
 
-## Existing installations
+## Release history
 
-Install the first build with bundle ID `com.nininunz.Clerestory` from its DMG. It starts with a fresh sandbox. Earlier `com.nininunz.OpenYoink` builds and upstream OpenYoink retain their separate data containers.
-
-See the [1.0.0 release notes](releases/release-notes-1.0.0.md) and [initial validation record](releases/validation-2026-11-17.md) for historical release and test evidence.
+All pre-release builds were removed on 2026-11-18 and Clerestory restarted at 1.0.0. Those builds used Sparkle build numbers up to 60, including a 1.0.5 (60) build with the `com.nininunz.Clerestory` identity, so every new release uses build 61 or higher. `Scripts/make-release.sh` enforces this floor when the appcast is empty. Earlier `com.nininunz.OpenYoink` builds and upstream OpenYoink keep separate data containers and do not update to Clerestory.

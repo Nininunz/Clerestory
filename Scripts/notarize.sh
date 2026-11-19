@@ -6,7 +6,7 @@
 #   xcrun notarytool store-credentials <profile-name> ...
 #   export NOTARY_PROFILE=<profile-name>
 #
-# Usage: ./Scripts/notarize.sh export/Clerestory-1.0.5.dmg
+# Usage: ./Scripts/notarize.sh export/Clerestory-1.0.0.dmg
 # Developer ID-signed .app and .pkg inputs are also supported. This script preserves
 # the existing signatures.
 
