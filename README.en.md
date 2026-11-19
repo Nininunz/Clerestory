@@ -4,13 +4,13 @@
 
 Clerestory puts a file shelf and configurable shortcuts in a panel at the top of your display. Use it on any display. On a Mac with a built-in notch, an optional Notch companion gives you a compact way to open the panel and see module activity.
 
-[Download Clerestory 1.0.5](https://github.com/Nininunz/Clerestory/releases/tag/v1.0.5) · [Quick start](#quick-start) · [简体中文](README.md)
+[Download Clerestory](https://github.com/Nininunz/Clerestory/releases/latest) · [Quick start](#quick-start) · [简体中文](README.md)
 
 ## Install
 
-Clerestory supports macOS 15 and later on Apple silicon and Intel. Open the signed and notarized [Clerestory 1.0.5 DMG](https://github.com/Nininunz/Clerestory/releases/download/v1.0.5/Clerestory-1.0.5.dmg) and drag the app to Applications.
+Clerestory supports macOS 15 and later on Apple silicon and Intel. Open the signed and notarized DMG from the [latest release](https://github.com/Nininunz/Clerestory/releases/latest) and drag the app to Applications.
 
-Install Clerestory from its DMG when switching from an earlier OpenYoink build. Clerestory starts with its own Shelf and preferences. To update a build that uses the Clerestory app identity, choose **Check for Updates…** from the menu bar icon. See the [release guide](docs/RELEASING.md).
+To update, choose **Check for Updates…** from the menu bar icon.
 
 ## Quick start
 

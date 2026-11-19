@@ -12,9 +12,3 @@
 | Visual previews | [Module previews](development/PREVIEWS.md) explains how to render fresh captures with synthetic data. |
 | Publishing releases | [Release and Sparkle guide](RELEASING.md) covers signing, notarization, feed publication, and update verification. |
 | Repository metadata | [README badges](badges/README.md) explains how to refresh the checked-in badges. [Third-party notices](../THIRD_PARTY_NOTICES.md) records bundled dependencies and attribution. |
-
-## Historical records
-
-- [1.0.0 (55) release notes](releases/release-notes-1.0.0.md) record the original public release, published as OpenYoink.
-- [November 17, 2026 release validation](releases/validation-2026-11-17.md) records the candidate builds, tests, and results from that release cycle.
-- [Clerestory 1.0.5 (60) validation](releases/validation-1.0.5.md) records signing, launch, and Sparkle checks, with clean-account validation pending.

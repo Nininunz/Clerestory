@@ -127,7 +127,8 @@ fi
 # to the highest listed build plus one and reject lower or equal explicit builds.
 # An existing release version can be rebuilt with its original build number.
 MAX_BUILD="$(grep -o '<sparkle:version>[0-9]*' "$APPCAST" 2>/dev/null | grep -o '[0-9]*' | sort -n | tail -1 || true)"
-MAX_BUILD="${MAX_BUILD:-51}"
+# Builds up to 60 were published before the 2026-11-18 release reset, so never go lower.
+MAX_BUILD="${MAX_BUILD:-60}"
 EXISTING_VERSION_BUILD="$(python3 - "$APPCAST" "$VERSION" <<'PYEOF'
 import sys
 import xml.etree.ElementTree as ET
