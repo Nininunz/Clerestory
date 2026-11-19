@@ -7476,6 +7476,66 @@
           }
         }
       }
+    },
+    "Add Clipboard Image to Shelf" : {
+      "extractionState" : "manual",
+      "comment" : "Menu bar item that adds the image on the clipboard to the Shelf",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Clipboard Image to Shelf"
+          }
+        }
+      }
+    },
+    "Clipboard Image.png" : {
+      "extractionState" : "manual",
+      "comment" : "Display name for an image added from the clipboard",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clipboard Image.png"
+          }
+        }
+      }
+    },
+    "Clipboard Image.jpg" : {
+      "extractionState" : "manual",
+      "comment" : "Display name for a JPEG image added from the clipboard",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clipboard Image.jpg"
+          }
+        }
+      }
+    },
+    "No supported image on the clipboard." : {
+      "extractionState" : "manual",
+      "comment" : "Shelf notice details when Add Clipboard Image to Shelf finds no image",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No supported image on the clipboard."
+          }
+        }
+      }
+    },
+    "No image to add." : {
+      "extractionState" : "manual",
+      "comment" : "Shelf notice summary when Add Clipboard Image to Shelf finds no image",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No image to add."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

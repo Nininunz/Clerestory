@@ -77,6 +77,28 @@ final class DropImportCoordinator {
         type == PasteboardTypes.jpeg ? materializedJPEGDisplayName : materializedImageDisplayName
     }
 
+    /// Where image data being stored came from: a drop, or the "Add Clipboard Image to Shelf" menu
+    /// item. It decides the stored file name and how a failure can be recovered.
+    enum ImageSource: Sendable {
+        case drop, clipboard
+
+        nonisolated func displayName(for type: NSPasteboard.PasteboardType) -> String {
+            switch self {
+            case .drop: DropImportCoordinator.materializedImageDisplayName(for: type)
+            case .clipboard:
+                type == PasteboardTypes.jpeg
+                    ? String(localized: "Clipboard Image.jpg") : String(localized: "Clipboard Image.png")
+            }
+        }
+
+        nonisolated var recoveryAction: RecoveryAction {
+            switch self {
+            case .drop: .dragAgainFromSource
+            case .clipboard: .dismiss
+            }
+        }
+    }
+
     /// UX1: Successful import callback (drag and drop and UX3 clipboard save share this entry).
     /// `importItems`
     /// Trigger synchronously on MainActor when returning `handled` —— AppDelegate uses this to mark
@@ -281,10 +303,9 @@ final class DropImportCoordinator {
         }
 
         // 3. Image data (bitmaps without file URL): Materialize PNG to TempFileService directory.
-        if let imageType = PasteboardTypes.preferredImageType(in: types) {
+        if PasteboardTypes.preferredImageType(in: types) != nil {
             let pending = scheduleImageMaterialization(from: pasteboard,
                                                        taskID: batchID,
-                                                       preferredType: imageType,
                                                        onItemReady: onAsyncItemReady)
             if pending > 0 {
                 return DropImportResult(items: [], pendingMaterializations: pending)
@@ -667,15 +688,31 @@ final class DropImportCoordinator {
 
     // MARK: - Image data
 
+    /// "Add Clipboard Image to Shelf": adds only the clipboard's image, with no fallback to files,
+    /// links, or text. A copied file is skipped even when it carries an icon bitmap (Finder writes
+    /// its icon), so this never adds a file's icon. Returns how many images were scheduled.
+    func importClipboardImages(from pasteboard: NSPasteboard,
+                               onItemReady: @escaping @MainActor (ShelfItem) -> Void) -> Int {
+        let pending = scheduleImageMaterialization(from: pasteboard, taskID: UUID(), source: .clipboard,
+                                                   skipFileCopies: true, onItemReady: onItemReady)
+        if pending > 0 { onImportHandled?() }
+        return pending
+    }
+
     /// Extract image Data from each pasteboard item and dispatch to background materialization.
     /// NSPasteboardItem is not Sendable, Data must be extracted on this layer (MainActor) locally, not
     /// passed across actors with original item.
     private func scheduleImageMaterialization(from pasteboard: NSPasteboard,
                                               taskID: UUID,
-                                              preferredType: NSPasteboard.PasteboardType,
+                                              source: ImageSource = .drop,
+                                              skipFileCopies: Bool = false,
                                               onItemReady: @escaping @MainActor (ShelfItem) -> Void) -> Int {
         let payloads: [(type: NSPasteboard.PasteboardType, data: Data)] =
             (pasteboard.pasteboardItems ?? []).compactMap { item in
+                if skipFileCopies,
+                   item.types.contains(PasteboardTypes.fileURL) || item.types.contains(.init("com.apple.icns")) {
+                    return nil
+                }
                 // Use the first image type that has data; an empty one falls through to the next.
                 for type in PasteboardTypes.imageTypes where item.types.contains(type) {
                     if let data = item.data(forType: type), !data.isEmpty { return (type, data) }
@@ -691,7 +728,7 @@ final class DropImportCoordinator {
                 failure: TransferFailure(
                     reason: .materializationFailed,
                     itemName: itemName,
-                    recoveryAction: .dragAgainFromSource
+                    recoveryAction: source.recoveryAction
                 )
             )
         }
@@ -705,7 +742,7 @@ final class DropImportCoordinator {
                     guard let imageData = Self.storedImageData(from: payload.data, type: payload.type) else {
                         throw DropImportError.imageConversionFailed
                     }
-                    let displayName = Self.materializedImageDisplayName(for: payload.type)
+                    let displayName = source.displayName(for: payload.type)
                     let destination = try tempFileService.uniqueFileURL(suggestedName: displayName)
                     try imageData.write(to: destination, options: .atomic)
                     let item = Self.makeFileBackedItem(for: destination,
@@ -718,7 +755,7 @@ final class DropImportCoordinator {
                     // Fail without crashing or being silent: log + D10 inline prompt, drag-and-drop is
                     // still considered as handled.
                     logger.error("Failed to materialize dropped image data: \(error.localizedDescription, privacy: .public)")
-                    await reportFailure(Self.materializedImageDisplayName(for: payload.type))
+                    await reportFailure(source.displayName(for: payload.type))
                 }
             }
         }
