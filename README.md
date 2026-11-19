@@ -31,7 +31,7 @@ Hover, click, and drag-to-open are enabled by default. Adjust the hover delays o
 
 - **Panel.** Opens on the display where you trigger it and stays on that display until dismissed. Use **Settings → Panel → Shortcut Positions** or **Quick Settings** to arrange module shortcuts.
 - **Notch.** An optional companion on the built-in display of a Mac with a physical notch. It is on by default. Use **Settings → Notch** to turn it off, choose its module order, and set a cycling shortcut (none is set by default). Hold Shift with that shortcut to cycle backward.
-- **Shelf** and **Quick Settings** are available by default. To use other modules, turn on **Experimental Modules** under **Settings → Modules**. Transfers, Timer, Battery and System Status turn on right away; turn on the others individually. Experimental modules include Transfers, Timer, Battery, Now Playing, System Status, Quick Access, Clipboard History, and AI Usage.
+- **Shelf** and **Quick Settings** are available by default. To use other modules, turn on **Experimental Modules** under **Settings → Modules**. Transfers, Timer, Battery and System Status turn on right away; turn on the others individually. Experimental modules include Transfers, Timer, Battery, Now Playing, System Status, Clipboard History, and AI Usage.
 
 ## File safety and lifecycle
 
@@ -68,7 +68,6 @@ Regular file drags provide both a file URL and a filename Chromium understands. 
 - The only background network traffic is checking for and downloading updates from GitHub Pages / Releases, and you can turn that off.
 - AI Usage only talks to TokenTracker on your own Mac (`localhost:7680`). It never goes online and doesn't read TokenTracker's files.
 - Now Playing never goes online. It reads playback info through a local helper first, and falls back to AppleScript for Apple Music / Spotify, which may trigger an Automation permission prompt. If the module breaks, the shelf keeps working.
-- Quick Access only remembers the folders you add. Removing one doesn't delete the folder. **Open** uses the folder's default app; **Open With** lets you pick another app for that one open, and the choice isn't saved.
 
 ### Clipboard history
 

@@ -20,7 +20,7 @@ Scripts/render-module-previews.sh --module shelf --module battery --capture snap
 Scripts/render-module-previews.sh --module shelf --output /tmp/my-shelf-previews
 ```
 
-Module slugs: `battery`, `timer`, `now-playing`, `ai-usage`, `clipboard`, `quick-access`, `shelf`, `transfers`, `system-status`, `quick-settings`.
+Module slugs: `battery`, `timer`, `now-playing`, `ai-usage`, `clipboard`, `shelf`, `transfers`, `system-status`, `quick-settings`.
 
 `--scenario` matches case-insensitive substrings of scenario IDs or labels. Shelf IDs are stable even when their display labels change. A filter with no matches fails rather than silently producing an empty gallery. `--list` still builds and runs the fixture catalog so its labels stay in sync with the code.
 
@@ -30,7 +30,7 @@ Each run defaults to a new `/tmp/clerestory-previews-*` directory with `index.ht
 
 Add Shelf cases to `ClerestoryTests/TestKit/Shelf/ShelfScenario.swift` using real state/store inputs. Other modules still use the compatibility adapter in `IslandModulePreviewTests.swift`. Enabled cases automatically appear in listing, filtering, the manifest, and the gallery. Shelf includes empty, populated, selected, search-empty, importing, duplicate-drop, file-drag, long-name, large-grid, and keyboard-focus samples.
 
-Notice samples post the module's real notice into a preview message center (`IslandMessageCenter.preview(notice:from:)`) and pass it with the scenario, so the host draws the pill below the Panel: Clipboard History `notice` and Quick Access `duplicate-folder-notice`. Lasting conditions are page content: Clipboard History `load-failed` and `storage-full`, Quick Access `load-failed`, and AI Usage `refresh-failed-cached-data-retry` show their `IslandStatusRow`.
+Notice samples post the module's real notice into a preview message center (`IslandMessageCenter.preview(notice:from:)`) and pass it with the scenario, so the host draws the pill below the Panel: Clipboard History `notice`. Lasting conditions are page content: Clipboard History `load-failed` and `storage-full`, and AI Usage `refresh-failed-cached-data-retry` show their `IslandStatusRow`.
 
 ## Test kit structure
 

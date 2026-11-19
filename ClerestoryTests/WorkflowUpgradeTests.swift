@@ -27,7 +27,7 @@ final class WorkflowUpgradeTests: XCTestCase {
             )
             access = nil
             XCTAssertNotNil(retainedAccess)
-            source.acceptedByFolderCopy = path == 2
+            if path == 2 { source.acceptShelfReorder() }
             source.completeDrag(operation: path == 0 ? [] : .copy)
             XCTAssertNil(retainedAccess)
             XCTAssertEqual(store.items, [item])
@@ -110,11 +110,11 @@ final class WorkflowUpgradeTests: XCTestCase {
             XCTAssertTrue(settings.islandDragApproachEnabled)
             XCTAssertTrue(settings.islandEnabled)
         }
-        XCTAssertTrue(settings.isIslandModuleEnabled(.folders))
+        XCTAssertTrue(settings.isIslandModuleEnabled(.aiUsage))
         XCTAssertTrue(settings.isIslandModulePinned(.clipboard))
         XCTAssertTrue(settings.isIslandModulePinned("future.module"))
         XCTAssertTrue(settings.isIslandModulePinned(.system))
-        XCTAssertEqual(settings.islandModuleConfiguration.pinnedModuleIDs.count, 6)
+        XCTAssertEqual(settings.islandModuleConfiguration.pinnedModuleIDs.count, 5)
         settings.clipboardHistoryShortcut = nil
         XCTAssertNil(SettingsStore(defaults: defaults).clipboardHistoryShortcut)
     }
@@ -162,32 +162,4 @@ final class WorkflowUpgradeTests: XCTestCase {
         XCTAssertTrue(ResourceUsagePolicy.samplingAllowed(isSleeping: false, isLocked: false))
     }
 
-    func testFolderDropLocatorIgnoresClippedTiles() {
-        let id = UUID()
-        let viewport = CGRect(x: 0, y: 50, width: 200, height: 100)
-        let tiles = [id: CGRect(x: 0, y: 30, width: 80, height: 60)]
-        XCTAssertNil(FavoriteFolderDropLocator.target(at: .init(x: 20, y: 40), tiles: tiles,
-                                                      viewport: viewport, addFrame: .zero))
-        XCTAssertEqual(FavoriteFolderDropLocator.target(at: .init(x: 20, y: 60), tiles: tiles,
-                                                       viewport: viewport, addFrame: .zero), .folder(id))
-    }
-
-    func testFolderCopyAcceptanceBypassesDragOutRemovalPolicy() throws {
-        let suite = "ClerestoryInternalCopy-\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
-        let settings = SettingsStore(defaults: defaults)
-        settings.dragOutRemovalPolicy = .remove
-        let item = ShelfItem(kind: .file, displayName: "keep on shelf", isCut: true)
-        let store = ShelfStore(items: [item])
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let source = DragSessionController(contents: .init(items: [item], topLevelIDs: [item.id]),
-                                           store: store, settings: settings,
-                                           recents: RecentItemsService(directoryURL: directory))
-        source.acceptedByFolderCopy = true
-        source.completeDrag(operation: .copy)
-        XCTAssertEqual(store.items, [item])
-        XCTAssertFalse(store.canUndoRemoval)
-    }
 }

@@ -4,8 +4,8 @@ A module tells the user about itself in three ways. Pick by one rule: **if it wi
 
 | What | Example | Where it shows | API |
 | --- | --- | --- | --- |
-| Status | "Battery low", "Timer finished", "Copying files…" | The Notch's icon, tint and VoiceOver label; once in the notice pill when raised | `ModuleMessenger.setStatus`, `setStatuses`, `clearStatus` |
-| Notice | "Power connected", "Copied to Clipboard", "Folder added to Quick Access." | The notice pill, until it times out | `ModuleMessenger.post` |
+| Status | "Battery low", "Timer finished", "Disk space is low" | The Notch's icon, tint and VoiceOver label; once in the notice pill when raised | `ModuleMessenger.setStatus`, `setStatuses`, `clearStatus` |
+| Notice | "Power connected", "Copied to Clipboard", "You can keep up to 30 favorites." | The notice pill, until it times out | `ModuleMessenger.post` |
 | Status row | "History storage is full…", AI Usage's refresh failure with **Retry** | The module's own page, while the condition holds | `IslandStatusRow` (plain view content) |
 
 [Panel and Notch architecture](../PANEL_ARCHITECTURE.md#statuses-notices-and-the-notch) describes how the message center queues, raises and shows them.

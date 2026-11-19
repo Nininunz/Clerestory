@@ -61,8 +61,6 @@ final class ShelfWindowController: NSObject {
     let nowPlayingModuleStore: NowPlayingModuleStore
     let systemStatusModuleStore: SystemStatusModuleStore
     let aiUsageModuleStore: AIUsageModuleStore
-    let favoriteFoldersStore: FavoriteFoldersStore
-    let favoriteFolderDropCoordinator: FavoriteFolderDropCoordinator
     let islandModuleContainer: IslandModuleContainer
     /// Open onboarding presentations. The last one to end restores the earlier visibility.
     private var onboardingPresentationCount = 0
@@ -192,8 +190,6 @@ final class ShelfWindowController: NSObject {
                 .environment(nowPlayingModuleStore)
                 .environment(systemStatusModuleStore)
                 .environment(aiUsageModuleStore)
-                .environment(favoriteFoldersStore)
-                .environment(favoriteFolderDropCoordinator)
                 .environment(clipboardHistoryStore)
                 .environment(\.bookmarkService, importCoordinator.bookmarkService)
                 .environment(\.dragOutController, islandDragOutController)
@@ -215,30 +211,18 @@ final class ShelfWindowController: NSObject {
         hostingController.sizingOptions = []
         hostingController.view.setAccessibilityLabel(islandRole == .notch
             ? String(localized: "Notch") : String(localized: "Clerestory Panel"))
-        let dropOverride: DragContainerDropOverride? = islandRole == .expanded
-            ? DragContainerDropOverride(
-                isActive: { [weak self] in
-                    guard let self else { return false }
-                    return self.islandActivityCoordinator.surfaceState.isExpanded
-                        && [.folders, .clipboard].contains(self.islandActivityCoordinator.selectedModule)
-                },
-                canHandle: { [weak self] context in
-                    guard let self, self.islandActivityCoordinator.selectedModule == .folders else { return false }
-                    return self.favoriteFolderDropCoordinator.update(context)
-                },
-                perform: { [weak self] context in
-                    guard let self, self.islandActivityCoordinator.selectedModule == .folders else { return false }
-                    return self.favoriteFolderDropCoordinator.perform(context)
-                },
-                reset: { [weak self] in self?.favoriteFolderDropCoordinator.resetTarget() }
-            )
-            : nil
+        let isExpandedPanel = islandRole == .expanded
         panel.contentView = DragContainerView(
             store: store,
             coordinator: importCoordinator,
             dropTargetState: islandDropTargetState,
             gridGeometry: islandGridGeometry,
-            dropOverride: dropOverride,
+            // Clipboard History takes no drops while it is shown in the expanded Panel.
+            refusesDrops: { [weak self] in
+                guard isExpandedPanel, let self else { return false }
+                return self.islandActivityCoordinator.surfaceState.isExpanded
+                    && self.islandActivityCoordinator.selectedModule == .clipboard
+            },
             onDestinationEntered: { [weak self] sequenceNumber in
                 self?.onIslandDestinationEntered?(sequenceNumber)
             },
@@ -343,13 +327,6 @@ final class ShelfWindowController: NSObject {
             alertsEnabled: { settings.aiUsageLimitAlertsEnabled },
             messenger: messages.messenger(for: .aiUsage)
         )
-        let favoriteFoldersStore = FavoriteFoldersStore(
-            persistence: FavoriteFoldersPersistenceController(),
-            bookmarkService: importCoordinator.bookmarkService,
-            messenger: messages.messenger(for: .folders)
-        )
-        let favoriteFolderDropCoordinator = FavoriteFolderDropCoordinator(folders: favoriteFoldersStore,
-                                                                          bookmarks: importCoordinator.bookmarkService)
         let shelfRuntime = CallbackIslandModuleRuntime(
             descriptor: islandModuleRegistry.descriptor(for: .shelf)!
         )
@@ -376,11 +353,6 @@ final class ShelfWindowController: NSObject {
             start: { nowPlayingModuleStore.start() },
             stop: { nowPlayingModuleStore.stop() }
         )
-        let favoriteFoldersModuleRuntime = CallbackIslandModuleRuntime(
-            descriptor: islandModuleRegistry.descriptor(for: .folders)!,
-            start: { favoriteFoldersStore.start() },
-            stop: { favoriteFoldersStore.stop(); favoriteFolderDropCoordinator.cancelCopy() }
-        )
         self.islandActivityCoordinator = islandActivityCoordinator
         self.islandModuleRegistry = islandModuleRegistry
         self.islandTimerStore = islandTimerStore
@@ -388,8 +360,6 @@ final class ShelfWindowController: NSObject {
         self.nowPlayingModuleStore = nowPlayingModuleStore
         self.systemStatusModuleStore = systemStatusModuleStore
         self.aiUsageModuleStore = aiUsageModuleStore
-        self.favoriteFoldersStore = favoriteFoldersStore
-        self.favoriteFolderDropCoordinator = favoriteFolderDropCoordinator
         self.islandModuleContainer = IslandModuleContainer(
             registrations: [
                 IslandModuleRegistration(
@@ -444,11 +414,6 @@ final class ShelfWindowController: NSObject {
                     }
                 ),
                 IslandModuleRegistration(
-                    descriptor: favoriteFoldersModuleRuntime.descriptor,
-                    runtime: favoriteFoldersModuleRuntime,
-                    makeContentView: { _ in AnyView(FavoriteFoldersModuleView()) }
-                ),
-                IslandModuleRegistration(
                     descriptor: aiUsageModuleStore.descriptor,
                     runtime: aiUsageModuleStore,
                     makeContentView: { _ in AnyView(IslandAIUsageView()) }
@@ -493,7 +458,6 @@ final class ShelfWindowController: NSObject {
             self.islandActivityCoordinator.show(module: .timer)
         }
         powerSourceMonitor.messenger = messages.messenger(for: .battery)
-        favoriteFolderDropCoordinator.messenger = messages.messenger(for: .folders)
         nowPlayingModuleStore.messenger = messages.messenger(for: .media)
         store.onItemsDidChange = { [weak self] in
             guard let self else { return }
@@ -549,7 +513,6 @@ final class ShelfWindowController: NSObject {
         islandNoticePanel?.stop()
         transferAnnouncements?.stop()
         setIslandDragZoneActive(false)
-        favoriteFolderDropCoordinator.cancelCopy()
         stopIslandModules()
         islandPresentation.deactivate()
     }
@@ -683,11 +646,6 @@ final class ShelfWindowController: NSObject {
             return false
         }
 
-        if sourcePanel === islandPanel,
-           islandActivityCoordinator.selectedModule == .folders {
-            return handleFavoriteFoldersKeyDown(event, modifiers: modifiers)
-        }
-
         if modifiers == [.command, .option],
            event.charactersIgnoringModifiers?.lowercased() == "c" {
             return performKeyboardAction(.copyPath)
@@ -752,26 +710,6 @@ final class ShelfWindowController: NSObject {
                 interaction.exitStack()
                 return true
             }
-            collapseIsland(animated: !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
-            return true
-        default:
-            return false
-        }
-    }
-
-    private func handleFavoriteFoldersKeyDown(
-        _ event: NSEvent,
-        modifiers: NSEvent.ModifierFlags
-    ) -> Bool {
-        guard modifiers.isEmpty else { return false }
-        switch event.keyCode {
-        case 123: return favoriteFoldersStore.selectRelative(delta: -1)
-        case 124: return favoriteFoldersStore.selectRelative(delta: 1)
-        case 125: return favoriteFoldersStore.selectRelative(delta: 2)
-        case 126: return favoriteFoldersStore.selectRelative(delta: -2)
-        case 36, 76: return favoriteFoldersStore.openSelected()
-        case 51, 117: return favoriteFoldersStore.removeSelected()
-        case 53:
             collapseIsland(animated: !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
             return true
         default:

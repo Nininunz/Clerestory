@@ -9,7 +9,6 @@ struct IslandExpandedView: View {
     @Environment(IslandModuleRegistry.self) private var registry
     @Environment(IslandModuleContainer.self) private var moduleContainer
     @Environment(NowPlayingModuleStore.self) private var nowPlayingStore
-    @Environment(FavoriteFolderDropCoordinator.self) private var folderCopy
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var onPerformRecovery: ((RecoveryAction) -> Void)?
     var onOpenSettings: (() -> Void)?
@@ -42,16 +41,6 @@ struct IslandExpandedView: View {
         .environment(\.colorScheme, .dark)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("island.root")
-        .alert("File Already Exists", isPresented: Binding(
-            get: { folderCopy.conflictName != nil },
-            set: { if !$0 { folderCopy.decideConflict(.cancel) } }
-        )) {
-            Button("Keep Both") { folderCopy.decideConflict(.keepBoth) }
-            Button("Skip") { folderCopy.decideConflict(.skip) }
-            Button("Cancel Copy", role: .cancel) { folderCopy.decideConflict(.cancel) }
-        } message: {
-            Text((folderCopy.conflictName ?? "") + "\n" + String(localized: "The existing file will not be overwritten."))
-        }
         .onChange(of: settings.effectiveIslandModuleConfiguration, initial: true) {
             registry.apply(settings: settings)
             moduleContainer.apply(

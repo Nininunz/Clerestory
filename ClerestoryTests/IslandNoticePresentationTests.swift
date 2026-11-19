@@ -52,13 +52,13 @@ final class IslandNoticePresentationTests: XCTestCase {
 
     func testShownModuleNoticeIsImmediateInUnpinnedPanel() {
         var state = IslandNoticePresentation()
-        XCTAssertEqual(state.update(noticeID: 1, from: .folders, context: context(.expanded, shown: .folders)), .visible)
-        XCTAssertEqual(state.update(noticeID: 1, from: .folders, context: context(.expanded, shown: .shelf)), .visible,
+        XCTAssertEqual(state.update(noticeID: 1, from: .clipboard, context: context(.expanded, shown: .clipboard)), .visible)
+        XCTAssertEqual(state.update(noticeID: 1, from: .clipboard, context: context(.expanded, shown: .shelf)), .visible,
                        "Switching pages keeps a notice that has appeared")
-        XCTAssertEqual(state.update(noticeID: 2, from: .folders, context: context(.expanded, transitioning: true,
-                                                                                  shown: .folders)), .waiting,
+        XCTAssertEqual(state.update(noticeID: 2, from: .clipboard, context: context(.expanded, transitioning: true,
+                                                                                    shown: .clipboard)), .waiting,
                        "The opening animation still comes first")
-        XCTAssertEqual(state.update(noticeID: 2, from: .folders, context: context(.expanded, shown: .folders)), .visible)
+        XCTAssertEqual(state.update(noticeID: 2, from: .clipboard, context: context(.expanded, shown: .clipboard)), .visible)
     }
 
     func testOtherModuleNoticeStillWaitsForUnpinnedPanelToClose() {

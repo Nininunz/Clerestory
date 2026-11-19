@@ -93,7 +93,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         additionalProtectedPaths: { [weak self] in
             (self?.deliveryCoordinator.protectedMaterializedPaths ?? [])
                 .union(self?.shelfStore.undoProtectedPaths ?? [])
-                .union(self?.shelfWindowController.favoriteFolderDropCoordinator.protectedPaths ?? [])
         },
         prepareRestoredItems: { [weak self] items in
             guard let self else { return items }

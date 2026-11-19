@@ -19,7 +19,6 @@ final class IslandModulePreviewTests: XCTestCase {
         try await media()
         try await ai()
         try await clipboard()
-        try await folders()
         try await shelf()
         try await transfers()
         try await system()
@@ -90,17 +89,6 @@ final class IslandModulePreviewTests: XCTestCase {
             views.append(entry(state, ClipboardHistoryView.preview(query: state == "No results" ? "no matching item" : "").environment(settings).environment(store), messages: messages))
         }
         try await export("clipboard", "Clipboard History", views)
-    }
-    private func folders() async throws {
-        let items = ["Documents", "Projects", "Downloads"].map { FavoriteFolder(bookmark: Data(), lastKnownPath: "/Preview/\($0)") }
-        var views: [PreviewEntry] = []
-        for state in ["Empty / Add", "Folders / Add + Open", "Unavailable folder", "Load failed", "Duplicate folder notice", "Copying / Cancel"] {
-            let store = FavoriteFoldersStore.preview(items: state == "Empty / Add" || state == "Load failed" ? [] : items, unavailable: state == "Unavailable folder", loadFailed: state == "Load failed")
-            let duplicate = FavoriteFoldersStore.importNotice(for: .init(duplicates: 1))
-            let messages = state == "Duplicate folder notice" ? IslandMessageCenter.preview(notice: duplicate, from: .folders) : nil
-            views.append(entry(state, FavoriteFoldersModuleView().environment(store).environment(FavoriteFolderDropCoordinator.preview(folders: store, copying: state == "Copying / Cancel")).environment(DropTargetState()), messages: messages))
-        }
-        try await export("quick-access", "Quick Access", views)
     }
     private func shelf() async throws {
         try await renderer.export("shelf", "Shelf", ShelfScenario.catalog(context: context))

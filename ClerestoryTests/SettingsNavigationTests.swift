@@ -54,7 +54,7 @@ final class SettingsNavigationTests: XCTestCase {
     func testModuleDestinationsAreUniqueAndExcludeFixedQuickSettings() {
         let ids = ModuleSettingsDestination.allCases.map(\.moduleID)
         XCTAssertEqual(Set(ids).count, ids.count)
-        XCTAssertEqual(Set(ids), Set([.shelf, .transfers, .timer, .battery, .system, .media, .folders, .clipboard, .aiUsage]))
+        XCTAssertEqual(Set(ids), Set([.shelf, .transfers, .timer, .battery, .system, .media, .clipboard, .aiUsage]))
         XCTAssertFalse(ids.contains(.quickSettings))
     }
 

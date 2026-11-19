@@ -44,7 +44,7 @@ extension SettingsStore {
         switch preset {
         case .files: enabled = [.shelf, .transfers]; pinned = [.shelf]
         case .clipboard: enabled = [.shelf, .transfers, .clipboard]; pinned = [.shelf, .clipboard]
-        case .toolbox: enabled = builtIns; pinned = [.shelf, .clipboard, .folders, .media, .system]
+        case .toolbox: enabled = builtIns; pinned = [.shelf, .clipboard, .media, .system]
         }
         var configuration = islandModuleConfiguration
         // Preserve hidden/unknown modules and their exact saved shortcut positions.

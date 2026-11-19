@@ -74,7 +74,7 @@ final class IslandNotchSelectionTests: XCTestCase {
     }
 
     func testCycleSkipsDisabledAndUnsupportedModulesAndWraps() {
-        let enabled: [IslandModuleID] = [.shelf, .timer, .media, .folders, .system, .clipboard, .quickSettings]
+        let enabled: [IslandModuleID] = [.shelf, .timer, .media, .system, .clipboard, .quickSettings]
         XCTAssertEqual(IslandNotchDisplay.next(after: .shelf, enabled: enabled), .timer)
         XCTAssertEqual(IslandNotchDisplay.next(after: .timer, enabled: enabled), .media)
         XCTAssertEqual(IslandNotchDisplay.next(after: .media, enabled: enabled), .shelf)

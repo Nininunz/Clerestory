@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum ModuleSettingsDestination: String, CaseIterable, Identifiable {
-    case shelf, transfers, timer, battery, system, media, folders, clipboard, aiUsage
+    case shelf, transfers, timer, battery, system, media, clipboard, aiUsage
 
     var id: Self { self }
 
@@ -13,7 +13,6 @@ enum ModuleSettingsDestination: String, CaseIterable, Identifiable {
         case .battery: .battery
         case .system: .system
         case .media: .media
-        case .folders: .folders
         case .clipboard: .clipboard
         case .aiUsage: .aiUsage
         }
@@ -27,7 +26,6 @@ enum ModuleSettingsDestination: String, CaseIterable, Identifiable {
         case .battery: "Battery"
         case .system: "System Status"
         case .media: "Now Playing"
-        case .folders: "Quick Access"
         case .clipboard: "Clipboard History"
         case .aiUsage: "AI Usage"
         }
@@ -41,7 +39,6 @@ enum ModuleSettingsDestination: String, CaseIterable, Identifiable {
         case .battery: "battery.75percent"
         case .system: "speedometer"
         case .media: "music.note"
-        case .folders: "folder"
         case .clipboard: "doc.on.clipboard"
         case .aiUsage: "chart.line.uptrend.xyaxis"
         }
@@ -219,11 +216,6 @@ struct ModulesSettingsTab: View {
         case .timer:
             Section("Timer") {
                 Text("Set durations and manage timers in the Timer module.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-        case .folders:
-            Section("Quick Access") {
-                Text("Add and manage folders in the Quick Access module.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         case .transfers:

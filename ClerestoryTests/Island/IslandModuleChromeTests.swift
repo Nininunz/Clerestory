@@ -383,15 +383,9 @@ final class IslandModuleChromeTests: XCTestCase {
     func testModuleNoticesAndStatusRowsFitAtBothModuleWidths() throws {
         let notices: [IslandNotice] = [
             ClipboardHistoryStore.copiedNotice, ClipboardHistoryStore.copyFailedNotice,
-            ClipboardHistoryStore.favoritesLimitNotice,
-            try XCTUnwrap(FavoriteFoldersStore.importNotice(for: .init(added: 2))),
-            try XCTUnwrap(FavoriteFoldersStore.importNotice(for: .init(duplicates: 1))),
-            try XCTUnwrap(FavoriteFoldersStore.importNotice(for: .init(rejected: 1))),
-            FavoriteFoldersStore.openFailedNotice(reason: "The application can't be opened.")
+            ClipboardHistoryStore.favoritesLimitNotice
         ]
         let rows: [IslandStatusRow] = [
-            IslandStatusRow(message: "Folder favorites could not be loaded. The damaged data was kept for recovery.",
-                            isError: true),
             IslandStatusRow(message: ClipboardHistoryStore.storageFullMessage, isError: true),
             IslandStatusRow(message: "Clipboard history could not be saved.", isError: true, style: .window),
             IslandStatusRow(message: "TokenTracker returned HTTP 503", isError: true,
