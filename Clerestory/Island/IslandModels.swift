@@ -235,6 +235,9 @@ final class IslandModuleRegistry {
     static let quickSettingsDescriptor = IslandModuleDescriptor(
         id: .quickSettings, title: String(localized: "Quick Settings"),
         systemImage: "square.grid.2x2", order: -1, isCore: true, supportsExtendedHeight: true)
+    static let batteryDescriptor = IslandModuleDescriptor(
+        id: .battery, title: String(localized: "Battery"),
+        systemImage: "battery.75percent", order: 3, isCore: false, supportsExtendedHeight: true)
     private(set) var descriptors: [IslandModuleDescriptor] = [
         .init(id: .shelf, title: String(localized: "Shelf"),
               systemImage: "tray.full", order: 0, isCore: true, supportsExtendedHeight: true),
@@ -242,8 +245,7 @@ final class IslandModuleRegistry {
               systemImage: "arrow.up.arrow.down", order: 1, isCore: false),
         .init(id: .timer, title: String(localized: "Timer"),
               systemImage: "timer", order: 2, isCore: false),
-        .init(id: .battery, title: String(localized: "Battery"),
-              systemImage: "battery.75percent", order: 3, isCore: false),
+        IslandModuleRegistry.batteryDescriptor,
         .init(id: .system, title: String(localized: "System Status"),
               systemImage: "gauge.with.dots.needle.67percent", order: 4, isCore: false),
         .init(id: .media, title: String(localized: "Now Playing"),

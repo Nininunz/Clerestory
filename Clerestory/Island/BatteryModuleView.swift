@@ -2,77 +2,50 @@ import SwiftUI
 
 struct IslandBatteryView: View {
     @Environment(PowerSourceMonitor.self) private var powerMonitor
+    @State private var changingLowPowerMode = false
+    @State private var lowPowerModeError: String?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var snapshot: PowerSourceMonitor.Snapshot { powerMonitor.snapshot }
 
     var body: some View {
         VStack(spacing: IslandModuleLayout.headerSpacing) {
-            IslandModuleHeader(
-                title: "Battery",
-                subtitle: powerMonitor.snapshot.hasBattery
-                    ? powerStatus
-                    : String(localized: "No internal battery"),
-                systemImage: batterySymbol
-            )
-            IslandModuleScrollView(fillsViewport: true) {
-                if powerMonitor.snapshot.hasBattery {
-                    VStack(spacing: 12) {
-                        HStack(spacing: 20) {
-                            BatteryChargeRing(
-                                percentage: powerMonitor.snapshot.percentage,
-                                tint: batteryTint,
-                                reduceMotion: reduceMotion
-                            )
-
-                            VStack(alignment: .leading, spacing: 7) {
-                                HStack(spacing: 7) {
-                                    Image(systemName: statusSymbol)
-                                        .font(.system(size: 12, weight: .bold))
-                                        .foregroundStyle(batteryTint)
-                                        .frame(width: 28, height: 28)
-                                        .background {
-                                            Circle().fill(batteryTint.opacity(0.13))
-                                        }
-
-                                    Text(powerStatus)
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundStyle(IslandVisualStyle.primaryText)
-                                        .lineLimit(1)
-                                }
-
-                                if let powerWatts = powerMonitor.snapshot.powerWatts {
-                                    let formattedPower = BatteryPowerFormatting.string(watts: powerWatts)
-                                    Text(formattedPower)
-                                        .font(.system(size: 24, weight: .semibold, design: .rounded))
-                                        .monospacedDigit()
-                                        .foregroundStyle(IslandVisualStyle.primaryText)
-                                        .contentTransition(.numericText())
-                                        .accessibilityLabel(Text("Battery power"))
-                                        .accessibilityValue(Text(formattedPower))
-                                } else {
-                                    Text("Not Available")
-                                        .font(.system(size: 15, weight: .semibold))
-                                        .foregroundStyle(IslandVisualStyle.tertiaryText)
-                                }
-                            }
-
-                            Spacer(minLength: 0)
-                        }
-
-                        Divider()
-                            .overlay(IslandVisualStyle.hairline)
-
-                        BatteryPowerWaveform(
-                            samples: powerMonitor.powerHistory,
-                            currentWatts: powerMonitor.snapshot.powerWatts
-                        )
+            IslandModuleHeader(title: "Battery", subtitle: nil, systemImage: "battery.75percent") {
+                if snapshot.hasBattery {
+                    Button {
+                        toggleLowPowerMode()
+                    } label: {
+                        Image(systemName: snapshot.lowPowerMode ? "leaf.fill" : "leaf")
+                            .foregroundStyle(snapshot.lowPowerMode ? Color.mint : Color.primary)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 13)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    .background(batteryCardBackground)
+                    .buttonStyle(IslandHeaderButtonStyle())
+                    .disabled(changingLowPowerMode)
+                    .help("Toggle Low Power Mode")
+                    .accessibilityLabel("Toggle Low Power Mode")
+                    .accessibilityValue(snapshot.lowPowerMode ? Text("Low Power Mode on") : Text("Low Power Mode off"))
+                }
+            }
+            IslandModuleScrollView(fillsViewport: true) {
+                if snapshot.hasBattery {
+                    VStack(alignment: .leading, spacing: 12) {
+                        overview
+                        if let lowPowerModeError {
+                            Text(lowPowerModeError)
+                                .font(.caption)
+                                .foregroundStyle(IslandVisualStyle.secondaryText)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        BatteryPowerWaveform(samples: powerMonitor.powerHistory, currentWatts: snapshot.powerWatts)
+                            .padding(12)
+                            .background(batteryCardBackground)
+                        batteryDetails
+                            .padding(12)
+                            .background(batteryCardBackground)
+                    }
+                    .padding(.bottom, 4)
                 } else {
                     IslandEmptyState(
-                        title: "Not applicable",
+                        title: "No internal battery",
                         message: "This Mac does not report an internal battery.",
                         systemImage: "desktopcomputer"
                     )
@@ -80,6 +53,146 @@ struct IslandBatteryView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    private func toggleLowPowerMode() {
+        changingLowPowerMode = true
+        lowPowerModeError = nil
+        Task { @MainActor in
+            defer { changingLowPowerMode = false }
+            do {
+                try await LowPowerModeHelper.toggle()
+                powerMonitor.refresh()
+            } catch {
+                lowPowerModeError = error.localizedDescription
+            }
+        }
+    }
+
+    private var overview: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(alignment: .center, spacing: 12) {
+                Text(snapshot.percentage.formatted(.percent.scale(1)))
+                    .font(.system(size: 32, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .accessibilityLabel(Text("Battery charge"))
+                    .accessibilityValue(Text("\(snapshot.percentage) percent"))
+                Spacer()
+                VStack(alignment: .trailing, spacing: 4) {
+                    Label(powerStatus, systemImage: statusSymbol)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(IslandVisualStyle.primaryText)
+                    if let estimateText {
+                        Text(estimateText)
+                            .font(.caption)
+                            .foregroundStyle(IslandVisualStyle.secondaryText)
+                    }
+                }
+            }
+            GeometryReader { geometry in
+                Capsule()
+                    .fill(IslandVisualStyle.hairline)
+                    .overlay(alignment: .leading) {
+                        Capsule()
+                            .fill(batteryTint)
+                            .frame(width: geometry.size.width * CGFloat(snapshot.percentage) / 100)
+                    }
+            }
+                .frame(height: 3)
+                .accessibilityHidden(true)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: snapshot.percentage)
+            HStack {
+                if let watts = snapshot.powerWatts {
+                    Label(BatteryPowerFormatting.string(watts: watts), systemImage: "waveform")
+                        .accessibilityLabel(Text("Battery power"))
+                        .accessibilityValue(Text(BatteryPowerFormatting.string(watts: watts)))
+                }
+                Spacer()
+                if let watts = snapshot.adapterWatts {
+                    Label("\(watts) W adapter", systemImage: "powerplug")
+                } else if snapshot.lowPowerMode {
+                    Label("Low Power Mode", systemImage: "leaf")
+                }
+            }
+            .font(.caption.monospacedDigit())
+            .foregroundStyle(IslandVisualStyle.secondaryText)
+        }
+        .padding(.horizontal, 3)
+    }
+
+    private var estimateText: String? {
+        let snapshot = powerMonitor.snapshot
+        if let minutes = snapshot.estimatedMinutes {
+            let duration = Duration.seconds(minutes * 60).formatted(
+                .units(allowed: [.hours, .minutes], width: .abbreviated)
+            )
+            return snapshot.isCharging
+                ? String(localized: "About \(duration) to full")
+                : String(localized: "About \(duration) remaining")
+        }
+        return snapshot.isCalculatingEstimate ? String(localized: "Calculating time remaining…") : nil
+    }
+
+    private var batteryDetails: some View {
+        let snapshot = powerMonitor.snapshot
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("Battery details")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(IslandVisualStyle.primaryText)
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .topLeading), count: 3),
+                      alignment: .leading, spacing: 12) {
+                if let condition = snapshot.healthCondition {
+                    detail("Condition", condition)
+                }
+                if let cycles = snapshot.cycleCount {
+                    detail("Cycle count", cycles.formatted())
+                }
+                if let full = snapshot.fullChargeCapacity, let design = snapshot.designCapacity {
+                    let ratio = (Double(full) / Double(design)).formatted(.percent.precision(.fractionLength(1)))
+                    detail("Raw capacity ratio", ratio)
+                }
+                if let full = snapshot.fullChargeCapacity {
+                    detail("Full charge capacity", String(localized: "\(full.formatted()) mAh"))
+                }
+                if let design = snapshot.designCapacity {
+                    detail("Design capacity", String(localized: "\(design.formatted()) mAh"))
+                }
+                if let celsius = snapshot.temperatureCelsius {
+                    let temperature = Measurement(value: celsius, unit: UnitTemperature.celsius)
+                    detail("Temperature", temperature.formatted(.measurement(width: .abbreviated, usage: .asProvided, numberFormatStyle: .number.precision(.fractionLength(1)))))
+                }
+                if let millivolts = snapshot.voltageMillivolts {
+                    let volts = (Double(millivolts) / 1_000).formatted(.number.precision(.fractionLength(2)))
+                    detail("Voltage", String(localized: "\(volts) V"))
+                }
+                if let milliamps = snapshot.currentMilliamps {
+                    detail("Current", String(localized: "\(milliamps.formatted()) mA"))
+                }
+                if let name = snapshot.adapterName {
+                    detail("Power adapter", name)
+                }
+                if let watts = snapshot.adapterWatts {
+                    detail("Adapter wattage", String(localized: "\(watts.formatted()) W"))
+                }
+                detail("Low Power Mode", snapshot.lowPowerMode ? String(localized: "On") : String(localized: "Off"))
+            }
+        }
+        .font(.subheadline)
+        .foregroundStyle(IslandVisualStyle.secondaryText)
+    }
+
+    private func detail(_ label: LocalizedStringKey, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(IslandVisualStyle.secondaryText)
+            Text(value)
+                .font(.caption.weight(.semibold).monospacedDigit())
+                .foregroundStyle(IslandVisualStyle.primaryText)
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 
     private var batteryCardBackground: some View {
@@ -110,63 +223,16 @@ struct IslandBatteryView: View {
     private var batteryTint: Color {
         if powerMonitor.snapshot.percentage <= 10 { return .red }
         if powerMonitor.snapshot.percentage <= 20 { return .orange }
-        return .green
+        return .mint
     }
 
     private var powerStatus: String {
         if powerMonitor.snapshot.isCharging { return String(localized: "Charging") }
+        if powerMonitor.snapshot.isCharged { return String(localized: "Fully charged") }
         if powerMonitor.snapshot.isConnectedToPower { return String(localized: "Connected to power") }
         return String(localized: "Running on battery")
     }
 }
-private struct BatteryChargeRing: View {
-    let percentage: Int
-    let tint: Color
-    let reduceMotion: Bool
-
-    private var progress: Double {
-        min(max(Double(percentage) / 100, 0), 1)
-    }
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .stroke(Color.white.opacity(0.09), lineWidth: 8)
-
-            Circle()
-                .trim(from: 0, to: progress)
-                .stroke(
-                    AngularGradient(
-                        colors: [tint.opacity(0.62), tint, tint.opacity(0.88)],
-                        center: .center,
-                        startAngle: .degrees(-90),
-                        endAngle: .degrees(270)
-                    ),
-                    style: StrokeStyle(lineWidth: 8, lineCap: .round)
-                )
-                .rotationEffect(.degrees(-90))
-                .shadow(color: tint.opacity(0.30), radius: 5)
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.35),
-                           value: progress)
-
-            HStack(alignment: .firstTextBaseline, spacing: 2) {
-                Text("\(percentage)")
-                    .font(.system(size: 31, weight: .semibold, design: .rounded))
-                    .foregroundStyle(IslandVisualStyle.primaryText)
-                    .monospacedDigit()
-                    .contentTransition(.numericText())
-                Text("%")
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundStyle(IslandVisualStyle.secondaryText)
-            }
-        }
-        .frame(width: 88, height: 88)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("Battery"))
-        .accessibilityValue(Text("\(percentage) percent"))
-    }
-}
-
 private struct BatteryPowerWaveform: View {
     let samples: [BatteryPowerSample]
     let currentWatts: Double?
@@ -184,7 +250,7 @@ private struct BatteryPowerWaveform: View {
     var body: some View {
         VStack(spacing: 5) {
             HStack(spacing: 8) {
-                Label("Power history", systemImage: "waveform.path.ecg")
+                Label("Battery power history", systemImage: "waveform.path.ecg")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(IslandVisualStyle.secondaryText)
 
@@ -200,13 +266,21 @@ private struct BatteryPowerWaveform: View {
                     .foregroundStyle(IslandVisualStyle.tertiaryText)
                 }
 
-                Text("2 min")
+                Text("Last 2 min")
                     .font(.system(size: 9, weight: .medium, design: .rounded))
                     .foregroundStyle(IslandVisualStyle.tertiaryText)
             }
 
-            BatteryPowerCanvas(samples: samples, scaleWatts: scaleWatts)
-                .frame(maxWidth: .infinity, minHeight: 68, maxHeight: 82)
+            if samples.count > 1 {
+                BatteryPowerCanvas(samples: samples, scaleWatts: scaleWatts)
+                    .frame(height: 54)
+            } else {
+                Text(currentWatts == nil ? "Power reading unavailable" : "Collecting power history…")
+                    .font(.caption2)
+                    .foregroundStyle(IslandVisualStyle.secondaryText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 4)
+            }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("Power history"))
@@ -328,12 +402,14 @@ private struct BatteryPowerCanvas: View {
 
     private func samplePoints(in plot: CGRect, zeroY: CGFloat) -> [CGPoint] {
         guard let newest = samples.last?.timestamp else { return [] }
-        let oldest = newest.addingTimeInterval(-PowerSourceMonitor.powerHistoryDuration)
+        guard let first = samples.first?.timestamp else { return [] }
+        let duration = min(PowerSourceMonitor.powerHistoryDuration, max(15, newest.timeIntervalSince(first)))
+        let oldest = newest.addingTimeInterval(-duration)
         let verticalRange = plot.height / 2 - 3
 
         return samples.map { sample in
             let elapsed = sample.timestamp.timeIntervalSince(oldest)
-            let progress = min(max(elapsed / PowerSourceMonitor.powerHistoryDuration, 0), 1)
+            let progress = min(max(elapsed / duration, 0), 1)
             let normalizedWatts = min(max(sample.watts / scaleWatts, -1), 1)
             return CGPoint(
                 x: plot.minX + plot.width * CGFloat(progress),

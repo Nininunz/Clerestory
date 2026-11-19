@@ -51,10 +51,10 @@ enum BatteryElectricalReader {
         return .init(voltageMillivolts: voltage, currentMilliamps: current)
     }
 
-    static func readRegistryProperties() -> [String: Any]? {
+    static func readRegistryProperties(serviceName: String = "AppleSmartBattery") -> [String: Any]? {
         let service = IOServiceGetMatchingService(
             kIOMainPortDefault,
-            IOServiceMatching("AppleSmartBattery")
+            IOServiceNameMatching(serviceName)
         )
         guard service != IO_OBJECT_NULL else { return nil }
         defer { IOObjectRelease(service) }
@@ -103,6 +103,19 @@ final class PowerSourceMonitor: IslandModule {
         var isCharging: Bool
         var isConnectedToPower: Bool
         var powerWatts: Double? = nil
+        var isCharged = false
+        var estimatedMinutes: Int? = nil
+        var isCalculatingEstimate = false
+        var cycleCount: Int? = nil
+        var temperatureCelsius: Double? = nil
+        var voltageMillivolts: Int64? = nil
+        var currentMilliamps: Int64? = nil
+        var fullChargeCapacity: Int? = nil
+        var designCapacity: Int? = nil
+        var healthCondition: String? = nil
+        var adapterName: String? = nil
+        var adapterWatts: Int? = nil
+        var lowPowerMode = false
 
         static let unavailable = Snapshot(hasBattery: false,
                                           percentage: 0,
@@ -111,13 +124,7 @@ final class PowerSourceMonitor: IslandModule {
                                           powerWatts: nil)
     }
 
-    let descriptor = IslandModuleDescriptor(
-        id: .battery,
-        title: String(localized: "Battery"),
-        systemImage: "battery.75percent",
-        order: 3,
-        isCore: false
-    )
+    let descriptor = IslandModuleRegistry.batteryDescriptor
 
     @ObservationIgnored
     nonisolated(unsafe) private var runLoopSource: CFRunLoopSource?
@@ -259,7 +266,10 @@ final class PowerSourceMonitor: IslandModule {
 
     static func snapshot(
         from description: [String: Any]?,
-        registryProperties: [String: Any]? = nil
+        registryProperties: [String: Any]? = nil,
+        packProperties: [String: Any]? = nil,
+        adapterProperties: [String: Any]? = nil,
+        lowPowerMode: Bool = false
     ) -> Snapshot {
         guard let description else { return .unavailable }
         let current = description[kIOPSCurrentCapacityKey] as? Int ?? 0
@@ -269,15 +279,49 @@ final class PowerSourceMonitor: IslandModule {
         let state = description[kIOPSPowerSourceStateKey] as? String
         let onAC = state == kIOPSACPowerValue
         let charging = description[kIOPSIsChargingKey] as? Bool ?? false
-        let powerWatts = BatteryElectricalReader.sample(
+        let electrical = BatteryElectricalReader.sample(
             powerSourceDescription: description,
             registryProperties: registryProperties
-        )?.signedPowerWatts(isCharging: charging, isConnectedToPower: onAC)
-        return Snapshot(hasBattery: true,
-                        percentage: percentage,
-                        isCharging: charging,
-                        isConnectedToPower: onAC,
-                        powerWatts: powerWatts)
+        )
+        let charged = description[kIOPSIsChargedKey] as? Bool
+            ?? (onAC && !charging && percentage == 100)
+        let estimate = charging ? description[kIOPSTimeToFullChargeKey] as? Int
+            : state == kIOPSBatteryPowerValue ? description[kIOPSTimeToEmptyKey] as? Int : nil
+        let data = registryProperties?["BatteryData"] as? [String: Any]
+        let packData = packProperties?["BatteryData"] as? [String: Any]
+        let registryAdapter = registryProperties?["AdapterDetails"] as? [String: Any]
+        let registryTemperature = (packData?["Temperature"] as? NSNumber)
+            ?? (registryProperties?["Temperature"] as? NSNumber)
+        let temperature = registryTemperature.map { $0.doubleValue / 100 }
+            ?? (description[kIOPSTemperatureKey] as? NSNumber)?.doubleValue
+
+        return Snapshot(
+            hasBattery: true,
+            percentage: percentage,
+            isCharging: charging,
+            isConnectedToPower: onAC,
+            powerWatts: electrical?.signedPowerWatts(isCharging: charging, isConnectedToPower: onAC),
+            isCharged: charged,
+            estimatedMinutes: estimate.flatMap { (0..<65_535).contains($0) ? $0 : nil },
+            isCalculatingEstimate: estimate == -1,
+            cycleCount: registryProperties?["CycleCount"] as? Int,
+            temperatureCelsius: temperature.flatMap { (-20...100).contains($0) ? $0 : nil },
+            voltageMillivolts: electrical?.voltageMillivolts,
+            currentMilliamps: electrical?.currentMilliamps,
+            fullChargeCapacity: positiveCapacity(data?["FullChargeCapacity"], data?["AppleRawMaxCapacity"],
+                                                 registryProperties?["AppleRawMaxCapacity"]),
+            designCapacity: positiveCapacity(data?["DesignCapacity"], registryProperties?["DesignCapacity"]),
+            healthCondition: description[kIOPSBatteryHealthConditionKey] as? String
+                ?? description[kIOPSBatteryHealthKey] as? String,
+            adapterName: onAC ? (registryAdapter?["Name"] as? String) : nil,
+            adapterWatts: onAC ? positiveCapacity(adapterProperties?[kIOPSPowerAdapterWattsKey],
+                                                 registryAdapter?["Watts"]) : nil,
+            lowPowerMode: lowPowerMode
+        )
+    }
+
+    private static func positiveCapacity(_ values: Any?...) -> Int? {
+        values.compactMap { $0 as? Int }.first { $0 > 0 }
     }
 
     private static func readSnapshot() -> Snapshot {
@@ -291,7 +335,14 @@ final class PowerSourceMonitor: IslandModule {
                 .takeUnretainedValue() as? [String: Any],
                   let type = description[kIOPSTypeKey] as? String,
                   type == kIOPSInternalBatteryType else { continue }
-            return snapshot(from: description, registryProperties: registryProperties)
+            let onAC = description[kIOPSPowerSourceStateKey] as? String == kIOPSACPowerValue
+            return snapshot(
+                from: description,
+                registryProperties: registryProperties,
+                packProperties: BatteryElectricalReader.readRegistryProperties(serviceName: "AppleSmartBatteryPack"),
+                adapterProperties: onAC ? IOPSCopyExternalPowerAdapterDetails()?.takeRetainedValue() as? [String: Any] : nil,
+                lowPowerMode: ProcessInfo.processInfo.isLowPowerModeEnabled
+            )
         }
         return .unavailable
     }
@@ -312,17 +363,7 @@ final class PowerSourceMonitor: IslandModule {
         }
         if alertBand != lastAlertBand, let alertBand {
             lastAlertBand = alertBand
-            onActivity?(.init(
-                id: "battery.low",
-                moduleID: .battery,
-                priority: .criticalBattery,
-                title: alertBand == 10
-                    ? String(localized: "Battery critically low")
-                    : String(localized: "Battery low"),
-                detail: "\(current.percentage)%",
-                systemImage: "battery.25percent",
-                expiresAt: nil
-            ))
+            onActivity?(lowBatteryActivity(band: alertBand, current: current))
             return
         } else if alertBand == nil, lastAlertBand != nil {
             lastAlertBand = nil
@@ -342,6 +383,23 @@ final class PowerSourceMonitor: IslandModule {
                 systemImage: current.isConnectedToPower ? "bolt.fill" : "battery.75percent",
                 expiresAt: nowProvider().addingTimeInterval(2.5)
             ))
+        } else if previous.lowPowerMode != current.lowPowerMode {
+            if let band = lastAlertBand {
+                // Keep the persistent low-battery alert; show the new mode in it.
+                onActivity?(lowBatteryActivity(band: band, current: current))
+            } else {
+                onActivity?(.init(
+                    id: "battery.low-power-mode",
+                    moduleID: .battery,
+                    priority: .powerChange,
+                    title: current.lowPowerMode
+                        ? String(localized: "Low Power Mode enabled")
+                        : String(localized: "Low Power Mode disabled"),
+                    detail: nil,
+                    systemImage: current.lowPowerMode ? "leaf.fill" : "leaf",
+                    expiresAt: nowProvider().addingTimeInterval(2.5)
+                ))
+            }
         } else if fullChargeAlertEnabled(),
                   previous.percentage < 100,
                   current.percentage == 100 {
@@ -351,6 +409,24 @@ final class PowerSourceMonitor: IslandModule {
                               detail: nil, systemImage: "battery.100percent",
                               expiresAt: nowProvider().addingTimeInterval(2.5)))
         }
+    }
+
+    /// The persistent low-battery alert. It stays until the battery leaves the
+    /// low bands, and also shows when Low Power Mode is on.
+    private func lowBatteryActivity(band: Int, current: Snapshot) -> IslandActivity {
+        .init(
+            id: "battery.low",
+            moduleID: .battery,
+            priority: .criticalBattery,
+            title: band == 10
+                ? String(localized: "Battery critically low")
+                : String(localized: "Battery low"),
+            detail: current.lowPowerMode
+                ? String(localized: "\(current.percentage)% · Low Power Mode on")
+                : "\(current.percentage)%",
+            systemImage: "battery.25percent",
+            expiresAt: nil
+        )
     }
 }
 

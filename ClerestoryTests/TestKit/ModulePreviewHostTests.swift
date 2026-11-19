@@ -38,9 +38,17 @@ final class ModulePreviewHostTests: XCTestCase {
     }
 
     func testUnsupportedModuleDoesNotGetExtensionControls() throws {
-        let descriptor = try XCTUnwrap(ModulePreviewHost.descriptor(for: "battery"))
+        let descriptor = try XCTUnwrap(ModulePreviewHost.descriptor(for: "timer"))
+        XCTAssertFalse(descriptor.supportsExtendedHeight)
         let host = IslandModuleHost(descriptor: descriptor, coordinator: IslandActivityCoordinator()) { EmptyView() }
         XCTAssertNil(host.extensionContext)
+    }
+
+    /// Battery's details (including the Low Power Mode control) use the extended height.
+    func testBatteryGetsExtensionControls() throws {
+        let descriptor = try XCTUnwrap(ModulePreviewHost.descriptor(for: "battery"))
+        let host = IslandModuleHost(descriptor: descriptor, coordinator: IslandActivityCoordinator()) { EmptyView() }
+        XCTAssertNotNil(host.extensionContext)
     }
 
     func testPreviewMeasuresActualShelfContentAndCapsExtendedHeight() async throws {
