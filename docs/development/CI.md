@@ -2,6 +2,8 @@
 
 The `macOS CI` workflow runs on pull requests targeting `main`, pushes to `main`, and manual dispatch. It runs the required **Build and unit tests (Xcode 27)** check on the `xcode-27` runner with Xcode 27.2.
 
+On pull requests, a short **Detect code changes** job runs first. If every changed file is root-level Markdown, under `docs/`, or a GitHub issue or pull request template, the build job is skipped. A skipped required check counts as passing, so documentation-only PRs can merge without a macOS run. `docs/appcast.xml`, `LICENSE`, `TestFixtures/`, workflow files, and everything else still trigger the full build. Pushes to `main` and manual runs always build. If change detection fails, the build runs.
+
 GitHub currently labels the `xcode-27` runner image as a public preview; see its [installed software](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md).
 
 `Scripts/test-ci.sh` runs the module-core Swift package tests, builds the Release app, then runs the Debug app-hosted `ClerestoryTests` suite serially. Local ad-hoc signing needs no Apple account or signing secrets. Shell pipeline failures propagate, individual tests have time limits, and the job has a 30-minute timeout. A newer revision cancels an older run for the same PR or branch.
