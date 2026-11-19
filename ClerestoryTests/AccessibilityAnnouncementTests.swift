@@ -67,4 +67,23 @@ final class AccessibilityAnnouncementTests: XCTestCase {
         cancelled.phase = .cancelled
         XCTAssertNil(AccessibilityAnnouncementPlanner.announcement(for: cancelled))
     }
+
+    func testTransferAnnouncementsFireWithoutShelfViewOnScreen() async {
+        let recorder = AnnouncementRecorder()
+        let transfers = TransferStore()
+        let observer = TransferAnnouncementObserver(transferStore: transfers,
+                                                    announcer: .recording(into: recorder))
+        defer { observer.stop() }
+        XCTAssertTrue(recorder.announcements.isEmpty)
+
+        let id = transfers.beginImport(expectedCount: 2)
+        for _ in 0..<10 { await Task.yield() }
+        XCTAssertEqual(recorder.messages, ["Started receiving content."],
+                       "The store alone drives transfer speech; no view is involved")
+        transfers.recordFailure(taskID: id, failure: TransferFailure(reason: .deliveryFailed, recoveryAction: .dismiss))
+        transfers.recordFailure(taskID: id, failure: TransferFailure(reason: .deliveryFailed, recoveryAction: .dismiss))
+        for _ in 0..<10 { await Task.yield() }
+        XCTAssertEqual(recorder.announcements.count, 2)
+        XCTAssertEqual(recorder.announcements.last?.priority, .high)
+    }
 }

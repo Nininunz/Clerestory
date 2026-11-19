@@ -18,7 +18,7 @@ final class DropImportFallbackTests: XCTestCase {
     private struct Context {
         let bookmarkService = BookmarkService()
         let tempFileService: TempFileService
-        let messages = IslandMessageCenter()
+        let messages = IslandMessageCenter.forTesting()
         let coordinator: DropImportCoordinator
         var temporaryURLs: [URL] = []
 
@@ -267,7 +267,7 @@ final class DropImportFallbackTests: XCTestCase {
         let result = context.coordinator.importItems(from: pasteboard, onAsyncItemReady: ignoringAsyncItems())
 
         XCTAssertFalse(result.handled)
-        XCTAssertEqual(context.messages.current?.notice.fullText,
+        XCTAssertEqual(context.messages.currentNotice?.notice.fullText,
                        String(localized: "That content can't be added to the shelf yet."))
     }
 }

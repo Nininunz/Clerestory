@@ -17,16 +17,16 @@ final class DropImportCoordinatorTests: XCTestCase {
         let existing = ShelfItem(kind: .file, path: "/tmp/existing.txt", displayName: "existing.txt")
         let fresh = ShelfItem(kind: .file, path: "/tmp/new.txt", displayName: "new.txt")
         let store = ShelfStore(items: [existing])
-        XCTAssertNil(context.messages.current)
+        XCTAssertNil(context.messages.currentNotice)
         context.coordinator.addDroppedItems([existing, fresh], to: store)
         XCTAssertEqual(store.items.count, 2)
-        XCTAssertEqual(context.messages.current?.notice, ShelfNotice.alreadyOnShelf.notice)
+        XCTAssertEqual(context.messages.currentNotice?.notice, ShelfNotice.alreadyOnShelf.notice)
         context.coordinator.messenger.post(.reconnected)
         context.coordinator.addDroppedItems([], to: store)
-        XCTAssertEqual(context.messages.current?.notice, ShelfNotice.reconnected.notice,
+        XCTAssertEqual(context.messages.currentNotice?.notice, ShelfNotice.reconnected.notice,
                        "Old duplicate state must not produce another notice")
         context.coordinator.addDroppedItems([existing], to: store)
-        XCTAssertEqual(context.messages.current?.notice, ShelfNotice.alreadyOnShelf.notice)
+        XCTAssertEqual(context.messages.currentNotice?.notice, ShelfNotice.alreadyOnShelf.notice)
         XCTAssertEqual(store.items.count, 2)
     }
 
@@ -38,7 +38,7 @@ final class DropImportCoordinatorTests: XCTestCase {
     private struct Context {
         let bookmarkService = BookmarkService()
         let tempFileService: TempFileService
-        let messages = IslandMessageCenter()
+        let messages = IslandMessageCenter.forTesting()
         let coordinator: DropImportCoordinator
         var temporaryURLs: [URL] = []
 

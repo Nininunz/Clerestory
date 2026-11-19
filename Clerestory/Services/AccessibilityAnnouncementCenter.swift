@@ -1,5 +1,5 @@
 import AppKit
-import SwiftUI
+import Observation
 
 /// A batch-level VoiceOver announcement. The token represents the semantic
 /// event, so progress-count churn cannot repeat the same spoken message.
@@ -78,8 +78,13 @@ final class AccessibilityAnnouncementCenter {
 
     func announce(task: TransferTask?) {
         guard let task,
-              let announcement = AccessibilityAnnouncementPlanner.announcement(for: task),
-              postedTokens.insert(announcement.token).inserted else { return }
+              let announcement = AccessibilityAnnouncementPlanner.announcement(for: task) else { return }
+        announce(announcement)
+    }
+
+    /// Speaks an announcement once per token.
+    func announce(_ announcement: AccessibilityAnnouncement) {
+        guard postedTokens.insert(announcement.token).inserted else { return }
         postHandler(announcement)
     }
 
@@ -96,13 +101,29 @@ final class AccessibilityAnnouncementCenter {
     }
 }
 
-private struct AccessibilityAnnouncementCenterEnvironmentKey: EnvironmentKey {
-    static var defaultValue: AccessibilityAnnouncementCenter? { nil }
-}
+/// Speaks transfer milestones from the store itself, so announcements do not depend on
+/// ShelfView being on screen.
+@MainActor
+final class TransferAnnouncementObserver {
+    private let transferStore: TransferStore
+    private let announcer: AccessibilityAnnouncementCenter
+    private var isStopped = false
 
-extension EnvironmentValues {
-    var accessibilityAnnouncementCenter: AccessibilityAnnouncementCenter? {
-        get { self[AccessibilityAnnouncementCenterEnvironmentKey.self] }
-        set { self[AccessibilityAnnouncementCenterEnvironmentKey.self] = newValue }
+    init(transferStore: TransferStore, announcer: AccessibilityAnnouncementCenter) {
+        self.transferStore = transferStore
+        self.announcer = announcer
+        observe()
+    }
+
+    func stop() { isStopped = true }
+
+    private func observe() {
+        guard !isStopped else { return }
+        let task = withObservationTracking {
+            transferStore.currentTask
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in self?.observe() }
+        }
+        announcer.announce(task: task)
     }
 }

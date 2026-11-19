@@ -22,7 +22,7 @@ Record the Clerestory version and build, commit, macOS version and build, hardwa
 | Photos single and multiple images | Finder, plus an upload area for a single image | Verify progress, completed images, and useful error feedback. Keep successful items available if part of a batch fails. |
 | Notes rich text and embedded images | Mail, a text editor, or Finder, as appropriate | Verify the representation received by the destination. Check for empty or duplicate cards and confirm images open after export. |
 
-With hover reveal off, drag a test file and selected text toward the Panel trigger. Verify the Panel opens, accepts the drop, and shows the expected drag outline. Repeat after using the wallpaper to reveal the desktop. Drop a file already on Shelf and confirm the duplicate notice follows release and the count is stable. Then verify that files with the same name from different paths can coexist.
+With hover reveal off, drag a test file and selected text toward the Panel trigger. Verify the Panel opens, accepts the drop, and shows the expected drag outline. Repeat after using the wallpaper to reveal the desktop. Drop a file already on Shelf and confirm the duplicate notice follows release and the count is stable. Then verify that files with the same name from different paths can coexist. With no image on the clipboard, choose **Add Clipboard Image to Shelf** and confirm the Panel stays closed and the notice appears under the notch.
 
 ## File availability and recovery
 
@@ -44,7 +44,7 @@ Run `Scripts/diagnostics/verify-shelf-volume-availability.sh` to check eject and
 - On a built-in notched display with an external screen attached, trigger the Panel from each display using hover, click, keyboard, and drag. Confirm the Notch stays on the built-in display. Verify the Panel stays on the triggering display while open and falls back to a visible location on disconnect. Repeat across different scaling settings, Spaces, full-screen windows, and display reconnect.
 - Verify hover reveal and dismissal, quick reentry, pin and unpin, and pointer travel into an open menu. Open Quick Look and leave the Panel with the pointer. Close the preview and confirm normal dismissal and Shelf focus resume.
 - Put keyboard focus in another app, then click a Shelf card. Check arrows and Shift-arrow selection, Space for Quick Look, navigation while the preview is open, Escape, Return, Delete, and Command-C. Typing and editing shortcuts in Shelf or Clipboard search should act on the search field.
-- Check VoiceOver names, selection and transfer status announcements, and recovery actions. Check Reduce Motion, Increase Contrast, Differentiate Without Color, and light and dark appearance. Use a small display or larger text to check scrolling, clipping, and control reachability.
+- Check VoiceOver names, selection and transfer status announcements, and recovery actions. Notices are spoken when they are posted, even while they wait behind an open Panel; a notice with a button also names it, such as "Open Recovery is available." Transfer announcements should also be spoken while the Shelf is closed. Check Reduce Motion, Increase Contrast, Differentiate Without Color, and light and dark appearance. Use a small display or larger text to check scrolling, clipping, and control reachability.
 - Check the app icon in Finder and the Dock, including small sizes. Use a freshly built app when comparing artwork to rule out a cached icon.
 
 See [Panel and Notch architecture](PANEL_ARCHITECTURE.md) for display ownership and trigger behavior.

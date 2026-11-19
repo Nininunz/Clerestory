@@ -36,10 +36,11 @@ struct ModulePreviewHost: View {
 
     private var notice: IslandNotice? {
         var presentation = IslandNoticePresentation()
-        let phase = presentation.update(revision: messages?.current == nil ? nil : messages?.revision,
+        let current = messages?.currentNotice
+        let phase = presentation.update(noticeID: current?.id, from: current?.moduleID,
             context: .init(isEnabled: true, surface: .pinned, isTransitioning: false,
                            isDragging: dropTarget?.isTargeted == true))
-        return phase == .visible ? messages?.current?.notice : nil
+        return phase == .visible ? current?.notice : nil
     }
 
     var size: CGSize {

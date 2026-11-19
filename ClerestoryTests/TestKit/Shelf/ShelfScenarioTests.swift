@@ -140,7 +140,7 @@ final class ShelfScenarioTests: XCTestCase {
         for notice in ShelfNotice.allCases {
             XCTAssertTrue(ids.contains("notice-" + notice.rawValue))
             let fixture = try ShelfScenarioFixture(.populated, notice: notice.notice)
-            XCTAssertEqual(fixture.messages.current?.notice.fullText, notice.text)
+            XCTAssertEqual(fixture.messages.currentNotice?.notice.fullText, notice.text)
         }
         for sample in ShelfTransferSample.allCases {
             XCTAssertTrue(ids.contains("transfer-" + sample.rawValue))
@@ -187,11 +187,13 @@ final class ShelfScenarioTests: XCTestCase {
     func testPreviewFeedbackDoesNotExpireButRuntimeNoticesStillDo() async throws {
         let preview = try ShelfScenarioFixture(.populated, notice: ShelfNotice.removed.notice,
                                                transfer: .importDelivered)
-        let runtime = IslandMessageCenter()
+        let clock = ManualMessageClock()
+        let runtime = IslandMessageCenter.forTesting(clock: clock)
         runtime.messenger(for: .shelf).post(.removed)
-        try await Task.sleep(for: .seconds(IslandMessageCenter.displayDuration + 0.3))
-        XCTAssertNil(runtime.current)
-        XCTAssertEqual(preview.messages.current?.notice.fullText, ShelfNotice.removed.text)
+        runtime.setNoticeClockRunning(true)
+        await clock.advance(by: IslandMessageCenter.defaultDuration)
+        XCTAssertNil(runtime.currentNotice)
+        XCTAssertEqual(preview.messages.currentNotice?.notice.fullText, ShelfNotice.removed.text)
         XCTAssertEqual(preview.transfers.currentTask?.phase, .delivered)
     }
 

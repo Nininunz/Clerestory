@@ -82,9 +82,9 @@ final class ShelfWindowController: NSObject {
     /// v1.3: shared non-destructive selection actions and the retained AppKit
     /// share-session lifecycle.
     private let shelfActionRunner: ShelfActionRunner
-    /// Batch-level VoiceOver announcements live for the controller lifetime so
-    /// SwiftUI redraws cannot repeat already spoken events.
-    private let accessibilityAnnouncementCenter = AccessibilityAnnouncementCenter()
+    /// Speaks transfer milestones whether or not ShelfView is on screen, through the message
+    /// center's announcer so one instance de-duplicates all speech.
+    private var transferAnnouncements: TransferAnnouncementObserver?
     /// Reads DragStartMonitor.isDragInProgress. Auto-hide must keep an already
     /// visible Shelf open during a drag.
     private let dragStartMonitor: DragStartMonitor
@@ -299,8 +299,6 @@ final class ShelfWindowController: NSObject {
                 .environment(\.tempFileService, tempFileService)
                 .environment(\.itemRecoveryController, itemRecoveryController)
                 .environment(\.shelfActionRunner, shelfActionRunner)
-                .environment(\.accessibilityAnnouncementCenter,
-                              accessibilityAnnouncementCenter)
                 // The inner collapse handle uses the standard hideShelf animation.
                 .environment(\.shelfRevealState,
                              presentationStyle == .classic ? classicReveal : nil)
@@ -615,6 +613,8 @@ final class ShelfWindowController: NSObject {
             messenger: messages.messenger(for: .shelf)
         )
         super.init()
+        transferAnnouncements = TransferAnnouncementObserver(transferStore: importCoordinator.transferStore,
+                                                             announcer: messages.announcer)
         islandPresentation.connect()
         islandTimerStore.onActivity = { [weak self] activity in
             self?.timerModuleRuntime.replaceActivity(activity)
@@ -721,6 +721,7 @@ final class ShelfWindowController: NSObject {
     func shutdown() {
         islandNotchPanel.orderOut(nil)
         islandNoticePanel?.stop()
+        transferAnnouncements?.stop()
         setIslandDragZoneActive(false)
         favoriteFolderDropCoordinator.cancelCopy()
         quickActionLayoutTask?.cancel()

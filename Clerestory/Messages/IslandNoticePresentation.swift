@@ -5,6 +5,8 @@ struct IslandNoticePresentation {
         var surface: IslandSurfaceState
         var isTransitioning: Bool
         var isDragging: Bool
+        /// The module the expanded panel shows, or `nil` when the panel is not expanded.
+        var shownModule: IslandModuleID? = nil
     }
 
     enum Phase: Equatable {
@@ -14,21 +16,25 @@ struct IslandNoticePresentation {
     }
 
     private(set) var phase: Phase = .idle
-    private var revision: UInt64?
+    private var noticeID: UInt64?
     private var hasAppeared = false
 
-    /// Each new notice waits for an unpinned Island to close. Once presented,
-    /// that notice follows later expansion changes without being queued again.
-    mutating func update(revision nextRevision: UInt64?, context: Context) -> Phase {
-        if revision != nextRevision {
-            revision = nextRevision
+    /// A new notice waits for an unpinned panel to close, unless the panel shows the module that
+    /// posted it. A drag defers every notice. Once presented, a notice follows later expansion
+    /// changes without waiting again.
+    mutating func update(noticeID nextID: UInt64?, from moduleID: IslandModuleID? = nil,
+                         context: Context) -> Phase {
+        if noticeID != nextID {
+            noticeID = nextID
             hasAppeared = false
         }
-        guard nextRevision != nil, context.isEnabled else {
+        guard nextID != nil, context.isEnabled else {
             phase = .idle
             return phase
         }
-        let waitsForClose = !hasAppeared && (context.surface == .expanded || context.isTransitioning)
+        let isFromShownModule = moduleID != nil && moduleID == context.shownModule
+        let waitsForClose = !hasAppeared
+            && ((context.surface == .expanded && !isFromShownModule) || context.isTransitioning)
         if context.isDragging || waitsForClose {
             phase = .waiting
         } else {
