@@ -42,6 +42,9 @@ final class ShelfWindowController: NSObject {
     private static let animationDuration: TimeInterval = 0.2
     var onClassicDestinationEntered: ((Int) -> Void)?
     var onClassicDestinationEnded: ((Int, Bool) -> Void)?
+    /// Panel (Island) drop destinations, including the approach zone, report the same way.
+    var onIslandDestinationEntered: ((Int) -> Void)?
+    var onIslandDestinationEnded: ((Int, Bool) -> Void)?
     var onClassicPresentationRequested: (() -> Void)?
 
     private let appState: AppState
@@ -186,6 +189,12 @@ final class ShelfWindowController: NSObject {
         panel.contentView = DragContainerView(
             store: store, coordinator: importCoordinator,
             dropTargetState: islandDropTargetState, gridGeometry: islandGridGeometry,
+            onDestinationEntered: { [weak self] sequenceNumber in
+                self?.onIslandDestinationEntered?(sequenceNumber)
+            },
+            onDestinationEnded: { [weak self] sequenceNumber, accepted in
+                self?.onIslandDestinationEnded?(sequenceNumber, accepted)
+            },
             onNativeShelfDrag: { [weak self] in
                 guard let self else { return }
                 self.dragStartMonitor.confirmShelfDragFromDestination(at: NSEvent.mouseLocation)
@@ -353,12 +362,18 @@ final class ShelfWindowController: NSObject {
             gridGeometry: gridGeometry,
             dropOverride: dropOverride,
             onDestinationEntered: { [weak self] sequenceNumber in
-                guard presentationStyle == .classic else { return }
-                self?.onClassicDestinationEntered?(sequenceNumber)
+                if presentationStyle == .classic {
+                    self?.onClassicDestinationEntered?(sequenceNumber)
+                } else {
+                    self?.onIslandDestinationEntered?(sequenceNumber)
+                }
             },
             onDestinationEnded: { [weak self] sequenceNumber, accepted in
-                guard presentationStyle == .classic else { return }
-                self?.onClassicDestinationEnded?(sequenceNumber, accepted)
+                if presentationStyle == .classic {
+                    self?.onClassicDestinationEnded?(sequenceNumber, accepted)
+                } else {
+                    self?.onIslandDestinationEnded?(sequenceNumber, accepted)
+                }
             },
             onNativeShelfDrag: { [weak self] in
                 guard presentationStyle == .island else { return }
@@ -1825,7 +1840,11 @@ final class ShelfWindowController: NSObject {
 
     func islandDragEnded(imported: Bool, hasPendingNotice: Bool = false) {
         guard settings.islandEnabled, settings.islandShelfEnabled else { return }
-        islandActivityCoordinator.endDrag(imported: imported, hasPendingNotice: hasPendingNotice)
+        if islandActivityCoordinator.endDrag(imported: imported, hasPendingNotice: hasPendingNotice) {
+            // The drag opened the panel and the drop keeps it open: moving away closes it, as
+            // after a hover. A panel opened by click or shortcut before the drag stays as it was.
+            islandPresentation.resumeHoverDismissal()
+        }
     }
 
     private func startEnabledIslandModules() {

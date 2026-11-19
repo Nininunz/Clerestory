@@ -256,7 +256,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     })
     /// Tracks drag-triggered Shelf reveals and decides when to dismiss them.
     private var dragAutoShowSession = DragAutoShowSession()
-    private var islandDragWasActivated = false
+    /// Decides when a Panel the drag opened learns how the drag ended.
+    private var islandDragEndSession = IslandDragEndSession()
+    private var islandDragEndTimeout: Task<Void, Never>?
     private var noticeRevisionBeforeDrag: UInt64 = 0
 
     /// The edge tab opens Shelf on click, accepts drops, and can be dragged along the edge.
@@ -302,7 +304,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Count successful drops and clipboard saves so an automatic reveal stays open after import.
         dropImportCoordinator.onImportHandled = { [weak self] in
             self?.dragAutoShowSession.noteImport()
+            self?.islandDragEndSession.noteImport()
             self?.shelfWindowController.promoteClassicHoverPreviewIfNeeded()
+        }
+        shelfWindowController.onIslandDestinationEntered = { [weak self] sequenceNumber in
+            self?.islandDragEndSession.destinationEntered(sequenceNumber: sequenceNumber)
+        }
+        shelfWindowController.onIslandDestinationEnded = { [weak self] sequenceNumber, accepted in
+            guard let self else { return }
+            self.applyIslandDragEnd(
+                self.islandDragEndSession.destinationEnded(sequenceNumber: sequenceNumber, accepted: accepted)
+            )
         }
         shelfWindowController.onClassicDestinationEntered = { [weak self] sequenceNumber in
             self?.dragAutoShowSession.destinationEntered(sequenceNumber: sequenceNumber)
@@ -444,6 +456,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Immediate mode opens a hidden Shelf and marks it as automatic. A visible Shelf stays
     /// as it is. Edge-only mode tracks the drag and delegates opening to the edge trigger.
     private func handleDragStart() {
+        // End a Panel drag still waiting for its destination before the notice baseline moves.
+        applyIslandDragEnd(islandDragEndSession.dragBegan())
         noticeRevisionBeforeDrag = messages.noticeRevision(for: .shelf)
         dragAutoShowSession.dragBegan()
         guard settingsStore.effectivePreferredShelfSurface == .classic else { return }
@@ -458,7 +472,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard settingsStore.islandEnabled,
               settingsStore.islandShelfEnabled else { return }
         if shelfPresentationCoordinator.dragApproachedTop(at: point) {
-            islandDragWasActivated = true
+            islandDragEndSession.markPanelActivated()
         }
     }
 
@@ -470,20 +484,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// are recorded through onImportHandled and noteImport. The setting controls whether Shelf
     /// stays open. EmptyShelfAutoHideRule also checks isDragInProgress before dismissing.
     private func handleDragEnd() {
-        let imported = dragAutoShowSession.receivedImport
         let shouldHideClassic = dragAutoShowSession.dragEnded(
             keepShelfOpenAfterDrop: settingsStore.keepShelfOpenAfterDrop
         )
-        if islandDragWasActivated {
+        applyIslandDragEnd(islandDragEndSession.mouseUp())
+        guard shouldHideClassic, appState.isShelfVisible else { return }
+        shelfPresentationCoordinator.hideClassic(animated: true)
+    }
+
+    /// Ends the drag for a Panel the drag opened once mouse-up and any Panel destination that
+    /// saw the drag have both finished. The drop can reach the Panel after mouse-up, so
+    /// deciding at mouse-up would miss the import and collapse the Panel.
+    private func applyIslandDragEnd(_ step: IslandDragEndSession.Step) {
+        switch step {
+        case .noAction:
+            return
+        case .awaitDestination(let generation):
+            islandDragEndTimeout?.cancel()
+            islandDragEndTimeout = Task { @MainActor [weak self] in
+                try? await Task.sleep(for: IslandDragEndSession.destinationTimeout)
+                guard !Task.isCancelled, let self else { return }
+                self.applyIslandDragEnd(self.islandDragEndSession.destinationTimedOut(generation: generation))
+            }
+        case .endDrag(let imported):
+            islandDragEndTimeout?.cancel()
+            islandDragEndTimeout = nil
             shelfPresentationCoordinator.dragEnded(
                 imported: imported,
                 // Only Shelf feedback from this drag collapses the panel the drag opened.
                 hasPendingNotice: messages.hasNewCurrentNotice(from: .shelf, since: noticeRevisionBeforeDrag)
             )
-            islandDragWasActivated = false
         }
-        guard shouldHideClassic, appState.isShelfVisible else { return }
-        shelfPresentationCoordinator.hideClassic(animated: true)
     }
 
     // MARK: - UX3 clipboard save
