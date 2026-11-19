@@ -6,54 +6,52 @@ import UniformTypeIdentifiers
 
 struct IgnoredAppsSettingsSection: View {
     @Environment(SettingsStore.self) private var settings
-    @State private var selection: Set<String> = []
     @State private var runningApps: [NSRunningApplication] = []
 
     var body: some View {
-        @Bindable var settings = settings
         Group {
             Section {
-                List(selection: $selection) {
-                    ForEach(settings.ignoredAppBundleIDs, id: \.self) { bundleID in
-                        IgnoredAppRow(bundleID: bundleID).tag(bundleID)
+                // Plain rows instead of a List: a List is its own scroll view and
+                // would swallow scroll-wheel events meant for the Settings page.
+                VStack(spacing: 0) {
+                    if settings.ignoredAppBundleIDs.isEmpty {
+                        Text("No ignored apps")
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, minHeight: 36)
+                    } else {
+                        ForEach(Array(settings.ignoredAppBundleIDs.enumerated()), id: \.element) { index, bundleID in
+                            if index > 0 { Divider() }
+                            IgnoredAppRow(bundleID: bundleID) {
+                                settings.removeIgnoredApps(bundleIDs: [bundleID])
+                            }
+                        }
                     }
                 }
-                .frame(height: 160)
-                .onDeleteCommand {
-                    settings.removeIgnoredApps(bundleIDs: selection)
-                    selection.removeAll()
-                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(.background.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
+                .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(.separator))
 
-                HStack {
-                    Menu("Add…") {
-                        ForEach(runningApps, id: \.bundleIdentifier) { app in
-                            Button {
-                                if let bundleID = app.bundleIdentifier {
-                                    settings.addIgnoredApp(bundleID: bundleID)
-                                }
-                            } label: {
-                                Label {
-                                    Text(app.localizedName ?? app.bundleIdentifier ?? String(localized: "Unknown"))
-                                } icon: {
-                                    if let icon = app.icon {
-                                        Image(nsImage: icon)
-                                    }
+                Menu("Add…") {
+                    ForEach(runningApps, id: \.bundleIdentifier) { app in
+                        Button {
+                            if let bundleID = app.bundleIdentifier {
+                                settings.addIgnoredApp(bundleID: bundleID)
+                            }
+                        } label: {
+                            Label {
+                                Text(app.localizedName ?? app.bundleIdentifier ?? String(localized: "Unknown"))
+                            } icon: {
+                                if let icon = app.icon {
+                                    Image(nsImage: icon)
                                 }
                             }
                         }
-                        Divider()
-                        Button("Choose Application…") { chooseApplication() }
                     }
-                    .fixedSize()
-
-                    Spacer()
-
-                    Button("Remove") {
-                        settings.removeIgnoredApps(bundleIDs: selection)
-                        selection.removeAll()
-                    }
-                    .disabled(selection.isEmpty)
+                    Divider()
+                    Button("Choose Application…") { chooseApplication() }
                 }
+                .fixedSize()
             } header: {
                 Text("Ignored Apps")
             } footer: {
@@ -91,6 +89,7 @@ struct IgnoredAppsSettingsSection: View {
 /// that can no longer be located degrades to a dashed placeholder + raw ID.
 private struct IgnoredAppRow: View {
     let bundleID: String
+    let remove: () -> Void
 
     private var appURL: URL? {
         NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID)
@@ -120,7 +119,15 @@ private struct IgnoredAppRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            Spacer()
+            Button(action: remove) {
+                Image(systemName: "minus.circle")
+            }
+            .buttonStyle(.borderless)
+            .help("Remove")
+            .accessibilityLabel(Text("Remove \(displayName)"))
         }
+        .padding(.vertical, 6)
     }
 }
 
