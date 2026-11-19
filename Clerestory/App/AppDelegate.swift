@@ -369,6 +369,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 hasLegacyInstallEvidence: hasLegacyInstallEvidence
             )
         }
+        #if DEBUG
+        DebugTestMessages.center = messages
+        #endif
     }
 
     private func presentRequestedUITestSurface() {
