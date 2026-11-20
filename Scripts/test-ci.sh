@@ -2,7 +2,7 @@
 # Run the CI checks. With no argument, run every phase in order, as a local
 # pre-merge check. CI runs one phase per job so the jobs can run in parallel.
 #
-# Usage: Scripts/test-ci.sh [all|identity|module-core|release|unit-tests]
+# Usage: Scripts/test-ci.sh [all|identity|module-core|release|helper|unit-tests]
 #
 # CLERESTORY_CI_OUTPUT  Directory for logs and results (default: a new temp dir).
 # CLERESTORY_RELEASE_BUILD
@@ -14,8 +14,8 @@ set -euo pipefail
 
 phase="${1:-all}"
 case "$phase" in
-  all|identity|module-core|release|unit-tests) ;;
-  *) echo "usage: $0 [all|identity|module-core|release|unit-tests]" >&2; exit 64 ;;
+  all|identity|module-core|release|helper|unit-tests) ;;
+  *) echo "usage: $0 [all|identity|module-core|release|helper|unit-tests]" >&2; exit 64 ;;
 esac
 
 repo_dir="$(cd "$(dirname "$0")/.." && pwd)"
@@ -69,6 +69,28 @@ if runs release; then
   echo "==> Release build (${CLERESTORY_RELEASE_BUILD:-full})"
   xcodebuild build "${common[@]}" "${release[@]}" -configuration Release \
     2>&1 | tee "$output_dir/release-build.log"
+fi
+
+if runs helper; then
+  # Build the Low Power Mode helper and an unsigned package with an ad-hoc
+  # signature, then check the package contents. Release packages are signed
+  # and notarized by make-release.sh.
+  echo "==> Low Power Mode helper"
+  {
+    Scripts/build-low-power-mode-helper.sh - "$output_dir/helper"
+    pkgutil --expand-full "$output_dir/helper/ClerestoryLowPowerMode.pkg" "$output_dir/helper/expanded"
+    payload="$output_dir/helper/expanded/Payload"
+    service=com.nininunz.Clerestory.LowPowerMode
+    archs="$(lipo -archs "$payload/Library/PrivilegedHelperTools/$service")"
+    echo "Helper architectures: $archs"
+    # Exit explicitly: bash 3.2's set -e ignores a failed [[ ]] test.
+    if [[ " $archs " != *" arm64 "* || " $archs " != *" x86_64 "* ]]; then
+      echo "error: the helper must be built for arm64 and x86_64" >&2
+      exit 1
+    fi
+    plutil -lint "$payload/Library/LaunchDaemons/$service.plist"
+    test -x "$output_dir/helper/expanded/Scripts/postinstall"
+  } 2>&1 | tee "$output_dir/helper.log"
 fi
 
 if runs unit-tests; then

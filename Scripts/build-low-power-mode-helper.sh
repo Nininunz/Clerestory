@@ -7,6 +7,8 @@
 #   The application identity signs the helper. The optional installer identity
 #   signs the package, which notarization requires; without it the package is
 #   unsigned and only suitable for local testing.
+#   An application identity of "-" signs the helper ad hoc, for CI build checks.
+#   Clerestory rejects an ad-hoc helper, so that package is not for installing.
 set -eu
 
 if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
@@ -17,6 +19,10 @@ fi
 repo=$(cd "$(dirname "$0")/.." && pwd)
 identity=$1
 installer_identity=${3:-}
+if [ "$identity" = "-" ] && [ -n "$installer_identity" ]; then
+    echo "error: An ad-hoc helper can't go in a signed package." >&2
+    exit 64
+fi
 mkdir -p "$2"
 output=$(cd "$2" && pwd)
 stage=$(mktemp -d)
@@ -29,8 +35,13 @@ mkdir -p "$(dirname "$binary")" "$stage/root/Library/LaunchDaemons" "$stage/scri
 xcrun clang -Wall -Wextra -Werror -fblocks -mmacosx-version-min=15 \
     -arch arm64 -arch x86_64 -framework CoreFoundation -framework IOKit \
     "$repo/Helpers/LowPowerMode/main.c" -o "$binary"
-codesign --force --options runtime --timestamp --identifier "$service" --sign "$identity" "$binary"
-codesign --verify --strict -R="anchor apple generic and identifier \"$service\" and certificate leaf[subject.OU] = \"8KB55P2YKQ\"" "$binary"
+if [ "$identity" = "-" ]; then
+    codesign --force --options runtime --identifier "$service" --sign - "$binary"
+    codesign --verify --strict "$binary"
+else
+    codesign --force --options runtime --timestamp --identifier "$service" --sign "$identity" "$binary"
+    codesign --verify --strict -R="anchor apple generic and identifier \"$service\" and certificate leaf[subject.OU] = \"8KB55P2YKQ\"" "$binary"
+fi
 install -m 644 "$repo/Helpers/LowPowerMode/$service.plist" "$stage/root/Library/LaunchDaemons/$service.plist"
 plutil -lint "$stage/root/Library/LaunchDaemons/$service.plist"
 
