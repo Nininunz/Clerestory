@@ -279,10 +279,12 @@ final class PowerSourceMonitor: IslandModule {
         let state = description[kIOPSPowerSourceStateKey] as? String
         let onAC = state == kIOPSACPowerValue
         let charging = description[kIOPSIsChargingKey] as? Bool ?? false
+        // For a few seconds after wake, macOS reports zero current while the
+        // Mac runs on battery. Treat that as no reading rather than 0 W.
         let electrical = BatteryElectricalReader.sample(
             powerSourceDescription: description,
             registryProperties: registryProperties
-        )
+        ).flatMap { onAC || $0.currentMilliamps != 0 ? $0 : nil }
         let charged = description[kIOPSIsChargedKey] as? Bool
             ?? (onAC && !charging && percentage == 100)
         let estimate = charging ? description[kIOPSTimeToFullChargeKey] as? Int
