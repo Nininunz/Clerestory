@@ -11,13 +11,18 @@
 #
 # Archive with Developer ID, verify app and nested signatures, then build the DMG.
 # Sign, notarize, and staple the DMG before signing its final bytes for Sparkle.
+# In Developer ID mode, also build, sign, notarize, and staple the Low Power Mode
+# helper package, export/ClerestoryLowPowerMode.pkg.
 #
-# Upload export/Clerestory-<VERSION>.dmg to the matching GitHub Release tag
-# v<VERSION> separately to make the appcast enclosure available.
+# Upload export/Clerestory-<VERSION>.dmg and export/ClerestoryLowPowerMode.pkg to
+# the matching GitHub Release tag v<VERSION> separately. The appcast needs the DMG,
+# and Settings downloads the helper package from the latest release.
 #
 # Environment variables
 #   DEVELOPER_ID_APPLICATION is the full signing identity in Keychain, for example:
 #                 Developer ID Application: Example Name (ABCDE12345)
+#   DEVELOPER_ID_INSTALLER is the full installer signing identity in Keychain, for
+#                 the helper package: Developer ID Installer: Example Name (ABCDE12345)
 #   DEVELOPMENT_TEAM_ID is the 10-character Apple Developer team ID.
 #   NOTARY_PROFILE is the Keychain profile from xcrun notarytool store-credentials.
 #   SPARKLE_BIN overrides the directory containing sign_update. The default
@@ -75,7 +80,7 @@ if ! command -v node >/dev/null 2>&1; then
 fi
 
 if [ "$RELEASE_MODE" = "developer-id" ]; then
-    for required_name in DEVELOPER_ID_APPLICATION DEVELOPMENT_TEAM_ID NOTARY_PROFILE; do
+    for required_name in DEVELOPER_ID_APPLICATION DEVELOPER_ID_INSTALLER DEVELOPMENT_TEAM_ID NOTARY_PROFILE; do
         if [ -z "${!required_name:-}" ]; then
             echo "error: Missing environment variable ${required_name}. Without an Apple certificate, explicitly use: $0 $VERSION ${BUILD_NUMBER:-<BUILD>} --adhoc" >&2
             exit 1
@@ -90,6 +95,14 @@ if [ "$RELEASE_MODE" = "developer-id" ]; then
         *"$DEVELOPER_ID_APPLICATION"*) ;;
         *)
             echo "error: The configured Developer ID Application signing identity was not found in Keychain." >&2
+            exit 1
+            ;;
+    esac
+    # Installer identities are not code-signing identities, so list all valid ones.
+    case "$(security find-identity -v)" in
+        *"$DEVELOPER_ID_INSTALLER"*) ;;
+        *)
+            echo "error: The configured Developer ID Installer signing identity was not found in Keychain." >&2
             exit 1
             ;;
     esac
@@ -279,6 +292,21 @@ else
     echo "==> Skip Apple notarization in ad hoc mode"
 fi
 
+# The Low Power Mode helper only accepts a Developer ID-signed Clerestory, so
+# ad hoc releases don't include it.
+HELPER_PKG_PATH="export/ClerestoryLowPowerMode.pkg"
+rm -f "$HELPER_PKG_PATH"
+if [ "$RELEASE_MODE" = "developer-id" ]; then
+    echo "==> Build the Low Power Mode helper package"
+    HELPER_VERSION="$VERSION" ./Scripts/build-low-power-mode-helper.sh \
+        "$DEVELOPER_ID_APPLICATION" export "$DEVELOPER_ID_INSTALLER"
+    NOTARY_PROFILE="$NOTARY_PROFILE" ./Scripts/notarize.sh "$HELPER_PKG_PATH"
+    pkgutil --check-signature "$HELPER_PKG_PATH"
+    spctl --assess --type install --verbose=2 "$HELPER_PKG_PATH"
+else
+    echo "==> Skip the Low Power Mode helper package in ad hoc mode"
+fi
+
 # Create the EdDSA signature after notarization and stapling finalize the DMG bytes.
 echo "==> sign_update"
 SIGN_OUTPUT="$("$SIGN_UPDATE" --account com.nininunz.OpenYoink "$DMG_PATH")"
@@ -362,6 +390,9 @@ echo "    After uploading the GitHub release, use these two values to update hom
 echo ""
 echo "==> Done"
 echo "    DMG:     $DMG_PATH"
+if [ -f "$HELPER_PKG_PATH" ]; then
+    echo "    helper:  $HELPER_PKG_PATH"
+fi
 echo "    appcast: $APPCAST"
 echo "    mode:    $RELEASE_MODE"
 if [ "${CLERESTORY_RELEASE_CANDIDATE:-0}" = "1" ]; then
@@ -369,5 +400,5 @@ if [ "${CLERESTORY_RELEASE_CANDIDATE:-0}" = "1" ]; then
 else
     echo "    badges:  docs/badges/"
     echo "Review and commit the feed and badges only when the matching release is ready."
-    echo "No GitHub release has been created by this script."
+    echo "No GitHub release has been created by this script. Attach the DMG and the helper package to it."
 fi
