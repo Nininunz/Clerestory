@@ -267,6 +267,11 @@ fi
 
 ./Scripts/verify-distribution.sh "$APP_PATH" "$RELEASE_MODE" "$VERSION" "$BUILD_NUMBER"
 
+# Published files must not reveal the build machine: no coverage instrumentation,
+# home folder, account name, or checkout path.
+echo "==> Check the app for build-machine details"
+python3 ./Scripts/check-release-contents.py "$APP_PATH"
+
 if [ "$RELEASE_MODE" = "developer-id" ]; then
     APP_SIGN_INFO="$(codesign -dvvv "$APP_PATH" 2>&1)"
     if ! printf '%s\n' "$APP_SIGN_INFO" | grep -Eq 'flags=.*runtime'; then
@@ -300,6 +305,10 @@ if [ "$RELEASE_MODE" = "developer-id" ]; then
     echo "==> Build the Low Power Mode helper package"
     HELPER_VERSION="$VERSION" ./Scripts/build-low-power-mode-helper.sh \
         "$DEVELOPER_ID_APPLICATION" export "$DEVELOPER_ID_INSTALLER"
+    HELPER_CHECK_DIR="$(mktemp -d)"
+    pkgutil --expand-full "$HELPER_PKG_PATH" "$HELPER_CHECK_DIR/expanded"
+    python3 ./Scripts/check-release-contents.py "$HELPER_CHECK_DIR/expanded"
+    rm -rf "$HELPER_CHECK_DIR"
     NOTARY_PROFILE="$NOTARY_PROFILE" ./Scripts/notarize.sh "$HELPER_PKG_PATH"
     pkgutil --check-signature "$HELPER_PKG_PATH"
     spctl --assess --type install --verbose=2 "$HELPER_PKG_PATH"
