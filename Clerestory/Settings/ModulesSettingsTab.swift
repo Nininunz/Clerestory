@@ -86,7 +86,7 @@ struct ModulesSettingsTab: View {
             Section("Experimental") {
                 Toggle("Experimental Modules", isOn: $settings.experimentalModulesEnabled)
                     .accessibilityIdentifier("settings.experimentalModules")
-                Text("Enable modules beyond Shelf and Quick Settings. Turning this off keeps their saved settings and shortcut positions.")
+                Text("Enable modules beyond Shelf, Quick Settings and Battery. Turning this off keeps their saved settings and shortcut positions.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Modules") {

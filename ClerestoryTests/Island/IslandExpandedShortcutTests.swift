@@ -14,16 +14,20 @@ final class IslandExpandedShortcutTests: XCTestCase {
         try withSettings { defaults in
             let settings = SettingsStore(defaults: defaults)
             XCTAssertEqual(settings.effectiveIslandShortcuts.shortcutPositions,
-                           [.shelf, .quickSettings, nil, nil, nil, nil, nil, nil])
-            XCTAssertEqual(settings.effectiveIslandShortcuts.visibleShortcutIndices(), [0, 1])
+                           [.shelf, .quickSettings, .battery, nil, nil, nil, nil, nil])
+            XCTAssertEqual(settings.effectiveIslandShortcuts.visibleShortcutIndices(), [0, 1, 2])
             settings.experimentalModulesEnabled = true
             settings.setIslandModuleEnabled(true, id: .timer)
             settings.assignIslandShortcut(.timer, at: 7)
             let saved = settings.islandModuleConfiguration
             settings.experimentalModulesEnabled = false
-            XCTAssertEqual(settings.effectiveIslandShortcuts.visibleShortcutIndices(), [0, 1])
+            XCTAssertEqual(settings.effectiveIslandShortcuts.visibleShortcutIndices(), [0, 1, 2])
             settings.setIslandModuleEnabled(false, id: .shelf)
+            XCTAssertEqual(settings.effectiveIslandShortcuts.visibleShortcutIndices(), [1, 2])
+            settings.setIslandModuleEnabled(false, id: .battery)
             XCTAssertEqual(settings.effectiveIslandShortcuts.visibleShortcutIndices(), [1])
+            settings.setIslandModuleEnabled(true, id: .battery)
+            settings.assignIslandShortcut(.battery, at: 2)
             settings.setIslandModuleEnabled(true, id: .shelf)
             settings.assignIslandShortcut(.shelf, at: 0)
             settings.experimentalModulesEnabled = true
