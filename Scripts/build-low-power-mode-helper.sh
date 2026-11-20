@@ -28,7 +28,8 @@ output=$(cd "$2" && pwd)
 stage=$(mktemp -d)
 trap 'rm -rf "$stage"' EXIT
 service=com.nininunz.Clerestory.LowPowerMode
-version=$(sed -n 's/^MARKETING_VERSION *= *//p' "$repo/Version.xcconfig")
+# make-release.sh passes its release version; otherwise use the checkout's version.
+version=${HELPER_VERSION:-$(sed -n 's/^MARKETING_VERSION *= *//p' "$repo/Version.xcconfig")}
 binary="$stage/root/Library/PrivilegedHelperTools/$service"
 mkdir -p "$(dirname "$binary")" "$stage/root/Library/LaunchDaemons" "$stage/scripts"
 

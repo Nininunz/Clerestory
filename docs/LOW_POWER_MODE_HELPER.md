@@ -21,7 +21,7 @@ The rest of Clerestory works normally without the helper.
 
 ## Build, sign, and notarize the package
 
-From the repository root:
+`Scripts/make-release.sh` builds, signs, notarizes, and staples the package as `export/ClerestoryLowPowerMode.pkg` with each Developer ID release, using the release version. To build it on its own, from the repository root:
 
 ```sh
 Scripts/build-low-power-mode-helper.sh \
@@ -31,7 +31,7 @@ Scripts/notarize.sh export/helper/ClerestoryLowPowerMode.pkg
 
 - The application identity signs the helper binary.
 - The installer identity signs the package, which notarization requires. Leave it off for an unsigned package for local testing only.
-- The package version comes from `MARKETING_VERSION` in `Version.xcconfig`.
+- The package version comes from `MARKETING_VERSION` in `Version.xcconfig`, or from `HELPER_VERSION` when set. The release script sets it to the release version.
 - The package installs the helper in `/Library/PrivilegedHelperTools` and its launchd plist in `/Library/LaunchDaemons`, then loads it. Reinstalling or upgrading replaces the running copy.
 
 To publish it, attach `ClerestoryLowPowerMode.pkg` to every GitHub release next to the DMG. **Download Helper…** in Settings links to `releases/latest/download/ClerestoryLowPowerMode.pkg`, so a release without the package breaks that link. Sparkle updates only the app, so people who already installed the helper need to install the package again only when the helper changes.

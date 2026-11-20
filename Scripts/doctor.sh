@@ -84,7 +84,7 @@ check_release() {
     check_command codesign 'Install the macOS signing tools.'
     check_command hdiutil 'The macOS hdiutil command is required to create DMGs.'
 
-    for name in DEVELOPER_ID_APPLICATION DEVELOPMENT_TEAM_ID NOTARY_PROFILE; do
+    for name in DEVELOPER_ID_APPLICATION DEVELOPER_ID_INSTALLER DEVELOPMENT_TEAM_ID NOTARY_PROFILE; do
         if [[ -z "${!name:-}" ]]; then
             fail "$name is missing. Set it in the environment or Scripts/release-signing.local."
         fi
@@ -98,6 +98,15 @@ check_release() {
             pass 'Configured Developer ID Application signing identity is available'
         else
             fail 'The configured Developer ID Application signing identity is unavailable in Keychain.'
+        fi
+    fi
+    if [[ -n "${DEVELOPER_ID_INSTALLER:-}" ]]; then
+        # Installer identities are not code-signing identities, so list all valid ones.
+        if identities=$(security find-identity -v 2>/dev/null) &&
+           [[ "$identities" == *"$DEVELOPER_ID_INSTALLER"* ]]; then
+            pass 'Configured Developer ID Installer signing identity is available'
+        else
+            fail 'The configured Developer ID Installer signing identity is unavailable in Keychain.'
         fi
     fi
 
