@@ -5056,6 +5056,193 @@
         }
       }
     },
+    "Helper" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Helper"
+          }
+        }
+      }
+    },
+    "Checking…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Checking…"
+          }
+        }
+      }
+    },
+    "Installed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installed"
+          }
+        }
+      }
+    },
+    "Not installed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not installed"
+          }
+        }
+      }
+    },
+    "The leaf button in Battery uses a small helper to switch Low Power Mode without asking for a password. Download and open the installer, then allow Clerestory in System Settings under Login Items & Extensions." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The leaf button in Battery uses a small helper to switch Low Power Mode without asking for a password. Download and open the installer, then allow Clerestory in System Settings under Login Items & Extensions."
+          }
+        }
+      }
+    },
+    "Download Helper…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download Helper…"
+          }
+        }
+      }
+    },
+    "Open Login Items…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Login Items…"
+          }
+        }
+      }
+    },
+    "Check Again" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check Again"
+          }
+        }
+      }
+    },
+    "Use the leaf button in Battery to switch Low Power Mode for the active power source." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use the leaf button in Battery to switch Low Power Mode for the active power source."
+          }
+        }
+      }
+    },
+    "Low Power Mode needs a helper" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Low Power Mode needs a helper"
+          }
+        }
+      }
+    },
+    "Install the helper once to switch Low Power Mode from here, or use System Settings instead." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install the helper once to switch Low Power Mode from here, or use System Settings instead."
+          }
+        }
+      }
+    },
+    "Not Now" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not Now"
+          }
+        }
+      }
+    },
+    "Use System Settings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use System Settings"
+          }
+        }
+      }
+    },
+    "Install Helper…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install Helper…"
+          }
+        }
+      }
+    },
+    "Open System Settings instead of using the helper" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open System Settings instead of using the helper"
+          }
+        }
+      }
+    },
+    "When this is on, the leaf button in Battery opens Battery in System Settings, where macOS has its own Low Power Mode control. No helper is needed." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When this is on, the leaf button in Battery opens Battery in System Settings, where macOS has its own Low Power Mode control. No helper is needed."
+          }
+        }
+      }
+    },
+    "Low Power Mode Helper" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Low Power Mode Helper"
+          }
+        }
+      }
+    },
     "Notify when fully charged" : {
       "extractionState" : "manual",
       "localizations" : {

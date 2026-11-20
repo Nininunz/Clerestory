@@ -1,9 +1,20 @@
+import AppKit
 import SwiftUI
 
 struct IslandBatteryView: View {
+    /// Opens Settings on the Battery page, where the Low Power Mode helper can be installed.
+    var onOpenSettings: () -> Void = {}
     @Environment(PowerSourceMonitor.self) private var powerMonitor
+    @Environment(SettingsStore.self) private var settings
     @State private var changingLowPowerMode = false
     @State private var lowPowerModeError: String?
+    /// Shown when the leaf is clicked without the helper and no choice has been made.
+    @State private var showsHelperPrompt: Bool
+
+    init(onOpenSettings: @escaping () -> Void = {}, showsHelperPrompt: Bool = false) {
+        self.onOpenSettings = onOpenSettings
+        _showsHelperPrompt = State(initialValue: showsHelperPrompt)
+    }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var snapshot: PowerSourceMonitor.Snapshot { powerMonitor.snapshot }
@@ -29,6 +40,9 @@ struct IslandBatteryView: View {
                 if snapshot.hasBattery {
                     VStack(alignment: .leading, spacing: 12) {
                         overview
+                        if showsHelperPrompt {
+                            helperPrompt
+                        }
                         if let lowPowerModeError {
                             Text(lowPowerModeError)
                                 .font(.caption)
@@ -56,17 +70,56 @@ struct IslandBatteryView: View {
     }
 
     private func toggleLowPowerMode() {
-        changingLowPowerMode = true
         lowPowerModeError = nil
+        guard !settings.lowPowerModeOpensSystemSettings else {
+            NSWorkspace.shared.open(LowPowerModeHelper.batterySettingsURL)
+            return
+        }
+        changingLowPowerMode = true
         Task { @MainActor in
             defer { changingLowPowerMode = false }
             do {
                 try await LowPowerModeHelper.toggle()
+                showsHelperPrompt = false
                 powerMonitor.refresh()
+            } catch LowPowerModeHelper.HelperError.unavailable {
+                showsHelperPrompt = true
             } catch {
                 lowPowerModeError = error.localizedDescription
             }
         }
+    }
+
+    private var helperPrompt: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Low Power Mode needs a helper", systemImage: "leaf")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(IslandVisualStyle.primaryText)
+            Text("Install the helper once to switch Low Power Mode from here, or use System Settings instead.")
+                .font(.caption)
+                .foregroundStyle(IslandVisualStyle.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 8) {
+                Button("Not Now") { showsHelperPrompt = false }
+                    .accessibilityIdentifier("battery.helperPrompt.notNow")
+                Spacer(minLength: 0)
+                Button("Use System Settings") {
+                    showsHelperPrompt = false
+                    settings.lowPowerModeOpensSystemSettings = true
+                    NSWorkspace.shared.open(LowPowerModeHelper.batterySettingsURL)
+                }
+                .accessibilityIdentifier("battery.helperPrompt.systemSettings")
+                Button("Install Helper…") {
+                    showsHelperPrompt = false
+                    onOpenSettings()
+                }
+                .accessibilityIdentifier("battery.helperPrompt.install")
+            }
+            .buttonStyle(IslandActionButtonStyle())
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(batteryCardBackground)
     }
 
     private var overview: some View {

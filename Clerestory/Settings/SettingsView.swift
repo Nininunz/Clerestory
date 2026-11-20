@@ -24,6 +24,12 @@ final class SettingsNavigationModel {
         }
     }
 
+    /// Open one module's detail page, or the module list when `destination` is nil.
+    func openModule(_ destination: ModuleSettingsDestination?) {
+        selectedPane = .modules
+        moduleSettingsDestination = destination
+    }
+
     /// Tab focus can move independently of selection in the button sidebar.
     /// Arrow navigation continues from that focused button, not the old pane.
     @discardableResult

@@ -238,6 +238,11 @@ final class SettingsStore {
         }
     }
 
+    /// The Battery leaf opens macOS Battery settings instead of using the Low Power Mode helper.
+    var lowPowerModeOpensSystemSettings = false {
+        didSet { defaults.set(lowPowerModeOpensSystemSettings, forKey: Keys.lowPowerModeOpensSystemSettings) }
+    }
+
     var islandFullChargeAlertEnabled: Bool {
         didSet {
             defaults.set(islandFullChargeAlertEnabled,
@@ -479,6 +484,7 @@ final class SettingsStore {
         static let islandTimerEnabled = prefix + "islandTimerEnabled"
         static let islandBatteryEnabled = prefix + "islandBatteryEnabled"
         static let islandFullChargeAlertEnabled = prefix + "islandFullChargeAlertEnabled"
+        static let lowPowerModeOpensSystemSettings = prefix + "lowPowerModeOpensSystemSettings"
         static let islandMediaEnabled = prefix + "islandMediaEnabled"
         static let aiUsageNotchMetric = prefix + "aiUsageCompactMetric"
         static let aiUsageLimitAlertsEnabled = prefix + "aiUsageLimitAlertsEnabled"
@@ -537,6 +543,7 @@ final class SettingsStore {
 
         showNotch = defaults.object(forKey: Keys.showNotch) as? Bool ?? true
         experimentalModulesEnabled = defaults.bool(forKey: Keys.experimentalModulesEnabled)
+        lowPowerModeOpensSystemSettings = defaults.bool(forKey: Keys.lowPowerModeOpensSystemSettings)
         clipboardHistoryEnabled = defaults.bool(forKey: Keys.clipboardHistoryEnabled)
         clipboardHistoryPaused = defaults.bool(forKey: Keys.clipboardHistoryPaused)
         let retentionDays = defaults.integer(forKey: Keys.clipboardHistoryRetentionDays)
