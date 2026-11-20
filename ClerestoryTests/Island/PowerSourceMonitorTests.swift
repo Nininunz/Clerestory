@@ -59,6 +59,26 @@ final class PowerSourceMonitorTests: XCTestCase {
         XCTAssertEqual(snapshot.powerWatts, -10)
     }
 
+    func testZeroCurrentOnBatteryIsNoReading() {
+        let description: [String: Any] = [
+            kIOPSCurrentCapacityKey: 42,
+            kIOPSMaxCapacityKey: 100,
+            kIOPSPowerSourceStateKey: kIOPSBatteryPowerValue,
+            kIOPSIsChargingKey: false,
+            kIOPSVoltageKey: 11_466,
+            kIOPSCurrentKey: 0,
+        ]
+        let registry: [String: Any] = ["Voltage": 11_466, "InstantAmperage": 0, "Amperage": 0]
+        let onBattery = PowerSourceMonitor.snapshot(from: description, registryProperties: registry)
+        XCTAssertNil(onBattery.powerWatts)
+        XCTAssertNil(onBattery.currentMilliamps)
+
+        var connected = description
+        connected[kIOPSPowerSourceStateKey] = kIOPSACPowerValue
+        let onAC = PowerSourceMonitor.snapshot(from: connected, registryProperties: registry)
+        XCTAssertEqual(onAC.powerWatts, 0)
+    }
+
     func testNestedBatteryDetailsAndUnknownChargingEstimate() {
         let snapshot = PowerSourceMonitor.snapshot(from: [
             kIOPSCurrentCapacityKey: 50,
