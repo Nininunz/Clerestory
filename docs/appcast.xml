@@ -6,5 +6,12 @@
         <link>https://nininunz.github.io/Clerestory/appcast.xml</link>
         <description>Updates for Clerestory, based on OpenYoink.</description>
         <language>en</language>
+        <item>
+            <title>Version 1.0.0</title>
+            <pubDate>Fri, 20 Nov 2026 16:01:06 -0600</pubDate>
+            <sparkle:version>61</sparkle:version>
+            <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+            <enclosure url="https://github.com/Nininunz/Clerestory/releases/download/v1.0.0/Clerestory-1.0.0.dmg" sparkle:edSignature="0qtWAvvu0T0WHiDR96M3XwADN3FXmXogVIyHfcsti86MleukVFauBxZ0Cagjik5KWXroLwxjxpVWMInDEt0GAQ==" length="5641038" type="application/octet-stream" />
+        </item>
     </channel>
 </rss>
