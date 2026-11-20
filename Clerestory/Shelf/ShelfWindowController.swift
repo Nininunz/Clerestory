@@ -285,7 +285,7 @@ final class ShelfWindowController: NSObject {
          dragStartMonitor: DragStartMonitor,
          clipboardHistoryStore: ClipboardHistoryStore,
          onOpenSettings: @escaping @MainActor () -> Void = {},
-         onOpenModuleSettings: @escaping @MainActor () -> Void = {},
+         onOpenModuleSettings: @escaping @MainActor (ModuleSettingsDestination?) -> Void = { _ in },
          onOpenStorageRecovery: @escaping @MainActor () -> Void = {},
          tutorialTokenForItem: @escaping @MainActor (UUID) -> String? = { _ in nil }) {
         self.store = store
@@ -368,7 +368,7 @@ final class ShelfWindowController: NSObject {
                     makeContentView: { context in
                         AnyView(IslandModuleLibraryView(onOpenSettings: {
                             islandActivityCoordinator.collapse()
-                            onOpenModuleSettings()
+                            onOpenModuleSettings(nil)
                         }))
                     }
                 ),
@@ -399,7 +399,12 @@ final class ShelfWindowController: NSObject {
                 IslandModuleRegistration(
                     descriptor: batteryModuleRuntime.descriptor,
                     runtime: batteryModuleRuntime,
-                    makeContentView: { _ in AnyView(IslandBatteryView()) }
+                    makeContentView: { _ in
+                        AnyView(IslandBatteryView(onOpenSettings: {
+                            islandActivityCoordinator.collapse()
+                            onOpenModuleSettings(.battery)
+                        }))
+                    }
                 ),
                 IslandModuleRegistration(
                     descriptor: systemStatusModuleStore.descriptor,

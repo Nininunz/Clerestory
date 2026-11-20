@@ -189,6 +189,7 @@ struct ModulesSettingsTab: View {
             Section("Battery") {
                 Toggle("Notify when fully charged", isOn: $settings.islandFullChargeAlertEnabled)
             }
+            LowPowerModeHelperSection()
         case .aiUsage:
             Section("AI Usage") {
                 Picker("Show in notch", selection: $settings.aiUsageNotchMetric) {

@@ -44,6 +44,16 @@ final class SettingsNavigationTests: XCTestCase {
         XCTAssertNil(navigation.moduleSettingsDestination)
     }
 
+    func testOpenModuleShowsItsDetailOrTheModuleList() {
+        let navigation = SettingsNavigationModel()
+        navigation.openModule(.battery)
+        XCTAssertEqual(navigation.selectedPane, .modules)
+        XCTAssertEqual(navigation.moduleSettingsDestination, .battery)
+        navigation.openModule(nil)
+        XCTAssertEqual(navigation.selectedPane, .modules)
+        XCTAssertNil(navigation.moduleSettingsDestination)
+    }
+
     func testSidebarNavigationLeavesModuleDetail() {
         let navigation = SettingsNavigationModel()
         navigation.open(.clipboard)

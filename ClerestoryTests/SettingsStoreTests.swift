@@ -327,4 +327,13 @@ final class SettingsStoreTests: XCTestCase {
 
         XCTAssertEqual(SettingsStore(defaults: defaults).ignoredAppBundleIDs, ["com.apple.mail"])
     }
+
+    func testLowPowerModeSystemSettingsChoiceDefaultsOffAndPersists() throws {
+        let (defaults, name) = try makeSuite()
+        defer { defaults.removePersistentDomain(forName: name) }
+        let store = SettingsStore(defaults: defaults)
+        XCTAssertFalse(store.lowPowerModeOpensSystemSettings)
+        store.lowPowerModeOpensSystemSettings = true
+        XCTAssertTrue(SettingsStore(defaults: defaults).lowPowerModeOpensSystemSettings)
+    }
 }

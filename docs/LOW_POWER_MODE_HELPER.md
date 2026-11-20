@@ -2,11 +2,17 @@
 
 The Battery module's leaf button toggles Low Power Mode for the active power source. Changing that system setting needs administrator rights, which the sandboxed app does not have, so it asks a small helper that runs as a system LaunchDaemon (`com.nininunz.Clerestory.LowPowerMode`).
 
-The helper is optional and ships as its own installer package, `ClerestoryLowPowerMode.pkg`. Without it, the button reports that the helper is unavailable and the rest of Clerestory works normally.
+The helper is optional and ships as its own installer package, `ClerestoryLowPowerMode.pkg`. Without it, or when the app's signature doesn't match the helper's, clicking the leaf shows a prompt in the Battery module:
+
+- **Install Helper…** opens **Settings → Modules → Battery** in Clerestory. That page shows whether the helper is available and has buttons to download the installer and open Login Items & Extensions.
+- **Use System Settings** turns on **Open System Settings instead of using the helper** and opens Battery in System Settings, where macOS has its own Low Power Mode control. From then on the leaf goes straight there and doesn't use the helper. Turn the setting off in Settings → Modules → Battery to use the helper again.
+- **Not Now** closes the prompt. It appears again on the next click.
+
+The rest of Clerestory works normally without the helper.
 
 ## How it works
 
-- The app sends one XPC request, `toggle`, to the helper's Mach service.
+- The app sends one XPC request, `toggle`, to the helper's Mach service. To show the helper's status, Settings sends a `status` request; the helper replies to any request but only acts on `toggle`, so this changes nothing.
 - Each side checks the other's code signature. The app only talks to a helper signed as `com.nininunz.Clerestory.LowPowerMode` by the Clerestory Developer ID team. The helper only accepts requests from an app signed as `com.nininunz.Clerestory` by the same team.
 - The helper runs as root and accepts no other requests. It reads the active power source, reads that profile's current mode with `pmset -g custom`, and flips only that profile with `/usr/bin/pmset`. It runs `pmset` with fixed arguments and a minimal environment, one request at a time.
 - On Macs with High Power Mode, `pmset` reports `powermode` instead of `lowpowermode`. The helper handles both. Turning Low Power Mode off there returns to Automatic, not to High Power.
@@ -28,7 +34,7 @@ Scripts/notarize.sh export/helper/ClerestoryLowPowerMode.pkg
 - The package version comes from `MARKETING_VERSION` in `Version.xcconfig`.
 - The package installs the helper in `/Library/PrivilegedHelperTools` and its launchd plist in `/Library/LaunchDaemons`, then loads it. Reinstalling or upgrading replaces the running copy.
 
-To publish it, attach `ClerestoryLowPowerMode.pkg` to the GitHub release next to the DMG. Sparkle updates only the app, so release a new package whenever the helper changes.
+To publish it, attach `ClerestoryLowPowerMode.pkg` to every GitHub release next to the DMG. **Download Helper…** in Settings links to `releases/latest/download/ClerestoryLowPowerMode.pkg`, so a release without the package breaks that link. Sparkle updates only the app, so people who already installed the helper need to install the package again only when the helper changes.
 
 ## Install and test
 
@@ -38,7 +44,7 @@ Open the package and follow the installer. It asks for an administrator password
 sudo /usr/sbin/installer -pkg export/helper/ClerestoryLowPowerMode.pkg -target /
 ```
 
-If the button still says the helper is unavailable after installing, check that Clerestory is switched on under **System Settings → General → Login Items & Extensions → Allow in the Background**.
+If the leaf still shows the prompt, or Settings still says **Not installed**, after installing, check that Clerestory is switched on under **System Settings → General → Login Items & Extensions → Allow in the Background**.
 
 Run a Clerestory build signed by the same team (Developer ID, or Apple Development for local testing). Ad-hoc builds don't match the helper's requirement. In Battery, click the leaf to switch modes for the active power source, and click again to switch back. Each click should change the system mode without asking for a password, and show one notice.
 

@@ -42,7 +42,13 @@ final class IslandModulePreviewTests: XCTestCase {
             ("Power reading unavailable", .init(hasBattery: true, percentage: 64, isCharging: false, isConnectedToPower: false)),
             ("No internal battery", .unavailable)
         ]
-        try await export("battery", "Battery", states.map { entry($0.0, IslandBatteryView().environment(PowerSourceMonitor.preview(snapshot: $0.1))) })
+        let settings = settings()
+        var views = states.map {
+            entry($0.0, IslandBatteryView().environment(settings).environment(PowerSourceMonitor.preview(snapshot: $0.1)))
+        }
+        views.insert(entry("Low Power Mode helper prompt", IslandBatteryView(showsHelperPrompt: true)
+            .environment(settings).environment(PowerSourceMonitor.preview(snapshot: states[0].1))), at: 1)
+        try await export("battery", "Battery", views)
     }
     private func timer() async throws {
         let states: [(String, IslandTimerStore.State)] = [

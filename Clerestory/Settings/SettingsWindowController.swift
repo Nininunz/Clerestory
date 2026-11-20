@@ -42,6 +42,12 @@ final class SettingsWindowController {
     /// Show the settings window and activate the app (LSUIElement: window fronting and keyboard focus both
     /// depend on explicit
     /// activate; repeated calls are idempotent — if window exists, only front it).
+    /// Show Settings on one module's detail page, or on the module list.
+    func show(module destination: ModuleSettingsDestination?) {
+        navigation.openModule(destination)
+        show()
+    }
+
     func show(pane: SettingsPane? = nil) {
         if let pane {
             navigation.open(pane)

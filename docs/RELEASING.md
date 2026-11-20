@@ -7,6 +7,7 @@ Clerestory is maintained in [Nininunz/Clerestory](https://github.com/Nininunz/Cl
 | Item | Value |
 | --- | --- |
 | Download | `Clerestory-<VERSION>.dmg` containing `Clerestory.app` |
+| Helper download | `ClerestoryLowPowerMode.pkg` ([Low Power Mode helper](LOW_POWER_MODE_HELPER.md)) |
 | App bundle ID | `com.nininunz.Clerestory` |
 | Sparkle signing Keychain account | `com.nininunz.OpenYoink` |
 | Public feed | [Clerestory appcast](https://nininunz.github.io/Clerestory/appcast.xml) |
@@ -33,7 +34,7 @@ Update [Version.xcconfig](../Version.xcconfig) when preparing a release. It sets
 
 1. Build a local candidate with `CLERESTORY_RELEASE_CANDIDATE=1 Scripts/make-release.sh "$version" "$build"`. This signs and notarizes the artifact and writes unpublished metadata to `export/appcast-candidate.xml`. The DMG lands under `export/`. Choose a higher build when testing an update from an already installed candidate.
 2. Run the build and test checks in the [CI guide](development/CI.md) and the relevant [manual smoke checks](MANUAL_TESTING.md). Test installing the signed DMG and launching the app in an appropriate test account. Check code signing, notarization stapling, and both architectures. Use supported Intel hardware to verify execution there when available.
-3. Build the public package with `Scripts/make-release.sh "$version" "$build"`. Use the Developer ID build for public distribution. The script produces the signed DMG and writes its Sparkle signature and length to `docs/appcast.xml`. Publish the exact DMG referenced by the appcast to the matching GitHub release. Merge the signed appcast entry into `main`.
+3. Build the public package with `Scripts/make-release.sh "$version" "$build"`. Use the Developer ID build for public distribution. The script produces the signed DMG and writes its Sparkle signature and length to `docs/appcast.xml`. Publish the exact DMG referenced by the appcast to the matching GitHub release. Build, sign and notarize the [Low Power Mode helper](LOW_POWER_MODE_HELPER.md) package and attach it to the same release as `ClerestoryLowPowerMode.pkg`: Settings → Modules → Battery downloads it from the latest release, so every release needs a copy, even when the helper hasn't changed. Merge the signed appcast entry into `main`.
 4. Run `Scripts/publish-update-feed.sh` from a checkout with write access to the account Pages repository. It reads the merged appcast, verifies the release archive and signature, creates or updates the feed path, and checks that the deployed bytes match. Then run `Scripts/verify-update-feed.sh "https://nininunz.github.io/Clerestory/appcast.xml" "$version"` to check the public download, signature, and bundled app.
 5. For updates within the `com.nininunz.Clerestory` identity, confirm Sparkle discovers the update from an earlier signed install using the public feed. Seed disposable Shelf items and a preference first. After installation and relaunch, verify the new build and confirm that the data and setting survived. Record the results with the release evidence.
 
