@@ -114,6 +114,10 @@ jobs:
           CLERESTORY_CI_OUTPUT: ${{ runner.temp }}/clerestory-ci
           CLERESTORY_RELEASE_BUILD: ${{ needs.changes.outputs.release_build || 'full' }}
         run: Scripts/test-ci.sh release
+      - name: Build Low Power Mode helper
+        env:
+          CLERESTORY_CI_OUTPUT: ${{ runner.temp }}/clerestory-ci
+        run: Scripts/test-ci.sh helper
       - name: Upload build logs
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

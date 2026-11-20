@@ -36,6 +36,8 @@ Scripts/notarize.sh export/helper/ClerestoryLowPowerMode.pkg
 
 To publish it, attach `ClerestoryLowPowerMode.pkg` to every GitHub release next to the DMG. **Download Helper…** in Settings links to `releases/latest/download/ClerestoryLowPowerMode.pkg`, so a release without the package breaks that link. Sparkle updates only the app, so people who already installed the helper need to install the package again only when the helper changes.
 
+CI builds the helper and its package with an ad-hoc signature on every code change (`Scripts/test-ci.sh helper`) to catch build breaks. Clerestory rejects an ad-hoc helper, so that package is not for installing.
+
 ## Install and test
 
 Open the package and follow the installer. It asks for an administrator password once. For a local, unsigned build, install from Terminal:

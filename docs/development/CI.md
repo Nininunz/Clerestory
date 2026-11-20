@@ -8,7 +8,7 @@ The `macOS CI` workflow runs on pull requests targeting `main`, pushes to `main`
 | --- | --- | --- |
 | Detect code changes | `ubuntu-latest` | Classifies the PR's changed files. |
 | Package tests and identity check | `ubuntu-latest` | Runs `Scripts/check-identity.py` and the `ClerestoryModuleCore` package tests with the image's Swift toolchain. The package imports only Foundation. |
-| Release build (Xcode 27) | `xcode-27` | Builds the app in the Release configuration. |
+| Release build (Xcode 27) | `xcode-27` | Builds the app in the Release configuration, then builds the [Low Power Mode helper](../LOW_POWER_MODE_HELPER.md) and its package with an ad-hoc signature and checks the package contents. |
 | Unit tests (Xcode 27) | `xcode-27` | Builds Debug and runs the app-hosted `ClerestoryTests` suite in parallel across three workers. |
 | Build and unit tests (Xcode 27) | `ubuntu-latest` | The required gate. It passes only if the three check jobs passed, or if they were skipped for a documentation-only PR. It fails if any of them failed, was cancelled, or did not run on a code change. If change detection itself fails, every check runs and their results decide. |
 
@@ -30,7 +30,7 @@ With Xcode 27.2 installed, run every phase in order:
 Scripts/test-ci.sh
 ```
 
-Pass `identity`, `module-core`, `release`, or `unit-tests` to run a single phase, as CI does. Set `CLERESTORY_RELEASE_BUILD=fast` for the quicker PR-style Release compile; the default is the full build.
+Pass `identity`, `module-core`, `release`, `helper`, or `unit-tests` to run a single phase, as CI does. Set `CLERESTORY_RELEASE_BUILD=fast` for the quicker PR-style Release compile; the default is the full build.
 
 The script prints a fresh temporary results directory. Set `CLERESTORY_CI_OUTPUT` to an empty directory to choose its location. An existing `unit-tests.xcresult` makes Xcode refuse the run, so use a fresh output directory for each run. `DEVELOPER_DIR` can select the installed Xcode version locally; CI pins it in the workflow. Package versions come only from the committed `Package.resolved`.
 
