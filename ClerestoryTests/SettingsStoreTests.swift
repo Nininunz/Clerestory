@@ -27,9 +27,14 @@ final class SettingsStoreTests: XCTestCase {
         let enabled = store.islandModuleConfiguration.enabledModuleIDs
         store.restoreDefaultIslandShortcuts()
         let positions = store.islandModuleConfiguration.shortcutPositions
-        XCTAssertEqual(positions, [.shelf, .quickSettings, nil, nil, nil, nil, nil, nil])
+        XCTAssertEqual(positions, [.shelf, .quickSettings, .battery, nil, nil, nil, nil, nil])
         XCTAssertEqual(store.islandModuleConfiguration.enabledModuleIDs, enabled)
         XCTAssertEqual(SettingsStore(defaults: defaults).islandModuleConfiguration.shortcutPositions, positions)
+
+        store.setIslandModuleEnabled(false, id: .battery)
+        store.restoreDefaultIslandShortcuts()
+        XCTAssertEqual(store.islandModuleConfiguration.shortcutPositions,
+                       [.shelf, .quickSettings, nil, nil, nil, nil, nil, nil])
     }
 
     func testGeneralSettings_persistAcrossInstances() throws {
@@ -75,9 +80,10 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.islandModuleConfiguration.enabledModuleIDs,
                        [.shelf, .transfers, .timer, .battery, .system])
         XCTAssertEqual(store.islandModuleConfiguration.pinnedModuleIDs,
-                       [.shelf])
+                       [.shelf, .battery])
         XCTAssertEqual(store.islandModuleConfiguration.shortcutPositions[0], .shelf)
         XCTAssertEqual(store.islandModuleConfiguration.shortcutPositions[1], .quickSettings)
+        XCTAssertEqual(store.islandModuleConfiguration.shortcutPositions[2], .battery)
     }
 
     func testExistingUserMigratesLegacyModuleOrderWithoutEnablingSystem() throws {

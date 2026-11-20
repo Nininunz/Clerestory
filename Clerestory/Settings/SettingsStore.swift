@@ -273,13 +273,16 @@ final class SettingsStore {
         }
     }
 
-    /// Opt-in availability for modules beyond Shelf and Quick Settings.
+    /// Modules that are available without Experimental Modules.
+    static let standardModuleIDs: Set<IslandModuleID> = [.shelf, .quickSettings, .battery]
+
+    /// Opt-in availability for modules beyond the standard ones.
     var experimentalModulesEnabled = false {
         didSet { defaults.set(experimentalModulesEnabled, forKey: Keys.experimentalModulesEnabled) }
     }
 
     func isIslandModuleAvailable(_ id: IslandModuleID) -> Bool {
-        id == .shelf || id == .quickSettings || experimentalModulesEnabled
+        Self.standardModuleIDs.contains(id) || experimentalModulesEnabled
     }
 
     /// Apply feature availability without rewriting the user's saved module choices.
@@ -339,8 +342,9 @@ final class SettingsStore {
             enabled: islandModuleConfiguration.enabledModuleIDs)
     }
 
+    /// Shelf, Quick Settings, then Battery when it is enabled.
     private static func defaultIslandShortcuts(enabled: [IslandModuleID]) -> IslandModuleConfiguration {
-        expandedConfiguration(enabled: enabled, positions: [.shelf, .quickSettings])
+        expandedConfiguration(enabled: enabled, positions: [.shelf, .quickSettings, .battery])
     }
 
     private static func expandedConfiguration(enabled: [IslandModuleID], positions: [IslandModuleID?]) -> IslandModuleConfiguration {

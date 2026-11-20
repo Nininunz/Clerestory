@@ -479,6 +479,17 @@
         }
       }
     },
+    "Enable modules beyond Shelf, Quick Settings and Battery. Turning this off keeps their saved settings and shortcut positions." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enable modules beyond Shelf, Quick Settings and Battery. Turning this off keeps their saved settings and shortcut positions."
+          }
+        }
+      }
+    },
     "Enable Experimental Modules to use the clipboard and toolbox presets. Hidden module preferences are preserved." : {
       "localizations" : {
         "en" : {

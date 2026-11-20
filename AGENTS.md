@@ -18,7 +18,7 @@ Clerestory is a sandboxed macOS 15+ menu bar app (SwiftUI and AppKit) with a Pan
 | Panel | The floating surface at the top of the screen. Code still calls it the Island (`Island*` types, `Clerestory/Island/`). Use "Panel" in anything users see. |
 | Notch | The optional companion on a built-in notched display. |
 | Shelf | The core module that holds files, text, links and images. |
-| Module | A Panel feature: Shelf, Quick Settings, and optional (experimental) modules such as Battery, Timer and Clipboard History. |
+| Module | A Panel feature: Shelf, Quick Settings, Battery, and optional (experimental) modules such as Timer and Clipboard History. |
 
 ## Before you open a pull request
 
