@@ -1,3 +1,4 @@
+import AppKit
 import XCTest
 @testable import Clerestory
 
@@ -199,5 +200,20 @@ final class IslandNotchSelectionTests: XCTestCase {
         XCTAssertTrue(settings.notchCycleShortcutConflicts)
         settings.notchCycleShortcut = nil
         XCTAssertFalse(settings.notchCycleShortcutConflicts)
+    }
+
+    /// A pointer click is handled by IslandPresentationController on mouse-down;
+    /// the Notch button must ignore it so the same click can't reopen the Panel.
+    func testNotchButtonIgnoresPointerClicksButNotOtherPresses() throws {
+        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+            let click = try XCTUnwrap(NSEvent.mouseEvent(with: type, location: .zero, modifierFlags: [],
+                timestamp: 0, windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 1))
+            XCTAssertTrue(IslandNotchView.isPointerActivation(click))
+        }
+        let key = try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [],
+            timestamp: 0, windowNumber: 0, context: nil, characters: " ",
+            charactersIgnoringModifiers: " ", isARepeat: false, keyCode: 49))
+        XCTAssertFalse(IslandNotchView.isPointerActivation(key))
+        XCTAssertFalse(IslandNotchView.isPointerActivation(nil))
     }
 }

@@ -19,7 +19,14 @@ struct IslandNotchView: View {
     @State private var notchArtworkImage: NSImage?
 
     var body: some View {
-        Button { coordinator.showFromNotch(module: defaultOpenModule) } label: {
+        Button {
+            // IslandPresentationController handles pointer clicks on mouse-down:
+            // it opens the Panel, or closes it when open. Acting again on
+            // mouse-up would reopen a Panel that click just closed, so only a
+            // press without the pointer, such as VoiceOver's, is handled here.
+            guard !Self.isPointerActivation(NSApp.currentEvent) else { return }
+            coordinator.showFromNotch(module: defaultOpenModule)
+        } label: {
             notchContent
         }
         .buttonStyle(.plain)
@@ -38,6 +45,13 @@ struct IslandNotchView: View {
             mediaAccent = ArtworkAccentExtractor.accent(from: data)
         }
         .preferredColorScheme(.dark)
+    }
+
+    /// Whether the button was activated by a mouse click rather than by
+    /// accessibility or the keyboard.
+    static func isPointerActivation(_ event: NSEvent?) -> Bool {
+        guard let event else { return false }
+        return event.type == .leftMouseDown || event.type == .leftMouseUp
     }
 
     private var notchIsHighlighted: Bool { isNotchHovering || coordinator.isPointerHovering }

@@ -4,7 +4,7 @@
 
 Clerestory uses the same floating Panel on every display. It opens on the display where it was triggered and stays there until dismissed unless that display disconnects. Display geometry determines placement and available height. The toolbar, rounded surface, content padding, and reveal animation are shared.
 
-The optional Notch companion lives in its own non-key window on the built-in notched display. **Settings → Notch → Show in notch** controls its visibility. The preference is retained on hardware without a notch. Activating the Notch selects its module in the Panel and preserves an existing pin.
+The optional Notch companion lives in its own non-key window on the built-in notched display. **Settings → Notch → Show in notch** controls its visibility. The preference is retained on hardware without a notch. Clicking the Notch opens the Panel on its module, and clicking it while the Panel is open closes it. IslandPresentationController handles both on mouse-down; the Notch button itself only responds to presses without the pointer, such as VoiceOver, which open the Panel or select its module and preserve an existing pin.
 
 When the Notch is unavailable or hidden on the triggering display, the top-center edge is the pointer trigger. Hover and click have independent settings. With click reveal on, clicking the trigger again closes the open Panel, including a pinned one. A deliberate close keeps hover from reopening the Panel until the pointer leaves the trigger. File and text drag approach can open Shelf even when hover reveal is off. An open Quick Look session pauses hover dismissal.
 
