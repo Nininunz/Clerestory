@@ -70,8 +70,10 @@ final class IslandPresentationController: NSObject {
                 self.islandActivityCoordinator.selectedModule = module
             }
             self.logIslandPresentation("surface-animation-completed")
+            self.reportIfExpandedPanelIsMissing()
             self.scheduleIslandLayoutUpdate()
         }
+        observeSystemEventsForDiagnostics()
     }
 
     func activate() {
@@ -597,13 +599,41 @@ final class IslandPresentationController: NSObject {
     func logIslandPresentation(_ reason: String) {
         let state = String(describing: islandActivityCoordinator.surfaceState)
         let frame = NSStringFromRect(islandPanel.frame)
-        islandLogger.notice("\(reason, privacy: .public) state=\(state, privacy: .public) id=\(self.islandActivityCoordinator.surfaceTransitionID) pending=\(self.islandActivityCoordinator.isSurfaceTransitionPending) frame=\(frame, privacy: .public) visible=\(self.islandPanel.isVisible) occluded=\(!self.islandPanel.occlusionState.contains(.visible)) key=\(self.islandPanel.isKeyWindow)")
+        let windowServer = IslandWindowDiagnostics.describe(
+            IslandWindowDiagnostics.windowServerState(windowNumber: islandPanel.windowNumber))
+        let display = IslandWindowDiagnostics.displayDescription(for: islandPanel.screen)
+        islandLogger.notice("\(reason, privacy: .public) state=\(state, privacy: .public) id=\(self.islandActivityCoordinator.surfaceTransitionID) pending=\(self.islandActivityCoordinator.isSurfaceTransitionPending) frame=\(frame, privacy: .public) visible=\(self.islandPanel.isVisible) occluded=\(!self.islandPanel.occlusionState.contains(.visible)) key=\(self.islandPanel.isKeyWindow) onScreen=\(windowServer, privacy: .public) activeSpace=\(self.islandPanel.isOnActiveSpace) display=\(display, privacy: .public)")
+    }
+
+    /// Reports #112: Clerestory considers the panel open, but the window
+    /// server doesn't have it on screen. Diagnostics only; nothing is changed.
+    private func reportIfExpandedPanelIsMissing() {
+        guard islandActivityCoordinator.surfaceState.isExpanded else { return }
+        let windowServer = IslandWindowDiagnostics.windowServerState(windowNumber: islandPanel.windowNumber)
+        guard IslandWindowDiagnostics.isMissingFromScreen(appKitVisible: islandPanel.isVisible,
+                                                          windowServer: windowServer) else { return }
+        islandLogger.fault("panel-not-on-screen window=\(self.islandPanel.windowNumber) onScreen=\(IslandWindowDiagnostics.describe(windowServer), privacy: .public) activeSpace=\(self.islandPanel.isOnActiveSpace) display=\(IslandWindowDiagnostics.displayDescription(for: self.islandPanel.screen), privacy: .public)")
+    }
+
+    /// Logs wake, screen sleep, lock and session changes with the panel's
+    /// state, so a missing panel (#112) can be traced to what preceded it.
+    private func observeSystemEventsForDiagnostics() {
+        let selector = #selector(islandWindowStateDidChange(_:))
+        for name in IslandWindowDiagnostics.workspaceEvents {
+            NSWorkspace.shared.notificationCenter.addObserver(self, selector: selector, name: name, object: nil)
+        }
+        for name in IslandWindowDiagnostics.distributedEvents {
+            DistributedNotificationCenter.default().addObserver(self, selector: selector, name: name, object: nil)
+        }
+        NotificationCenter.default.addObserver(
+            self, selector: selector, name: NSApplication.didChangeScreenParametersNotification, object: nil)
     }
 
     @objc nonisolated func islandWindowStateDidChange(_ notification: Notification) {
         let reason = notification.name.rawValue
         Task { @MainActor [weak self] in
             self?.logIslandPresentation(reason)
+            self?.reportIfExpandedPanelIsMissing()
         }
     }
 

@@ -54,3 +54,11 @@ The visible Panel surface defines the hit area. Native hit testing and the drag 
 ## Previews and validation
 
 Use the [module preview generator](development/PREVIEWS.md) to render a fresh gallery from the current checkout. It uses synthetic data and the production module host. The [native UI-test guide](development/UI_TESTS.md) covers keyboard focus, window lifecycle, and cross-app drag and drop. The [manual testing guide](MANUAL_TESTING.md) covers real source and destination apps, physical displays, and file recovery.
+
+## Window diagnostics
+
+`IslandPresentationController` logs each Panel transition, occlusion and key change, Space change, wake, screen sleep, lock, session change, and display change to the `IslandPresentation` category. Each line includes whether the window server has the Panel on screen (`onScreen`), whether it is on the active Space, and its display number. When Clerestory considers the Panel open but the window server doesn't show it, it logs a `panel-not-on-screen` fault (#112). The lines contain no file names, clipboard data, or pointer positions.
+
+```sh
+/usr/bin/log show --last 1h --predicate 'subsystem == "com.nininunz.Clerestory" AND category == "IslandPresentation"' --style compact
+```
