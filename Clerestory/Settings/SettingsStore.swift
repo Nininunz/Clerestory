@@ -250,6 +250,15 @@ final class SettingsStore {
         }
     }
 
+    /// The charges Battery can start warning at. "Critically low" stays at 10%.
+    static let lowBatteryWarningOptions = [10, 15, 20, 30]
+    static let defaultLowBatteryWarningPercent = 20
+
+    /// Battery's "low" warning starts at this charge, one of `lowBatteryWarningOptions`.
+    var lowBatteryWarningPercent: Int {
+        didSet { defaults.set(lowBatteryWarningPercent, forKey: Keys.lowBatteryWarningPercent) }
+    }
+
     /// AI usage module (data from TokenTracker): the number shown in the
     /// notch display while the module is enabled.
     var aiUsageNotchMetric: AIUsageNotchMetric {
@@ -484,6 +493,7 @@ final class SettingsStore {
         static let islandTimerEnabled = prefix + "islandTimerEnabled"
         static let islandBatteryEnabled = prefix + "islandBatteryEnabled"
         static let islandFullChargeAlertEnabled = prefix + "islandFullChargeAlertEnabled"
+        static let lowBatteryWarningPercent = prefix + "lowBatteryWarningPercent"
         static let lowPowerModeOpensSystemSettings = prefix + "lowPowerModeOpensSystemSettings"
         static let islandMediaEnabled = prefix + "islandMediaEnabled"
         static let aiUsageNotchMetric = prefix + "aiUsageCompactMetric"
@@ -530,6 +540,7 @@ final class SettingsStore {
             Keys.islandTimerEnabled: true,
             Keys.islandBatteryEnabled: true,
             Keys.islandFullChargeAlertEnabled: false,
+            Keys.lowBatteryWarningPercent: Self.defaultLowBatteryWarningPercent,
             Keys.islandMediaEnabled: false,
             Keys.aiUsageNotchMetric: AIUsageNotchMetric.todayCost.rawValue,
             Keys.aiUsageLimitAlertsEnabled: true,
@@ -590,6 +601,9 @@ final class SettingsStore {
         islandTimerEnabled = resolvedIslandTimerEnabled
         islandBatteryEnabled = resolvedIslandBatteryEnabled
         islandFullChargeAlertEnabled = resolvedIslandFullChargeAlertEnabled
+        let storedLowBatteryPercent = defaults.integer(forKey: Keys.lowBatteryWarningPercent)
+        lowBatteryWarningPercent = Self.lowBatteryWarningOptions.contains(storedLowBatteryPercent)
+            ? storedLowBatteryPercent : Self.defaultLowBatteryWarningPercent
         islandMediaEnabled = resolvedIslandMediaEnabled
         aiUsageNotchMetric = defaults.string(forKey: Keys.aiUsageNotchMetric)
             .flatMap(AIUsageNotchMetric.init(rawValue:)) ?? .todayCost

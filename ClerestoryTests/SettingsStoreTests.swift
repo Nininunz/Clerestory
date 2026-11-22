@@ -195,6 +195,19 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertTrue(reloaded.islandMediaEnabled)
     }
 
+    func testLowBatteryWarningDefaultsToTwentyPersistsAndRejectsOtherValues() throws {
+        let (defaults, name) = try makeSuite()
+        defer { defaults.removePersistentDomain(forName: name) }
+        let store = SettingsStore(defaults: defaults)
+        XCTAssertEqual(store.lowBatteryWarningPercent, 20)
+
+        store.lowBatteryWarningPercent = 30
+        XCTAssertEqual(SettingsStore(defaults: defaults).lowBatteryWarningPercent, 30)
+
+        defaults.set(7, forKey: "Clerestory.lowBatteryWarningPercent")
+        XCTAssertEqual(SettingsStore(defaults: defaults).lowBatteryWarningPercent, 20)
+    }
+
     func testIslandDisplayTargetCanSwitchBackToAutomatic() throws {
         let (defaults, name) = try makeSuite()
         defer { defaults.removePersistentDomain(forName: name) }
