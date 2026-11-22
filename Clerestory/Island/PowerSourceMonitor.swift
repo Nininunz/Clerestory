@@ -140,6 +140,7 @@ final class PowerSourceMonitor: IslandModule {
     @ObservationIgnored private var pollingTask: Task<Void, Never>?
     private let nowProvider: @MainActor () -> Date
     private let fullChargeAlertEnabled: @MainActor () -> Bool
+    private let lowBatteryWarningPercent: @MainActor () -> Int
     private(set) var snapshot: Snapshot = .unavailable
     private(set) var powerHistory: [BatteryPowerSample] = []
     private(set) var isRunning = false
@@ -155,12 +156,14 @@ final class PowerSourceMonitor: IslandModule {
          isSelectedAndExpanded: @escaping @MainActor () -> Bool = { false },
          samplingAllowed: @escaping @MainActor () -> Bool = { ResourceUsageState.shared.samplingAllowed },
          snapshotProvider: @escaping @MainActor () -> Snapshot = { PowerSourceMonitor.readSnapshot() },
-         fullChargeAlertEnabled: @escaping @MainActor () -> Bool = { false }) {
+         fullChargeAlertEnabled: @escaping @MainActor () -> Bool = { false },
+         lowBatteryWarningPercent: @escaping @MainActor () -> Int = { SettingsStore.defaultLowBatteryWarningPercent }) {
         self.nowProvider = now
         self.isSelectedAndExpanded = isSelectedAndExpanded
         self.samplingAllowed = samplingAllowed
         self.snapshotProvider = snapshotProvider
         self.fullChargeAlertEnabled = fullChargeAlertEnabled
+        self.lowBatteryWarningPercent = lowBatteryWarningPercent
     }
 
     deinit {
@@ -376,7 +379,8 @@ final class PowerSourceMonitor: IslandModule {
     /// Every sample sets the whole status set, so "low" is there exactly while the battery is
     /// low, whatever notices come and go. The center announces it once when it is raised.
     private func updateMessages(previous: Snapshot, current: Snapshot) {
-        messenger.setStatuses(current.hasBattery ? Self.statuses(for: current) : [])
+        messenger.setStatuses(current.hasBattery
+            ? Self.statuses(for: current, lowThreshold: lowBatteryWarningPercent()) : [])
         guard current.hasBattery, previous.hasBattery else { return }
         if previous.isConnectedToPower != current.isConnectedToPower {
             let title = current.isConnectedToPower
@@ -412,11 +416,20 @@ final class PowerSourceMonitor: IslandModule {
         }
     }
 
-    /// "low" while the battery is at 20% or less. Both bands are critical, so the notch stays
-    /// red. "Battery critically low" at 10% or less is level 1, so falling into it raises the
-    /// status again, while charging back out of it (level 0, "Battery low") is silent.
-    static func statuses(for snapshot: Snapshot) -> [IslandStatus] {
-        guard snapshot.hasBattery, snapshot.percentage <= 20 else { return [] }
+    /// Applies a changed low-battery warning setting now instead of at the next sample.
+    func refreshStatuses() {
+        guard isRunning else { return }
+        messenger.setStatuses(snapshot.hasBattery
+            ? Self.statuses(for: snapshot, lowThreshold: lowBatteryWarningPercent()) : [])
+    }
+
+    /// "low" while the battery is at `lowThreshold` (the setting, 20% by default) or less.
+    /// Both bands are critical, so the notch stays red. "Battery critically low" at 10% or
+    /// less is level 1, so falling into it raises the status again, while charging back out
+    /// of it (level 0, "Battery low") is silent.
+    static func statuses(for snapshot: Snapshot,
+                         lowThreshold: Int = SettingsStore.defaultLowBatteryWarningPercent) -> [IslandStatus] {
+        guard snapshot.hasBattery, snapshot.percentage <= max(lowThreshold, 10) else { return [] }
         let isCritical = snapshot.percentage <= 10
         return [IslandStatus(
             key: "low",

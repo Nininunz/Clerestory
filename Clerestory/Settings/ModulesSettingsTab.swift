@@ -187,6 +187,14 @@ struct ModulesSettingsTab: View {
             ClipboardSettingsSections()
         case .battery:
             Section("Battery") {
+                Picker("Warn when battery is low at", selection: $settings.lowBatteryWarningPercent) {
+                    ForEach(SettingsStore.lowBatteryWarningOptions, id: \.self) { percent in
+                        Text((Double(percent) / 100).formatted(.percent)).tag(percent)
+                    }
+                }
+                .pickerStyle(.menu)
+                Text("At this level the notch turns red and a message appears once. At 10% or less it appears again as critically low.")
+                    .font(.caption).foregroundStyle(.secondary)
                 Toggle("Notify when fully charged", isOn: $settings.islandFullChargeAlertEnabled)
             }
             LowPowerModeHelperSection()

@@ -281,7 +281,7 @@ struct IslandBatteryView: View {
 
     private var batteryTint: Color {
         if powerMonitor.snapshot.percentage <= 10 { return .red }
-        if powerMonitor.snapshot.percentage <= 20 { return .orange }
+        if powerMonitor.snapshot.percentage <= settings.lowBatteryWarningPercent { return .orange }
         return .mint
     }
 

@@ -271,6 +271,43 @@ final class PowerSourceMonitorTests: XCTestCase {
         XCTAssertNil(center.currentNotice)
     }
 
+    func testLowWarningFollowsTheChosenThresholdAndCriticalStaysAtTen() {
+        let at = { (percent: Int, threshold: Int) in
+            PowerSourceMonitor.statuses(for: self.snapshot(percentage: percent), lowThreshold: threshold)
+                .map(\.title)
+        }
+        XCTAssertEqual(at(25, 30), ["Battery low"])
+        XCTAssertEqual(at(31, 30), [])
+        XCTAssertEqual(at(18, 15), [])
+        XCTAssertEqual(at(15, 15), ["Battery low"])
+        XCTAssertEqual(at(10, 15), ["Battery critically low"])
+        // At the lowest setting the warning and the critical level coincide.
+        XCTAssertEqual(at(11, 10), [])
+        XCTAssertEqual(at(10, 10), ["Battery critically low"])
+        XCTAssertEqual(at(20, SettingsStore.defaultLowBatteryWarningPercent), ["Battery low"])
+    }
+
+    func testChangingTheThresholdUpdatesTheWarningWithoutANewReading() {
+        var threshold = 20
+        let monitor = PowerSourceMonitor(
+            samplingAllowed: { true },
+            snapshotProvider: { .init(hasBattery: true, percentage: 25, isCharging: false, isConnectedToPower: false) },
+            lowBatteryWarningPercent: { threshold })
+        let center = makeCenter()
+        monitor.messenger = center.messenger(for: .battery)
+        monitor.start()
+        defer { monitor.stop() }
+        XCTAssertTrue(center.statuses(for: .battery).isEmpty)
+
+        threshold = 30
+        monitor.refreshStatuses()
+        XCTAssertEqual(center.statuses(for: .battery).map(\.title), ["Battery low"])
+
+        threshold = 15
+        monitor.refreshStatuses()
+        XCTAssertTrue(center.statuses(for: .battery).isEmpty)
+    }
+
     func testRecoveringAboveTheLowThresholdClearsLow() {
         let (monitor, center) = makeMonitor()
         monitor.process(snapshot(percentage: 20))

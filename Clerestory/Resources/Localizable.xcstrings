@@ -6072,6 +6072,28 @@
           }
         }
       }
+    },
+    "Warn when battery is low at" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warn when battery is low at"
+          }
+        }
+      }
+    },
+    "At this level the notch turns red and a message appears once. At 10% or less it appears again as critically low." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "At this level the notch turns red and a message appears once. At 10% or less it appears again as critically low."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

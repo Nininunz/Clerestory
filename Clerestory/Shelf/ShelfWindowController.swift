@@ -303,7 +303,8 @@ final class ShelfWindowController: NSObject {
             isSelectedAndExpanded: {
                 islandActivityCoordinator.surfaceState.isExpanded && islandActivityCoordinator.selectedModule == .battery
             },
-            fullChargeAlertEnabled: { settings.islandFullChargeAlertEnabled }
+            fullChargeAlertEnabled: { settings.islandFullChargeAlertEnabled },
+            lowBatteryWarningPercent: { settings.lowBatteryWarningPercent }
         )
         let nowPlayingModuleStore = NowPlayingModuleStore(
             sourceFactory: { NowPlayingSourceFactory.bundled(isSelectedAndExpanded: {
@@ -901,6 +902,7 @@ final class ShelfWindowController: NSObject {
     @objc private nonisolated func userDefaultsDidChange(_ notification: Notification) {
         Task { @MainActor in
             self.applyPresentationSettings(animated: true)
+            self.powerSourceMonitor.refreshStatuses()
         }
     }
 
