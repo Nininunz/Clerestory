@@ -200,7 +200,9 @@ struct IslandBatteryView: View {
                 if let cycles = snapshot.cycleCount {
                     detail("Cycle count", cycles.formatted())
                 }
-                if let full = snapshot.fullChargeCapacity, let design = snapshot.designCapacity {
+                if let percent = snapshot.maximumCapacityPercent {
+                    detail("Maximum capacity", (Double(percent) / 100).formatted(.percent))
+                } else if let full = snapshot.fullChargeCapacity, let design = snapshot.designCapacity {
                     let ratio = (Double(full) / Double(design)).formatted(.percent.precision(.fractionLength(1)))
                     detail("Raw capacity ratio", ratio)
                 }
@@ -282,6 +284,7 @@ struct IslandBatteryView: View {
     private var powerStatus: String {
         if powerMonitor.snapshot.isCharging { return String(localized: "Charging") }
         if powerMonitor.snapshot.isCharged { return String(localized: "Fully charged") }
+        if powerMonitor.snapshot.isChargingOnHold { return String(localized: "Charging on hold") }
         if powerMonitor.snapshot.isConnectedToPower { return String(localized: "Connected to power") }
         return String(localized: "Running on battery")
     }

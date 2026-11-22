@@ -112,10 +112,19 @@ final class PowerSourceMonitor: IslandModule {
         var currentMilliamps: Int64? = nil
         var fullChargeCapacity: Int? = nil
         var designCapacity: Int? = nil
+        /// Battery health as System Settings shows it ("Maximum Capacity").
+        /// Nil when the battery doesn't report it as a percentage, as on Intel Macs.
+        var maximumCapacityPercent: Int? = nil
         var healthCondition: String? = nil
         var adapterName: String? = nil
         var adapterWatts: Int? = nil
         var lowPowerMode = false
+
+        /// Plugged in but neither charging nor full: macOS is holding the
+        /// charge, for example for Optimized Battery Charging or a charge limit.
+        var isChargingOnHold: Bool {
+            hasBattery && isConnectedToPower && !isCharging && !isCharged
+        }
 
         static let unavailable = Snapshot(hasBattery: false,
                                           percentage: 0,
@@ -313,6 +322,9 @@ final class PowerSourceMonitor: IslandModule {
             fullChargeCapacity: positiveCapacity(data?["FullChargeCapacity"], data?["AppleRawMaxCapacity"],
                                                  registryProperties?["AppleRawMaxCapacity"]),
             designCapacity: positiveCapacity(data?["DesignCapacity"], registryProperties?["DesignCapacity"]),
+            maximumCapacityPercent: maximumCapacityPercent(
+                registryProperties?["MaxCapacity"],
+                design: positiveCapacity(data?["DesignCapacity"], registryProperties?["DesignCapacity"])),
             healthCondition: description[kIOPSBatteryHealthConditionKey] as? String
                 ?? description[kIOPSBatteryHealthKey] as? String,
             adapterName: onAC ? (registryAdapter?["Name"] as? String) : nil,
@@ -320,6 +332,15 @@ final class PowerSourceMonitor: IslandModule {
                                                  registryAdapter?["Watts"]) : nil,
             lowPowerMode: lowPowerMode
         )
+    }
+
+    /// On Apple silicon the battery's `MaxCapacity` is the health percentage
+    /// System Settings shows. On Intel Macs it is a capacity in mAh, so only a
+    /// value of at most 100 next to a design capacity in mAh counts.
+    static func maximumCapacityPercent(_ value: Any?, design: Int?) -> Int? {
+        guard let percent = value as? Int, (1...100).contains(percent),
+              let design, design > 100 else { return nil }
+        return percent
     }
 
     private static func positiveCapacity(_ values: Any?...) -> Int? {
