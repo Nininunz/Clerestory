@@ -194,17 +194,20 @@ struct IslandBatteryView: View {
                 .foregroundStyle(IslandVisualStyle.primaryText)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .topLeading), count: 3),
                       alignment: .leading, spacing: 12) {
+                // Health first, then capacity, then electrical readings, then
+                // the adapter. macOS only reports a condition when something is
+                // wrong, such as Service Recommended, so it leads when present.
                 if let condition = snapshot.healthCondition {
                     detail("Condition", condition)
-                }
-                if let cycles = snapshot.cycleCount {
-                    detail("Cycle count", cycles.formatted())
                 }
                 if let percent = snapshot.maximumCapacityPercent {
                     detail("Maximum capacity", (Double(percent) / 100).formatted(.percent))
                 } else if let full = snapshot.fullChargeCapacity, let design = snapshot.designCapacity {
                     let ratio = (Double(full) / Double(design)).formatted(.percent.precision(.fractionLength(1)))
                     detail("Raw capacity ratio", ratio)
+                }
+                if let cycles = snapshot.cycleCount {
+                    detail("Cycle count", cycles.formatted())
                 }
                 if let full = snapshot.fullChargeCapacity {
                     detail("Full charge capacity", String(localized: "\(full.formatted()) mAh"))
@@ -229,7 +232,8 @@ struct IslandBatteryView: View {
                 if let watts = snapshot.adapterWatts {
                     detail("Adapter wattage", String(localized: "\(watts.formatted()) W"))
                 }
-                detail("Low Power Mode", snapshot.lowPowerMode ? String(localized: "On") : String(localized: "Off"))
+                // Low Power Mode isn't repeated here: the leaf button turns
+                // mint when it's on, and VoiceOver reads its state.
             }
         }
         .font(.subheadline)
