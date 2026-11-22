@@ -346,6 +346,20 @@ final class IslandActivityCoordinatorTests: XCTestCase {
         XCTAssertTrue(coordinator.canRevealOnHover)
     }
 
+    func testHoverLatchClearsOnlyWhenThePointerLeavesTheTrigger() {
+        let coordinator = IslandActivityCoordinator()
+        coordinator.show(module: .shelf)
+        coordinator.collapse()
+
+        // Without a visible Notch the pointer isn't hovering it, but it is
+        // still on the trigger strip, so the latch holds.
+        coordinator.setPointerHovering(false, insideTrigger: true)
+        XCTAssertFalse(coordinator.canRevealOnHover)
+
+        coordinator.setPointerHovering(false, insideTrigger: false)
+        XCTAssertTrue(coordinator.canRevealOnHover)
+    }
+
     func testProgrammaticCollapseCanLeaveHoverRevealAvailable() {
         let coordinator = IslandActivityCoordinator()
         coordinator.show(module: .shelf)

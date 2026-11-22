@@ -415,11 +415,15 @@ final class IslandActivityCoordinator {
         shortcutSwipeTarget = nil
     }
 
-    func setPointerHovering(_ hovering: Bool) {
-        // Clear the deliberate-collapse latch on exit even if the visual
-        // hover value was already false. The next genuine pointer entry may
-        // then reveal the Island normally.
-        if !hovering { isHoverRevealSuppressed = false }
+    /// `insideTrigger` is whether the pointer is still in the area that
+    /// reveals the Island. It defaults to `hovering`, which matches when the
+    /// Notch is shown. Without the Notch, the pointer can rest on the trigger
+    /// strip without hovering a visible Notch.
+    func setPointerHovering(_ hovering: Bool, insideTrigger: Bool? = nil) {
+        // Clear the deliberate-collapse latch once the pointer leaves the
+        // trigger, even if the visual hover value was already false. The next
+        // genuine pointer entry may then reveal the Island normally.
+        if !(insideTrigger ?? hovering) { isHoverRevealSuppressed = false }
         guard isPointerHovering != hovering else { return }
         isPointerHovering = hovering
     }
