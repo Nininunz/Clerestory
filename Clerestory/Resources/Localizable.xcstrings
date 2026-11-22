@@ -6039,6 +6039,39 @@
           }
         }
       }
+    },
+    "Maximum capacity" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maximum capacity"
+          }
+        }
+      }
+    },
+    "Charging on hold" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charging on hold"
+          }
+        }
+      }
+    },
+    "Raw capacity ratio" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raw capacity ratio"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

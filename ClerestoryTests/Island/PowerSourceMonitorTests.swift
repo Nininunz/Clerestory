@@ -79,6 +79,45 @@ final class PowerSourceMonitorTests: XCTestCase {
         XCTAssertEqual(onAC.powerWatts, 0)
     }
 
+    func testMaximumCapacityIsReadOnlyWhenTheBatteryReportsAPercentage() {
+        let description: [String: Any] = [
+            kIOPSCurrentCapacityKey: 77,
+            kIOPSMaxCapacityKey: 100,
+            kIOPSPowerSourceStateKey: kIOPSBatteryPowerValue,
+            kIOPSIsChargingKey: false,
+        ]
+        // Apple silicon: MaxCapacity is the health percentage, as in System Settings.
+        let appleSilicon = PowerSourceMonitor.snapshot(from: description, registryProperties: [
+            "MaxCapacity": 97, "BatteryData": ["DesignCapacity": 8579, "FullChargeCapacity": 8487],
+        ])
+        XCTAssertEqual(appleSilicon.maximumCapacityPercent, 97)
+        // Intel: MaxCapacity is a capacity in mAh, which isn't a percentage.
+        let intel = PowerSourceMonitor.snapshot(from: description, registryProperties: [
+            "MaxCapacity": 4_870, "DesignCapacity": 5_103,
+        ])
+        XCTAssertNil(intel.maximumCapacityPercent)
+        XCTAssertNil(PowerSourceMonitor.snapshot(from: description).maximumCapacityPercent)
+        XCTAssertNil(PowerSourceMonitor.maximumCapacityPercent(100, design: nil))
+        XCTAssertNil(PowerSourceMonitor.maximumCapacityPercent(0, design: 8579))
+    }
+
+    func testChargingIsOnHoldOnlyWhenPluggedInWithoutChargingOrBeingFull() {
+        func snapshot(onAC: Bool, charging: Bool, charged: Bool, percent: Int = 80) -> PowerSourceMonitor.Snapshot {
+            PowerSourceMonitor.snapshot(from: [
+                kIOPSCurrentCapacityKey: percent,
+                kIOPSMaxCapacityKey: 100,
+                kIOPSPowerSourceStateKey: onAC ? kIOPSACPowerValue : kIOPSBatteryPowerValue,
+                kIOPSIsChargingKey: charging,
+                kIOPSIsChargedKey: charged,
+            ])
+        }
+        XCTAssertTrue(snapshot(onAC: true, charging: false, charged: false).isChargingOnHold)
+        XCTAssertFalse(snapshot(onAC: true, charging: true, charged: false).isChargingOnHold)
+        XCTAssertFalse(snapshot(onAC: true, charging: false, charged: true, percent: 100).isChargingOnHold)
+        XCTAssertFalse(snapshot(onAC: false, charging: false, charged: false).isChargingOnHold)
+        XCTAssertFalse(PowerSourceMonitor.Snapshot.unavailable.isChargingOnHold)
+    }
+
     func testNestedBatteryDetailsAndUnknownChargingEstimate() {
         let snapshot = PowerSourceMonitor.snapshot(from: [
             kIOPSCurrentCapacityKey: 50,
