@@ -468,6 +468,12 @@ final class IslandPresentationController: NSObject {
             }
             let layout = islandLayout(at: point)
             if layout.pointerTriggerFrame.contains(point) {
+                // A click on the trigger closes the open Panel, pinned or not.
+                // Collapsing suppresses hover until the pointer leaves, so the
+                // pointer resting on the trigger doesn't reopen it.
+                guard settings.islandClickRevealEnabled else { return }
+                islandLogger.notice("trigger-click event=\(event.eventNumber)")
+                collapseIsland(animated: true)
                 return
             }
             if islandHoverPreview.phase == .preview || islandHoverPreview.phase == .leaving,
@@ -488,7 +494,8 @@ final class IslandPresentationController: NSObject {
             islandActivityCoordinator.setPointerHovering(
                 !islandActivityCoordinator.surfaceState.isExpanded
                     && islandActivityCoordinator.notchLayout?.notchIsVisible == true
-                    && islandActivityCoordinator.notchLayout?.notchPointerFrame.contains(point) == true
+                    && islandActivityCoordinator.notchLayout?.notchPointerFrame.contains(point) == true,
+                insideTrigger: interactiveFrame.contains(point)
             )
             if islandHoverPreview.phase == .preview || islandHoverPreview.phase == .leaving {
                 let inside = hoverKeepAliveFrame(for: layout).contains(point)

@@ -125,6 +125,85 @@ final class IslandPresentationControllerTests: XCTestCase {
         }
     }
 
+    func testClickingTheTriggerClosesTheOpenPanelAndHoverDoesNotReopenIt() throws {
+        for notched in [true, false] {
+            for pinned in [false, true] {
+                let name = "IslandTriggerClose.\(UUID().uuidString)"
+                let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
+                defer { defaults.removePersistentDomain(forName: name) }
+                let settings = SettingsStore(defaults: defaults)
+                let coordinator = IslandActivityCoordinator()
+                let registry = IslandModuleRegistry()
+                registry.apply(settings: settings)
+                let screen = geometry(notched: notched)
+                let presentation = IslandPresentationController(
+                    settings: settings, coordinator: coordinator, registry: registry,
+                    modules: IslandModuleContainer(registrations: [], messages: .forTesting()),
+                    notices: { nil }, collapse: { _ in coordinator.collapse() },
+                    makePanel: { _ in
+                        ShelfPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel],
+                                   backing: .buffered, defer: false)
+                    }, screenGeometry: { _ in screen })
+                presentation.connect()
+                defer { presentation.deactivate() }
+                let trigger = presentation.islandLayout().pointerTriggerFrame
+                let point = CGPoint(x: trigger.midX, y: screen.frame.maxY)
+                let click = try XCTUnwrap(NSEvent.mouseEvent(with: .leftMouseDown, location: .zero,
+                    modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil,
+                    eventNumber: 0, clickCount: 1, pressure: 1))
+                let move = try XCTUnwrap(NSEvent.mouseEvent(with: .mouseMoved, location: .zero,
+                    modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil,
+                    eventNumber: 0, clickCount: 0, pressure: 0))
+                presentation.handleIslandEvent(click, at: point)
+                XCTAssertTrue(coordinator.surfaceState.isExpanded)
+                if pinned { coordinator.setPinned(true) }
+
+                presentation.handleIslandEvent(click, at: point)
+                XCTAssertEqual(coordinator.surfaceState, .collapsed)
+                // The pointer still rests on the trigger: hover must not reveal it again.
+                XCTAssertFalse(coordinator.canRevealOnHover)
+                presentation.handleIslandEvent(move, at: point)
+                XCTAssertEqual(presentation.hoverPreviewPhase, .idle)
+                XCTAssertEqual(coordinator.surfaceState, .collapsed)
+
+                // Leaving and coming back re-arms hover; another click opens it.
+                presentation.handleIslandEvent(move, at: CGPoint(x: trigger.midX, y: screen.frame.midY))
+                XCTAssertTrue(coordinator.canRevealOnHover)
+                presentation.handleIslandEvent(click, at: point)
+                XCTAssertTrue(coordinator.surfaceState.isExpanded)
+            }
+        }
+    }
+
+    func testTriggerClickDoesNotCloseThePanelWhenClickRevealIsOff() throws {
+        let name = "IslandTriggerCloseOff.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let settings = SettingsStore(defaults: defaults)
+        settings.islandClickRevealEnabled = false
+        let coordinator = IslandActivityCoordinator()
+        let registry = IslandModuleRegistry()
+        registry.apply(settings: settings)
+        let screen = geometry(notched: true)
+        let presentation = IslandPresentationController(
+            settings: settings, coordinator: coordinator, registry: registry,
+            modules: IslandModuleContainer(registrations: [], messages: .forTesting()),
+            notices: { nil }, collapse: { _ in coordinator.collapse() },
+            makePanel: { _ in
+                ShelfPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel],
+                           backing: .buffered, defer: false)
+            }, screenGeometry: { _ in screen })
+        presentation.connect()
+        defer { presentation.deactivate() }
+        coordinator.show(module: .shelf)
+        let trigger = presentation.islandLayout().pointerTriggerFrame
+        let click = try XCTUnwrap(NSEvent.mouseEvent(with: .leftMouseDown, location: .zero,
+            modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil,
+            eventNumber: 0, clickCount: 1, pressure: 1))
+        presentation.handleIslandEvent(click, at: CGPoint(x: trigger.midX, y: screen.frame.maxY))
+        XCTAssertTrue(coordinator.surfaceState.isExpanded)
+    }
+
     func testResumeHoverDismissalArmsHoverOnlyForAnUnpinnedOpenPanel() throws {
         let name = "IslandHoverResume.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: name))

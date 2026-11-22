@@ -17,6 +17,7 @@ To update, choose **Check for Updates…** from the menu bar icon.
 | To… | Do this |
 | --- | --- |
 | Open the Panel | Move to the top center of your display, click the trigger area, press `⌘⇧Space`, or use the menu bar icon. |
+| Close the Panel | Click the trigger area again, even when the Panel is pinned, or press `⌘⇧Space`. An unpinned Panel also closes when you click outside it or, if it opened on hover, move away. |
 | Add to Shelf | Drag a file or selected text toward the top center, then drop it into Shelf. |
 | Move a file into Shelf | Hold `⌘` while dropping. Read [File safety and lifecycle](#file-safety-and-lifecycle) first. |
 | Park the clipboard | Press `⌘⇧Space` twice with **Double-press saves clipboard** enabled. |
