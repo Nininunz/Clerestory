@@ -35,6 +35,16 @@ Hover, click, and drag-to-open are enabled by default. Adjust the hover delays o
 - **Messages.** Short messages, such as **Already on Shelf**, appear in a pill below the Panel, or below the notch when the Panel is closed. Each one stays until it has been on screen long enough to read, and pointing at a message with a button keeps it there. A module warning, such as a low battery, appears once and again only if it gets worse; its **Show** button opens that module. VoiceOver reads every message.
 - **Shelf**, **Quick Settings** and **Battery** are available by default, and each has a Panel shortcut. To use other modules, turn on **Experimental Modules** under **Settings → Modules**. Transfers, Timer and System Status turn on right away; turn on the others individually. Experimental modules include Transfers, Timer, Now Playing, System Status, Clipboard History, and AI Usage.
 
+### Known limitation: crowded menu bar
+
+When the menu bar has more icons than fit to the right of the notch, macOS hides the extra icons and shows an arrow (**<**) just to the right of the notch. The Notch companion extends a little past the notch on each side, so that arrow can appear squeezed against it or partly behind it. macOS decides where the arrow goes, and apps can't move it. We're looking at Notch layouts that leave room for it, but a fix is unlikely.
+
+Until then, keep the menu bar from overflowing:
+
+- Use a menu bar manager such as [Ice](https://github.com/jordanbaird/Ice), [Bartender](https://www.macbartender.com) or [Vanilla](https://matthewpalmer.net/vanilla/) to hide icons you rarely use.
+- Turn off **Settings → General → Show Clerestory in menu bar**. With the Notch on, you can still open everything from the Notch or the Panel.
+- On macOS 26 or later, turn off icons you don't need in **System Settings → Menu Bar**.
+
 ## File safety and lifecycle
 
 A regular drop only remembers where the file is; nothing gets moved. Removing a card, or setting **After dragging out** to **Remove** in **Settings → Modules → Shelf**, never deletes the original. Dropping onto Finder asks for a copy, and the destination decides whether to take it.
