@@ -58,15 +58,32 @@ enum IslandNotchIndicatorResolver {
         return status
     }
 
+    /// The module whose critical status the icon borrows (step 4 of `resolve`), or `nil` when the
+    /// icon shows the display's own notice, drag arrow or status. While it is borrowed, the notch
+    /// shows that module's value, such as the battery percentage, in place of its display's own.
+    static func borrowedModule(display: IslandModuleID?, center: IslandMessageCenter,
+                               isDragInProgress: Bool) -> IslandModuleID? {
+        // Steps 1 and 2 of `resolve` cover the status.
+        if let display, center.visibleNotice?.moduleID == display { return nil }
+        if display == .shelf, isDragInProgress { return nil }
+        return chosenStatus(display: display, center: center)?.borrowedFrom
+    }
+
     /// Steps 3 to 5 of `resolve`.
     private static func statusIndicator(display: IslandModuleID?,
                                         center: IslandMessageCenter) -> IslandNotchIndicator? {
+        chosenStatus(display: display, center: center).map { indicator(for: $0.status) }
+    }
+
+    /// Steps 3 to 5 of `resolve`: the status and, in step 4, the module it is borrowed from.
+    private static func chosenStatus(display: IslandModuleID?, center: IslandMessageCenter)
+        -> (status: IslandStatus, borrowedFrom: IslandModuleID?)? {
         let top = display.flatMap(center.topStatus(for:))
-        if let top, top.tone >= .warning { return indicator(for: top) }
+        if let top, top.tone >= .warning { return (top, nil) }
         if let borrowed = center.latestCriticalStatus(excluding: display) {
-            return indicator(for: borrowed.status)
+            return (borrowed.status, borrowed.moduleID)
         }
-        return top.map(indicator(for:))
+        return top.map { ($0, nil) }
     }
 
     /// The notch's VoiceOver label: its display's label, plus each of the indicator's texts the
