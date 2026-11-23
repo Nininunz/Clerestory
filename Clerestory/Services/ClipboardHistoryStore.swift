@@ -303,6 +303,20 @@ final class ClipboardHistoryStore {
         }
     }
 
+    /// The write to run when the app quits, captured now on the main actor. Running it needs
+    /// nothing more from the main actor, so the quit can't wait behind a busy main queue
+    /// (#123). Nil when there is nothing safe to write: history is still loading, or it
+    /// couldn't be loaded and must not be overwritten.
+    func finalSave() -> (@Sendable () async -> Void)? {
+        guard !isLoading, canWrite else { return nil }
+        saveTask?.cancel()
+        revision += 1
+        let revision = revision
+        let entries = entries
+        let persistence = persistence
+        return { try? await persistence.save(entries, revision: revision) }
+    }
+
     func flush() async {
         if isLoading {
             guard let loadTask else { return }
