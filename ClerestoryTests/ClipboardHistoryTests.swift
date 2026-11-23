@@ -503,6 +503,24 @@ final class ClipboardHistoryTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appendingPathComponent("clipboard-history.json").path))
     }
 
+    func testFinalSaveWritesTheCurrentHistoryWithoutTheMainActor() async throws {
+        try await start()
+        write("first"); history.poll()
+        write("second"); history.poll()
+        let save = try XCTUnwrap(history.finalSave())
+        await Task.detached { await save() }.value
+        let loaded = try await ClipboardHistoryPersistence(directoryURL: directory).load()
+        XCTAssertEqual(loaded.map(\.content), [.text("second"), .text("first")])
+    }
+
+    func testFinalSaveIsSkippedWhileLoadingOrAfterAFailedLoad() async throws {
+        XCTAssertNil(history.finalSave(), "Nothing to write before history has loaded")
+        try Data("broken history".utf8).write(to: directory.appendingPathComponent("clipboard-history.json"))
+        try await start()
+        XCTAssertNotNil(history.errorMessage)
+        XCTAssertNil(history.finalSave(), "Unreadable history must not be overwritten")
+    }
+
     func testClearFlushDoesNotTouchSystemClipboardAndSurvivesQueuedSaves() async throws {
         try await start()
         for i in 0..<10 { write("\(i)"); history.poll() }

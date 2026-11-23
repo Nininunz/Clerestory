@@ -344,9 +344,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         clipboardHistoryStore.stop()
-        Task { @MainActor in
-            await clipboardHistoryStore.flush()
-            sender.reply(toApplicationShouldTerminate: true)
+        guard let save = clipboardHistoryStore.finalSave() else { return .terminateNow }
+        // The quit can be requested from a block on the main dispatch queue, as Sparkle does
+        // before relaunching. AppKit then waits for the reply inside that block, so the save
+        // runs off the main actor and the reply goes through the main run loop (#123).
+        Task.detached {
+            await save()
+            MainRunLoop.perform { NSApp.reply(toApplicationShouldTerminate: true) }
         }
         return .terminateLater
     }
