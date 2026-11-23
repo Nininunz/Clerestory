@@ -193,4 +193,39 @@ final class IslandNotchIndicatorResolverTests: XCTestCase {
         XCTAssertEqual(IslandNotchIndicatorResolver.accessibilityLabel("Song", indicator: resolve(.media, center)),
                        "Song, Battery low, Paused", "The borrowed critical status stays in the label")
     }
+
+    private func borrowed(_ display: IslandModuleID?, _ center: IslandMessageCenter,
+                          dragging: Bool = false) -> IslandModuleID? {
+        IslandNotchIndicatorResolver.borrowedModule(display: display, center: center, isDragInProgress: dragging)
+    }
+
+    func testBorrowedModuleIsTheModuleWhoseCriticalStatusTheIconShows() {
+        let center = makeCenter(started: [.shelf, .media, .battery])
+        XCTAssertNil(borrowed(.shelf, center))
+
+        center.messenger(for: .battery).setStatus(low)
+        XCTAssertEqual(borrowed(.shelf, center), .battery)
+        XCTAssertEqual(borrowed(nil, center), .battery, "The fallback display borrows it too")
+        XCTAssertNil(borrowed(.battery, center), "Battery shows its own status")
+
+        center.messenger(for: .battery).clearStatus("low")
+        XCTAssertNil(borrowed(.shelf, center))
+    }
+
+    func testNothingIsBorrowedWhileTheDisplaysOwnNoticeDragOrWarningShows() {
+        let center = makeCenter(started: [.shelf, .media, .battery])
+        center.messenger(for: .battery).setStatus(low)
+
+        XCTAssertNil(borrowed(.shelf, center, dragging: true))
+
+        center.messenger(for: .shelf).post(.removed)
+        showCurrentNotice(center)
+        XCTAssertNil(borrowed(.shelf, center))
+        center.setVisibleNotice(nil)
+        XCTAssertEqual(borrowed(.shelf, center), .battery)
+
+        center.messenger(for: .media).setStatus(.init(key: "warn", title: "Warning",
+                                                      systemImage: "exclamationmark.triangle", tone: .warning))
+        XCTAssertNil(borrowed(.media, center), "The display's own warning wins")
+    }
 }

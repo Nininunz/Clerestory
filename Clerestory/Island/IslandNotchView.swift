@@ -82,6 +82,12 @@ struct IslandNotchView: View {
                                              isDragInProgress: coordinator.isDragInProgress)
     }
 
+    /// The module whose critical status the notch borrows. See IslandNotchIndicatorResolver.
+    private var borrowedModule: IslandModuleID? {
+        IslandNotchIndicatorResolver.borrowedModule(display: notchDisplay.moduleID, center: messages,
+                                                    isDragInProgress: coordinator.isDragInProgress)
+    }
+
     @ViewBuilder
     private var notchLeading: some View {
         let indicator = indicator
@@ -108,54 +114,60 @@ struct IslandNotchView: View {
 
     private var notchTrailing: some View {
         Group {
-            switch notchDisplay {
-            case .media:
-                if let snapshot = nowPlayingStore.snapshot {
-                    notchMediaEqualizer(isPlaying: snapshot.isPlaying,
-                                          tint: mediaAccent.color,
-                                          rhythmSeed: mediaRhythmSeed)
-                } else {
-                    IslandNotchWingIcon(systemName: "pause")
-                }
-            case .transfers:
-                if let task = transferStore.currentTask, task.phase.isTerminal {
-                    switch task.phase {
-                    case .failed, .partiallySucceeded:
-                        IslandNotchWingIcon(systemName: "exclamationmark.triangle")
-                    case .cancelled:
-                        IslandNotchWingIcon(systemName: "xmark")
-                    default:
-                        IslandNotchWingIcon(systemName: "checkmark")
+            // A low battery borrowed by another display shows its percentage in place of
+            // that display's value, next to the red battery icon.
+            if borrowedModule == .battery, powerMonitor.snapshot.hasBattery {
+                notchBatteryText(powerMonitor.snapshot.percentage)
+            } else {
+                switch notchDisplay {
+                case .media:
+                    if let snapshot = nowPlayingStore.snapshot {
+                        notchMediaEqualizer(isPlaying: snapshot.isPlaying,
+                                              tint: mediaAccent.color,
+                                              rhythmSeed: mediaRhythmSeed)
+                    } else {
+                        IslandNotchWingIcon(systemName: "pause")
                     }
-                } else if !transferStore.hasVisibleActivity {
-                    IslandNotchWingIcon(systemName: "checkmark")
-                } else if reduceMotion {
-                    IslandNotchWingIcon(systemName: "arrow.triangle.2.circlepath")
-                } else {
-                    notchTransferSpinner
+                case .transfers:
+                    if let task = transferStore.currentTask, task.phase.isTerminal {
+                        switch task.phase {
+                        case .failed, .partiallySucceeded:
+                            IslandNotchWingIcon(systemName: "exclamationmark.triangle")
+                        case .cancelled:
+                            IslandNotchWingIcon(systemName: "xmark")
+                        default:
+                            IslandNotchWingIcon(systemName: "checkmark")
+                        }
+                    } else if !transferStore.hasVisibleActivity {
+                        IslandNotchWingIcon(systemName: "checkmark")
+                    } else if reduceMotion {
+                        IslandNotchWingIcon(systemName: "arrow.triangle.2.circlepath")
+                    } else {
+                        notchTransferSpinner
+                    }
+                case .timer:
+                    if case .finished = timerStore.state {
+                        IslandNotchWingIcon(systemName: "checkmark")
+                    } else {
+                        notchTimerText(timerStore.notchRemaining)
+                    }
+                case .aiUsage:
+                    if let value = aiUsageStore.notchValue {
+                        IslandNotchAIValueText(value: value)
+                    } else {
+                        IslandNotchWingIcon(systemName: "minus")
+                    }
+                case .shelf:
+                    notchShelfText(shelfStore.items.count)
+                case .battery:
+                    if powerMonitor.snapshot.hasBattery {
+                        notchBatteryText(powerMonitor.snapshot.percentage)
+                    } else {
+                        IslandNotchWingIcon(systemName: "minus")
+                    }
+                case .fallback:
+                    notchFallbackSymbol
                 }
-            case .timer:
-                if case .finished = timerStore.state {
-                    IslandNotchWingIcon(systemName: "checkmark")
-                } else {
-                    notchTimerText(timerStore.notchRemaining)
-                }
-            case .aiUsage:
-                if let value = aiUsageStore.notchValue {
-                    IslandNotchAIValueText(value: value)
-                } else {
-                    IslandNotchWingIcon(systemName: "minus")
-                }
-            case .shelf:
-                notchShelfText(shelfStore.items.count)
-            case .battery:
-                if powerMonitor.snapshot.hasBattery {
-                    notchBatteryText(powerMonitor.snapshot.percentage)
-                } else {
-                    IslandNotchWingIcon(systemName: "minus")
-                }
-            case .fallback:
-                notchFallbackSymbol
             }
         }
         .foregroundStyle(.white)
@@ -212,14 +224,26 @@ struct IslandNotchView: View {
     }
 
     private var notchAccessibilityLabel: String {
-        IslandNotchIndicatorResolver.accessibilityLabel(notchDisplayAccessibilityLabel, indicator: indicator)
+        IslandNotchIndicatorResolver.accessibilityLabel(notchVisibleValueAccessibilityLabel, indicator: indicator)
+    }
+
+    /// The display's label, plus the battery percentage the notch shows while it borrows a low battery.
+    private var notchVisibleValueAccessibilityLabel: String {
+        guard notchDisplay != .battery, borrowedModule == .battery,
+              powerMonitor.snapshot.hasBattery else { return notchDisplayAccessibilityLabel }
+        return IslandStatus.spokenText(title: notchDisplayAccessibilityLabel,
+                                       detail: batteryAccessibilityLabel)
+    }
+
+    private var batteryAccessibilityLabel: String {
+        String(localized: "Battery, \(powerMonitor.snapshot.percentage) percent")
     }
 
     private var notchDisplayAccessibilityLabel: String {
         switch notchDisplay {
         case .battery:
             return powerMonitor.snapshot.hasBattery
-                ? String(localized: "Battery, \(powerMonitor.snapshot.percentage) percent")
+                ? batteryAccessibilityLabel
                 : String(localized: "No internal battery")
         case .shelf:
             return String(localized: "Clerestory Panel, \(shelfStore.items.count) shelf items")
